@@ -1,25 +1,27 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.compose")
-    id("org.jetbrains.kotlin.plugin.serialization")
+    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.kotlinAndroid)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kotlinCompose)
+    alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.pforhan.alphathinker"
-    compileSdk = libs.versions.compileSdk.toLong()
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
         applicationId = "com.pforhan.alphathinker"
         minSdk = 26
-        targetSdk = libs.versions.compileSdk.toLong()
+        targetSdk = libs.versions.compileSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildTypes {
@@ -36,13 +38,13 @@ android {
     }
 }
 
-compose {
-    resourcesPackageNamespace = "com.pforhan.alphathinker"
+compose.resources {
+    packageOfResClass = "com.pforhan.alphathinker"
 }
 
 kotlin {
     compilerOptions {
-        jvmToolchain(11)
+        jvmToolchain(26)
     }
 }
 

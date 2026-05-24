@@ -25,17 +25,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CardDefaults
-import com.pforhan.alphathinker.model.Questions
+import com.pforhan.alphathinker.model.Question
 
 @Composable
 fun QuestionsCard(
-    question: Questions,
+    question: Question,
     onUpdateAnswer: (String, String) -> Unit
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    var answerText by remember { mutableStateOf(question.answer?.text ?: "") }
-
-    val isAnswered = !question.answer?.text.isNullOrBlank()
+    var answerText by remember { mutableStateOf("") }
+    val isAnswered = question.text.isNotBlank()
+    val isAnswered = question.text.isNotBlank()
 
     Card(
         modifier = Modifier
@@ -93,7 +93,7 @@ fun QuestionsCard(
                         }
                     }
                 )
-                if (!isAnswered) {
+                if (!isAnswered || isExpanded) {
                     Row(
                         modifier = Modifier
                             .padding(top = 4.dp)
@@ -109,6 +109,13 @@ fun QuestionsCard(
                             Text("Save")
                         }
                     }
+                } else {
+                    Text(
+                        "Answered · Tap to see answer",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
                 }
             }
         }

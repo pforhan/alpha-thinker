@@ -93,11 +93,14 @@ class MockLLMIntegration : LLMIntegration {
         )
     )
 
-    override suspend fun generateInitialQuestions(synopsis: String): List<Question> {
+    override suspend fun generateInitialQuestions(@Suppress("UNUSED_PARAMETER") synopsis: String): List<Question> {
         return getInitialQuestions()
     }
 
-    override suspend fun generateFollowUpQuestions(synopsis: String, previousRound: Int): List<Question> {
+    override suspend fun generateFollowUpQuestions(
+        @Suppress("UNUSED_PARAMETER") synopsis: String,
+        previousRound: Int
+    ): List<Question> {
         return getFollowUpQuestions(previousRound)
     }
 

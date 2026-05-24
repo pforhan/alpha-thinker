@@ -1,16 +1,18 @@
 plugins {
-    kotlin("multiplatform")
-    id("com.android.library")
-    id("org.jetbrains.compose")
-    id("org.jetbrains.kotlin.plugin.serialization")
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kotlinCompose)
 }
 
 kotlin {
+    jvmToolchain(26)
     androidTarget {
         compilations.all {
             compileTaskProvider {
                 compilerOptions {
-                    jvmTarget.set(org.gradle.jvm.toolchain.JvmTarget.JVM_11)
+                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
                 }
             }
         }
@@ -40,19 +42,21 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.appcompat)
         }
-        desktopMain.dependencies {
+        val desktopMain by getting {
+            dependencies {
+            }
         }
     }
 }
 
 android {
     namespace = "com.pforhan.alphathinker.shared"
-    compileSdk = libs.versions.compileSdk.toLong()
+    compileSdk = libs.versions.compileSdk.get().toInt()
     defaultConfig {
         minSdk = 26
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }

@@ -8,6 +8,7 @@ import com.pforhan.alphathinker.model.ExchangeRound
 import com.pforhan.alphathinker.model.Project
 import com.pforhan.alphathinker.model.Question
 import java.time.Instant
+import java.util.UUID
 
 class AndroidProjectStorage(
     private val database: AppDatabase
@@ -25,12 +26,15 @@ class AndroidProjectStorage(
 
             val questions = project.questions.map { q ->
                 RoomQuestion(
-                    questionId = q.id,
+                    id = q.id,
                     projectId = project.id,
                     round = project.exchangeRounds.find { it.questions.any { it.id == q.id } }?.round
                         ?: 0,
+                    contextId = if (project.exchangeRounds.isNotEmpty()) project.exchangeRounds.first().contextId
+                        else q.contextId,
                     text = q.text,
-                    timestamp = q.timestamp
+                    timestamp = q.timestamp,
+                    archivedAt = q.archivedAt
                 )
             }
             dao().insertQuestions(questions)
@@ -38,8 +42,8 @@ class AndroidProjectStorage(
             val answers = project.exchangeRounds.flatMap { round ->
                 round.answers.map { answer ->
                     RoomAnswer(
-                        id = answer.questionId,
                         questionId = answer.questionId,
+                        contextId = round.contextId,
                         text = answer.text,
                         answeredAt = answer.answeredAt,
                         modifiedAt = answer.modifiedAt
@@ -55,21 +59,41 @@ class AndroidProjectStorage(
     override suspend fun getProject(id: String): Project? {
         val projectEntity = dao().getProject(id) ?: return null
         val questionsList = dao().getQuestionsForProject(id)
+        val questionsWithDetails = dao().getQuestionsForProjectWithDetails(id)
+
+        val answersByQuestion = questionsWithDetails
+            .flatMap { it.answers }
+            .groupBy { it.questionId }
 
         val exchangeRounds = questionsList
-            .groupBy { it.round }
-            .mapNotNull { (round, qaList) ->
+            .groupBy { it.contextId to it.round }
+            .mapNotNull { (key, qaList) ->
+                val (contextId, round) = key
                 qaList.firstOrNull()?.let {
                     ExchangeRound(
                         round = round,
                         questions = qaList.map { qa ->
                             Question(
-                                id = qa.questionId,
+                                id = qa.id,
                                 text = qa.text,
-                                timestamp = qa.timestamp
+                                timestamp = qa.timestamp,
+                                contextId = contextId,
+                                archivedAt = qa.archivedAt
                             )
                         },
-                        createdAt = qaList.first().timestamp
+                        contextId = contextId,
+                        createdAt = qaList.first().timestamp,
+                        answers = qaList.flatMap { qa ->
+                            answersByQuestion[qa.id]?.map { a ->
+                                com.pforhan.alphathinker.model.Answer(
+                                    questionId = a.questionId,
+                                    text = a.text,
+                                    answeredAt = a.answeredAt,
+                                    modifiedAt = a.modifiedAt
+                                )
+                            } ?: emptyList()
+                        },
+                        questionsCount = qaList.size
                     )
                 }
             }
@@ -78,7 +102,9 @@ class AndroidProjectStorage(
             Question(
                 id = q.id,
                 text = q.text,
-                timestamp = q.timestamp
+                timestamp = q.timestamp,
+                contextId = q.contextId,
+                archivedAt = q.archivedAt
             )
         }
 

@@ -54,9 +54,14 @@ fun AppNavGraph(
             if (state is MainViewModel.UiState.ProjectDetail) {
                 ProjectDetailScreen(
                     project = state.project,
+                    onViewAllClick = { /* TODO */ },
+                    onViewArchivedClick = { /* TODO */ },
+                    onToggleAutoArchive = { viewModel.toggleAutoArchive() },
+                    onArchiveCurrentClick = { /* TODO */ },
                     onBack = { navController.popBackStack() },
                     onUpdateAnswer = { qId, text -> viewModel.updateAnswer(state.project.id, qId, text) },
-                    onExportClick = { /* TODO: open export dialog */ }
+                    onExportClick = { /* TODO */ },
+                    autoArchive = viewModel.archiveSettings.autoArchiveAfterUpdate
                 )
             }
         }

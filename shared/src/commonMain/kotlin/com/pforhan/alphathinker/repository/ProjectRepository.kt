@@ -3,6 +3,7 @@ package com.pforhan.alphathinker.repository
 import com.pforhan.alphathinker.llm.LLMIntegration
 import com.pforhan.alphathinker.model.Answer
 import com.pforhan.alphathinker.model.ExchangeRound
+import com.pforhan.alphathinker.model.Question
 import com.pforhan.alphathinker.model.Project
 import java.time.Instant
 import java.util.UUID
@@ -21,8 +22,9 @@ class ProjectRepository(
 
     suspend fun createProject(synopsis: String): Project {
         val now = Instant.now()
+        val projectId = UUID.randomUUID().toString()
         val project = Project(
-            id = UUID.randomUUID().toString(),
+            id = projectId,
             synopsis = synopsis.trim(),
             questions = emptyList(),
             exchangeRounds = emptyList(),
@@ -31,11 +33,15 @@ class ProjectRepository(
         )
         val saved = storage.saveProject(project)
 
+        val contextId = UUID.randomUUID().toString()
         val questions = llm.generateInitialQuestions(saved.synopsis)
+            .map { it.copy(id = UUID.randomUUID().toString(), contextId = contextId) }
         val round = ExchangeRound(
             round = 1,
             questions = questions,
-            createdAt = Instant.now()
+            contextId = contextId,
+            createdAt = Instant.now(),
+            questionsCount = questions.size
         )
 
         val updated = saved.copy(
@@ -55,77 +61,78 @@ class ProjectRepository(
     }
 
     suspend fun getUnansweredQuestions(project: Project): List<Question> {
-        val existingAnswers = project.exchangeRounds
-            .flatMap { it.questions }
-            .associate { it.id }
-
-        val rounds = project.exchangeRounds
-
-        return project.questions
-            .filter { it !in existingAnswers || existingAnswers[it.id].isBlank() }
-            .ifEmpty {
-                rounds.lastOrNull()?.questions ?: emptyList()
+        val lastActiveRound = project.exchangeRounds.filter { it.isActive }.lastOrNull()
+        if (lastActiveRound == null) {
+            return project.questions
+        }
+        val answeredQuestionIds = lastActiveRound.questions
+            .filter { question ->
+                project.questions.find { it.id == question.id }?.isBlank() == false
             }
+            .map { it.id }
+            .toSet()
+        return lastActiveRound.questions.filterNot { question ->
+            question.text.isBlank() || question.id in answeredQuestionIds || question.isArchived
+        }
     }
 
-    suspend fun updateAnswer(projectId: String, questionId: String, text: String): Project? {
+    private fun List<ExchangeRound>.lastActive() = this.filter { it.isActive }.lastOrNull()
+
+    suspend fun updateAnswer(
+        projectId: String,
+        questionId: String,
+        text: String,
+        autoArchive: Boolean = false
+    ): Project? {
         val project = storage.getProject(projectId) ?: return null
         val updatedRounds = project.exchangeRounds.map { round ->
             if (round.questions.any { it.id == questionId }) {
-                val updatedQuestions = round.questions.map { q ->
-                    if (q.id == questionId) {
-                        q
-                    } else {
-                        q
+                round.copy(
+                    questions = round.questions.map { q ->
+                        if (q.id == questionId) {
+                            q.copy(
+                                text = text,
+                                archivedAt = if (autoArchive) Instant.now() else q.archivedAt
+                            )
+                        } else {
+                            q
+                        }
                     }
-                }
-                val updatedAnswers = round.answers.toMutableList()
-                val answer = updatedAnswers.find { it.questionId == questionId }
-                if (answer != null) {
-                    updatedAnswers.add(answer.copy(text = text, modifiedAt = Instant.now()))
-                } else {
-                    updatedAnswers.add(Answer(questionId, text, Instant.now()))
-                }
-                round.copy(questions = updatedQuestions, answers = updatedAnswers)
+                )
             } else {
                 round
             }
         }
 
         val answered = allQuestionsAnswered(project, updatedRounds)
-        val updatedAnswers = updatedRounds.lastOrNull()?.answers ?: emptyList()
-        val answersMap = updatedAnswers.associate { it.questionId to it.text }
 
         val updatedProject = when {
-            answered && project.exchangeRounds.isNotEmpty() -> {
+            answered && updatedRounds.filter { it.isActive }.isNotEmpty() -> {
+                val contextId = UUID.randomUUID().toString()
                 val newQs = llm.generateFollowUpQuestions(
                     project.synopsis,
-                    updatedRounds.last().round
-                )
+                    updatedRounds.maxOf { it.round }
+                ).map { it.copy(id = UUID.randomUUID().toString(), contextId = contextId) }
                 val newRound = ExchangeRound(
-                    round = updatedRounds.last().round + 1,
+                    round = updatedRounds.maxOf { it.round } + 1,
                     questions = newQs,
-                    createdAt = Instant.now()
+                    contextId = contextId,
+                    createdAt = Instant.now(),
+                    questionsCount = newQs.size
                 )
+
+                val previousRounds = updatedRounds.toMutableList()
+                previousRounds.add(newRound)
+
                 project.copy(
                     questions = project.questions + newQs,
-                    exchangeRounds = updatedRounds + newRound,
+                    exchangeRounds = previousRounds,
                     updatedAt = Instant.now()
                 )
             }
             else -> {
-                val updatedRoundsMap = updatedRounds.map { r ->
-                    r.copy(
-                        questions = r.questions.map { q ->
-                            q.copy(
-                                id = q.id,
-                                text = q.text
-                            )
-                        }
-                    )
-                }
                 project.copy(
-                    exchangeRounds = updatedRoundsMap,
+                    exchangeRounds = updatedRounds,
                     updatedAt = Instant.now()
                 )
             }
@@ -138,9 +145,8 @@ class ProjectRepository(
     }
 
     private fun allQuestionsAnswered(project: Project, rounds: List<ExchangeRound>): Boolean {
-        val allQuestions = rounds.flatMap { it.questions }
-        val answeredIds = rounds.flatMap { it.answers }.map { it.questionId }.toSet()
-        return allQuestions.all { it.id in answeredIds }
+        val allQuestions = rounds.filter { it.isActive }.flatMap { it.questions }.filterNot { it.isArchived }
+        return allQuestions.isEmpty()
     }
 
     suspend fun deleteProject(id: String) {
@@ -153,16 +159,17 @@ class ProjectRepository(
 
     suspend fun exportProject(project: Project): String {
         val sb = StringBuilder()
-        sb.appendLine("# $synopsis")
+        sb.appendLine("# ${project.synopsis}")
         sb.appendLine()
         sb.appendLine("## Overview")
-        sb.appendLine("$synopsis")
+        sb.appendLine("${project.synopsis}")
         sb.appendLine()
 
         val sortedRounds = project.exchangeRounds.sortedBy { it.round }
         sortedRounds.forEach { round ->
-            sb.appendLine("## Round $round.round")
-            sb.appendLine("> Generated: $round.createdAt")
+            val status = if (round.isActive) " (Active)" else " (Archived)"
+            sb.appendLine("## Round ${round.round}$status")
+            sb.appendLine("> Generated: ${round.createdAt}")
             sb.appendLine()
 
             val answersMap = round.answers.associate { it.questionId to it }

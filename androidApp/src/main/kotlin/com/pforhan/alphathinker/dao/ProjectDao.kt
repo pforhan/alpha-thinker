@@ -54,10 +54,10 @@ interface ProjectDao {
     data class QuestionWithAnswers(
         @Embedded val question: QuestionEntity,
         @Relation(
-            parentColumn = "question_id",
+            parentColumn = "id",
             entity = AnswerEntity::class,
-            entityColumn = "id"
+            entityColumn = "question_id"
         )
-        val answer: AnswerEntity?
+        val answers: List<AnswerEntity> = emptyList()
     )
 }

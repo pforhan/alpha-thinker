@@ -35,7 +35,11 @@ class MainViewModel(
         val id: String,
         val synopsis: String,
         val createdAt: Instant,
-        val exchangeRoundCount: Int
+        val unansweredCount: Int
+    )
+
+    data class ArchiveSettings(
+        val autoArchiveAfterUpdate: Boolean = false
     )
 
     init {
@@ -48,11 +52,19 @@ class MainViewModel(
             try {
                 val projects = repository.getAllProjects()
                 val items = projects.map { p ->
+                    val activeRound = p.exchangeRounds.filter { it.isActive }.lastOrNull()
+                    val unansweredCount = if (activeRound != null) {
+                        activeRound.questions.count { q ->
+                            q.text.isNotBlank() && !q.isArchived
+                        }
+                    } else {
+                        p.questions.count { it.text.isNotBlank() }
+                    }
                     ProjectItem(
                         id = p.id,
                         synopsis = p.synopsis.take(60),
                         createdAt = p.createdAt,
-                        exchangeRoundCount = p.exchangeRounds.size
+                        unansweredCount = unansweredCount
                     )
                 }
                 uiState = UiState.ProjectList(items)
@@ -93,7 +105,12 @@ class MainViewModel(
     fun updateAnswer(projectId: String, questionId: String, text: String) {
         viewModelScope.launch {
             try {
-                val updated = repository.updateAnswer(projectId, questionId, text)
+                val updated = repository.updateAnswer(
+                    projectId,
+                    questionId,
+                    text,
+                    archiveSettings.autoArchiveAfterUpdate
+                )
                 if (updated != null) {
                     uiState = UiState.ProjectDetail(updated)
                 }
@@ -103,6 +120,12 @@ class MainViewModel(
         }
     }
 
+    fun toggleAutoArchive() {
+        archiveSettings = archiveSettings.copy(
+            autoArchiveAfterUpdate = !archiveSettings.autoArchiveAfterUpdate
+        )
+    }
+
     fun goToProjectList() {
         loadProjects()
     }
@@ -110,4 +133,7 @@ class MainViewModel(
     fun goToNewProject() {
         uiState = UiState.NewProject("", null)
     }
+
+    var archiveSettings by mutableStateOf(ArchiveSettings())
+        private set
 }

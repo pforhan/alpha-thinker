@@ -1,13 +1,15 @@
 [versions]
-agp = "8.8.0"
+agp = "9.2.1"
 compileSdk = "36"
-kotlin = "2.1.20"
+kotlin = "2.2.10"
 composeMultiplatform = "1.8.0"
 kotlinxSerialization = "1.8.1"
 navigationCompose = "2.8.0-alpha10"
 coreKtx = "1.15.0"
 appcompat = "1.7.0"
 lifecycleRuntimeKtx = "2.8.7"
+koin = "4.0.0"
+ksp = "2.3.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -18,6 +20,8 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 room-runtime = { group = "androidx.room", name = "room-runtime", version = "2.6.1" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version = "2.6.1" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version = "2.6.1" }
+koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
+koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -26,3 +30,6 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+koin = { id = "io.insert-koin.gradle", version.ref = "koin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

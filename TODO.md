@@ -64,6 +64,29 @@
 | Search / filter | Not in MVP |
 | Theme toggle | System-adaptive only |
 
+## In Progress — Stripped Project Detail UI + Auto-Archive Setting
+
+Goal: Hide "rounds" from user, simple streamlined project view:
+- Project list item: synopsis + 2-4 unanswered questions + links to view all / view archived
+- Project detail: synopsis + unanswered questions (streaming) + view all / view archived links
+- Archive rounds via `archivedAt` instead of `isActive` toggle (rounds stay in context window)
+- Auto-archive toggle in project options: when do we archive a round? (after generate, after all answered, manual, never)
+
+### Planned Changes
+
+1. **ExchangeRound.kt** — `archivedAt` is source of truth (computed `isActive: archivedAt == null`)
+2. **ProjectRepository.kt** — `updateAnswer()` archives via `archivedAt = if (autoArchive) Instant.now() else null`; remove `isActive = false` toggle on previous rounds
+3. **MainViewModel.kt** — add `autoArchive: Boolean` to state; remove `exchangeRoundCount` from `ProjectItem`; add helper props: `unansweredQuestions`, `archivedRounds`
+4. **ProjectDetailScreen.kt** — Replace round list with: synopsis card + unanswered questions list + "View All Questions" / "View Archived" action buttons
+5. **ProjectsListScreen.kt** — Remove exchange round count from project list item
+6. **AndroidProjectStorage.kt** — persist and read `archivedAt` (add `archived_at` column to questions table via migration, or store on context itself)
+7. **AppDatabase.kt** — bump version + add migration for `archived_at` nullable column on `questions` table
+
+### Notes
+- `round` field is only needed for MockLLM template cycling — can stay
+- Archived rounds still exist in `exchangeRounds` list, just with `archivedAt != null`
+- UI filters by `isActive`/`archivedAt` to decide what to show
+
 ## Open Questions
 
 - App icon design

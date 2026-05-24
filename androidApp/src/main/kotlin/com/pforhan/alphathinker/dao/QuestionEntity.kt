@@ -19,8 +19,9 @@ import java.time.Instant
     indexes = [Index("project_id")]
 )
 data class QuestionEntity(
-    @ColumnInfo(name = "question_id")
-    val questionId: String,
+    @PrimaryKey
+    @ColumnInfo(name = "id")
+    val id: String,
 
     @ColumnInfo(name = "project_id")
     val projectId: String,
@@ -28,12 +29,15 @@ data class QuestionEntity(
     @ColumnInfo(name = "round")
     val round: Int,
 
+    @ColumnInfo(name = "context_id")
+    val contextId: String,
+
     @ColumnInfo(name = "text")
     val text: String,
 
     @ColumnInfo(name = "timestamp")
-    val timestamp: Instant
-) {
-    @PrimaryKey
-    val id: String = questionId
-}
+    val timestamp: Instant,
+
+    @ColumnInfo(name = "archived_at")
+    val archivedAt: Instant?
+)
