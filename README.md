@@ -1,10 +1,13 @@
 # Alpha Thinker
 
-Lightweight nano-LLM-powered project planning app with iterative question-and-answer synthesis. Helps users plan projects through structured and iterative analysis of their project ideas.
+Lightweight project planning app with iterative question-and-answer synthesis. Helps users plan projects through structured and iterative analysis of their project ideas.
+
+Alpha Thinker is available in two versions:
+- **Alpha Thinker Edge**: Powered by a local nano-LLM for automated question generation and synthesis.
+- **Alpha Thinker Lite**: A lightweight version using a fixed set of seed questions and user-driven manual planning.
 
 ## Building
-
-TODO complete
+...
 
 ## Design Documentation
 
@@ -13,4 +16,4 @@ See [ENG-DESIGN.md](ENG-DESIGN.md) for architecture, data model, LLM interface, 
 
 ## TODO
 
-See [TODO.md](./TODO.md) for the implementation checklist.
+See [TODO.md](./TODO.md) for an implementation checklist.
