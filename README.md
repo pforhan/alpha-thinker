@@ -8,8 +8,8 @@ TODO complete
 
 ## Design Documentation
 
-See [PRD.md](./PRD.md) for product requirements.
-See [ENG-DESIGN.md](./ENG-DESIGN.md) for architecture, data model, LLM interface, and implementation details.
+See [PRD.md](PRD.md) for product requirements.
+See [ENG-DESIGN.md](ENG-DESIGN.md) for architecture, data model, LLM interface, and implementation details.
 
 ## TODO
 
