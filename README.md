@@ -5,18 +5,18 @@ Edge-LLM powered project planning app with iterative question-and-answer synthes
 ## Architecture
 
 ```
-┌────── androidApp (Compose Multiplatform) ──────┐
-│  ProjectsList │ NewProject │ ProjectDetail      │
+┌────── androidApp (Compose) ──────┐
+│ ProjectsList │ NewProject │ ProjectDetail │
 └──────────────────┬─────────────────────────────┘
-                   │ Room DB + DI
+                    │ Room DB + DI
 ┌──────────────────┴─────────────────────────────┐
 │           shared (Kotlin Multiplatform)         │
-│  Models │ LLM Interface │ Repository            │
+│  Models │ LLM Interface │ ProjectRepository     │
 └─────────────────────────────────────────────────┘
 ```
 
-- `:shared` — Kotlin Multiplatform module (JVM, Android, iOS targets) containing models, LLM interface, business logic
-- `:androidApp` — Android Compose UI, Room database, LLM actual implementation
+- `:shared` — Kotlin Multiplatform module containing models, LLM interface, and `ProjectRepository` (business logic).
+- `:androidApp` — Android Compose UI, Room database, and `AndroidProjectStorage` (persistence implementation).
 
 ## Quick Start
 
@@ -29,7 +29,7 @@ cd alpha-thinker
 ./gradlew build
 
 # Run on device/emulator
-./gradlew installDebug
+./gradlew :androidApp:installDebug
 ```
 
 ## Directory Structure
@@ -37,14 +37,15 @@ cd alpha-thinker
 ```
 ├── settings.gradle.kts          # Root: :shared + :androidApp
 ├── shared/                      # KMP shared logic
-│   ├── model/                   # Project, Question, ExchangeRound (Room-agnostic)
+│   ├── model/                   # Project, Question, ExchangeRound, Answer
 │   ├── llm/                     # LLMIntegration interface + Mock implementation
-│   └── repository/              # ProjectRepository
+│   └── repository/              # ProjectRepository (business logic)
 └── androidApp/                  # Android Compose app
     ├── dao/                     # Room entities + DAO
     ├── database/                # Room @Database
     ├── navigation/              # Nav graph
-    └── ui/screen/               # Compose screens
+    ├── repository/              # AndroidProjectStorage (persistence)
+    └── ui/                      # Compose screens, viewmodels, theme
 ```
 
 ## Tech Stack

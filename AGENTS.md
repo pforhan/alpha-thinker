@@ -17,7 +17,7 @@ alpha-thinker/
 ├── shared/                          (Kotlin Multiplatform module)
 │   ├── build.gradle.kts
 │   └── src/commonMain/kotlin/com/pforhan/alphathinker/
-│       ├── model/                   (Project, Question, ExchangeRound)
+│       ├── model/                   (Project, Question, ExchangeRound, Answer)
 │       ├── llm/                     (LLMIntegration interface + MockLLMIntegration)
 │       └── repository/              (ProjectRepository — business logic)
 ├── androidApp/                      (Android Compose app)
@@ -28,65 +28,13 @@ alpha-thinker/
 │       ├── database/                (AppDatabase — Room @Database)
 │       ├── navigation/              (AppNavGraph, Screen)
 │       ├── repository/              (AndroidProjectStorage — Room-backed implementation)
-│       ├── ui/                      (MainActivity, MainViewModel, screens, components, theme)
-│       └── src/debug/kotlin/        (Compose Previews)
+│       └── ui/                      (MainActivity, MainViewModel, screens, components, theme)
 └── gradle/
     └── libs.versions.toml           (dependency catalog: Kotlin 2.1.x, Compose 1.8.x, Room 2.6.1)
 ```
 
 ## Building and Running
-
-### Building
-
-To build the project (all variants), run:
-
-```bash
-./gradlew build
-```
-
-To build specific variants, use:
-
-```bash
-# Debug APK
-./gradlew :androidApp:assembleDebug
-
-# Release APK
-./gradlew :androidApp:assembleRelease
-```
-
-**Module targets:** Prefix tasks with the module name to target a specific subproject:
-
-| Task | Meaning |
-|------|---------|
-| `./gradlew :androidApp:build` | Build only the Android app |
-| `./gradlew :shared:build` | Build only the KMP library |
-| `./gradlew build` | Build all modules |
-
-### Running
-
-To install and run on a connected device or emulator:
-
-```bash
-# Debug variant
-./gradlew :androidApp:installDebug
-```
-
-### Testing
-
-```bash
-# Unit tests (all modules)
-./gradlew test
-
-# Unit tests (shared module only)
-./gradlew :shared:test
-
-# Instrumentation tests
-./gradlew connectedAndroidTest
-
-# Instrumentation tests (androidApp only)
-./gradlew :androidApp:connectedAndroidTest
-```
-
+...
 ## Development Conventions
 
 ### Packages
@@ -102,8 +50,9 @@ To install and run on a connected device or emulator:
 
 1. **UI** reads from `MainViewModel` (StateFlow)
 2. **ViewModel** calls `ProjectRepository` (shared business logic)
-3. **AndroidProjectStorage** (Room-backed) provides persistence
+3. **ProjectRepository** delegates data operations to `AndroidProjectStorage` (Room-backed)
 4. **LLM layer** generates initial and follow-up questions (swappable Mock → LiteLLM)
+
 
 ### LLM Integration
 
