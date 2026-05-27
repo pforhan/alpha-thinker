@@ -4,10 +4,17 @@
 
 This document outlines the technical investigations and design decisions required to implement Alpha Thinker. No final tech stack has been selected yet.
 
-### TODO: Tech Stack Evaluation
-- [ ] Evaluate **Kotlin Multiplatform (KMP)** for shared logic with platform-native UIs.
-- [ ] Evaluate **Flutter/Dart** for cross-platform UI and shared logic.
-- [ ] Assess local LLM inference library support (e.g., Llama.cpp, MediaPipe) for each candidate stack.
+## Target Architecture (v1.0)
+This iteration proposes a clear separation of concerns:
+1. **Frontend UI:** Flutter/Dart for a single, unified, and cross-platform user experience.
+2. **Core Logic/Engine:** Kotlin Multiplatform (KMP) for handling core domain logic, data persistence, and heavy computational lifting.
+
+This model allows the shared KMP layer to be the 'source of truth' for the application's business logic, decoupling it from UI platform specifics.
+
+
+### Interoperability Layer
+To ensure robust communication between Flutter/Dart and the KMP engine, we will use **Pigeon Flutter Bindings**. Pigeon will generate the necessary communication boilerplate code, ensuring type safety and predictable message passing across the language boundaries.
+- [x] Target Stack: Flutter/Dart (UI) + KMP (Logic)
 - [ ] Research performance of local storage options (SQLite, NoSQL) across platforms.
 
 ### TODO: Core Data Architecture
