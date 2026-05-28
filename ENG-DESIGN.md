@@ -2,7 +2,19 @@
 
 ## Engineering Strategy & Investigations
 
-This document outlines the technical investigations and design decisions required to implement Alpha Thinker. No final tech stack has been selected yet.
+This document outlines the technical investigations and design decisions required to implement Alpha Thinker.
+
+### Build System
+**Gradle** will serve as the primary build system, orchestrating the compilation of the **Kotlin Multiplatform (KMP)** engine and triggering the necessary **Flutter/Dart** and **iOS/CocoaPods** build pipelines.
+
+### Key Decisions
+- **Layered Architecture:** The UI layer (Flutter) remains "logic-free," acting as a presentation layer that observes the KMP engine. Complex business logic and data management reside within the KMP layer.
+- **Inference Engine:** We will utilize **Google's LiteRT-LM and MediaPipe** for on-device LLM execution (Alpha Thinker Edge), following the pattern established in projects like `OfflineAI-KMP`.
+- **Resilience & Fallback:** If the LLM inference fails (e.g., due to resource constraints or malformed output), the app will transparently fall back to the **Alpha Thinker Lite** implementation using the hardcoded seed questions.
+- **State Management:** Flutter best practices will be followed for UI state management.
+- **Unified UX:** The visual styling and user interface will remain consistent across both the Lite and Edge editions.
+- **Data Persistence:** For the development phase, complex schema migrations will be ignored.
+
 
 ## Target Architecture (v1.0)
 This iteration proposes a clear separation of concerns:
