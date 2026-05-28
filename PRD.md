@@ -47,7 +47,7 @@ Both Editions share the same general UI, but differ in source of question materi
 
 ### 4.3 LLM Integration (Alpha Thinker Edge Only)
 - Generate a set of tailored initial questions based on the project synopsis.
-- Generate follow-up questions based on the project's current state and previous rounds.
+- Generate follow-up questions based on the project's current state and previous answerss.
 
 ### 4.4 Seed Questions (Alpha Thinker Lite Only)
 The Lite version includes these 20 generic questions to guide the user:
@@ -93,34 +93,30 @@ The Lite version includes these 20 generic questions to guide the user:
 ## 6. Export
 - Synthesize all project data into a Markdown document.
 - Support for exporting via the system's native file picker or share sheet.
-- Document format:
-
+- Default document format:
 ```md
 # {{project.synopsis}}
 
 ## Overview
 {{project.synopsis}}
 
-{{#each project.exchangeRounds}}
-## Round {{round}} {{#if isActive}}(Active){{else}}(Archived){{/if}}
-> Generated: {{createdAt}}
-
-{{#each questions}}
-### Q: {{text}}
-
-{{#with answer}}
-| **Answer:** | {{text}} |
-|-------------|----------|
-| **Answered:** | {{answeredAt}} |
-{{#if modifiedAt}}| **Modified:** | {{modifiedAt}} |{{/if}}
-{{else}}
-| **Status:** | unanswered |
-|------------|------------|
+{{#with groupedQuestions}}
+## Answered Questions
+{{#each groupedQuestions.answered}} // sorted by answer date
+*Q: {{questionText}}*
+{{answerText}}
+{{/each}}
+## Remaining Questions
+{{#each groupedQuestions.unanswered}} // sorted by generation date
+*Q: {{questionText}}*
+{{/each}}
+## Archived Questions
+{{#each groupedQuestions.archived}} // sorted by archive date
+*Q: {{questionText}}*
+{{/each}}
 {{/with}}
-
-{{/each}}
-{{/each}}
 ```
+- Alpha Thinker Edge can also ask the LLM to rewrite the above as a cohesive doc.
 
 ## 7. Non-Functional Requirements
 - **Offline First**: The app should rely on edge-LLMs or local mocks to ensure rapid iteration and privacy.
