@@ -3,20 +3,20 @@
 This document tracks the specific engineering tasks required to move from design to a functional product.
 
 ## Phase 1: Foundation & Infrastructure
-- [ ] Set up Flutter project structure
-- [ ] Implement KMP core logic layer
-- [ ] Configure Pigeon for Flutter/KMP communication
-- [ ] Implement Room KMP persistence layer
-- [ ] Implement a simple script to transform Room/Pigeon models (initial alternative to KSP)
-- [ ] Implement Project, Question, and Answer entities in the database
-- [ ] **Project Scaffolding:** Initialize Gradle-based multi-module project (KMP + Flutter).
+- [x] Set up Flutter project structure
+- [x] Implement KMP core logic layer
+- [x] Configure Pigeon for Flutter/KMP communication
+- [x] Implement Room KMP persistence layer (Entities/DAOs done, build stabilized)
+- [x] Implement a simple script to transform Room/Pigeon models (Manual mappers implemented)
+- [x] Implement Project, Question, and Answer entities in the database
+- [x] **Project Scaffolding:** Initialize Gradle-based multi-module project (KMP + Flutter).
 
 ## Phase 2: Core User Experience (Lite Version)
-- [ ] Implement Project creation and listing views
-- [ ] Implement the Question/Answer workspace
+- [x] Implement Project creation and listing views
+- [x] Implement the Question/Answer workspace
 - [ ] Implement seed question extension UI (text area)
 - [ ] Implement answer revision history UI (list with timestamps)
-- [ ] **Domain Logic Implementation:** Implementing core project management and question-answering flows.
+- [x] **Domain Logic Implementation:** Implementing core project management and question-answering flows.
 - [ ] **Lite Implementation:** Implement the hardcoded 20 Seed Questions logic for fallback/Lite mode.
 
 ## Phase 3: Intelligence Integration (Edge Version)

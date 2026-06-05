@@ -1,6 +1,6 @@
 package com.pforhan.alphathinker.model
 
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 data class Question(
     val id: String,

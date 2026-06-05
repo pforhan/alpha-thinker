@@ -1,36 +1,106 @@
 # Gradle files
 .gradle/
-build/
+**/build/
 
 # Local configuration file (sdk path, etc)
 local.properties
+**/local.properties
 
 # Log/OS Files
 *.log
+.DS_Store
 
-# Android Studio generated files and folders
+# Android Studio / Android generated
 captures/
 .externalNativeBuild/
 .cxx/
 *.aab
 *.apk
 output-metadata.json
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+**/GeneratedPluginRegistrant.java
+key.properties
 
-# IntelliJ
+# IntelliJ / IDEs
 *.iml
+*.ipr
+*.iws
 .idea/
 misc.xml
 deploymentTargetDropDown.xml
 render.experimental.xml
+.history
+.svn/
+.swiftpm/
 
 # Keystore files
 *.jks
 *.keystore
 
-# Google Services (e.g. APIs or Firebase)
+# Google Services
 google-services.json
 
 # Android Profiling
 *.hprof
 /.kotlin
 /.obsidian
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+**/doc/api/
+/coverage/
+app.*.symbols
+app.*.map.json
+
+# Platform specific ephemeral files
+**/flutter/ephemeral/
+**/Flutter/ephemeral/
+
+# iOS / macOS
+**/dgph
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+**/*sync/
+.sconsign.dblite
+.tags*
+**/.vagrant/
+**/DerivedData/
+Icon?
+**/Pods/
+**/.symlinks/
+profile
+xcuserdata
+**/.generated/
+**/Flutter/App.framework
+**/Flutter/Flutter.framework
+**/Flutter/Flutter.podspec
+**/Flutter/Generated.xcconfig
+**/Flutter/app.flx
+**/Flutter/app.zip
+**/Flutter/flutter_assets/
+**/Flutter/flutter_export_environment.sh
+ServiceDefinitions.json
+**/Runner/GeneratedPluginRegistrant.*
+
+!default.mode1v3
+!default.mode2v3
+!default.pbxuser
+!default.perspectivev3
+
+# Windows
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+x64/
+x86/
+*.[Cc]ache
+!*.[Cc]ache/

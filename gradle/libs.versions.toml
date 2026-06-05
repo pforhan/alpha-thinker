@@ -11,15 +11,24 @@ lifecycleRuntimeKtx = "2.8.7"
 koin = "4.0.0"
 ksp = "2.3.2"
 
+room = "2.7.0-alpha11"
+kotlinxDatetime = "0.6.1"
+sqliteBundled = "2.5.0-alpha11"
+flutterEngine = "1.0.0-c416acfeb8126e097f758c664aaa3da929e27da0"
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
-room-runtime = { group = "androidx.room", name = "room-runtime", version = "2.6.1" }
-room-ktx = { group = "androidx.room", name = "room-ktx", version = "2.6.1" }
-room-compiler = { group = "androidx.room", name = "room-compiler", version = "2.6.1" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+composeMultiplatform-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime", version.ref = "composeMultiplatform" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqliteBundled" }
+flutter-embedding = { group = "io.flutter", name = "flutter_embedding_debug", version.ref = "flutterEngine" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
 

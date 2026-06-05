@@ -1,8 +1,9 @@
 package com.pforhan.alphathinker.llm
 
 import com.pforhan.alphathinker.model.Question
-import java.time.Instant
-import java.util.UUID
+import com.pforhan.alphathinker.util.randomUUID
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 
 class MockLLMIntegration : LLMIntegration {
     private var roundCounter = 0
@@ -112,9 +113,10 @@ class MockLLMIntegration : LLMIntegration {
 
         return template.map { text ->
             Question(
-                id = UUID.randomUUID().toString(),
+                id = randomUUID(),
                 text = text,
-                timestamp = Instant.now()
+                timestamp = Clock.System.now(),
+                contextId = "" 
             )
         }
     }
@@ -127,9 +129,10 @@ class MockLLMIntegration : LLMIntegration {
 
         return template.map { text ->
             Question(
-                id = UUID.randomUUID().toString(),
+                id = randomUUID(),
                 text = text,
-                timestamp = Instant.now()
+                timestamp = Clock.System.now(),
+                contextId = "" 
             )
         }
     }

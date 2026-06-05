@@ -5,8 +5,9 @@ import com.pforhan.alphathinker.model.Answer
 import com.pforhan.alphathinker.model.ExchangeRound
 import com.pforhan.alphathinker.model.Question
 import com.pforhan.alphathinker.model.Project
-import java.time.Instant
-import java.util.UUID
+import com.pforhan.alphathinker.util.randomUUID
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 
 class ProjectRepository(
     private val storage: Storage,
@@ -21,11 +22,13 @@ class ProjectRepository(
     }
 
     suspend fun createProject(synopsis: String): Project {
-        val now = Instant.now()
-        val projectId = UUID.randomUUID().toString()
+        val now = Clock.System.now()
+        val projectId = randomUUID()
         val project = Project(
             id = projectId,
             synopsis = synopsis.trim(),
+            editableTitle = synopsis.take(30).trim() + "...",
+            status = "Draft",
             questions = emptyList(),
             exchangeRounds = emptyList(),
             createdAt = now,
@@ -33,21 +36,21 @@ class ProjectRepository(
         )
         val saved = storage.saveProject(project)
 
-        val contextId = UUID.randomUUID().toString()
+        val contextId = randomUUID()
         val questions = llm.generateInitialQuestions(saved.synopsis)
-            .map { it.copy(id = UUID.randomUUID().toString(), contextId = contextId) }
+            .map { it.copy(id = randomUUID(), contextId = contextId) }
         val round = ExchangeRound(
             round = 1,
             questions = questions,
             contextId = contextId,
-            createdAt = Instant.now(),
+            createdAt = Clock.System.now(),
             questionsCount = questions.size
         )
 
         val updated = saved.copy(
             questions = questions,
             exchangeRounds = listOf(round),
-            updatedAt = Instant.now()
+            updatedAt = Clock.System.now()
         )
         return storage.saveProject(updated)
     }
@@ -62,17 +65,15 @@ class ProjectRepository(
 
     suspend fun getUnansweredQuestions(project: Project): List<Question> {
         val lastActiveRound = project.exchangeRounds.filter { it.isActive }.lastOrNull()
-        if (lastActiveRound == null) {
-            return project.questions
-        }
-        val answeredQuestionIds = lastActiveRound.questions
-            .filter { question ->
-                project.questions.find { it.id == question.id }?.isBlank() == false
-            }
-            .map { it.id }
+            ?: return emptyList()
+
+        val answeredQuestionIds = lastActiveRound.answers
+            .filter { it.isAnswered }
+            .map { it.questionId }
             .toSet()
+
         return lastActiveRound.questions.filterNot { question ->
-            question.text.isBlank() || question.id in answeredQuestionIds || question.isArchived
+            question.id in answeredQuestionIds || question.isArchived
         }
     }
 
@@ -85,14 +86,22 @@ class ProjectRepository(
         autoArchive: Boolean = false
     ): Project? {
         val project = storage.getProject(projectId) ?: return null
+        val now = Clock.System.now()
         val updatedRounds = project.exchangeRounds.map { round ->
             if (round.questions.any { it.id == questionId }) {
+                val existingAnswer = round.answers.find { it.questionId == questionId }
+                val newAnswer = if (existingAnswer == null) {
+                    Answer(questionId, text, now)
+                } else {
+                    existingAnswer.copy(text = text, modifiedAt = now)
+                }
+                
                 round.copy(
+                    answers = round.answers.filterNot { it.questionId == questionId } + newAnswer,
                     questions = round.questions.map { q ->
                         if (q.id == questionId) {
                             q.copy(
-                                text = text,
-                                archivedAt = if (autoArchive) Instant.now() else q.archivedAt
+                                archivedAt = if (autoArchive) now else q.archivedAt
                             )
                         } else {
                             q
@@ -108,16 +117,16 @@ class ProjectRepository(
 
         val updatedProject = when {
             answered && updatedRounds.filter { it.isActive }.isNotEmpty() -> {
-                val contextId = UUID.randomUUID().toString()
+                val contextId = randomUUID()
                 val newQs = llm.generateFollowUpQuestions(
                     project.synopsis,
                     updatedRounds.maxOf { it.round }
-                ).map { it.copy(id = UUID.randomUUID().toString(), contextId = contextId) }
+                ).map { it.copy(id = randomUUID(), contextId = contextId) }
                 val newRound = ExchangeRound(
                     round = updatedRounds.maxOf { it.round } + 1,
                     questions = newQs,
                     contextId = contextId,
-                    createdAt = Instant.now(),
+                    createdAt = Clock.System.now(),
                     questionsCount = newQs.size
                 )
 
@@ -127,21 +136,18 @@ class ProjectRepository(
                 project.copy(
                     questions = project.questions + newQs,
                     exchangeRounds = previousRounds,
-                    updatedAt = Instant.now()
+                    updatedAt = Clock.System.now()
                 )
             }
             else -> {
                 project.copy(
                     exchangeRounds = updatedRounds,
-                    updatedAt = Instant.now()
+                    updatedAt = Clock.System.now()
                 )
             }
         }
 
-        if (project.id != updatedProject.id) {
-            return storage.saveProject(updatedProject)
-        }
-        return updatedProject
+        return storage.saveProject(updatedProject)
     }
 
     private fun allQuestionsAnswered(project: Project, rounds: List<ExchangeRound>): Boolean {
@@ -175,15 +181,15 @@ class ProjectRepository(
             val answersMap = round.answers.associate { it.questionId to it }
 
             round.questions.forEach { question ->
-                sb.appendLine("### Q: $question.text")
+                sb.appendLine("### Q: ${question.text}")
                 val answer = answersMap[question.id]
                 if (answer != null && answer.isAnswered) {
                     sb.appendLine()
                     sb.appendLine("| **Answer:** | ${answer.text} |")
                     sb.appendLine("|-------------|--------")
-                    sb.appendLine("| **Answered:** | $answer.answeredAt |")
+                    sb.appendLine("| **Answered:** | ${answer.answeredAt} |")
                     if (answer.modifiedAt != null) {
-                        sb.appendLine("| **Modified:** | $answer.modifiedAt |")
+                        sb.appendLine("| **Modified:** | ${answer.modifiedAt} |")
                     }
                 } else {
                     sb.appendLine()

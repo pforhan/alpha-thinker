@@ -10,5 +10,5 @@ interface LLMIntegration {
     @Throws(AnalysisFailure::class)
     suspend fun generateFollowUpQuestions(synopsis: String, previousRound: Int): List<Question>
 
-    class AnalysisFailure(val message: String) : Exception(message)
+    class AnalysisFailure(override val message: String) : Exception(message)
 }

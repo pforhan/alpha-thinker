@@ -7,7 +7,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(26)
+    jvmToolchain(21)
     androidTarget {
         compilations.all {
             compileTaskProvider {
@@ -18,22 +18,14 @@ kotlin {
         }
     }
 
-    jvm("desktop")
-
-    listOf(
-        iosSimulatorArm64(),
-        iosArm64(),
-        iosX64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "shared"
-            isStatic = true
-        }
-    }
-
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.datetime)
+            implementation(libs.room.runtime)
+            implementation(libs.room.ktx)
+            implementation(libs.sqlite.bundled)
+            implementation(libs.composeMultiplatform.runtime)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -41,10 +33,6 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.appcompat)
-        }
-        val desktopMain by getting {
-            dependencies {
-            }
         }
     }
 }
@@ -58,5 +46,17 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url = uri("https://storage.googleapis.com/download.flutter.io")
+        }
+    }
+
+    dependencies {
+        compileOnly(libs.flutter.embedding)
     }
 }
