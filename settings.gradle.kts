@@ -15,8 +15,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "alphathinker"
-include(":androidApp")
-project(":androidApp").projectDir = file("androidApp")
 
 include(":shared")
 project(":shared").projectDir = file("shared")

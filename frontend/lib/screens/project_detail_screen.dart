@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../pigeon.dart';
+import '../injection.dart';
+import '../thinker_api.dart';
+import '../services/project_service.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final ProjectDto project;
@@ -10,7 +12,7 @@ class ProjectDetailScreen extends StatefulWidget {
 }
 
 class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
-  final ProjectApi _api = ProjectApi();
+  final ProjectService _service = getIt<ProjectService>();
   List<QuestionDto>? _questions;
   bool _loading = true;
 
@@ -23,15 +25,20 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   Future<void> _loadQuestions() async {
     setState(() => _loading = true);
     try {
-      final questions = await _api.getUnansweredQuestions(widget.project.id);
+      final questions = await _service.getUnansweredQuestions(widget.project.id);
       setState(() {
-        _questions = questions.cast<QuestionDto>();
+        _questions = questions;
         _loading = false;
       });
     } catch (e) {
+      debugPrint('Error loading questions: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading questions: $e')),
+          SnackBar(
+            content: Text('Error loading questions: $e'),
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
+          ),
         );
       }
       setState(() => _loading = false);
@@ -66,12 +73,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
     if (result == true && answerController.text.isNotEmpty) {
       try {
-        await _api.updateAnswer(widget.project.id, question.id, answerController.text, true);
+        await _service.updateAnswer(widget.project.id, question.id, answerController.text, true);
         await _loadQuestions();
       } catch (e) {
+        debugPrint('Error updating answer: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error updating answer: $e')),
+            SnackBar(
+              content: Text('Error updating answer: $e'),
+              duration: const Duration(seconds: 10),
+              action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
+            ),
           );
         }
       }

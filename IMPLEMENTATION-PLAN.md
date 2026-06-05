@@ -5,11 +5,13 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 1: Foundation & Infrastructure
 - [x] Set up Flutter project structure
 - [x] Implement KMP core logic layer
-- [x] Configure Pigeon for Flutter/KMP communication
+- [x] Configure Pigeon for Flutter/KMP communication (Aligned to `ThinkerApi`)
 - [x] Implement Room KMP persistence layer (Entities/DAOs done, build stabilized)
-- [x] Implement a simple script to transform Room/Pigeon models (Manual mappers implemented)
+- [x] Implement a simple script to transform Room/Pigeon models (Manual mappers implemented in `RoomStorage`)
 - [x] Implement Project, Question, and Answer entities in the database
 - [x] **Project Scaffolding:** Initialize Gradle-based multi-module project (KMP + Flutter).
+- [x] **Web Support:** Implement Dart-side `ProjectService` with `InMemory` fallback for Web.
+- [x] **Architectural Refinement:** Refactored naming to hide implementation details (Pigeon) and use domain-driven names (`ThinkerApi`, `ThinkerService`).
 
 ## Phase 2: Core User Experience (Lite Version)
 - [x] Implement Project creation and listing views

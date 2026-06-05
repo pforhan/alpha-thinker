@@ -13,7 +13,7 @@ import io.flutter.plugin.common.StandardMethodCodec
 import io.flutter.plugin.common.StandardMessageCodec
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
-private object PigeonPigeonUtils {
+private object ThinkerApiPigeonUtils {
 
   fun wrapResult(result: Any?): List<Any?> {
     return listOf(result)
@@ -231,17 +231,17 @@ data class ProjectDto (
       return true
     }
     val other = other as ProjectDto
-    return PigeonPigeonUtils.deepEquals(this.id, other.id) && PigeonPigeonUtils.deepEquals(this.synopsis, other.synopsis) && PigeonPigeonUtils.deepEquals(this.editableTitle, other.editableTitle) && PigeonPigeonUtils.deepEquals(this.createdAt, other.createdAt) && PigeonPigeonUtils.deepEquals(this.updatedAt, other.updatedAt) && PigeonPigeonUtils.deepEquals(this.status, other.status)
+    return ThinkerApiPigeonUtils.deepEquals(this.id, other.id) && ThinkerApiPigeonUtils.deepEquals(this.synopsis, other.synopsis) && ThinkerApiPigeonUtils.deepEquals(this.editableTitle, other.editableTitle) && ThinkerApiPigeonUtils.deepEquals(this.createdAt, other.createdAt) && ThinkerApiPigeonUtils.deepEquals(this.updatedAt, other.updatedAt) && ThinkerApiPigeonUtils.deepEquals(this.status, other.status)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.id)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.synopsis)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.editableTitle)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.createdAt)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.updatedAt)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.status)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.id)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.synopsis)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.editableTitle)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.createdAt)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.updatedAt)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.status)
     return result
   }
 }
@@ -282,16 +282,16 @@ data class QuestionDto (
       return true
     }
     val other = other as QuestionDto
-    return PigeonPigeonUtils.deepEquals(this.id, other.id) && PigeonPigeonUtils.deepEquals(this.text, other.text) && PigeonPigeonUtils.deepEquals(this.timestamp, other.timestamp) && PigeonPigeonUtils.deepEquals(this.contextId, other.contextId) && PigeonPigeonUtils.deepEquals(this.archivedAt, other.archivedAt)
+    return ThinkerApiPigeonUtils.deepEquals(this.id, other.id) && ThinkerApiPigeonUtils.deepEquals(this.text, other.text) && ThinkerApiPigeonUtils.deepEquals(this.timestamp, other.timestamp) && ThinkerApiPigeonUtils.deepEquals(this.contextId, other.contextId) && ThinkerApiPigeonUtils.deepEquals(this.archivedAt, other.archivedAt)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.id)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.text)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.timestamp)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.contextId)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.archivedAt)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.id)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.text)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.timestamp)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.contextId)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.archivedAt)
     return result
   }
 }
@@ -329,19 +329,19 @@ data class AnswerDto (
       return true
     }
     val other = other as AnswerDto
-    return PigeonPigeonUtils.deepEquals(this.questionId, other.questionId) && PigeonPigeonUtils.deepEquals(this.text, other.text) && PigeonPigeonUtils.deepEquals(this.answeredAt, other.answeredAt) && PigeonPigeonUtils.deepEquals(this.modifiedAt, other.modifiedAt)
+    return ThinkerApiPigeonUtils.deepEquals(this.questionId, other.questionId) && ThinkerApiPigeonUtils.deepEquals(this.text, other.text) && ThinkerApiPigeonUtils.deepEquals(this.answeredAt, other.answeredAt) && ThinkerApiPigeonUtils.deepEquals(this.modifiedAt, other.modifiedAt)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.questionId)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.text)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.answeredAt)
-    result = 31 * result + PigeonPigeonUtils.deepHash(this.modifiedAt)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.questionId)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.text)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.answeredAt)
+    result = 31 * result + ThinkerApiPigeonUtils.deepHash(this.modifiedAt)
     return result
   }
 }
-private open class PigeonPigeonCodec : StandardMessageCodec() {
+private open class ThinkerApiPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
@@ -383,7 +383,7 @@ private open class PigeonPigeonCodec : StandardMessageCodec() {
 
 
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
-interface ProjectApi {
+interface ThinkerApi {
   fun createProject(synopsis: String, callback: (Result<ProjectDto>) -> Unit)
   fun getAllProjects(callback: (Result<List<ProjectDto>>) -> Unit)
   fun getProject(id: String, callback: (Result<ProjectDto>) -> Unit)
@@ -392,16 +392,16 @@ interface ProjectApi {
   fun updateAnswer(projectId: String, questionId: String, text: String, autoArchive: Boolean, callback: (Result<Unit>) -> Unit)
 
   companion object {
-    /** The codec used by ProjectApi. */
+    /** The codec used by ThinkerApi. */
     val codec: MessageCodec<Any?> by lazy {
-      PigeonPigeonCodec()
+      ThinkerApiPigeonCodec()
     }
-    /** Sets up an instance of `ProjectApi` to handle messages through the `binaryMessenger`. */
+    /** Sets up an instance of `ThinkerApi` to handle messages through the `binaryMessenger`. */
     @JvmOverloads
-    fun setUp(binaryMessenger: BinaryMessenger, api: ProjectApi?, messageChannelSuffix: String = "") {
+    fun setUp(binaryMessenger: BinaryMessenger, api: ThinkerApi?, messageChannelSuffix: String = "") {
       val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ProjectApi.createProject$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ThinkerApi.createProject$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
@@ -409,10 +409,10 @@ interface ProjectApi {
             api.createProject(synopsisArg) { result: Result<ProjectDto> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(PigeonPigeonUtils.wrapError(error))
+                reply.reply(ThinkerApiPigeonUtils.wrapError(error))
               } else {
                 val data = result.getOrNull()
-                reply.reply(PigeonPigeonUtils.wrapResult(data))
+                reply.reply(ThinkerApiPigeonUtils.wrapResult(data))
               }
             }
           }
@@ -421,16 +421,16 @@ interface ProjectApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ProjectApi.getAllProjects$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ThinkerApi.getAllProjects$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
             api.getAllProjects{ result: Result<List<ProjectDto>> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(PigeonPigeonUtils.wrapError(error))
+                reply.reply(ThinkerApiPigeonUtils.wrapError(error))
               } else {
                 val data = result.getOrNull()
-                reply.reply(PigeonPigeonUtils.wrapResult(data))
+                reply.reply(ThinkerApiPigeonUtils.wrapResult(data))
               }
             }
           }
@@ -439,7 +439,7 @@ interface ProjectApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ProjectApi.getProject$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ThinkerApi.getProject$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
@@ -447,10 +447,10 @@ interface ProjectApi {
             api.getProject(idArg) { result: Result<ProjectDto> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(PigeonPigeonUtils.wrapError(error))
+                reply.reply(ThinkerApiPigeonUtils.wrapError(error))
               } else {
                 val data = result.getOrNull()
-                reply.reply(PigeonPigeonUtils.wrapResult(data))
+                reply.reply(ThinkerApiPigeonUtils.wrapResult(data))
               }
             }
           }
@@ -459,7 +459,7 @@ interface ProjectApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ProjectApi.getUnansweredQuestions$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ThinkerApi.getUnansweredQuestions$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
@@ -467,10 +467,10 @@ interface ProjectApi {
             api.getUnansweredQuestions(projectIdArg) { result: Result<List<QuestionDto>> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(PigeonPigeonUtils.wrapError(error))
+                reply.reply(ThinkerApiPigeonUtils.wrapError(error))
               } else {
                 val data = result.getOrNull()
-                reply.reply(PigeonPigeonUtils.wrapResult(data))
+                reply.reply(ThinkerApiPigeonUtils.wrapResult(data))
               }
             }
           }
@@ -479,7 +479,7 @@ interface ProjectApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ProjectApi.deleteProject$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ThinkerApi.deleteProject$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
@@ -487,9 +487,9 @@ interface ProjectApi {
             api.deleteProject(idArg) { result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(PigeonPigeonUtils.wrapError(error))
+                reply.reply(ThinkerApiPigeonUtils.wrapError(error))
               } else {
-                reply.reply(PigeonPigeonUtils.wrapResult(null))
+                reply.reply(ThinkerApiPigeonUtils.wrapResult(null))
               }
             }
           }
@@ -498,7 +498,7 @@ interface ProjectApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ProjectApi.updateAnswer$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.frontend.ThinkerApi.updateAnswer$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
@@ -509,9 +509,9 @@ interface ProjectApi {
             api.updateAnswer(projectIdArg, questionIdArg, textArg, autoArchiveArg) { result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
-                reply.reply(PigeonPigeonUtils.wrapError(error))
+                reply.reply(ThinkerApiPigeonUtils.wrapError(error))
               } else {
-                reply.reply(PigeonPigeonUtils.wrapResult(null))
+                reply.reply(ThinkerApiPigeonUtils.wrapResult(null))
               }
             }
           }

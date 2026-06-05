@@ -49,7 +49,7 @@ class AnswerDto {
 }
 
 @HostApi()
-abstract class ProjectApi {
+abstract class ThinkerApi {
   @async
   ProjectDto createProject(String synopsis);
   @async

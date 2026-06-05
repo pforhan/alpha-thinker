@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../pigeon.dart';
+import '../injection.dart';
+import '../thinker_api.dart';
+import '../services/project_service.dart';
 import 'project_detail_screen.dart';
 
 class ProjectListScreen extends StatefulWidget {
@@ -10,7 +12,7 @@ class ProjectListScreen extends StatefulWidget {
 }
 
 class _ProjectListScreenState extends State<ProjectListScreen> {
-  final ProjectApi _api = ProjectApi();
+  final ProjectService _service = getIt<ProjectService>();
   List<ProjectDto>? _projects;
   bool _loading = true;
 
@@ -23,15 +25,20 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   Future<void> _refreshProjects() async {
     setState(() => _loading = true);
     try {
-      final projects = await _api.getAllProjects();
+      final projects = await _service.getAllProjects();
       setState(() {
-        _projects = projects.cast<ProjectDto>();
+        _projects = projects;
         _loading = false;
       });
     } catch (e) {
+      debugPrint('Error loading projects: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading projects: $e')),
+          SnackBar(
+            content: Text('Error loading projects: $e'),
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
+          ),
         );
       }
       setState(() => _loading = false);
@@ -66,7 +73,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
 
     if (result == true && synopsisController.text.isNotEmpty) {
       try {
-        final newProject = await _api.createProject(synopsisController.text);
+        final newProject = await _service.createProject(synopsisController.text);
         await _refreshProjects();
         if (mounted) {
           Navigator.push(
@@ -77,9 +84,14 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
           ).then((_) => _refreshProjects());
         }
       } catch (e) {
+        debugPrint('Error creating project: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error creating project: $e')),
+            SnackBar(
+              content: Text('Error creating project: $e'),
+              duration: const Duration(seconds: 10),
+              action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
+            ),
           );
         }
       }
@@ -143,7 +155,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                           ),
                         );
                         if (confirm == true) {
-                          await _api.deleteProject(project.id);
+                          await _service.deleteProject(project.id);
                           await _refreshProjects();
                         }
                       },

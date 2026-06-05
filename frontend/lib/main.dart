@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'injection.dart';
 import 'screens/project_list_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  setupDependencyInjection();
   runApp(const AlphaThinkerApp());
 }
 

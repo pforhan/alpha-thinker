@@ -314,11 +314,11 @@ class _PigeonCodec extends StandardMessageCodec {
   }
 }
 
-class ProjectApi {
-  /// Constructor for [ProjectApi].  The [binaryMessenger] named argument is
+class ThinkerApi {
+  /// Constructor for [ThinkerApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  ProjectApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  ThinkerApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
         pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
@@ -328,7 +328,7 @@ class ProjectApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<ProjectDto> createProject(String synopsis) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ProjectApi.createProject$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ThinkerApi.createProject$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -347,7 +347,7 @@ class ProjectApi {
   }
 
   Future<List<ProjectDto>> getAllProjects() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ProjectApi.getAllProjects$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ThinkerApi.getAllProjects$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -366,7 +366,7 @@ class ProjectApi {
   }
 
   Future<ProjectDto> getProject(String id) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ProjectApi.getProject$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ThinkerApi.getProject$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -385,7 +385,7 @@ class ProjectApi {
   }
 
   Future<List<QuestionDto>> getUnansweredQuestions(String projectId) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ProjectApi.getUnansweredQuestions$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ThinkerApi.getUnansweredQuestions$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -404,7 +404,7 @@ class ProjectApi {
   }
 
   Future<void> deleteProject(String id) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ProjectApi.deleteProject$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ThinkerApi.deleteProject$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -422,7 +422,7 @@ class ProjectApi {
   }
 
   Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ProjectApi.updateAnswer$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName = 'dev.flutter.pigeon.frontend.ThinkerApi.updateAnswer$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,

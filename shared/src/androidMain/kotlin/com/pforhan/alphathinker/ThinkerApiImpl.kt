@@ -7,10 +7,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class ProjectApiImpl(
+class ThinkerApiImpl(
     private val repository: ProjectRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
-) : ProjectApi {
+) : ThinkerApi {
 
     override fun createProject(synopsis: String, callback: (Result<ProjectDto>) -> Unit) {
         scope.launch {
