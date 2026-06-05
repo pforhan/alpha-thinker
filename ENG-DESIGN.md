@@ -9,17 +9,17 @@ This document outlines the technical investigations and design decisions require
 
 ### Key Decisions
 - **Layered Architecture:** The UI layer (Flutter) remains "logic-free," acting as a presentation layer that observes the KMP engine. Complex business logic and data management reside within the KMP layer.
-- **Inference Engine:** We will utilize **Google's LiteRT-LM and MediaPipe** for on-device LLM execution (Alpha Thinker Edge), following the pattern established in projects like `OfflineAI-KMP`.
+- **Inference Engine:** We will utilize **Google's LiteRT-LM and MediaPipe** for on-device LLM execution (Alpha Thinker Edge), specifically leveraging `litertlm-kmp`.
 - **Resilience & Fallback:** If the LLM inference fails (e.g., due to resource constraints or malformed output), the app will transparently fall back to the **Alpha Thinker Lite** implementation using the hardcoded seed questions.
 - **State Management:** Flutter best practices will be followed for UI state management.
 - **Unified UX:** The visual styling and user interface will remain consistent across both the Lite and Edge editions.
 - **Data Persistence:** For the development phase, complex schema migrations will be ignored.
 
-
 ## Target Architecture (v1.0)
 This iteration proposes a clear separation of concerns:
 1. **Frontend UI:** Flutter/Dart for a single, unified, and cross-platform user experience.
 2. **Core Logic/Engine:** Kotlin Multiplatform (KMP) for handling core domain logic, data persistence, and heavy computational lifting.
+3. **LLM Inference Layer:** Local edge-LLM execution powered by LiteRT-LM via [litertlm-kmp](https://github.com/sagar-develop/litertlm-kmp), enabling offline-first autonomous question generation and synthesis.
 
 This model allows the shared KMP layer to be the 'source of truth' for the application's business logic, decoupling it from UI platform specifics.
 
@@ -54,7 +54,7 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     *   `answerId` (Unique ID)
     *   `questionId` (Foreign Key: Links to the parent Question.)
     *   `responseText` (String: The user's written answer.)
-    *   `answeredAt` (Timestamp: When the answer was filled. Any older answers with the same quetionId are older revisions)
+    *   `answeredAt` (Timestamp: When the answer was filled. All committed versions are stored; the most recent is the active answer. UI shall allow viewing/restoring previous versions by making a new version.)
 
 4. **LLMInteraction:**
     *   `llmInteractionId` (Unique ID)
@@ -62,9 +62,10 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     *   `promptUsed` (String: The full input prompt sent to the LLM.)
     *   `generationPayload` (JSON/Text: The LLM's raw output or a synthesized structured prompt.)
     *   `suggestedQuestions` (JSON/Text: Any structured list of new questions derived by the LLM.)
+    *   `durationMs` (Long: Time taken for the LLM to generate the response.)
+    *   `timestamp` (Timestamp: When the interaction occurred.)
 
 ### TODO: LLM Inference Strategy
-- [ ] Research "Edge LLM" execution models for mobile/desktop.
 - [ ] Define fallback behavior for low-resource devices.
 - [ ] Benchmark initial prompt latency vs. iterative follow-up performance.
 
