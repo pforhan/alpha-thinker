@@ -14,7 +14,7 @@ Both Editions share the same general UI, but differ in source of question materi
 
 ### 2.2 Alpha Thinker Lite
 - **Feature Set**: Manual planning workspace.
-- **Intelligence**: Uses a robust set of 20 hardcoded "Seed Questions" to kickstart the planning process.
+- **Intelligence**: Uses a robust set of 20 hardcoded "Seed Questions" to kickstart the planning process, which can be extended by the user via a text area (one question per line).
 - **User-Powered UI**: The user is responsible for creating their own follow-up questions or modifying the plan without automated synthesis.
 
 ## 3. Core User Flow
@@ -42,7 +42,7 @@ Both Editions share the same general UI, but differ in source of question materi
 - **Answer Management**: Support for reading, answering, and editing answers.
 - **Question Archiving**: Users can manually deactivate or archive questions.
 - **Immediate Archiving**: Option to archive questions immediately upon being answered.
-- **Auto-Archive (Edge Only)**: Provide a user option to allow the app to archive questions automatically (none / all / ask LLM) when the synopsis or preceding questions change.
+- **Auto-Archive (Edge Only)**: Provide a user app-wide setting to determine behavior when the synopsis or preceding questions change: a) do nothing, b) clear all prior questions and answers, or c) ask the LLM if each question is still relevant.
 - **Automatic Generation (Edge Only)**: Automatically trigger the generation of more questions as needed.
 
 ### 4.3 LLM Integration (Alpha Thinker Edge Only)
@@ -72,7 +72,10 @@ The Lite version includes these 20 generic questions to guide the user:
 19. How will you promote or distribute the final result?
 20. What is the very first step you need to take?
 
-## 5. User Interface Requirements
+### 5.4 System / Debug Workspace
+- **LLM Interaction Log**: A specialized view showing all historical LLM interactions, including the exact prompt sent, the response received, and the timing/latency for each.
+- **Debug LLM Console (Debug builds only)**: An interactive interface allowing developers to manually initiate LLM sessions, test prompts, and verify model behavior in real-time.
+- **Task Manager**: Visibility into long-running background tasks (like a cohesive document rewrite) with status and completion indicators.
 
 ### 5.1 Projects List
 - Display summary of all projects, including synopsis.
@@ -84,7 +87,8 @@ The Lite version includes these 20 generic questions to guide the user:
 
 ### 5.3 Project Detail (Planning Workspace)
 - Default view shows synopsis and a screenful of unanswered questions.
-- **Interactive Question Cards**: Each card includes the question text, timestamp, and an editable answer area with inline revision support.
+- **Interactive Question Cards**: Each card includes the question text, timestamp, and an editable answer area.
+- **Answer Revision UI**: Provide a list of prior versions of an answer with date/time stamps, allowing the user to view or restore previous versions.
 - Ability to view unanswered questions, archived questions, or both.
 - Visual indicators for completed/answered questions.
 - Picker for "Auto-Archive" behavior (Edge Only).
@@ -122,3 +126,8 @@ The Lite version includes these 20 generic questions to guide the user:
 - **Offline First**: The app should rely on edge-LLMs or local mocks to ensure rapid iteration and privacy.
 - **Cross-Platform**: The application should support multiple platforms (e.g., Mobile and Desktop) with shared business logic.
 - **Persistence**: Durable local storage of projects and their history.
+
+## 8. Open Questions & Planning TODOs
+*(None currently - all moved to IMPLEMENTATION-PLAN.md or resolved)*
+
+
