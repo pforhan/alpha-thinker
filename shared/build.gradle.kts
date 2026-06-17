@@ -7,7 +7,6 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(21)
     androidTarget {
         compilations.all {
             compileTaskProvider {
@@ -36,7 +35,6 @@ kotlin {
         }
     }
 }
-
 android {
     namespace = "com.pforhan.alphathinker.shared"
     compileSdk = libs.versions.compileSdk.get().toInt()

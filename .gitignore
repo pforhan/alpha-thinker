@@ -104,3 +104,7 @@ x64/
 x86/
 *.[Cc]ache
 !*.[Cc]ache/
+
+# Pigeon generated bindings
+frontend/frontend/lib/thinker_api.dart
+frontend/shared/src/androidMain/kotlin/com/pforhan/alphathinker/ThinkerApi.kt

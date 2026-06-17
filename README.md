@@ -15,28 +15,20 @@ Alpha Thinker is available in two versions:
 
 ### Setup Instructions
 
-1.  **Gradle Wrapper**:
-    The project uses a single Gradle wrapper located in the root directory. Use `./gradlew` for all Gradle-related tasks (building the `shared` module, etc.).
+To get the application running, simply execute the following command from the root directory:
 
-2.  **Generate Pigeon Bindings**:
-    Type-safe communication between Flutter and the KMP core is handled by Pigeon. Generate the bindings using:
-    ```bash
-    cd frontend
-    flutter pub get
-    dart run pigeon --input pigeons/messages.dart --dart_out lib/pigeon.dart --kotlin_out ../shared/src/androidMain/kotlin/com/pforhan/alphathinker/Pigeon.kt --kotlin_package "com.pforhan.alphathinker"
-    ```
+```bash
+./gradlew run
+```
 
-3.  **Build Shared Module**:
-    Build the KMP shared module:
-    ```bash
-    ./gradlew :shared:assemble
-    ```
+This command automatically handles the generation of Pigeon bindings and builds the KMP shared module before launching the app.
 
-4.  **Run Flutter App**:
-    ```bash
-    cd frontend
-    flutter run
-    ```
+### Build Details (Optional)
+
+For developers who need more granular control, the following tasks are available:
+- `./gradlew generatePigeon`: Generates type-safe communication bindings between Flutter and the KMP core.
+- `./gradlew :shared:assemble`: Builds the KMP shared module.
+- `./gradlew run`: Runs the full application.
 
 ### Configuration Notes
 
