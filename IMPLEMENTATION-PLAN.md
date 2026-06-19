@@ -17,6 +17,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] Implement Project creation and listing views
 - [x] Implement the Question/Answer workspace
 - [ ] Implement "Answered Questions" and "Archived Questions" views/filters
+- [ ] Present questions to be answered in a random order.
 - [ ] Implement dynamic question rotation (unanswered cards replace answered cards)
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement question archiving functionality (manual deactivation)
@@ -46,7 +47,15 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Develop custom KSP processor for Room/Pigeon synchronization (Deferred)
 - [ ] **State Management:** Implement the BLoC/Riverpod architecture to observe KMP updates.
 
+
+
 ## Phase 6: Testing & Verification
 - [ ] **KMP Unit Tests:** Verify business logic and fallback transitions.
 - [ ] **Integration Tests:** Verify the Pigeon bridge and end-to-end data flow.
 - [ ] **Performance Benchmarking:** Measure LLM inference latency and resource impact.
+
+## Phase 7: Backend Integration & Deployment (Low Priority)
+- [ ] Implement a real backend service to replace `InMemoryProjectService` for Web
+- [ ] Unify backend connection strategy for both native and web apps
+- [ ] Add Gradle/scripting support to launch backend and frontend concurrently
+
