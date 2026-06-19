@@ -16,9 +16,9 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 2: Core User Experience and Lite Version
 - [x] Implement Project creation and listing views
 - [x] Implement the Question/Answer workspace
+- [x] Present questions to be answered in a random order.
+- [x] Implement dynamic question rotation (unanswered cards replace answered cards)
 - [ ] Implement "Answered Questions" and "Archived Questions" views/filters
-- [ ] Present questions to be answered in a random order.
-- [ ] Implement dynamic question rotation (unanswered cards replace answered cards)
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement question archiving functionality (manual deactivation)
 - [x] **Domain Logic Implementation:** Implementing core project management and question-answering flows.

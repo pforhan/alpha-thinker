@@ -26,6 +26,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     setState(() => _loading = true);
     try {
       final questions = await _service.getUnansweredQuestions(widget.project.id);
+      questions.shuffle();
       setState(() {
         _questions = questions;
         _loading = false;
@@ -74,7 +75,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     if (result == true && answerController.text.isNotEmpty) {
       try {
         await _service.updateAnswer(widget.project.id, question.id, answerController.text, true);
-        await _loadQuestions();
+        
+        setState(() {
+          _questions?.removeWhere((q) => q.id == question.id);
+        });
+
+        if (_questions == null || _questions!.isEmpty) {
+          await _loadQuestions();
+        }
       } catch (e) {
         debugPrint('Error updating answer: $e');
         if (mounted) {
