@@ -30,13 +30,44 @@ tasks.register<Exec>("generatePigeon") {
     commandLine("bash", "-c", "flutter pub get && dart run pigeon --input pigeons/messages.dart --dart_out $pigeonDartOut --kotlin_out $pigeonKotlinOut --kotlin_package \"com.pforhan.alphathinker\" --package_name \"com.pforhan.alphathinker\"")
 }
 
-
-tasks.register<Exec>("run") {
+tasks.register<Exec>("runWeb") {
     group = "application"
-    description = "Runs the application"
+    description = "Runs the application on Web"
     workingDir = file("frontend")
     dependsOn(":shared:assemble", "generatePigeon")
-    commandLine("flutter", "run")
+    commandLine("flutter", "run", "-d", "chrome")
+}
+
+tasks.register<Exec>("runAndroid") {
+    group = "application"
+    description = "Runs the application on Android"
+    workingDir = file("frontend")
+    dependsOn(":shared:assemble", "generatePigeon")
+    commandLine("flutter", "run", "-d", "android")
+}
+
+tasks.register<Exec>("runIos") {
+    group = "application"
+    description = "Runs the application on iOS"
+    workingDir = file("frontend")
+    dependsOn(":shared:assemble", "generatePigeon")
+    commandLine("flutter", "run", "-d", "ios")
+}
+
+tasks.register<Exec>("runDesktop") {
+    group = "application"
+    description = "Runs the application on the current desktop platform"
+    workingDir = file("frontend")
+    dependsOn(":shared:assemble", "generatePigeon")
+    
+    val os = System.getProperty("os.name").lowercase()
+    val device = when {
+        os.contains("mac") -> "macos"
+        os.contains("win") -> "windows"
+        os.contains("nix") || os.contains("nux") -> "linux"
+        else -> "macos" 
+    }
+    commandLine("flutter", "run", "-d", device)
 }
 
 

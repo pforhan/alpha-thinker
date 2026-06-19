@@ -13,18 +13,23 @@ This document tracks the specific engineering tasks required to move from design
 - [x] **Web Support:** Implement Dart-side `ProjectService` with `InMemory` fallback for Web.
 - [x] **Architectural Refinement:** Refactored naming to hide implementation details (Pigeon) and use domain-driven names (`ThinkerApi`, `ThinkerService`).
 
-## Phase 2: Core User Experience (Lite Version)
+## Phase 2: Core User Experience and Lite Version
 - [x] Implement Project creation and listing views
 - [x] Implement the Question/Answer workspace
-- [ ] Implement seed question extension UI (text area)
+- [ ] Implement "Answered Questions" and "Archived Questions" views/filters
+- [ ] Implement dynamic question rotation (unanswered cards replace answered cards)
 - [ ] Implement answer revision history UI (list with timestamps)
+- [ ] Implement question archiving functionality (manual deactivation)
 - [x] **Domain Logic Implementation:** Implementing core project management and question-answering flows.
 - [ ] **Lite Implementation:** Implement the hardcoded 20 Seed Questions logic for fallback/Lite mode.
+- [ ] Implement global question pool management (create/edit questions usable across projects)
+- [ ] Integrate global pool with Lite mode (seed questions + global questions)
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Integrate LiteRT-LM for automated question generation
 - [ ] Implement "Auto-Archive" logic and app-wide settings
 - [ ] Implement background notification for long-running LLM tasks
+- [ ] Integrate global questions pool with Edge mode (LLM recommendations + global questions)
 - [ ] **LLM Interface:** Create the abstraction for the inference engine.
 - [ ] **Inference Implementation:** Integrate LiteRT-LM and MediaPipe for the Edge mode.
 - [ ] **Fallback Mechanism:** Implement the automatic switch from Edge to Lite upon inference failure.

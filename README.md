@@ -15,10 +15,13 @@ Alpha Thinker is available in two versions:
 
 ### Setup Instructions
 
-To get the application running, simply execute the following command from the root directory:
+To get the application running, simply execute one of the following commands from the root directory:
 
 ```bash
-./gradlew run
+./gradlew runWeb
+./gradlew runDesktop
+./gradlew runAndroid
+./gradlew runIos
 ```
 
 This command automatically handles the generation of Pigeon bindings and builds the KMP shared module before launching the app.

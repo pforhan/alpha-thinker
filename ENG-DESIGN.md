@@ -65,6 +65,12 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     *   `durationMs` (Long: Time taken for the LLM to generate the response.)
     *   `timestamp` (Timestamp: When the interaction occurred.)
 
+5. **GlobalQuestion:**
+   *   `globalQuestionId` (Unique ID)
+   *   `text` (String: The question text)
+   *   `category` (String, Optional: To help organize global questions)
+   *   `createdAt` (Timestamp)
+
 ### TODO: LLM Inference Strategy
 - [ ] Define fallback behavior for low-resource devices.
 - [ ] Benchmark initial prompt latency vs. iterative follow-up performance.

@@ -7,14 +7,17 @@ Alpha Thinker is a project planning application that transforms a vague project 
 
 Both Editions share the same general UI, but differ in source of question material and ability to generate content.
 
+### 2.0 Shared Features
+- **Custom Questions**: Users can extend the question pool by adding their own questions, specifying whether they are unique to the current project or added to a global pool for use in all projects.
+
 ### 2.1 Alpha Thinker Edge
 - **Feature Set**: Full iterative synthesis using a local edge-LLM.
-- **Intelligence**: Automatically generates tailored questions and suggested answers based on the specific project synopsis and history.
+- **Intelligence**: Automatically generates tailored questions and suggested answers based on the specific project synopsis and history. Includes any global questions added by the user.
 - **Automation**: LLM-driven question archiving and synopsis updates.
 
 ### 2.2 Alpha Thinker Lite
 - **Feature Set**: Manual planning workspace.
-- **Intelligence**: Uses a robust set of 20 hardcoded "Seed Questions" to kickstart the planning process, which can be extended by the user via a text area (one question per line).
+- **Intelligence**: Uses a robust set of 20 hardcoded "Seed Questions" to kickstart the planning process, along with any global questiosn added.
 - **User-Powered UI**: The user is responsible for creating their own follow-up questions or modifying the plan without automated synthesis.
 
 ## 3. Core User Flow
@@ -72,11 +75,6 @@ The Lite version includes these 20 generic questions to guide the user:
 19. How will you promote or distribute the final result?
 20. What is the very first step you need to take?
 
-### 5.4 System / Debug Workspace
-- **LLM Interaction Log**: A specialized view showing all historical LLM interactions, including the exact prompt sent, the response received, and the timing/latency for each.
-- **Debug LLM Console (Debug builds only)**: An interactive interface allowing developers to manually initiate LLM sessions, test prompts, and verify model behavior in real-time.
-- **Task Manager**: Visibility into long-running background tasks (like a cohesive document rewrite) with status and completion indicators.
-
 ### 5.1 Projects List
 - Display summary of all projects, including synopsis.
 - Show "unanswered" count for each project to indicate remaining work.
@@ -90,9 +88,20 @@ The Lite version includes these 20 generic questions to guide the user:
 - **Interactive Question Cards**: Each card includes the question text, timestamp, and an editable answer area.
 - **Answer Revision UI**: Provide a list of prior versions of an answer with date/time stamps, allowing the user to view or restore previous versions.
 - Ability to view unanswered questions, archived questions, or both.
+- Ability to ask a new question, optionally adding to global list.
 - Visual indicators for completed/answered questions.
 - Picker for "Auto-Archive" behavior (Edge Only).
 - Action to export the final project state.
+
+### 5.4 Global Question Management
+- **Global Question Repository**: A dedicated view to manage the pool of user-defined questions that can be applied to any project.
+- **Management Actions**: Users can add new questions to the global pool, edit existing ones, or delete them.
+- **Discovery**: When creating a new project or adding questions to an existing one, users can browse and select from the global pool.
+
+### 5.5 System / Debug Workspace
+- **LLM Interaction Log**: A specialized view showing all historical LLM interactions, including the exact prompt sent, the response received, and the timing/latency for each.
+- **Debug LLM Console (Debug builds only)**: An interactive interface allowing developers to manually initiate LLM sessions, test prompts, and verify model behavior in real-time.
+- **Task Manager**: Visibility into long-running background tasks (like a cohesive document rewrite) with status and completion indicators.
 
 ## 6. Export
 - Synthesize all project data into a Markdown document.
