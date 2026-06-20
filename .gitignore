@@ -107,4 +107,4 @@ x86/
 
 # Pigeon generated bindings
 frontend/frontend/lib/thinker_api.dart
-frontend/shared/src/androidMain/kotlin/com/pforhan/alphathinker/ThinkerApi.kt
+shared/src/androidMain/kotlin/com/pforhan/alphathinker/ThinkerApi.kt
