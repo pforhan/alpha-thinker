@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../injection.dart';
 import '../thinker_api.dart';
 import '../services/project_service.dart';
+import 'project_history_screen.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final ProjectDto project;
@@ -43,6 +44,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         );
       }
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _archiveQuestion(QuestionDto question) async {
+    try {
+      await _service.archiveQuestion(widget.project.id, question.id);
+      setState(() {
+        _questions?.removeWhere((q) => q.id == question.id);
+      });
+    } catch (e) {
+      debugPrint('Error archiving question: $e');
     }
   }
 
@@ -103,6 +115,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.project.editableTitle),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProjectHistoryScreen(project: widget.project),
+              ),
+            ),
+            child: const Text('History'),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,13 +154,18 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         itemCount: _questions!.length,
                         itemBuilder: (context, index) {
                           final question = _questions![index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: ListTile(
-                              title: Text(question.text),
-                              onTap: () => _answerQuestion(question),
-                            ),
-                          );
+                           return Card(
+                             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                             child: ListTile(
+                               title: Text(question.text),
+                               trailing: IconButton(
+                                 icon: const Icon(Icons.archive),
+                                 onPressed: () => _archiveQuestion(question),
+                               ),
+                               onTap: () => _answerQuestion(question),
+                             ),
+                           );
+
                         },
                       ),
           ),

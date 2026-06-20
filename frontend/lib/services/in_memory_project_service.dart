@@ -4,7 +4,6 @@ import 'project_service.dart';
 class InMemoryProjectService implements ProjectService {
   final List<ProjectDto> _projects = [];
   final Map<String, List<QuestionDto>> _questions = {};
-  final Map<String, List<AnswerDto>> _answers = {};
 
   @override
   Future<ProjectDto> createProject(String synopsis) async {
@@ -17,6 +16,7 @@ class InMemoryProjectService implements ProjectService {
       createdAt: now,
       updatedAt: now,
       status: 'Draft',
+      questions: [],
     );
     _projects.add(project);
 
@@ -27,12 +27,14 @@ class InMemoryProjectService implements ProjectService {
         text: 'What is the primary problem this project solves?',
         timestamp: now,
         contextId: 'initial',
+        answers: [],
       ),
       QuestionDto(
         id: 'q2',
         text: 'Who is the ideal user?',
         timestamp: now,
         contextId: 'initial',
+        answers: [],
       ),
     ];
 
@@ -52,47 +54,101 @@ class InMemoryProjectService implements ProjectService {
   @override
   Future<List<QuestionDto>> getUnansweredQuestions(String projectId) async {
     final questions = _questions[projectId] ?? [];
-    final answeredIds = (_answers[projectId] ?? []).map((a) => a.questionId).toSet();
-    return questions.where((q) => !answeredIds.contains(q.id) && q.archivedAt == null).toList();
+    return questions.where((q) => q.answers.isEmpty && q.archivedAt == null).toList();
   }
 
   @override
   Future<void> deleteProject(String id) async {
     _projects.removeWhere((p) => p.id == id);
     _questions.remove(id);
-    _answers.remove(id);
   }
 
   @override
   Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final answer = AnswerDto(
+    
+    final qs = _questions[projectId];
+    if (qs == null) return;
+
+    final qIndex = qs.indexWhere((q) => q.id == questionId);
+    if (qIndex == -1) return;
+
+    final question = qs[qIndex];
+    final answerIndex = question.answers.indexWhere((a) => a.questionId == questionId);
+    
+    final newAnswer = AnswerDto(
       questionId: questionId,
       text: text,
       answeredAt: now,
     );
 
-    if (!_answers.containsKey(projectId)) {
-      _answers[projectId] = [];
+    if (answerIndex != -1) {
+      question.answers[answerIndex] = newAnswer;
+    } else {
+      question.answers.add(newAnswer);
     }
-    _answers[projectId]!.add(answer);
 
     if (autoArchive) {
-      final qs = _questions[projectId];
-      if (qs != null) {
-        final index = qs.indexWhere((q) => q.id == questionId);
-        if (index != -1) {
-          qs[index] = QuestionDto(
-            id: qs[index].id,
-            text: qs[index].text,
-            timestamp: qs[index].timestamp,
-            contextId: qs[index].contextId,
-            archivedAt: now,
-          );
-        }
-      }
+      qs[qIndex] = QuestionDto(
+        id: question.id,
+        text: question.text,
+        timestamp: question.timestamp,
+        contextId: question.contextId,
+        archivedAt: now,
+        answers: question.answers,
+      );
     }
-    
+
+    final pIndex = _projects.indexWhere((p) => p.id == projectId);
+    if (pIndex != -1) {
+      _projects[pIndex].updatedAt = now;
+    }
+  }
+
+  @override
+  Future<void> archiveQuestion(String projectId, String questionId) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final qs = _questions[projectId];
+    if (qs == null) return;
+
+    final index = qs.indexWhere((q) => q.id == questionId);
+    if (index != -1) {
+      final q = qs[index];
+      qs[index] = QuestionDto(
+        id: q.id,
+        text: q.text,
+        timestamp: q.timestamp,
+        contextId: q.contextId,
+        archivedAt: now,
+        answers: q.answers,
+      );
+    }
+
+    final pIndex = _projects.indexWhere((p) => p.id == projectId);
+    if (pIndex != -1) {
+      _projects[pIndex].updatedAt = now;
+    }
+  }
+
+  @override
+  Future<void> unarchiveQuestion(String projectId, String questionId) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final qs = _questions[projectId];
+    if (qs == null) return;
+
+    final index = qs.indexWhere((q) => q.id == questionId);
+    if (index != -1) {
+      final q = qs[index];
+      qs[index] = QuestionDto(
+        id: q.id,
+        text: q.text,
+        timestamp: q.timestamp,
+        contextId: q.contextId,
+        archivedAt: null,
+        answers: q.answers,
+      );
+    }
+
     final pIndex = _projects.indexWhere((p) => p.id == projectId);
     if (pIndex != -1) {
       _projects[pIndex].updatedAt = now;

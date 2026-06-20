@@ -7,6 +7,7 @@ class ProjectDto {
   int createdAt;
   int updatedAt;
   String status;
+  List<QuestionDto> questions;
 
   ProjectDto({
     required this.id,
@@ -15,8 +16,10 @@ class ProjectDto {
     required this.createdAt,
     required this.updatedAt,
     required this.status,
+    required this.questions,
   });
 }
+
 
 class QuestionDto {
   String id;
@@ -24,6 +27,7 @@ class QuestionDto {
   int timestamp;
   String contextId;
   int? archivedAt;
+  List<AnswerDto> answers;
 
   QuestionDto({
     required this.id,
@@ -31,6 +35,7 @@ class QuestionDto {
     required this.timestamp,
     required this.contextId,
     this.archivedAt,
+    required this.answers,
   });
 }
 
@@ -62,4 +67,8 @@ abstract class ThinkerApi {
   void deleteProject(String id);
   @async
   void updateAnswer(String projectId, String questionId, String text, bool autoArchive);
+  @async
+  void archiveQuestion(String projectId, String questionId);
+  @async
+  void unarchiveQuestion(String projectId, String questionId);
 }

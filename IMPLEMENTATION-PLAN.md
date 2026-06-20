@@ -16,15 +16,21 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 2: Core User Experience and Lite Version
 - [x] Implement Project creation and listing views
 - [x] Implement the Question/Answer workspace
-- [x] Present questions to be answered in a random order.
-- [x] Implement dynamic question rotation (unanswered cards replace answered cards)
-- [ ] Implement "Answered Questions" and "Archived Questions" views/filters
+- [ ] Present questions to be answered in a random order.
+- [ ] Implement dynamic question rotation (unanswered cards replace answered cards)
+- [x] Implement question archiving functionality (manual deactivation)
+- [ ] Implement "Answered Questions" and "Archived Questions" views/filters. Just include a short blurb from the answer; allow opening for full details.
 - [ ] Implement answer revision history UI (list with timestamps)
-- [ ] Implement question archiving functionality (manual deactivation)
 - [x] **Domain Logic Implementation:** Implementing core project management and question-answering flows.
 - [ ] **Lite Implementation:** Implement the hardcoded 20 Seed Questions logic for fallback/Lite mode.
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
+
+## Phase 2.5: cleanup
+- [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
+- [ ] Change filenames with "pigeon" in them to something more appropriate
+- [ ] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker
+- [ ] reformat files to 2-space indent
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Integrate LiteRT-LM for automated question generation

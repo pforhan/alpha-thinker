@@ -92,6 +92,28 @@ class ThinkerApiImpl(
             }
         }
     }
+
+    override fun archiveQuestion(projectId: String, questionId: String, callback: (Result<Unit>) -> Unit) {
+        scope.launch {
+            try {
+                repository.archiveQuestion(projectId, questionId)
+                callback(Result.success(Unit))
+            } catch (e: Exception) {
+                callback(Result.failure(e))
+            }
+        }
+    }
+
+    override fun unarchiveQuestion(projectId: String, questionId: String, callback: (Result<Unit>) -> Unit) {
+        scope.launch {
+            try {
+                repository.unarchiveQuestion(projectId, questionId)
+                callback(Result.success(Unit))
+            } catch (e: Exception) {
+                callback(Result.failure(e))
+            }
+        }
+    }
 }
 
 fun Project.toDto(): ProjectDto = ProjectDto(
@@ -100,7 +122,8 @@ fun Project.toDto(): ProjectDto = ProjectDto(
     editableTitle = editableTitle,
     createdAt = createdAt.toEpochMilliseconds(),
     updatedAt = updatedAt.toEpochMilliseconds(),
-    status = status
+    status = status,
+    questions = questions.map { it.toDto() }
 )
 
 fun Question.toDto(): QuestionDto = QuestionDto(
@@ -108,5 +131,8 @@ fun Question.toDto(): QuestionDto = QuestionDto(
     text = text,
     timestamp = timestamp.toEpochMilliseconds(),
     contextId = contextId,
-    archivedAt = archivedAt?.toEpochMilliseconds()
+    archivedAt = archivedAt?.toEpochMilliseconds(),
+    answers = answers.map { 
+        AnswerDto(it.questionId, it.text, it.answeredAt.toEpochMilliseconds(), it.modifiedAt?.toEpochMilliseconds()) 
+    }
 )

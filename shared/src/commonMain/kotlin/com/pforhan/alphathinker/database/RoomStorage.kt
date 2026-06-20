@@ -3,7 +3,6 @@ package com.pforhan.alphathinker.database
 import com.pforhan.alphathinker.model.Project
 import com.pforhan.alphathinker.model.Question
 import com.pforhan.alphathinker.model.Answer
-import com.pforhan.alphathinker.model.ExchangeRound
 import com.pforhan.alphathinker.repository.ProjectRepository
 import kotlinx.datetime.Instant
 
@@ -32,8 +31,8 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
             )
         }
 
-        // Save answers (simplified for now, ideally linked to questions)
-        project.exchangeRounds.flatMap { it.answers }.forEach { a ->
+        // Save answers
+        project.questions.flatMap { it.answers }.forEach { a ->
             database.answerDao().upsertAnswer(
                 AnswerEntity(
                     questionId = a.questionId,
@@ -50,19 +49,7 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
     override suspend fun getProject(id: String): Project? {
         val entity = database.projectDao().getProjectById(id) ?: return null
         val questions = database.questionDao().getQuestionsForProject(id).map { qe ->
-            Question(
-                id = qe.id,
-                text = qe.text,
-                timestamp = Instant.fromEpochMilliseconds(qe.createdAt),
-                contextId = "", // Not stored in entity currently
-                archivedAt = qe.archivedAt?.let { Instant.fromEpochMilliseconds(it) }
-            )
-        }
-        
-        // This is a simplified reconstruction of exchangeRounds. 
-        // In a real app, we'd probably have an ExchangeRoundEntity.
-        val answers = questions.flatMap { q ->
-            database.answerDao().getAnswersForQuestion(q.id).map { ae ->
+            val qAnswers = database.answerDao().getAnswersForQuestion(qe.id).map { ae ->
                 Answer(
                     questionId = ae.questionId,
                     text = ae.text,
@@ -70,6 +57,14 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
                     modifiedAt = ae.modifiedAt?.let { Instant.fromEpochMilliseconds(it) }
                 )
             }
+            Question(
+                id = qe.id,
+                text = qe.text,
+                timestamp = Instant.fromEpochMilliseconds(qe.createdAt),
+                contextId = "", // Not stored in entity currently
+                archivedAt = qe.archivedAt?.let { Instant.fromEpochMilliseconds(it) },
+                answers = qAnswers
+            )
         }
 
         return Project(
@@ -78,16 +73,6 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
             editableTitle = entity.editableTitle,
             status = entity.status,
             questions = questions,
-            exchangeRounds = listOf( // Stub for now
-                ExchangeRound(
-                    round = 1,
-                    questions = questions,
-                    contextId = "",
-                    createdAt = Instant.fromEpochMilliseconds(entity.createdAt),
-                    answers = answers,
-                    questionsCount = questions.size
-                )
-            ),
             createdAt = Instant.fromEpochMilliseconds(entity.createdAt),
             updatedAt = Instant.fromEpochMilliseconds(entity.updatedAt)
         )
@@ -101,7 +86,6 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
                 editableTitle = entity.editableTitle,
                 status = entity.status,
                 questions = emptyList(), // Not loading all questions for list view
-                exchangeRounds = emptyList(),
                 createdAt = Instant.fromEpochMilliseconds(entity.createdAt),
                 updatedAt = Instant.fromEpochMilliseconds(entity.updatedAt)
             )

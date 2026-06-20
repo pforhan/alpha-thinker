@@ -2,9 +2,6 @@ package com.pforhan.alphathinker.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.pforhan.alphathinker.model.Project
-import com.pforhan.alphathinker.model.Question
-import com.pforhan.alphathinker.model.Answer
 
 @Entity(tableName = "projects")
 data class ProjectEntity(
