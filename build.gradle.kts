@@ -27,7 +27,7 @@ tasks.register<Exec>("generatePigeon") {
     description = "Generates Pigeon bindings for Flutter and KMP"
     workingDir = file("frontend")
     
-    commandLine("bash", "-c", "flutter pub get && dart run pigeon --input pigeons/messages.dart --dart_out $pigeonDartOut --kotlin_out ../$pigeonKotlinOut --kotlin_package \"com.pforhan.alphathinker\" --package_name \"com.pforhan.alphathinker\"")
+    commandLine("bash", "-c", "flutter pub get && dart run pigeon --input pigeons/messages.dart --dart_out ../$pigeonDartOut --kotlin_out ../$pigeonKotlinOut --kotlin_package \"com.pforhan.alphathinker\" --package_name \"com.pforhan.alphathinker\"")
 }
 
 tasks.register<Exec>("runWeb") {
