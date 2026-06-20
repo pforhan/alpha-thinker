@@ -26,7 +26,12 @@ class _ProjectHistoryScreenState extends State<ProjectHistoryScreen> {
   Future<void> _loadProjectData() async {
     setState(() => _loading = true);
     try {
+      debugPrint('Fetching project history for: ${widget.project.id}');
       final project = await _service.getProject(widget.project.id);
+      debugPrint('Project loaded. Questions count: ${project.questions.length}');
+      for (var q in project.questions) {
+        debugPrint('Question ${q.id}: text="${q.text}", archivedAt=${q.archivedAt}, answersCount=${q.answers.length}');
+      }
       
       setState(() {
         _allQuestions = project.questions;
@@ -76,8 +81,9 @@ class _ProjectHistoryScreenState extends State<ProjectHistoryScreen> {
             itemBuilder: (context, index) {
               final question = _allQuestions[index];
               final isArchived = question.archivedAt != null;
+              final hasAnswer = question.answers.isNotEmpty;
               
-              if (_filter == 'Answered' && isArchived) return const SizedBox.shrink();
+              if (_filter == 'Answered' && (isArchived || !hasAnswer)) return const SizedBox.shrink();
               if (_filter == 'Archived' && !isArchived) return const SizedBox.shrink();
 
               return Card(

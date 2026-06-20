@@ -86,7 +86,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
     if (result == true && answerController.text.isNotEmpty) {
       try {
-        await _service.updateAnswer(widget.project.id, question.id, answerController.text, true);
+        await _service.updateAnswer(widget.project.id, question.id, answerController.text, false);
         
         setState(() {
           _questions?.removeWhere((q) => q.id == question.id);

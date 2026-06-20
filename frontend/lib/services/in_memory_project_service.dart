@@ -48,7 +48,18 @@ class InMemoryProjectService implements ProjectService {
 
   @override
   Future<ProjectDto> getProject(String id) async {
-    return _projects.firstWhere((p) => p.id == id);
+    final project = _projects.firstWhere((p) => p.id == id);
+    final qs = _questions[id] ?? [];
+    
+    return ProjectDto(
+      id: project.id,
+      synopsis: project.synopsis,
+      editableTitle: project.editableTitle,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      status: project.status,
+      questions: List.from(qs),
+    );
   }
 
   @override
