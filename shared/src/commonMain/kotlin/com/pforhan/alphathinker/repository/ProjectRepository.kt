@@ -58,7 +58,7 @@ class ProjectRepository(
 
     suspend fun getUnansweredQuestions(project: Project): List<Question> {
         return project.questions.filterNot { question ->
-            question.answers.any { it.isAnswered } || question.isArchived
+                question.answers.any { it.isAnswered } || question.isIgnored
         }
     }
 
@@ -66,7 +66,7 @@ class ProjectRepository(
         projectId: String,
         questionId: String,
         text: String,
-        autoArchive: Boolean = false
+        autoIgnore: Boolean = false
     ): Project? {
         val project = storage.getProject(projectId) ?: return null
         val now = Clock.System.now()
@@ -83,7 +83,7 @@ class ProjectRepository(
                 val qAnswers = q.answers.filterNot { it.questionId == questionId } + newAnswer
                 q.copy(
                     answers = qAnswers,
-                    archivedAt = if (autoArchive) now else q.archivedAt
+                    ignoredAt = if (autoIgnore) now else q.ignoredAt
                 )
             } else {
                 q
@@ -114,18 +114,18 @@ class ProjectRepository(
     }
 
     private fun allQuestionsAnswered(project: Project, questions: List<Question>): Boolean {
-        val activeQuestions = questions.filterNot { it.isArchived }
+        val activeQuestions = questions.filterNot { it.isIgnored }
         return activeQuestions.all { it.answers.any { a -> a.isAnswered } }
     }
 
-    suspend fun archiveQuestion(
+    suspend fun ignoreQuestion(
         projectId: String,
         questionId: String
     ): Project? {
         val project = storage.getProject(projectId) ?: return null
         val now = Clock.System.now()
         val updatedQuestions = project.questions.map { q ->
-            if (q.id == questionId) q.copy(archivedAt = now) else q
+            if (q.id == questionId) q.copy(ignoredAt = now) else q
         }
 
         val updatedProject = project.copy(
@@ -135,14 +135,14 @@ class ProjectRepository(
         return storage.saveProject(updatedProject)
     }
 
-    suspend fun unarchiveQuestion(
+    suspend fun unignoreQuestion(
         projectId: String,
         questionId: String
     ): Project? {
         val project = storage.getProject(projectId) ?: return null
         val now = Clock.System.now()
         val updatedQuestions = project.questions.map { q ->
-            if (q.id == questionId) q.copy(archivedAt = null) else q
+            if (q.id == questionId) q.copy(ignoredAt = null) else q
         }
 
         val updatedProject = project.copy(

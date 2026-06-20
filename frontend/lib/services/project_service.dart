@@ -7,6 +7,6 @@ abstract class ProjectService {
   Future<List<QuestionDto>> getUnansweredQuestions(String projectId);
   Future<void> deleteProject(String id);
   Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive);
-  Future<void> archiveQuestion(String projectId, String questionId);
-  Future<void> unarchiveQuestion(String projectId, String questionId);
+  Future<void> ignoreQuestion(String projectId, String questionId);
+  Future<void> unignoreQuestion(String projectId, String questionId);
 }

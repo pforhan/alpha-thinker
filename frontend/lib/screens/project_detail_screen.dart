@@ -46,21 +46,21 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     }
   }
 
-  Future<void> _archiveQuestion(QuestionDto question) async {
+  Future<void> _ignoreQuestion(QuestionDto question) async {
     try {
-      await _service.archiveQuestion(widget.project.id, question.id);
+      await _service.ignoreQuestion(widget.project.id, question.id);
       _loadQuestions();
     } catch (e) {
-      debugPrint('Error archiving question: $e');
+      debugPrint('Error ignoring question: $e');
     }
   }
 
-  Future<void> _unarchiveQuestion(QuestionDto question) async {
+  Future<void> _unignoreQuestion(QuestionDto question) async {
     try {
-      await _service.unarchiveQuestion(widget.project.id, question.id);
+      await _service.unignoreQuestion(widget.project.id, question.id);
       _loadQuestions();
     } catch (e) {
-      debugPrint('Error unarchiving question: $e');
+      debugPrint('Error unignoring question: $e');
     }
   }
 
@@ -157,13 +157,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                           },
                         ),
                         const SizedBox(width: 8),
-                        ChoiceChip(
-                          label: const Text('Archived'),
-                          selected: _filter == 'Archived',
-                          onSelected: (selected) {
-                            setState(() => _filter = 'Archived');
-                          },
-                        ),
+                         ChoiceChip(
+                           label: const Text('Ignored'),
+                           selected: _filter == 'Ignored',
+                           onSelected: (selected) {
+                             setState(() => _filter = 'Ignored');
+                           },
+                         ),
+
                       ],
                     ),
                   ),
@@ -175,14 +176,15 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : () {
-                    final filteredQuestions = _questions?.where((q) {
-                      final isArchived = q.archivedAt != null;
-                      final hasAnswer = q.answers.isNotEmpty;
-                      if (_filter == 'Unanswered') return !hasAnswer && !isArchived;
-                      if (_filter == 'Answered') return hasAnswer && !isArchived;
-                      if (_filter == 'Archived') return isArchived;
-                      return true;
-                    }).toList();
+                     final filteredQuestions = _questions?.where((q) {
+                       final isIgnored = q.ignoredAt != null;
+                       final hasAnswer = q.answers.isNotEmpty;
+                       if (_filter == 'Unanswered') return !hasAnswer && !isIgnored;
+                       if (_filter == 'Answered') return hasAnswer && !isIgnored;
+                       if (_filter == 'Ignored') return isIgnored;
+                       return true;
+                     }).toList();
+
 
                     if (filteredQuestions == null || filteredQuestions.isEmpty) {
                       return Center(
@@ -198,9 +200,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                     return ListView.builder(
                       itemCount: filteredQuestions.length,
                       itemBuilder: (context, index) {
-                        final question = filteredQuestions[index];
-                        final isArchived = question.archivedAt != null;
-                        final hasAnswer = question.answers.isNotEmpty;
+                         final question = filteredQuestions[index];
+                         final isIgnored = question.ignoredAt != null;
+                         final hasAnswer = question.answers.isNotEmpty;
+
 
                         return Card(
                           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -208,13 +211,18 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                             title: Text(question.text),
                             subtitle: hasAnswer 
                               ? Text(question.answers.first.text, maxLines: 1, overflow: TextOverflow.ellipsis)
-                              : (isArchived ? const Text('Archived') : null),
-                            trailing: IconButton(
-                              icon: Icon(isArchived ? Icons.unarchive : Icons.archive),
-                              onPressed: () => isArchived 
-                                ? _unarchiveQuestion(question) 
-                                : _archiveQuestion(question),
-                            ),
+                               : (isIgnored ? const Text('Ignored') : null),
+                              trailing: Tooltip(
+                                message: isIgnored ? 'Show question' : 'Ignore question',
+                                child: IconButton(
+                                  icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
+                                  onPressed: () => isIgnored 
+                                    ? _unignoreQuestion(question) 
+                                    : _ignoreQuestion(question),
+                                ),
+                              ),
+
+
                             onTap: () => _answerQuestion(question),
                           ),
                         );

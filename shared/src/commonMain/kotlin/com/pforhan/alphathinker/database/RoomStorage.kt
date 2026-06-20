@@ -26,7 +26,7 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
                     projectId = project.id,
                     text = q.text,
                     createdAt = q.timestamp.toEpochMilliseconds(),
-                    archivedAt = q.archivedAt?.toEpochMilliseconds()
+                     ignoredAt = q.ignoredAt?.toEpochMilliseconds()
                 )
             )
         }
@@ -62,7 +62,7 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
                 text = qe.text,
                 timestamp = Instant.fromEpochMilliseconds(qe.createdAt),
                 contextId = "", // Not stored in entity currently
-                archivedAt = qe.archivedAt?.let { Instant.fromEpochMilliseconds(it) },
+                 ignoredAt = qe.ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
                 answers = qAnswers
             )
         }

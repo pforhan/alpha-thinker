@@ -80,12 +80,12 @@ class ThinkerApiImpl(
         projectId: String,
         questionId: String,
         text: String,
-        autoArchive: Boolean,
+        autoIgnore: Boolean,
         callback: (Result<Unit>) -> Unit
     ) {
         scope.launch {
             try {
-                repository.updateAnswer(projectId, questionId, text, autoArchive)
+                repository.updateAnswer(projectId, questionId, text, autoIgnore)
                 callback(Result.success(Unit))
             } catch (e: Exception) {
                 callback(Result.failure(e))
@@ -93,10 +93,10 @@ class ThinkerApiImpl(
         }
     }
 
-    override fun archiveQuestion(projectId: String, questionId: String, callback: (Result<Unit>) -> Unit) {
+    override fun ignoreQuestion(projectId: String, questionId: String, callback: (Result<Unit>) -> Unit) {
         scope.launch {
             try {
-                repository.archiveQuestion(projectId, questionId)
+                repository.ignoreQuestion(projectId, questionId)
                 callback(Result.success(Unit))
             } catch (e: Exception) {
                 callback(Result.failure(e))
@@ -104,10 +104,10 @@ class ThinkerApiImpl(
         }
     }
 
-    override fun unarchiveQuestion(projectId: String, questionId: String, callback: (Result<Unit>) -> Unit) {
+    override fun unignoreQuestion(projectId: String, questionId: String, callback: (Result<Unit>) -> Unit) {
         scope.launch {
             try {
-                repository.unarchiveQuestion(projectId, questionId)
+                repository.unignoreQuestion(projectId, questionId)
                 callback(Result.success(Unit))
             } catch (e: Exception) {
                 callback(Result.failure(e))
@@ -131,7 +131,7 @@ fun Question.toDto(): QuestionDto = QuestionDto(
     text = text,
     timestamp = timestamp.toEpochMilliseconds(),
     contextId = contextId,
-    archivedAt = archivedAt?.toEpochMilliseconds(),
+    ignoredAt = ignoredAt?.toEpochMilliseconds(),
     answers = answers.map { 
         AnswerDto(it.questionId, it.text, it.answeredAt.toEpochMilliseconds(), it.modifiedAt?.toEpochMilliseconds()) 
     }

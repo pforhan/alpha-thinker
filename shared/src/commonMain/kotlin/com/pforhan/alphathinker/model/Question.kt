@@ -7,10 +7,10 @@ data class Question(
     val text: String,
     val timestamp: Instant,
     val contextId: String,
-    val archivedAt: Instant? = null,
+    val ignoredAt: Instant? = null,
     val answers: List<Answer> = emptyList()
 ) {
-    val isArchived: Boolean
-        get() = archivedAt != null
+    val isIgnored: Boolean
+        get() = ignoredAt != null
 }
 

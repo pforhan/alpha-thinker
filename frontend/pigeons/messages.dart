@@ -26,7 +26,7 @@ class QuestionDto {
   String text;
   int timestamp;
   String contextId;
-  int? archivedAt;
+  int? ignoredAt;
   List<AnswerDto> answers;
 
   QuestionDto({
@@ -34,7 +34,7 @@ class QuestionDto {
     required this.text,
     required this.timestamp,
     required this.contextId,
-    this.archivedAt,
+     this.ignoredAt,
     required this.answers,
   });
 }
@@ -68,7 +68,7 @@ abstract class ThinkerApi {
   @async
   void updateAnswer(String projectId, String questionId, String text, bool autoArchive);
   @async
-  void archiveQuestion(String projectId, String questionId);
+   void ignoreQuestion(String projectId, String questionId);
   @async
-  void unarchiveQuestion(String projectId, String questionId);
+   void unignoreQuestion(String projectId, String questionId);
 }

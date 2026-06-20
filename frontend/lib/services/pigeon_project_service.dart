@@ -30,8 +30,8 @@ class PigeonProjectService implements ProjectService {
       _api.updateAnswer(projectId, questionId, text, autoArchive);
   
   @override
-  Future<void> archiveQuestion(String projectId, String questionId) => _api.archiveQuestion(projectId, questionId);
+  Future<void> ignoreQuestion(String projectId, String questionId) => _api.ignoreQuestion(projectId, questionId);
 
   @override
-  Future<void> unarchiveQuestion(String projectId, String questionId) => _api.unarchiveQuestion(projectId, questionId);
+  Future<void> unignoreQuestion(String projectId, String questionId) => _api.unignoreQuestion(projectId, questionId);
 }

@@ -65,7 +65,7 @@ class InMemoryProjectService implements ProjectService {
   @override
   Future<List<QuestionDto>> getUnansweredQuestions(String projectId) async {
     final questions = _questions[projectId] ?? [];
-    return questions.where((q) => q.answers.isEmpty && q.archivedAt == null).toList();
+    return questions.where((q) => q.answers.isEmpty && q.ignoredAt == null).toList();
   }
 
   @override
@@ -105,7 +105,7 @@ class InMemoryProjectService implements ProjectService {
         text: question.text,
         timestamp: question.timestamp,
         contextId: question.contextId,
-        archivedAt: now,
+        ignoredAt: now,
         answers: question.answers,
       );
     }
@@ -117,7 +117,7 @@ class InMemoryProjectService implements ProjectService {
   }
 
   @override
-  Future<void> archiveQuestion(String projectId, String questionId) async {
+  Future<void> ignoreQuestion(String projectId, String questionId) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final qs = _questions[projectId];
     if (qs == null) return;
@@ -130,7 +130,7 @@ class InMemoryProjectService implements ProjectService {
         text: q.text,
         timestamp: q.timestamp,
         contextId: q.contextId,
-        archivedAt: now,
+        ignoredAt: now,
         answers: q.answers,
       );
     }
@@ -142,7 +142,7 @@ class InMemoryProjectService implements ProjectService {
   }
 
   @override
-  Future<void> unarchiveQuestion(String projectId, String questionId) async {
+  Future<void> unignoreQuestion(String projectId, String questionId) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final qs = _questions[projectId];
     if (qs == null) return;
@@ -155,7 +155,7 @@ class InMemoryProjectService implements ProjectService {
         text: q.text,
         timestamp: q.timestamp,
         contextId: q.contextId,
-        archivedAt: null,
+        ignoredAt: null,
         answers: q.answers,
       );
     }

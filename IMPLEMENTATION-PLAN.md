@@ -32,6 +32,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
 
 ## Phase 2.5: cleanup
+- [ ] remove auto archive functionality
 - [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
 - [ ] Change filenames with "pigeon" in them to something more appropriate
 - [ ] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker

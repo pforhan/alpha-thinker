@@ -19,7 +19,7 @@ data class QuestionEntity(
     val projectId: String,
     val text: String,
     val createdAt: Long,
-    val archivedAt: Long? = null
+    val ignoredAt: Long? = null
 )
 
 @Entity(tableName = "answers")
