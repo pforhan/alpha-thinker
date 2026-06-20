@@ -16,13 +16,18 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 2: Core User Experience and Lite Version
 - [x] Implement Project creation and listing views
 - [x] Implement the Question/Answer workspace
-- [ ] Present questions to be answered in a random order.
-- [ ] Implement dynamic question rotation (unanswered cards replace answered cards)
 - [x] Implement question archiving functionality (manual deactivation)
-- [ ] Implement "Answered Questions" and "Archived Questions" views/filters. Just include a short blurb from the answer; allow opening for full details.
-- [ ] Implement answer revision history UI (list with timestamps)
+- [x] Implement "Answered Questions" and "Archived Questions" views/filters. Just include a short blurb from the answer; allow opening for full details.
 - [x] **Domain Logic Implementation:** Implementing core project management and question-answering flows.
+- [x] Merge unanswered / answered / archived questions all into one view that defaults to unanswered questions. Answered questions should show 1 line of text of the answer on the list.  All questions should be clickable for full details.
+- [ ] change "archive" concept to "ignored"
+- [ ] should be able to archive / unarchive / delete answer from question detail pane
+- [ ] viewing an answered question should show the full answer and provide an update button (which makes a new answer record)
 - [ ] **Lite Implementation:** Implement the hardcoded 20 Seed Questions logic for fallback/Lite mode.
+- [ ] Present questions to be answered in a random order.
+- [ ] Views / dialogs with a single text entry should focus that text field by default.
+- [ ] Implement dynamic question rotation (unanswered cards replace answered cards)
+- [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
 
@@ -31,6 +36,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Change filenames with "pigeon" in them to something more appropriate
 - [ ] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker
 - [ ] reformat files to 2-space indent
+- [ ] make a QuestionFilter enum and gather any related strings in it to provide type safety
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Integrate LiteRT-LM for automated question generation

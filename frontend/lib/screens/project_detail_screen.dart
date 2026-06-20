@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../injection.dart';
 import '../thinker_api.dart';
 import '../services/project_service.dart';
-import 'project_history_screen.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final ProjectDto project;
@@ -16,6 +15,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   final ProjectService _service = getIt<ProjectService>();
   List<QuestionDto>? _questions;
   bool _loading = true;
+  String _filter = 'Unanswered';
 
   @override
   void initState() {
@@ -26,10 +26,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   Future<void> _loadQuestions() async {
     setState(() => _loading = true);
     try {
-      final questions = await _service.getUnansweredQuestions(widget.project.id);
-      questions.shuffle();
+      final project = await _service.getProject(widget.project.id);
       setState(() {
-        _questions = questions;
+        _questions = project.questions;
         _loading = false;
       });
     } catch (e) {
@@ -50,11 +49,18 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   Future<void> _archiveQuestion(QuestionDto question) async {
     try {
       await _service.archiveQuestion(widget.project.id, question.id);
-      setState(() {
-        _questions?.removeWhere((q) => q.id == question.id);
-      });
+      _loadQuestions();
     } catch (e) {
       debugPrint('Error archiving question: $e');
+    }
+  }
+
+  Future<void> _unarchiveQuestion(QuestionDto question) async {
+    try {
+      await _service.unarchiveQuestion(widget.project.id, question.id);
+      _loadQuestions();
+    } catch (e) {
+      debugPrint('Error unarchiving question: $e');
     }
   }
 
@@ -87,14 +93,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     if (result == true && answerController.text.isNotEmpty) {
       try {
         await _service.updateAnswer(widget.project.id, question.id, answerController.text, false);
-        
-        setState(() {
-          _questions?.removeWhere((q) => q.id == question.id);
-        });
-
-        if (_questions == null || _questions!.isEmpty) {
-          await _loadQuestions();
-        }
+        _loadQuestions();
       } catch (e) {
         debugPrint('Error updating answer: $e');
         if (mounted) {
@@ -115,17 +114,6 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.project.editableTitle),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProjectHistoryScreen(project: widget.project),
-              ),
-            ),
-            child: const Text('History'),
-          ),
-        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,32 +130,97 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           ),
           const Divider(),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text('Questions:', style: Theme.of(context).textTheme.titleMedium),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Questions:', style: Theme.of(context).textTheme.titleMedium),
+                SizedBox(
+                  height: 30,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Unanswered'),
+                          selected: _filter == 'Unanswered',
+                          onSelected: (selected) {
+                            setState(() => _filter = 'Unanswered');
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: const Text('Answered'),
+                          selected: _filter == 'Answered',
+                          onSelected: (selected) {
+                            setState(() => _filter = 'Answered');
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: const Text('Archived'),
+                          selected: _filter == 'Archived',
+                          onSelected: (selected) {
+                            setState(() => _filter = 'Archived');
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : (_questions == null || _questions!.isEmpty)
-                    ? const Center(child: Text('No unanswered questions.'))
-                    : ListView.builder(
-                        itemCount: _questions!.length,
-                        itemBuilder: (context, index) {
-                          final question = _questions![index];
-                           return Card(
-                             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                             child: ListTile(
-                               title: Text(question.text),
-                               trailing: IconButton(
-                                 icon: const Icon(Icons.archive),
-                                 onPressed: () => _archiveQuestion(question),
-                               ),
-                               onTap: () => _answerQuestion(question),
-                             ),
-                           );
+                : () {
+                    final filteredQuestions = _questions?.where((q) {
+                      final isArchived = q.archivedAt != null;
+                      final hasAnswer = q.answers.isNotEmpty;
+                      if (_filter == 'Unanswered') return !hasAnswer && !isArchived;
+                      if (_filter == 'Answered') return hasAnswer && !isArchived;
+                      if (_filter == 'Archived') return isArchived;
+                      return true;
+                    }).toList();
 
-                        },
-                      ),
+                    if (filteredQuestions == null || filteredQuestions.isEmpty) {
+                      return Center(
+                        child: Text(
+                          _filter == 'Unanswered' 
+                            ? 'No unanswered questions.' 
+                            : 'No ${_filter.toLowerCase()} questions.',
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: filteredQuestions.length,
+                      itemBuilder: (context, index) {
+                        final question = filteredQuestions[index];
+                        final isArchived = question.archivedAt != null;
+                        final hasAnswer = question.answers.isNotEmpty;
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: ListTile(
+                            title: Text(question.text),
+                            subtitle: hasAnswer 
+                              ? Text(question.answers.first.text, maxLines: 1, overflow: TextOverflow.ellipsis)
+                              : (isArchived ? const Text('Archived') : null),
+                            trailing: IconButton(
+                              icon: Icon(isArchived ? Icons.unarchive : Icons.archive),
+                              onPressed: () => isArchived 
+                                ? _unarchiveQuestion(question) 
+                                : _archiveQuestion(question),
+                            ),
+                            onTap: () => _answerQuestion(question),
+                          ),
+                        );
+                      },
+                    );
+                  }(),
           ),
         ],
       ),
