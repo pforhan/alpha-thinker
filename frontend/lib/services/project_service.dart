@@ -9,4 +9,5 @@ abstract class ProjectService {
   Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive);
   Future<void> ignoreQuestion(String projectId, String questionId);
   Future<void> unignoreQuestion(String projectId, String questionId);
+  Future<void> deleteAnswer(String projectId, String questionId, int answerId);
 }

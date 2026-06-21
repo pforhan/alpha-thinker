@@ -12,5 +12,8 @@ data class Question(
 ) {
     val isIgnored: Boolean
         get() = ignoredAt != null
+
+    val currentAnswer: Answer?
+        get() = answers.lastOrNull()?.takeIf { it.deletedAt == null }
 }
 

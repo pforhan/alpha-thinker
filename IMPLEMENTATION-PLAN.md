@@ -20,24 +20,27 @@ This document tracks the specific engineering tasks required to move from design
 - [x] Implement "Answered Questions" and "Archived Questions" views/filters. Just include a short blurb from the answer; allow opening for full details.
 - [x] **Domain Logic Implementation:** Implementing core project management and question-answering flows.
 - [x] Merge unanswered / answered / archived questions all into one view that defaults to unanswered questions. Answered questions should show 1 line of text of the answer on the list.  All questions should be clickable for full details.
-- [ ] change "archive" concept to "ignored"
-- [ ] should be able to archive / unarchive / delete answer from question detail pane
-- [ ] viewing an answered question should show the full answer and provide an update button (which makes a new answer record)
+- [x] change "archive" concept to "ignored"
+- [x] Views / dialogs with a single text entry should focus that text field by default.
+- [x] viewing an answered question should show the full answer and provide an update button (which makes a new answer record)
+- [x] should be able to ignore / unignore / delete answer from question detail pane
 - [ ] **Lite Implementation:** Implement the hardcoded 20 Seed Questions logic for fallback/Lite mode.
 - [ ] Present questions to be answered in a random order.
-- [ ] Views / dialogs with a single text entry should focus that text field by default.
 - [ ] Implement dynamic question rotation (unanswered cards replace answered cards)
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
 
 ## Phase 2.5: cleanup
-- [ ] remove auto archive functionality
+- [ ] auto archive functionality should be for project updates, not question or answer updates.
 - [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
 - [ ] Change filenames with "pigeon" in them to something more appropriate
 - [ ] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker
 - [ ] reformat files to 2-space indent
 - [ ] make a QuestionFilter enum and gather any related strings in it to provide type safety
+- [ ] Rename LLMIntegration to QuestionGenerator
+- [ ] Make a QuestionDAO since questions and answers can be updated independently of a project.
+- [ ] Better text instead of "Submit" for adding / editing answers
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Integrate LiteRT-LM for automated question generation

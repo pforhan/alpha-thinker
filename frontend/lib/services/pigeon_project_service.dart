@@ -34,4 +34,7 @@ class PigeonProjectService implements ProjectService {
 
   @override
   Future<void> unignoreQuestion(String projectId, String questionId) => _api.unignoreQuestion(projectId, questionId);
+
+  @override
+  Future<void> deleteAnswer(String projectId, String questionId, int answerId) => _api.deleteAnswer(projectId, questionId, answerId);
 }

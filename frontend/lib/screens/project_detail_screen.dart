@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../injection.dart';
 import '../thinker_api.dart';
+import '../thinker_api_extensions.dart';
 import '../services/project_service.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
@@ -66,12 +67,19 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
   Future<void> _answerQuestion(QuestionDto question) async {
     final answerController = TextEditingController();
+    final current = question.currentAnswer;
+    
+    if (current != null && current.isAnswered) {
+      answerController.text = current.text;
+    }
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(question.text),
         content: TextField(
           controller: answerController,
+          autofocus: true,
           decoration: const InputDecoration(
             hintText: 'Enter your answer...',
           ),
@@ -82,6 +90,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
+          if (current != null && current.isAnswered)
+            TextButton(
+              onPressed: () async {
+                debugPrint('Deleting answer for question ${question.id} in project ${widget.project.id}');
+                await _service.deleteAnswer(widget.project.id, question.id, current.id);
+                debugPrint('Successfully deleted answer');
+                Navigator.pop(context, false);
+                _loadQuestions();
+              },
+              child: const Text('Delete Answer', style: TextStyle(color: Colors.red)),
+            ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Submit'),
@@ -178,7 +197,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 : () {
                      final filteredQuestions = _questions?.where((q) {
                        final isIgnored = q.ignoredAt != null;
-                       final hasAnswer = q.answers.isNotEmpty;
+                       final current = q.currentAnswer;
+                       final hasAnswer = current != null && current.isAnswered;
                        if (_filter == 'Unanswered') return !hasAnswer && !isIgnored;
                        if (_filter == 'Answered') return hasAnswer && !isIgnored;
                        if (_filter == 'Ignored') return isIgnored;
@@ -202,7 +222,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       itemBuilder: (context, index) {
                          final question = filteredQuestions[index];
                          final isIgnored = question.ignoredAt != null;
-                         final hasAnswer = question.answers.isNotEmpty;
+                         final current = question.currentAnswer;
+                         final hasAnswer = current != null && current.isAnswered;
 
 
                         return Card(
@@ -210,19 +231,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                           child: ListTile(
                             title: Text(question.text),
                             subtitle: hasAnswer 
-                              ? Text(question.answers.first.text, maxLines: 1, overflow: TextOverflow.ellipsis)
-                               : (isIgnored ? const Text('Ignored') : null),
-                              trailing: Tooltip(
-                                message: isIgnored ? 'Show question' : 'Ignore question',
-                                child: IconButton(
-                                  icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
-                                  onPressed: () => isIgnored 
-                                    ? _unignoreQuestion(question) 
-                                    : _ignoreQuestion(question),
-                                ),
+                              ? Text(current.text, maxLines: 1, overflow: TextOverflow.ellipsis)
+                              : (isIgnored ? const Text('Ignored') : null),
+                            trailing: Tooltip(
+                              message: isIgnored ? 'Show question' : 'Ignore question',
+                              child: IconButton(
+                                icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () => isIgnored 
+                                  ? _unignoreQuestion(question) 
+                                  : _ignoreQuestion(question),
                               ),
-
-
+                            ),
                             onTap: () => _answerQuestion(question),
                           ),
                         );

@@ -58,7 +58,7 @@ class ProjectRepository(
 
     suspend fun getUnansweredQuestions(project: Project): List<Question> {
         return project.questions.filterNot { question ->
-                question.answers.any { it.isAnswered } || question.isIgnored
+                (question.currentAnswer?.isAnswered ?: false) || question.isIgnored
         }
     }
 
@@ -71,34 +71,28 @@ class ProjectRepository(
         val project = storage.getProject(projectId) ?: return null
         val now = Clock.System.now()
         
-        val existingAnswer = project.questions.flatMap { it.answers }.find { it.questionId == questionId }
-        val newAnswer = if (existingAnswer == null) {
-            Answer(questionId, text, now)
-        } else {
-            existingAnswer.copy(text = text, modifiedAt = now)
-        }
-
+        val newAnswer = Answer(id = 0, questionId = questionId, text = text, answeredAt = now)
+        
         val updatedQuestions = project.questions.map { q ->
             if (q.id == questionId) {
-                val qAnswers = q.answers.filterNot { it.questionId == questionId } + newAnswer
                 q.copy(
-                    answers = qAnswers,
+                    answers = q.answers + newAnswer,
                     ignoredAt = if (autoIgnore) now else q.ignoredAt
                 )
             } else {
                 q
             }
         }
-
+        
         val answered = allQuestionsAnswered(project, updatedQuestions)
-
+        
         val updatedProject = if (answered) {
             val contextId = randomUUID()
             val newQs = llm.generateFollowUpQuestions(
                 project.synopsis,
                 project.questions.size 
             ).map { it.copy(id = randomUUID(), contextId = contextId) }
-
+            
             project.copy(
                 questions = project.questions + newQs,
                 updatedAt = Clock.System.now()
@@ -109,13 +103,13 @@ class ProjectRepository(
                 updatedAt = Clock.System.now()
             )
         }
-
+        
         return storage.saveProject(updatedProject)
     }
 
     private fun allQuestionsAnswered(project: Project, questions: List<Question>): Boolean {
         val activeQuestions = questions.filterNot { it.isIgnored }
-        return activeQuestions.all { it.answers.any { a -> a.isAnswered } }
+        return activeQuestions.all { it.currentAnswer?.isAnswered == true }
     }
 
     suspend fun ignoreQuestion(
@@ -158,6 +152,25 @@ class ProjectRepository(
         storage.deleteAllProjects()
     }
 
+    suspend fun deleteAnswer(
+        projectId: String,
+        questionId: String,
+        answerId: Long
+    ): Project? {
+        val project = storage.getProject(projectId) ?: return null
+        val now = Clock.System.now()
+        val updatedQuestions = project.questions.map { q ->
+            if (q.id == questionId) {
+                q.copy(answers = q.answers.map { a ->
+                    if (a.id == answerId) a.copy(deletedAt = now) else a
+                })
+            } else {
+                q
+            }
+        }
+        return storage.saveProject(project.copy(questions = updatedQuestions, updatedAt = now))
+    }
+
     suspend fun exportProject(project: Project): String {
         val sb = StringBuilder()
         sb.appendLine("# ${project.synopsis}")
@@ -168,8 +181,8 @@ class ProjectRepository(
 
         project.questions.sortedBy { it.timestamp }.forEach { question ->
             sb.appendLine("### Q: ${question.text}")
-            val answer = question.answers.find { it.isAnswered }
-            if (answer != null) {
+            val answer = question.currentAnswer
+            if (answer != null && answer.isAnswered) {
                 sb.appendLine()
                 sb.appendLine("| **Answer:** | ${answer.text} |")
                 sb.appendLine("|-------------|--------")

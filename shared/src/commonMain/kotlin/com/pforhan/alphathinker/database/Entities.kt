@@ -28,5 +28,6 @@ data class AnswerEntity(
     val questionId: String,
     val text: String,
     val answeredAt: Long,
-    val modifiedAt: Long? = null
+    val modifiedAt: Long? = null,
+    val deletedAt: Long? = null
 )

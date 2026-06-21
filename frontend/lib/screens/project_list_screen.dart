@@ -53,6 +53,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
         title: const Text('New Project'),
         content: TextField(
           controller: synopsisController,
+          autofocus: true,
           decoration: const InputDecoration(
             hintText: 'Enter your project idea (synopsis)...',
           ),

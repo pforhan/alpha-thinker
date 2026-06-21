@@ -114,6 +114,17 @@ class ThinkerApiImpl(
             }
         }
     }
+
+    override fun deleteAnswer(projectId: String, questionId: String, answerId: Long, callback: (Result<Unit>) -> Unit) {
+        scope.launch {
+            try {
+                repository.deleteAnswer(projectId, questionId, answerId)
+                callback(Result.success(Unit))
+            } catch (e: Exception) {
+                callback(Result.failure(e))
+            }
+        }
+    }
 }
 
 fun Project.toDto(): ProjectDto = ProjectDto(
@@ -133,6 +144,13 @@ fun Question.toDto(): QuestionDto = QuestionDto(
     contextId = contextId,
     ignoredAt = ignoredAt?.toEpochMilliseconds(),
     answers = answers.map { 
-        AnswerDto(it.questionId, it.text, it.answeredAt.toEpochMilliseconds(), it.modifiedAt?.toEpochMilliseconds()) 
+        AnswerDto(
+            id = it.id,
+            questionId = it.questionId, 
+            text = it.text, 
+            answeredAt = it.answeredAt.toEpochMilliseconds(), 
+            modifiedAt = it.modifiedAt?.toEpochMilliseconds(),
+            deletedAt = it.deletedAt?.toEpochMilliseconds()
+        ) 
     }
 )

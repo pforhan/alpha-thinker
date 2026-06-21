@@ -40,16 +40,20 @@ class QuestionDto {
 }
 
 class AnswerDto {
+  int id;
   String questionId;
   String text;
   int answeredAt;
   int? modifiedAt;
+  int? deletedAt;
 
   AnswerDto({
+    required this.id,
     required this.questionId,
     required this.text,
     required this.answeredAt,
     this.modifiedAt,
+    this.deletedAt,
   });
 }
 
@@ -71,4 +75,6 @@ abstract class ThinkerApi {
    void ignoreQuestion(String projectId, String questionId);
   @async
    void unignoreQuestion(String projectId, String questionId);
-}
+   @async
+   void deleteAnswer(String projectId, String questionId, int answerId);
+ }
