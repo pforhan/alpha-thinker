@@ -89,8 +89,7 @@ class ProjectRepository(
         val updatedProject = if (answered) {
             val contextId = randomUUID()
             val newQs = llm.generateFollowUpQuestions(
-                project.synopsis,
-                project.questions.size 
+              project.synopsis
             ).map { it.copy(id = randomUUID(), contextId = contextId) }
             
             project.copy(

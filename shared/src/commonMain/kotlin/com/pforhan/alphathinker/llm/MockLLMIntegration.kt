@@ -3,7 +3,6 @@ package com.pforhan.alphathinker.llm
 import com.pforhan.alphathinker.model.Question
 import com.pforhan.alphathinker.util.randomUUID
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 
 class MockLLMIntegration : LLMIntegration {
     private var roundCounter = 0
@@ -99,10 +98,9 @@ class MockLLMIntegration : LLMIntegration {
     }
 
     override suspend fun generateFollowUpQuestions(
-        @Suppress("UNUSED_PARAMETER") synopsis: String,
-        previousRound: Int
+      @Suppress("UNUSED_PARAMETER") synopsis: String
     ): List<Question> {
-        return getFollowUpQuestions(previousRound)
+        return getFollowUpQuestions(roundCounter++)
     }
 
     @Suppress("UNUSED_PARAM")

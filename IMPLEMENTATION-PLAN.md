@@ -41,6 +41,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Rename LLMIntegration to QuestionGenerator
 - [ ] Make a QuestionDAO since questions and answers can be updated independently of a project.
 - [ ] Better text instead of "Submit" for adding / editing answers
+- [ ] need to integrate MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Integrate LiteRT-LM for automated question generation
