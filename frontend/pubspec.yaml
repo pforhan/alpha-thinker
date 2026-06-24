@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   pigeon: ^26.3.4
   get_it: ^9.2.1
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

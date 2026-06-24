@@ -24,9 +24,10 @@ This document tracks the specific engineering tasks required to move from design
 - [x] Views / dialogs with a single text entry should focus that text field by default.
 - [x] viewing an answered question should show the full answer and provide an update button (which makes a new answer record)
 - [x] should be able to ignore / unignore / delete answer from question detail pane
-- [ ] **Lite Implementation:** Implement the hardcoded 20 Seed Questions logic for fallback/Lite mode.
-- [ ] Present questions to be answered in a random order.
-- [ ] Implement dynamic question rotation (unanswered cards replace answered cards)
+- [x] **Lite Implementation:** Implement the hardcoded 20 Seed Questions logic for fallback/Lite mode.
+- [x] Present questions to be answered in a random order.
+- [ ] We should only ever show 3 unanswered questions at a time.  Others should dynamically rotate in, with a new unanswered cards replacing the just-answered cards.  When showing unanswered questions, there should also be a shuffle button to bring in fresh questions (if available) without ignoring those currently visible.
+- [ ] Sort answered questions by answer date descending, ignored questions by ignored date descending
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)

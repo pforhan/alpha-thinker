@@ -3,6 +3,8 @@ import '../injection.dart';
 import '../thinker_api.dart';
 import '../thinker_api_extensions.dart';
 import '../services/project_service.dart';
+import '../services/preference_service.dart';
+import 'dart:math';
 
 class ProjectDetailScreen extends StatefulWidget {
   final ProjectDto project;
@@ -14,7 +16,9 @@ class ProjectDetailScreen extends StatefulWidget {
 
 class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   final ProjectService _service = getIt<ProjectService>();
+  final PreferenceService _prefs = getIt<PreferenceService>();
   List<QuestionDto>? _questions;
+  List<String>? _unansweredOrder;
   bool _loading = true;
   String _filter = 'Unanswered';
 
@@ -28,8 +32,31 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     setState(() => _loading = true);
     try {
       final project = await _service.getProject(widget.project.id);
+      final questions = project.questions;
+      
+      if (_filter == 'Unanswered') {
+        final unanswered = questions.where((q) {
+          final isIgnored = q.ignoredAt != null;
+          final current = q.currentAnswer;
+          final hasAnswer = current != null && current.isAnswered;
+          return !hasAnswer && !isIgnored;
+        }).toList();
+
+        if (unanswered.isNotEmpty) {
+          final savedOrder = await _prefs.getQuestionOrder(widget.project.id);
+          List<String> order = savedOrder;
+          
+          if (order.isEmpty) {
+            order = unanswered.map((q) => q.id).toList()..shuffle();
+            await _prefs.saveQuestionOrder(widget.project.id, order);
+          }
+          
+          _unansweredOrder = order;
+        }
+      }
+
       setState(() {
-        _questions = project.questions;
+        _questions = questions;
         _loading = false;
       });
     } catch (e) {
@@ -195,15 +222,26 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : () {
-                     final filteredQuestions = _questions?.where((q) {
-                       final isIgnored = q.ignoredAt != null;
-                       final current = q.currentAnswer;
-                       final hasAnswer = current != null && current.isAnswered;
-                       if (_filter == 'Unanswered') return !hasAnswer && !isIgnored;
-                       if (_filter == 'Answered') return hasAnswer && !isIgnored;
-                       if (_filter == 'Ignored') return isIgnored;
-                       return true;
-                     }).toList();
+                      var filteredQuestions = _questions?.where((q) {
+                        final isIgnored = q.ignoredAt != null;
+                        final current = q.currentAnswer;
+                        final hasAnswer = current != null && current.isAnswered;
+                        if (_filter == 'Unanswered') return !hasAnswer && !isIgnored;
+                        if (_filter == 'Answered') return hasAnswer && !isIgnored;
+                        if (_filter == 'Ignored') return isIgnored;
+                        return true;
+                      }).toList();
+
+                      if (_filter == 'Unanswered' && filteredQuestions != null && _unansweredOrder != null) {
+                        filteredQuestions.sort((a, b) {
+                          final indexA = _unansweredOrder!.indexOf(a.id);
+                          final indexB = _unansweredOrder!.indexOf(b.id);
+                          if (indexA == -1) return 1;
+                          if (indexB == -1) return -1;
+                          return indexA.compareTo(indexB);
+                        });
+                      }
+
 
 
                     if (filteredQuestions == null || filteredQuestions.isEmpty) {
@@ -224,6 +262,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                          final isIgnored = question.ignoredAt != null;
                          final current = question.currentAnswer;
                          final hasAnswer = current != null && current.isAnswered;
+
 
 
                         return Card(
