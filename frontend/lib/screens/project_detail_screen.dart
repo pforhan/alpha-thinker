@@ -92,6 +92,39 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     }
   }
 
+  Future<void> _rotateUnanswered(List<String> currentVisibleIds) async {
+    if (_unansweredOrder == null || _unansweredOrder!.isEmpty) return;
+
+    final order = List<String>.from(_unansweredOrder!);
+    final remaining = order.where((id) => !currentVisibleIds.contains(id)).toList();
+    
+    if (remaining.isEmpty) return;
+
+    // Move current visible ones to the end
+    final newOrder = [...remaining, ...currentVisibleIds];
+    
+    setState(() {
+      _unansweredOrder = newOrder;
+    });
+    await _prefs.saveQuestionOrder(widget.project.id, newOrder);
+  }
+
+  Future<void> _askLater(QuestionDto question) async {
+    if (_unansweredOrder == null) return;
+    
+    final order = List<String>.from(_unansweredOrder!);
+    final id = question.id;
+    if (!order.contains(id)) return;
+
+    order.remove(id);
+    order.add(id);
+    
+    setState(() {
+      _unansweredOrder = order;
+    });
+    await _prefs.saveQuestionOrder(widget.project.id, order);
+  }
+
   Future<void> _answerQuestion(QuestionDto question) async {
     final answerController = TextEditingController();
     final current = question.currentAnswer;
@@ -99,7 +132,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     if (current != null && current.isAnswered) {
       answerController.text = current.text;
     }
-
+    
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -135,7 +168,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         ],
       ),
     );
-
+    
     if (result == true && answerController.text.isNotEmpty) {
       try {
         await _service.updateAnswer(widget.project.id, question.id, answerController.text, false);
@@ -190,13 +223,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         ChoiceChip(
                           label: const Text('Unanswered'),
                           selected: _filter == 'Unanswered',
-                          onSelected: (selected) {
-                            setState(() => _filter = 'Unanswered');
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        ChoiceChip(
-                          label: const Text('Answered'),
+                                 onSelected: (selected) {
+                                   setState(() => _filter = 'Unanswered');
+                                 },
+                               ),
+                                const SizedBox(width: 8),
+                               ChoiceChip(
+                                 label: const Text('Answered'),
                           selected: _filter == 'Answered',
                           onSelected: (selected) {
                             setState(() => _filter = 'Answered');
@@ -218,76 +251,148 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               ],
             ),
           ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : () {
-                      var filteredQuestions = _questions?.where((q) {
-                        final isIgnored = q.ignoredAt != null;
-                        final current = q.currentAnswer;
-                        final hasAnswer = current != null && current.isAnswered;
-                        if (_filter == 'Unanswered') return !hasAnswer && !isIgnored;
-                        if (_filter == 'Answered') return hasAnswer && !isIgnored;
-                        if (_filter == 'Ignored') return isIgnored;
-                        return true;
-                      }).toList();
+          if (_filter == 'Unanswered')
+            Builder(
+              builder: (context) {
+                final unansweredCount = _questions?.where((q) {
+                  final isIgnored = q.ignoredAt != null;
+                  final current = q.currentAnswer;
+                  final hasAnswer = current != null && current.isAnswered;
+                  return !hasAnswer && !isIgnored;
+                }).length ?? 0;
 
-                      if (_filter == 'Unanswered' && filteredQuestions != null && _unansweredOrder != null) {
-                        filteredQuestions.sort((a, b) {
-                          final indexA = _unansweredOrder!.indexOf(a.id);
-                          final indexB = _unansweredOrder!.indexOf(b.id);
-                          if (indexA == -1) return 1;
-                          if (indexB == -1) return -1;
-                          return indexA.compareTo(indexB);
-                        });
-                      }
+                if (unansweredCount <= 3) {
+                  return const SizedBox.shrink();
+                }
 
-
-
-                    if (filteredQuestions == null || filteredQuestions.isEmpty) {
-                      return Center(
-                        child: Text(
-                          _filter == 'Unanswered' 
-                            ? 'No unanswered questions.' 
-                            : 'No ${_filter.toLowerCase()} questions.',
-                          textAlign: TextAlign.center,
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          final unanswered = _questions?.where((q) {
+                            final isIgnored = q.ignoredAt != null;
+                            final current = q.currentAnswer;
+                            final hasAnswer = current != null && current.isAnswered;
+                            return !hasAnswer && !isIgnored;
+                          }).toList() ?? [];
+                          
+                          if (unanswered.length > 3) {
+                            final currentOrder = List<String>.from(_unansweredOrder ?? []);
+                            final currentVisibleIds = currentOrder
+                              .where((id) => unanswered.any((q) => q.id == id))
+                              .take(3)
+                              .toList();
+                            _rotateUnanswered(currentVisibleIds);
+                          }
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.shuffle, size: 16),
+                            SizedBox(width: 4),
+                            Text('Shuffle'),
+                          ],
                         ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: filteredQuestions.length,
-                      itemBuilder: (context, index) {
-                         final question = filteredQuestions[index];
-                         final isIgnored = question.ignoredAt != null;
-                         final current = question.currentAnswer;
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          Expanded(
+             child: _loading
+                 ? const Center(child: CircularProgressIndicator())
+                 : Builder(
+                     builder: (context) {
+                       var filteredQuestions = _questions?.where((q) {
+                         final isIgnored = q.ignoredAt != null;
+                         final current = q.currentAnswer;
                          final hasAnswer = current != null && current.isAnswered;
+                         if (_filter == 'Unanswered') return !hasAnswer && !isIgnored;
+                         if (_filter == 'Answered') return hasAnswer && !isIgnored;
+                         if (_filter == 'Ignored') return isIgnored;
+                         return true;
+                       }).toList();
 
+                       if (_filter == 'Unanswered' && filteredQuestions != null && _unansweredOrder != null) {
+                         filteredQuestions.sort((a, b) {
+                           final indexA = _unansweredOrder!.indexOf(a.id);
+                           final indexB = _unansweredOrder!.indexOf(b.id);
+                           if (indexA == -1) return 1;
+                           if (indexB == -1) return -1;
+                           return indexA.compareTo(indexB);
+                         });
 
+                         if (filteredQuestions.length > 3) {
+                           filteredQuestions = filteredQuestions.take(3).toList();
+                         }
+                       }
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: ListTile(
-                            title: Text(question.text),
-                            subtitle: hasAnswer 
-                              ? Text(current.text, maxLines: 1, overflow: TextOverflow.ellipsis)
-                              : (isIgnored ? const Text('Ignored') : null),
-                            trailing: Tooltip(
-                              message: isIgnored ? 'Show question' : 'Ignore question',
-                              child: IconButton(
-                                icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
-                                onPressed: () => isIgnored 
-                                  ? _unignoreQuestion(question) 
-                                  : _ignoreQuestion(question),
+                       if (filteredQuestions == null || filteredQuestions.isEmpty) {
+                         return Center(
+                           child: Text(
+                             _filter == 'Unanswered' 
+                               ? 'No unanswered questions.' 
+                               : 'No ${_filter.toLowerCase()} questions.',
+                             textAlign: TextAlign.center,
+                           ),
+                         );
+                       }
+
+                       return ListView.builder(
+                         itemCount: filteredQuestions.length,
+                         itemBuilder: (context, index) {
+                           final question = filteredQuestions![index];
+                           final isIgnored = question.ignoredAt != null;
+                           final current = question.currentAnswer;
+                           final hasAnswer = current != null && current.isAnswered;
+
+                           return Card(
+                             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                             child: ListTile(
+                               title: Text(question.text),
+                               subtitle: hasAnswer 
+                                 ? Text(current.text, maxLines: 1, overflow: TextOverflow.ellipsis)
+                                 : (isIgnored ? const Text('Ignored') : null),
+                               trailing: Row(
+                                 mainAxisSize: MainAxisSize.min,
+                                 children: [
+                                   if (!hasAnswer && !isIgnored && 
+                                       (_questions?.where((q) {
+                                          final isIgnoredQ = q.ignoredAt != null;
+                                          final currentQ = q.currentAnswer;
+                                          final hasAnswerQ = currentQ != null && currentQ.isAnswered;
+                                          return !hasAnswerQ && !isIgnoredQ;
+                                        }).length ?? 0) > 3)
+                                     Tooltip(
+                                       message: 'Ask later',
+                                       child: IconButton(
+                                         icon: const Icon(Icons.rotate_left),
+                                         onPressed: () => _askLater(question),
+                                       ),
+                                     ),
+                                   Tooltip(
+                                     message: isIgnored ? 'Show question' : 'Ignore question',
+                                     child: IconButton(
+                                       icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
+                                       onPressed: () => isIgnored 
+                                         ? _unignoreQuestion(question) 
+                                         : _ignoreQuestion(question),
+                                       ),
+                                     ),
+                                 ],
+                               ),
+                               onTap: () => _answerQuestion(question),
                               ),
-                            ),
-                            onTap: () => _answerQuestion(question),
-                          ),
-                        );
-                      },
-                    );
-                  }(),
-          ),
+                            );
+                          },
+                         );
+                     },
+                   ),
+           ),
         ],
       ),
     );
