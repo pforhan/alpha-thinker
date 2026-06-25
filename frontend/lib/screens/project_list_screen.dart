@@ -99,6 +99,65 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     }
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('No projects yet.'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _createProject,
+            child: const Text('Create your first project'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectList() {
+    return ListView.builder(
+      itemCount: _projects!.length,
+      itemBuilder: (context, index) {
+        final project = _projects![index];
+        return ListTile(
+          title: Text(project.editableTitle),
+          subtitle: Text(project.synopsis, maxLines: 2, overflow: TextOverflow.ellipsis),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProjectDetailScreen(project: project),
+              ),
+            ).then((_) => _refreshProjects());
+          },
+          onLongPress: () => _confirmDeleteProject(project),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDeleteProject(ProjectDto project) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Project?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await _service.deleteProject(project.id);
+      await _refreshProjects();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,55 +173,8 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : (_projects == null || _projects!.isEmpty)
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('No projects yet.'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _createProject,
-                        child: const Text('Create your first project'),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _projects!.length,
-                  itemBuilder: (context, index) {
-                    final project = _projects![index];
-                    return ListTile(
-                      title: Text(project.editableTitle),
-                      subtitle: Text(project.synopsis, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProjectDetailScreen(project: project),
-                          ),
-                        ).then((_) => _refreshProjects());
-                      },
-                      onLongPress: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Delete Project?'),
-                            content: const Text('This action cannot be undone.'),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                            ],
-                          ),
-                        );
-                        if (confirm == true) {
-                          await _service.deleteProject(project.id);
-                          await _refreshProjects();
-                        }
-                      },
-                    );
-                  },
-                ),
+              ? _buildEmptyState()
+              : _buildProjectList(),
       floatingActionButton: FloatingActionButton(
         onPressed: _createProject,
         child: const Icon(Icons.add),

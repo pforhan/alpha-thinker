@@ -35,7 +35,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
 
 ## Phase 2.5: cleanup
-- [ ] break up bracket storms with multiple methods to make the code easier to read.
+- [x] break up bracket storms with multiple methods to make the code easier to read.
 - [ ] auto archive functionality should be for project updates, not question or answer updates.
 - [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
 - [ ] Change filenames with "pigeon" in them to something more appropriate

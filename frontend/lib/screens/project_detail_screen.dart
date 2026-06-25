@@ -28,6 +28,32 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     _loadQuestions();
   }
 
+  List<QuestionDto> _getFilteredQuestions() {
+    if (_questions == null) return [];
+
+    var filtered = _questions!.where((q) {
+      if (_filter == 'Unanswered') return q.isUnanswered;
+      if (_filter == 'Answered') return q.isAnswered && !q.isIgnored;
+      if (_filter == 'Ignored') return q.isIgnored;
+      return true;
+    }).toList();
+
+    if (_filter == 'Unanswered' && _unansweredOrder != null) {
+      filtered.sort((a, b) {
+        final indexA = _unansweredOrder!.indexOf(a.id);
+        final indexB = _unansweredOrder!.indexOf(b.id);
+        if (indexA == -1) return 1;
+        if (indexB == -1) return -1;
+        return indexA.compareTo(indexB);
+      });
+
+      if (filtered.length > 3) {
+        filtered = filtered.take(3).toList();
+      }
+    }
+    return filtered;
+  }
+
   Future<void> _loadQuestions() async {
     setState(() => _loading = true);
     try {
@@ -35,12 +61,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       final questions = project.questions;
       
       if (_filter == 'Unanswered') {
-        final unanswered = questions.where((q) {
-          final isIgnored = q.ignoredAt != null;
-          final current = q.currentAnswer;
-          final hasAnswer = current != null && current.isAnswered;
-          return !hasAnswer && !isIgnored;
-        }).toList();
+        final unanswered = questions.where((q) => q.isUnanswered).toList();
 
         if (unanswered.isNotEmpty) {
           final savedOrder = await _prefs.getQuestionOrder(widget.project.id);
@@ -188,6 +209,115 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     }
   }
 
+  Widget _buildFilterChips() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('Questions:', style: Theme.of(context).textTheme.titleMedium),
+          SizedBox(
+            height: 30,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('Unanswered'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Answered'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Ignored'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String filter) {
+    return ChoiceChip(
+      label: Text(filter),
+      selected: _filter == filter,
+      onSelected: (selected) {
+        setState(() => _filter = filter);
+      },
+    );
+  }
+
+  Widget _buildShuffleButton() {
+    if (_filter != 'Unanswered') return const SizedBox.shrink();
+
+    final unanswered = _questions?.where((q) => q.isUnanswered).toList() ?? [];
+    if (unanswered.length <= 3) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          TextButton(
+            onPressed: () {
+              final currentOrder = List<String>.from(_unansweredOrder ?? []);
+              final currentVisibleIds = currentOrder
+                  .where((id) => unanswered.any((q) => q.id == id))
+                  .take(3)
+                  .toList();
+              _rotateUnanswered(currentVisibleIds);
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.shuffle, size: 16),
+                SizedBox(width: 4),
+                Text('Shuffle'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionItem(QuestionDto question) {
+    final isIgnored = question.isIgnored;
+    final hasAnswer = question.isAnswered;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        title: Text(question.text),
+        subtitle: hasAnswer 
+          ? Text(question.currentAnswer!.text, maxLines: 1, overflow: TextOverflow.ellipsis)
+          : (isIgnored ? const Text('Ignored') : null),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!hasAnswer && !isIgnored && _questions?.where((q) => q.isUnanswered).length != null && _questions!.where((q) => q.isUnanswered).length > 3)
+              Tooltip(
+                message: 'Ask later',
+                child: IconButton(
+                  icon: const Icon(Icons.rotate_left),
+                  onPressed: () => _askLater(question),
+                ),
+              ),
+            Tooltip(
+              message: isIgnored ? 'Show question' : 'Ignore question',
+              child: IconButton(
+                icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
+                onPressed: () => isIgnored 
+                  ? _unignoreQuestion(question) 
+                  : _ignoreQuestion(question),
+              ),
+            ),
+          ],
+        ),
+        onTap: () => _answerQuestion(question),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -208,130 +338,16 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             ),
           ),
           const Divider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Questions:', style: Theme.of(context).textTheme.titleMedium),
-                SizedBox(
-                  height: 30,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        ChoiceChip(
-                          label: const Text('Unanswered'),
-                          selected: _filter == 'Unanswered',
-                                 onSelected: (selected) {
-                                   setState(() => _filter = 'Unanswered');
-                                 },
-                               ),
-                                const SizedBox(width: 8),
-                               ChoiceChip(
-                                 label: const Text('Answered'),
-                          selected: _filter == 'Answered',
-                          onSelected: (selected) {
-                            setState(() => _filter = 'Answered');
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                         ChoiceChip(
-                           label: const Text('Ignored'),
-                           selected: _filter == 'Ignored',
-                           onSelected: (selected) {
-                             setState(() => _filter = 'Ignored');
-                           },
-                         ),
-
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_filter == 'Unanswered')
-            Builder(
-              builder: (context) {
-                final unansweredCount = _questions?.where((q) {
-                  final isIgnored = q.ignoredAt != null;
-                  final current = q.currentAnswer;
-                  final hasAnswer = current != null && current.isAnswered;
-                  return !hasAnswer && !isIgnored;
-                }).length ?? 0;
-
-                if (unansweredCount <= 3) {
-                  return const SizedBox.shrink();
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          final unanswered = _questions?.where((q) {
-                            final isIgnored = q.ignoredAt != null;
-                            final current = q.currentAnswer;
-                            final hasAnswer = current != null && current.isAnswered;
-                            return !hasAnswer && !isIgnored;
-                          }).toList() ?? [];
-                          
-                          if (unanswered.length > 3) {
-                            final currentOrder = List<String>.from(_unansweredOrder ?? []);
-                            final currentVisibleIds = currentOrder
-                              .where((id) => unanswered.any((q) => q.id == id))
-                              .take(3)
-                              .toList();
-                            _rotateUnanswered(currentVisibleIds);
-                          }
-                        },
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.shuffle, size: 16),
-                            SizedBox(width: 4),
-                            Text('Shuffle'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+          _buildFilterChips(),
+          _buildShuffleButton(),
           Expanded(
              child: _loading
                  ? const Center(child: CircularProgressIndicator())
                  : Builder(
                      builder: (context) {
-                       var filteredQuestions = _questions?.where((q) {
-                         final isIgnored = q.ignoredAt != null;
-                         final current = q.currentAnswer;
-                         final hasAnswer = current != null && current.isAnswered;
-                         if (_filter == 'Unanswered') return !hasAnswer && !isIgnored;
-                         if (_filter == 'Answered') return hasAnswer && !isIgnored;
-                         if (_filter == 'Ignored') return isIgnored;
-                         return true;
-                       }).toList();
+                       final filteredQuestions = _getFilteredQuestions();
 
-                       if (_filter == 'Unanswered' && filteredQuestions != null && _unansweredOrder != null) {
-                         filteredQuestions.sort((a, b) {
-                           final indexA = _unansweredOrder!.indexOf(a.id);
-                           final indexB = _unansweredOrder!.indexOf(b.id);
-                           if (indexA == -1) return 1;
-                           if (indexB == -1) return -1;
-                           return indexA.compareTo(indexB);
-                         });
-
-                         if (filteredQuestions.length > 3) {
-                           filteredQuestions = filteredQuestions.take(3).toList();
-                         }
-                       }
-
-                       if (filteredQuestions == null || filteredQuestions.isEmpty) {
+                       if (filteredQuestions.isEmpty) {
                          return Center(
                            child: Text(
                              _filter == 'Unanswered' 
@@ -344,57 +360,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
                        return ListView.builder(
                          itemCount: filteredQuestions.length,
-                         itemBuilder: (context, index) {
-                           final question = filteredQuestions![index];
-                           final isIgnored = question.ignoredAt != null;
-                           final current = question.currentAnswer;
-                           final hasAnswer = current != null && current.isAnswered;
-
-                           return Card(
-                             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                             child: ListTile(
-                               title: Text(question.text),
-                               subtitle: hasAnswer 
-                                 ? Text(current.text, maxLines: 1, overflow: TextOverflow.ellipsis)
-                                 : (isIgnored ? const Text('Ignored') : null),
-                               trailing: Row(
-                                 mainAxisSize: MainAxisSize.min,
-                                 children: [
-                                   if (!hasAnswer && !isIgnored && 
-                                       (_questions?.where((q) {
-                                          final isIgnoredQ = q.ignoredAt != null;
-                                          final currentQ = q.currentAnswer;
-                                          final hasAnswerQ = currentQ != null && currentQ.isAnswered;
-                                          return !hasAnswerQ && !isIgnoredQ;
-                                        }).length ?? 0) > 3)
-                                     Tooltip(
-                                       message: 'Ask later',
-                                       child: IconButton(
-                                         icon: const Icon(Icons.rotate_left),
-                                         onPressed: () => _askLater(question),
-                                       ),
-                                     ),
-                                   Tooltip(
-                                     message: isIgnored ? 'Show question' : 'Ignore question',
-                                     child: IconButton(
-                                       icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
-                                       onPressed: () => isIgnored 
-                                         ? _unignoreQuestion(question) 
-                                         : _ignoreQuestion(question),
-                                       ),
-                                     ),
-                                 ],
-                               ),
-                               onTap: () => _answerQuestion(question),
-                              ),
-                            );
-                          },
-                         );
+                         itemBuilder: (context, index) => _buildQuestionItem(filteredQuestions[index]),
+                       );
                      },
                    ),
-           ),
+            ),
         ],
       ),
+
     );
   }
 }
