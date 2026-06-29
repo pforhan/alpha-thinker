@@ -29,13 +29,16 @@ This document tracks the specific engineering tasks required to move from design
 - [x] We should only ever show 3 unanswered questions at a time.  Others should dynamically rotate in, with a new unanswered cards replacing the just-answered cards.  When showing unanswered questions, there should also be a shuffle button to bring in fresh questions (if available) without ignoring those currently visible.  Similarly, each question should also have an option to "ask later" that question by putting it at the end of the list.  Both actions operate similarly -- they place the current questions at the end of the sorted list and pull the next questions from the front of the list.  If there are no more unanswered questions these actions should not be available.
 - [x] Sort answered questions by answer date descending, ignored questions by ignored date descending
 - [x] add ask later to the unanswered question editor dialog
-- [ ] add animations for ask later, shuffle, and ignore / unignore actions.
+- [x] allow swipe-to-ignore (left) and swipe-to-ask-later (right)
+- [x] add animations for ask later, shuffle, and ignore / unignore actions.
+- [ ] ability to edit project synopsis. Provide the means to clear prior answers or keep them.
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
 
 ## Phase 2.5: cleanup
 - [x] break up bracket storms with multiple methods to make the code easier to read.
+- [ ] break up project_detail_screen.dart further, moving the dialog out at least
 - [ ] auto archive functionality should be for project updates, not question or answer updates.
 - [ ] clean up Answer.isAnswered
 - [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
@@ -47,6 +50,8 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Make a QuestionDAO since questions and answers can be updated independently of a project.
 - [ ] Better text instead of "Submit" for adding / editing answers
 - [ ] need to integrate MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
+- [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
+- [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it. 
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Integrate LiteRT-LM for automated question generation

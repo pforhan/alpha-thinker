@@ -4,6 +4,7 @@ import '../thinker_api.dart';
 import '../thinker_api_extensions.dart';
 import '../services/project_service.dart';
 import '../services/preference_service.dart';
+import '../widgets/question_item.dart';
 import 'dart:math';
 
 class ProjectDetailScreen extends StatefulWidget {
@@ -301,40 +302,20 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }
 
   Widget _buildQuestionItem(QuestionDto question) {
-    final isIgnored = question.isIgnored;
-    final hasAnswer = question.isAnswered;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ListTile(
-        title: Text(question.text),
-        subtitle: hasAnswer 
-          ? Text(question.currentAnswer!.text, maxLines: 1, overflow: TextOverflow.ellipsis)
-          : (isIgnored ? const Text('Ignored') : null),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!hasAnswer && !isIgnored && _questions?.where((q) => q.isUnanswered).length != null && _questions!.where((q) => q.isUnanswered).length > 3)
-              Tooltip(
-                message: 'Ask later',
-                child: IconButton(
-                  icon: const Icon(Icons.rotate_left),
-                  onPressed: () => _askLater(question),
-                ),
-              ),
-            Tooltip(
-              message: isIgnored ? 'Show question' : 'Ignore question',
-              child: IconButton(
-                icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
-                onPressed: () => isIgnored 
-                  ? _unignoreQuestion(question) 
-                  : _ignoreQuestion(question),
-              ),
-            ),
-          ],
-        ),
-        onTap: () => _answerQuestion(question),
-      ),
+    return QuestionItem(
+      question: question,
+      filter: _filter,
+      onAskLater: () => _askLater(question),
+      onIgnore: () => _ignoreQuestion(question),
+      onUnignore: () => _unignoreQuestion(question),
+      onDeleteAnswer: () async {
+        final current = question.currentAnswer;
+        if (current != null) {
+          await _service.deleteAnswer(widget.project.id, question.id, current.id);
+          _loadQuestions();
+        }
+      },
+      onTap: () => _answerQuestion(question),
     );
   }
 
@@ -378,10 +359,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                          );
                        }
 
-                       return ListView.builder(
-                         itemCount: filteredQuestions.length,
-                         itemBuilder: (context, index) => _buildQuestionItem(filteredQuestions[index]),
-                       );
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: ListView.builder(
+                            key: ValueKey(_filter + (_unansweredOrder?.join(',') ?? '')),
+                            itemCount: filteredQuestions.length,
+                            itemBuilder: (context, index) => _buildQuestionItem(filteredQuestions[index]),
+                          ),
+                        );
                      },
                    ),
             ),
