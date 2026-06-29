@@ -28,7 +28,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] Present questions to be answered in a random order.
 - [x] We should only ever show 3 unanswered questions at a time.  Others should dynamically rotate in, with a new unanswered cards replacing the just-answered cards.  When showing unanswered questions, there should also be a shuffle button to bring in fresh questions (if available) without ignoring those currently visible.  Similarly, each question should also have an option to "ask later" that question by putting it at the end of the list.  Both actions operate similarly -- they place the current questions at the end of the sorted list and pull the next questions from the front of the list.  If there are no more unanswered questions these actions should not be available.
 - [x] Sort answered questions by answer date descending, ignored questions by ignored date descending
-- [ ] add ask later to the unanswered question editor dialog
+- [x] add ask later to the unanswered question editor dialog
 - [ ] add animations for ask later, shuffle, and ignore / unignore actions.
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
@@ -37,6 +37,7 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 2.5: cleanup
 - [x] break up bracket storms with multiple methods to make the code easier to read.
 - [ ] auto archive functionality should be for project updates, not question or answer updates.
+- [ ] clean up Answer.isAnswered
 - [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
 - [ ] Change filenames with "pigeon" in them to something more appropriate
 - [ ] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker

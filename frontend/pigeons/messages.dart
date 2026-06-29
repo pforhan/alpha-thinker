@@ -43,7 +43,7 @@ class AnswerDto {
   int id;
   String questionId;
   String text;
-  int answeredAt;
+  int? answeredAt;
   int? modifiedAt;
   int? deletedAt;
 
@@ -51,7 +51,7 @@ class AnswerDto {
     required this.id,
     required this.questionId,
     required this.text,
-    required this.answeredAt,
+    this.answeredAt,
     this.modifiedAt,
     this.deletedAt,
   });
@@ -70,7 +70,7 @@ abstract class ThinkerApi {
   @async
   void deleteProject(String id);
   @async
-  void updateAnswer(String projectId, String questionId, String text, bool autoArchive);
+  void updateAnswer(String projectId, String questionId, String text, bool autoArchive, bool isDraft);
   @async
    void ignoreQuestion(String projectId, String questionId);
   @async

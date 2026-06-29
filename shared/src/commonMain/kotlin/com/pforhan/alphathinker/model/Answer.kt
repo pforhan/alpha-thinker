@@ -6,10 +6,10 @@ data class Answer(
   val id: Long = 0,
   val questionId: String,
   val text: String,
-  val answeredAt: Instant,
+  val answeredAt: Instant?,
   val modifiedAt: Instant? = null,
   val deletedAt: Instant? = null
 ) {
   val isAnswered: Boolean
-    get() = text.isNotBlank()
+    get() = text.isNotBlank() && answeredAt != null
 }

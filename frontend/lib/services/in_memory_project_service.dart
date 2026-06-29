@@ -207,26 +207,34 @@ class InMemoryProjectService implements ProjectService {
   }
 
   @override
-  Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive) async {
+  Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive, bool isDraft) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     
     final qs = _questions[projectId];
     if (qs == null) return;
-
+    
     final qIndex = qs.indexWhere((q) => q.id == questionId);
     if (qIndex == -1) return;
-
-    final question = qs[qIndex];
     
+    final question = qs[qIndex];
+
+    if (isDraft && question.isAnswered) {
+      throw Exception('Cannot add a draft answer to an answered question');
+    }
+    
+    if (isDraft) {
+      question.answers.clear();
+    }
+
     final newAnswer = AnswerDto(
       id: DateTime.now().millisecondsSinceEpoch,
       questionId: questionId,
       text: text,
-      answeredAt: now,
+      answeredAt: isDraft ? null : now,
     );
-
+    
     question.answers.add(newAnswer);
-
+    
     if (autoArchive) {
       qs[qIndex] = QuestionDto(
         id: question.id,
@@ -237,7 +245,7 @@ class InMemoryProjectService implements ProjectService {
         answers: question.answers,
       );
     }
-
+    
     final pIndex = _projects.indexWhere((p) => p.id == projectId);
     if (pIndex != -1) {
       _projects[pIndex].updatedAt = now;

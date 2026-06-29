@@ -26,8 +26,8 @@ class PigeonProjectService implements ProjectService {
   Future<void> deleteProject(String id) => _api.deleteProject(id);
 
   @override
-  Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive) =>
-      _api.updateAnswer(projectId, questionId, text, autoArchive);
+  Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive, bool isDraft) =>
+      _api.updateAnswer(projectId, questionId, text, autoArchive, isDraft);
   
   @override
   Future<void> ignoreQuestion(String projectId, String questionId) => _api.ignoreQuestion(projectId, questionId);

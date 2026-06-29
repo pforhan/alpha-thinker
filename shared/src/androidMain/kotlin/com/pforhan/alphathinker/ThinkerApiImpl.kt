@@ -81,11 +81,12 @@ class ThinkerApiImpl(
         questionId: String,
         text: String,
         autoIgnore: Boolean,
+        isDraft: Boolean,
         callback: (Result<Unit>) -> Unit
     ) {
         scope.launch {
             try {
-                repository.updateAnswer(projectId, questionId, text, autoIgnore)
+                repository.updateAnswer(projectId, questionId, text, autoIgnore, isDraft)
                 callback(Result.success(Unit))
             } catch (e: Exception) {
                 callback(Result.failure(e))
@@ -148,7 +149,7 @@ fun Question.toDto(): QuestionDto = QuestionDto(
             id = it.id,
             questionId = it.questionId, 
             text = it.text, 
-            answeredAt = it.answeredAt.toEpochMilliseconds(), 
+            answeredAt = it.answeredAt?.toEpochMilliseconds(), 
             modifiedAt = it.modifiedAt?.toEpochMilliseconds(),
             deletedAt = it.deletedAt?.toEpochMilliseconds()
         ) 

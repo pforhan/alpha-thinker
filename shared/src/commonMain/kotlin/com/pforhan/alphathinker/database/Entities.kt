@@ -27,7 +27,7 @@ data class AnswerEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val questionId: String,
     val text: String,
-    val answeredAt: Long,
+    val answeredAt: Long? = null,
     val modifiedAt: Long? = null,
     val deletedAt: Long? = null
 )

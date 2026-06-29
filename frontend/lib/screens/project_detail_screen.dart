@@ -50,13 +50,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       if (filtered.length > 3) {
         filtered = filtered.take(3).toList();
       }
-    } else if (_filter == 'Answered') {
-      filtered.sort((a, b) => (b.currentAnswer?.updatedAt ?? DateTime(0)).compareTo(a.currentAnswer?.updatedAt ?? DateTime(0)));
-    } else if (_filter == 'Ignored') {
-      filtered.sort((a, b) => (b.ignoredAt ?? DateTime(0)).compareTo(a.ignoredAt ?? DateTime(0)));
-    }
-    return filtered;
-  }
+     } else if (_filter == 'Answered') {
+       filtered.sort((a, b) => (b.currentAnswer?.modifiedAt ?? b.currentAnswer?.answeredAt ?? 0).compareTo(a.currentAnswer?.modifiedAt ?? a.currentAnswer?.answeredAt ?? 0));
+     } else if (_filter == 'Ignored') {
+       filtered.sort((a, b) => (b.ignoredAt ?? 0).compareTo(a.ignoredAt ?? 0));
+     }
+     return filtered;
+   }
 
   Future<void> _loadQuestions() async {
     setState(() => _loading = true);
@@ -170,33 +170,49 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           ),
           maxLines: 5,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          if (current != null && current.isAnswered)
-            TextButton(
-              onPressed: () async {
-                debugPrint('Deleting answer for question ${question.id} in project ${widget.project.id}');
-                await _service.deleteAnswer(widget.project.id, question.id, current.id);
-                debugPrint('Successfully deleted answer');
-                Navigator.pop(context, false);
-                _loadQuestions();
-              },
-              child: const Text('Delete Answer', style: TextStyle(color: Colors.red)),
-            ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Submit'),
-          ),
-        ],
+         actions: [
+           TextButton(
+             onPressed: () => Navigator.pop(context, false),
+             child: const Text('Cancel'),
+           ),
+           if (current == null || !current.isAnswered)
+             TextButton(
+               onPressed: () async {
+                 if (answerController.text.isNotEmpty) {
+                   try {
+                     await _service.updateAnswer(widget.project.id, question.id, answerController.text, false, true);
+                     _loadQuestions();
+                   } catch (e) {
+                     debugPrint('Error saving draft: $e');
+                   }
+                 }
+                 _askLater(question);
+                 Navigator.pop(context, false);
+               },
+               child: const Text('Ask Later'),
+             ),
+           if (current != null && current.isAnswered)
+             TextButton(
+               onPressed: () async {
+                 debugPrint('Deleting answer for question ${question.id} in project ${widget.project.id}');
+                 await _service.deleteAnswer(widget.project.id, question.id, current.id);
+                 debugPrint('Successfully deleted answer');
+                 Navigator.pop(context, false);
+                 _loadQuestions();
+               },
+               child: const Text('Delete Answer', style: TextStyle(color: Colors.red)),
+             ),
+           ElevatedButton(
+             onPressed: () => Navigator.pop(context, true),
+             child: const Text('Submit'),
+           ),
+         ],
       ),
     );
     
     if (result == true && answerController.text.isNotEmpty) {
       try {
-        await _service.updateAnswer(widget.project.id, question.id, answerController.text, false);
+        await _service.updateAnswer(widget.project.id, question.id, answerController.text, false, false);
         _loadQuestions();
       } catch (e) {
         debugPrint('Error updating answer: $e');

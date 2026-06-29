@@ -66,12 +66,20 @@ class ProjectRepository(
         projectId: String,
         questionId: String,
         text: String,
-        autoIgnore: Boolean = false
+        autoIgnore: Boolean = false,
+        isDraft: Boolean = false
     ): Project? {
         val project = storage.getProject(projectId) ?: return null
+        val question = project.questions.find { it.id == questionId } ?: return null
+
+        if (isDraft && question.currentAnswer?.isAnswered == true) {
+            throw IllegalStateException("Cannot add a draft answer to a question that is already answered")
+        }
+
         val now = Clock.System.now()
+
         
-        val newAnswer = Answer(id = 0, questionId = questionId, text = text, answeredAt = now)
+        val newAnswer = Answer(id = 0, questionId = questionId, text = text, answeredAt = if (isDraft) null else now)
         
         val updatedQuestions = project.questions.map { q ->
             if (q.id == questionId) {

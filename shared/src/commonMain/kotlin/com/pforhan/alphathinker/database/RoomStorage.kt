@@ -37,7 +37,7 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
                 AnswerEntity(
                     questionId = a.questionId,
                     text = a.text,
-                    answeredAt = a.answeredAt.toEpochMilliseconds(),
+                     answeredAt = a.answeredAt?.toEpochMilliseconds(), 
                     modifiedAt = a.modifiedAt?.toEpochMilliseconds()
                 )
             )
@@ -53,7 +53,7 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
                 Answer(
                     questionId = ae.questionId,
                     text = ae.text,
-                    answeredAt = Instant.fromEpochMilliseconds(ae.answeredAt),
+                    answeredAt = ae.answeredAt?.let { Instant.fromEpochMilliseconds(it) },
                     modifiedAt = ae.modifiedAt?.let { Instant.fromEpochMilliseconds(it) }
                 )
             }
