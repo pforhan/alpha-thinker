@@ -5,6 +5,7 @@ import '../thinker_api_extensions.dart';
 import '../services/project_service.dart';
 import '../services/preference_service.dart';
 import '../widgets/question_item.dart';
+import '../widgets/answer_dialog.dart';
 import 'dart:math';
 
 class ProjectDetailScreen extends StatefulWidget {
@@ -152,81 +153,37 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }
 
   Future<void> _answerQuestion(QuestionDto question) async {
-    final answerController = TextEditingController();
-    final current = question.currentAnswer;
-    
-    if (current != null && current.isAnswered) {
-      answerController.text = current.text;
-    }
-    
-    final result = await showDialog<bool>(
+    final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(question.text),
-        content: TextField(
-          controller: answerController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Enter your answer...',
-          ),
-          maxLines: 5,
-        ),
-         actions: [
-           TextButton(
-             onPressed: () => Navigator.pop(context, false),
-             child: const Text('Cancel'),
-           ),
-           if (current == null || !current.isAnswered)
-             TextButton(
-               onPressed: () async {
-                 if (answerController.text.isNotEmpty) {
-                   try {
-                     await _service.updateAnswer(widget.project.id, question.id, answerController.text, false, true);
-                     _loadQuestions();
-                   } catch (e) {
-                     debugPrint('Error saving draft: $e');
-                   }
-                 }
-                 _askLater(question);
-                 Navigator.pop(context, false);
-               },
-               child: const Text('Ask Later'),
-             ),
-           if (current != null && current.isAnswered)
-             TextButton(
-               onPressed: () async {
-                 debugPrint('Deleting answer for question ${question.id} in project ${widget.project.id}');
-                 await _service.deleteAnswer(widget.project.id, question.id, current.id);
-                 debugPrint('Successfully deleted answer');
-                 Navigator.pop(context, false);
-                 _loadQuestions();
-               },
-               child: const Text('Delete Answer', style: TextStyle(color: Colors.red)),
-             ),
-           ElevatedButton(
-             onPressed: () => Navigator.pop(context, true),
-             child: const Text('Submit'),
-           ),
-         ],
+      builder: (context) => AnswerDialog(
+        project: widget.project,
+        question: question,
+        onSubmit: (answer) async {
+          if (answer.isNotEmpty) {
+            try {
+              await _service.updateAnswer(widget.project.id, question.id, answer, false, false);
+            } catch (e) {
+              debugPrint('Error updating answer: $e');
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error updating answer: $e'),
+                    duration: const Duration(seconds: 10),
+                    action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
+                  ),
+                );
+              }
+            }
+          }
+        },
       ),
     );
-    
-    if (result == true && answerController.text.isNotEmpty) {
-      try {
-        await _service.updateAnswer(widget.project.id, question.id, answerController.text, false, false);
-        _loadQuestions();
-      } catch (e) {
-        debugPrint('Error updating answer: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error updating answer: $e'),
-              duration: const Duration(seconds: 10),
-              action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
-            ),
-          );
-        }
-      }
+
+    if (result == 'submit' || result == 'deleted') {
+      _loadQuestions();
+    } else if (result == 'ask_later') {
+      _askLater(question);
+      _loadQuestions();
     }
   }
 

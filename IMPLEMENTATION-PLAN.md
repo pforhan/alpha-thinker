@@ -38,7 +38,7 @@ This document tracks the specific engineering tasks required to move from design
 
 ## Phase 2.5: cleanup
 - [x] break up bracket storms with multiple methods to make the code easier to read.
-- [ ] break up project_detail_screen.dart further, moving the dialog out at least
+- [x] break up project_detail_screen.dart further, moving the dialog out at least
 - [ ] auto archive functionality should be for project updates, not question or answer updates.
 - [ ] clean up Answer.isAnswered
 - [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
