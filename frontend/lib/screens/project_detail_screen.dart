@@ -50,6 +50,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       if (filtered.length > 3) {
         filtered = filtered.take(3).toList();
       }
+    } else if (_filter == 'Answered') {
+      filtered.sort((a, b) => (b.currentAnswer?.updatedAt ?? DateTime(0)).compareTo(a.currentAnswer?.updatedAt ?? DateTime(0)));
+    } else if (_filter == 'Ignored') {
+      filtered.sort((a, b) => (b.ignoredAt ?? DateTime(0)).compareTo(a.ignoredAt ?? DateTime(0)));
     }
     return filtered;
   }
