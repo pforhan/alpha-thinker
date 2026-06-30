@@ -375,19 +375,10 @@ class InMemoryProjectService implements ProjectService {
     if (updateMode == ProjectUpdateMode.clear) {
       final qs = _questions[id];
       if (qs != null) {
-        for (var q in qs) {
-          for (var i = 0; i < q.answers.length; i++) {
-            final a = q.answers[i];
-            q.answers[i] = AnswerDto(
-              id: a.id,
-              questionId: a.questionId,
-              text: a.text,
-              answeredAt: a.answeredAt,
-              modifiedAt: a.modifiedAt,
-              deletedAt: now,
-            );
+          for (var q in qs) {
+            q.answers.clear(); // Using clear here as it's a mock, or mark deleted
+            q.ignoredAt = null;
           }
-        }
       }
     }
 

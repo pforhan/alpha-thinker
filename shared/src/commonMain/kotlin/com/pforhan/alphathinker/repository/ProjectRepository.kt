@@ -67,9 +67,12 @@ class ProjectRepository(
     val now = Clock.System.now()
 
     val updatedQuestions = when (mode) {
-      ProjectUpdateMode.CLEAR -> project.questions.map { q ->
-        q.copy(answers = q.answers.map { a -> a.copy(deletedAt = now) })
-      }
+       ProjectUpdateMode.CLEAR -> project.questions.map { q ->
+         q.copy(
+           answers = q.answers.map { a -> a.copy(deletedAt = now) },
+           ignoredAt = null
+         )
+       }
 
       ProjectUpdateMode.REVALIDATE -> {
         // TODO: AI revalidation logic

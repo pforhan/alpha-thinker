@@ -33,7 +33,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] add animations for ask later, shuffle, and ignore / unignore actions.
 - [x] ability to edit project synopsis. Provide the means to clear prior answers or keep them.
 - [x] When ask later saves answers as draft they should show up when that question is opened again. 
-- [ ] During edit project, clear all answers should also reset question state
+- [x] During edit project, clear all answers should also reset question state
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
@@ -79,8 +79,6 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Design and implement navigation strategy for multi-platform (mobile/desktop)
 - [ ] Develop custom KSP processor for Room/Pigeon synchronization (Deferred)
 - [ ] **State Management:** Implement the BLoC/Riverpod architecture to observe KMP updates.
-
-
 
 ## Phase 6: Testing & Verification
 - [ ] **KMP Unit Tests:** Verify business logic and fallback transitions.
