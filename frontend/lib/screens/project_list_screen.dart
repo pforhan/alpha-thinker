@@ -3,6 +3,7 @@ import '../injection.dart';
 import '../thinker_api.dart';
 import '../services/project_service.dart';
 import 'project_detail_screen.dart';
+import '../widgets/edit_project_dialog.dart';
 
 class ProjectListScreen extends StatefulWidget {
   const ProjectListScreen({super.key});
@@ -46,59 +47,41 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   }
 
   Future<void> _createProject() async {
-    final synopsisController = TextEditingController();
-    final result = await showDialog<bool>(
+    await showDialog(
       context: context,
-      builder: (context) =>
-          AlertDialog(
-            title: const Text('New Project'),
-            content: TextField(
-              controller: synopsisController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                hintText: 'Enter your project idea (synopsis)...',
-              ),
-              maxLines: 3,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Create'),
-              ),
-            ],
-          ),
+      builder: (context) => EditProjectDialog(
+        onSave: (title, synopsis, _) async {
+          if (synopsis.isNotEmpty) {
+            try {
+              final newProject = await _service.createProject(
+                synopsis,
+                title: title.isNotEmpty ? title : null,
+              );
+              await _refreshProjects();
+              if (mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProjectDetailScreen(project: newProject),
+                  ),
+                ).then((_) => _refreshProjects());
+              }
+            } catch (e) {
+              debugPrint('Error creating project: $e');
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error creating project: $e'),
+                    duration: const Duration(seconds: 10),
+                    action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
+                  ),
+                );
+              }
+            }
+          }
+        },
+      ),
     );
-
-    if (result == true && synopsisController.text.isNotEmpty) {
-      try {
-        final newProject = await _service.createProject(
-            synopsisController.text);
-        await _refreshProjects();
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ProjectDetailScreen(project: newProject),
-            ),
-          ).then((_) => _refreshProjects());
-        }
-      } catch (e) {
-        debugPrint('Error creating project: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error creating project: $e'),
-              duration: const Duration(seconds: 10),
-              action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
-            ),
-          );
-        }
-      }
-    }
   }
 
   Widget _buildEmptyState() {

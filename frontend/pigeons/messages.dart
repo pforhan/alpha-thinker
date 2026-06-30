@@ -66,7 +66,7 @@ enum ProjectUpdateMode {
 @HostApi()
 abstract class ThinkerApi {
   @async
-  ProjectDto createProject(String synopsis);
+  ProjectDto createProject(String synopsis, String? title);
 
   @async
   List<ProjectDto> getAllProjects();
@@ -94,7 +94,7 @@ abstract class ThinkerApi {
   void deleteAnswer(String projectId, String questionId, int answerId);
 
   @async
-  ProjectDto updateProject(String id, String synopsis,
+  ProjectDto updateProject(String id, String title, String synopsis,
       ProjectUpdateMode updateMode);
 }
 

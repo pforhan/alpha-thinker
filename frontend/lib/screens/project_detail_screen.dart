@@ -200,11 +200,12 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     }
   }
 
-  Future<void> _updateSynopsis(String newSynopsis,
+  Future<void> _updateSynopsis(String title, String newSynopsis,
       ProjectUpdateMode mode) async {
     try {
       final updatedProject = await _service.updateProject(
         widget.project.id,
+        title,
         newSynopsis,
         mode,
       );
@@ -226,7 +227,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       builder: (context) =>
           EditProjectDialog(
             project: _currentProject,
-            onSave: (synopsis, mode) => _updateSynopsis(synopsis, mode),
+            onSave: (title, synopsis, mode) => _updateSynopsis(title, synopsis, mode),
           ),
     );
   }
@@ -329,12 +330,6 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_currentProject.editableTitle),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _editSynopsis,
-          ),
-        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

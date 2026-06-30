@@ -1,7 +1,7 @@
 import '../thinker_api.dart';
 
 abstract class ProjectService {
-  Future<ProjectDto> createProject(String synopsis);
+  Future<ProjectDto> createProject(String synopsis, {String? title});
 
   Future<List<ProjectDto>> getAllProjects();
 
@@ -20,6 +20,6 @@ abstract class ProjectService {
 
   Future<void> deleteAnswer(String projectId, String questionId, int answerId);
 
-  Future<ProjectDto> updateProject(String id, String synopsis,
+  Future<ProjectDto> updateProject(String id, String title, String synopsis,
       ProjectUpdateMode updateMode);
 }

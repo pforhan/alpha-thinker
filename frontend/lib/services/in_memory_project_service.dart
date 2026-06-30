@@ -8,7 +8,7 @@ class InMemoryProjectService implements ProjectService {
   final Map<String, List<QuestionDto>> _questions = {};
 
   @override
-  Future<ProjectDto> createProject(String synopsis) async {
+  Future<ProjectDto> createProject(String synopsis, {String? title}) async {
     final id = DateTime
         .now()
         .millisecondsSinceEpoch
@@ -19,9 +19,9 @@ class InMemoryProjectService implements ProjectService {
     final project = ProjectDto(
       id: id,
       synopsis: synopsis,
-      editableTitle: synopsis.length > 30
+      editableTitle: title ?? (synopsis.length > 30
           ? '${synopsis.substring(0, 30)}...'
-          : synopsis,
+          : synopsis),
       createdAt: now,
       updatedAt: now,
       status: 'Draft',
@@ -358,7 +358,7 @@ class InMemoryProjectService implements ProjectService {
   }
 
   @override
-  Future<ProjectDto> updateProject(String id, String synopsis,
+  Future<ProjectDto> updateProject(String id, String title, String synopsis,
       ProjectUpdateMode updateMode) async {
     final pIndex = _projects.indexWhere((p) => p.id == id);
     if (pIndex == -1) throw Exception('Project not found');
@@ -369,8 +369,7 @@ class InMemoryProjectService implements ProjectService {
         .millisecondsSinceEpoch;
 
     project.synopsis = synopsis;
-    project.editableTitle =
-    synopsis.length > 30 ? '${synopsis.substring(0, 30)}...' : synopsis;
+    project.editableTitle = title;
     project.updatedAt = now;
 
     if (updateMode == ProjectUpdateMode.clear) {

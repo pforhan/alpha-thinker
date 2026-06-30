@@ -20,13 +20,13 @@ class ProjectRepository(
     suspend fun deleteAllProjects()
   }
 
-  suspend fun createProject(synopsis: String): Project {
+  suspend fun createProject(synopsis: String, title: String? = null): Project {
     val now = Clock.System.now()
     val projectId = randomUUID()
     val project = Project(
       id = projectId,
       synopsis = synopsis.trim(),
-      editableTitle = synopsis.take(30).trim() + "...",
+      editableTitle = title?.trim() ?: (synopsis.take(30).trim() + "..."),
       status = "Draft",
       questions = emptyList(),
       createdAt = now,
@@ -59,6 +59,7 @@ class ProjectRepository(
 
   suspend fun updateProject(
       id: String,
+      title: String,
       synopsis: String,
       mode: ProjectUpdateMode,
   ): Project? {
@@ -80,7 +81,7 @@ class ProjectRepository(
 
     val updatedProject = project.copy(
       synopsis = synopsis.trim(),
-      editableTitle = synopsis.take(30).trim() + "...",
+      editableTitle = title.trim(),
       questions = updatedQuestions,
       updatedAt = now
     )

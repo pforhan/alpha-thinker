@@ -5,8 +5,8 @@ class PigeonProjectService implements ProjectService {
   final ThinkerApi _api = ThinkerApi();
 
   @override
-  Future<ProjectDto> createProject(String synopsis) =>
-      _api.createProject(synopsis);
+  Future<ProjectDto> createProject(String synopsis, {String? title}) =>
+      _api.createProject(synopsis, title);
 
   @override
   Future<List<ProjectDto>> getAllProjects() async {
@@ -44,7 +44,7 @@ class PigeonProjectService implements ProjectService {
       int answerId) => _api.deleteAnswer(projectId, questionId, answerId);
 
   @override
-  Future<ProjectDto> updateProject(String id, String synopsis,
+  Future<ProjectDto> updateProject(String id, String title, String synopsis,
       ProjectUpdateMode updateMode) =>
-      _api.updateProject(id, synopsis, updateMode);
+      _api.updateProject(id, title, synopsis, updateMode);
 }

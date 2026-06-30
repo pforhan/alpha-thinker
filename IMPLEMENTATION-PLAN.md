@@ -33,6 +33,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] add animations for ask later, shuffle, and ignore / unignore actions.
 - [x] ability to edit project synopsis. Provide the means to clear prior answers or keep them.
 - [x] When ask later saves answers as draft they should show up when that question is opened again. 
+- [ ] During edit project, clear all answers should also reset question state
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
@@ -40,8 +41,9 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 2.5: cleanup
 - [x] break up bracket storms with multiple methods to make the code easier to read.
 - [x] break up project_detail_screen.dart further, moving the dialog out at least
-- [ ] reformat all code with 2-space indents
-- [ ] combine new project dialog with edit project dialog
+- [x] reformat all code with 2-space indents
+- [x] combine new project dialog with edit project dialog
+- [ ] strip whitespace from all user-inputted text in frontend and backend
 - [ ] auto archive functionality should be for project updates, not question or answer updates.
 - [ ] clean up Answer.isAnswered
 - [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage

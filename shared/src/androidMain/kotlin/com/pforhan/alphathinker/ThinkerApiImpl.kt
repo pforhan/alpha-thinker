@@ -12,10 +12,10 @@ class ThinkerApiImpl(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main),
 ) : ThinkerApi {
 
-  override fun createProject(synopsis: String, callback: (Result<ProjectDto>) -> Unit) {
+  override fun createProject(synopsis: String, title: String?, callback: (Result<ProjectDto>) -> Unit) {
     scope.launch {
       try {
-        val project = repository.createProject(synopsis)
+        val project = repository.createProject(synopsis, title = title)
         callback(Result.success(project.toDto()))
       } catch (e: Exception) {
         callback(Result.failure(e))
@@ -145,13 +145,14 @@ class ThinkerApiImpl(
 
   override fun updateProject(
       id: String,
+      title: String,
       synopsis: String,
       updateMode: ProjectUpdateMode,
       callback: (Result<ProjectDto>) -> Unit,
   ) {
     scope.launch {
       try {
-        val project = repository.updateProject(id, synopsis, updateMode)
+        val project = repository.updateProject(id, title, synopsis, updateMode)
         if (project != null) {
           callback(Result.success(project.toDto()))
         } else {
