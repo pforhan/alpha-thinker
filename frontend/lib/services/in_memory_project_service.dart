@@ -18,10 +18,10 @@ class InMemoryProjectService implements ProjectService {
         .millisecondsSinceEpoch;
     final project = ProjectDto(
       id: id,
-      synopsis: synopsis,
-      editableTitle: title ?? (synopsis.length > 30
-          ? '${synopsis.substring(0, 30)}...'
-          : synopsis),
+      synopsis: synopsis.trim(),
+      editableTitle: title?.trim() ?? (synopsis.trim().length > 30
+          ? '${synopsis.trim().substring(0, 30)}...'
+          : synopsis.trim()),
       createdAt: now,
       updatedAt: now,
       status: 'Draft',
@@ -241,7 +241,7 @@ class InMemoryProjectService implements ProjectService {
           .now()
           .millisecondsSinceEpoch,
       questionId: questionId,
-      text: text,
+      text: text.trim(),
       answeredAt: isDraft ? null : now,
     );
 
@@ -368,8 +368,8 @@ class InMemoryProjectService implements ProjectService {
         .now()
         .millisecondsSinceEpoch;
 
-    project.synopsis = synopsis;
-    project.editableTitle = title;
+    project.synopsis = synopsis.trim();
+    project.editableTitle = title.trim();
     project.updatedAt = now;
 
     if (updateMode == ProjectUpdateMode.clear) {

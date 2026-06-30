@@ -44,7 +44,7 @@ class _AnswerDialogState extends State<AnswerDialog> {
     if (_answerController.text.isNotEmpty) {
       try {
         await _service.updateAnswer(
-            widget.project.id, widget.question.id, _answerController.text,
+            widget.project.id, widget.question.id, _answerController.text.trim(),
             false, true);
       } catch (e) {
         debugPrint('Error saving draft: $e');
@@ -97,7 +97,7 @@ class _AnswerDialogState extends State<AnswerDialog> {
           ),
         ElevatedButton(
           onPressed: () async {
-            await widget.onSubmit(_answerController.text);
+            await widget.onSubmit(_answerController.text.trim());
             Navigator.pop(context, 'submit');
           },
           child: const Text('Submit'),

@@ -15,7 +15,7 @@ class ThinkerApiImpl(
   override fun createProject(synopsis: String, title: String?, callback: (Result<ProjectDto>) -> Unit) {
     scope.launch {
       try {
-        val project = repository.createProject(synopsis, title = title)
+        val project = repository.createProject(synopsis.trim(), title = title?.trim())
         callback(Result.success(project.toDto()))
       } catch (e: Exception) {
         callback(Result.failure(e))
@@ -89,7 +89,7 @@ class ThinkerApiImpl(
   ) {
     scope.launch {
       try {
-        repository.updateAnswer(projectId, questionId, text, autoIgnore, isDraft)
+        repository.updateAnswer(projectId, questionId, text.trim(), autoIgnore, isDraft)
         callback(Result.success(Unit))
       } catch (e: Exception) {
         callback(Result.failure(e))
@@ -152,7 +152,7 @@ class ThinkerApiImpl(
   ) {
     scope.launch {
       try {
-        val project = repository.updateProject(id, title, synopsis, updateMode)
+        val project = repository.updateProject(id, title.trim(), synopsis.trim(), updateMode)
         if (project != null) {
           callback(Result.success(project.toDto()))
         } else {

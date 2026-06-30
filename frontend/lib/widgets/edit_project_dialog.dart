@@ -127,7 +127,7 @@ class _EditProjectDialogState extends State<EditProjectDialog> {
         ),
         TextButton(
           onPressed: () {
-            widget.onSave(_titleController.text, _synopsisController.text, _mode);
+            widget.onSave(_titleController.text.trim(), _synopsisController.text.trim(), _mode);
             Navigator.pop(context);
           },
           child: Text(isEdit ? 'Save' : 'Create'),
