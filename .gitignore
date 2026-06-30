@@ -1,39 +1,39 @@
 # Gradle files
-.gradle/
 **/build/
+.gradle/
 
 # Local configuration file (sdk path, etc)
-local.properties
 **/local.properties
+local.properties
 
 # Log/OS Files
 *.log
 .DS_Store
 
 # Android Studio / Android generated
-captures/
-.externalNativeBuild/
-.cxx/
-*.aab
-*.apk
-output-metadata.json
+**/GeneratedPluginRegistrant.java
 **/android/app/debug
 **/android/app/profile
 **/android/app/release
-**/GeneratedPluginRegistrant.java
+*.aab
+*.apk
+.cxx/
+.externalNativeBuild/
+captures/
 key.properties
+output-metadata.json
 
 # IntelliJ / IDEs
 *.iml
 *.ipr
 *.iws
-.idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
 .history
+.idea/
 .svn/
 .swiftpm/
+deploymentTargetDropDown.xml
+misc.xml
+render.experimental.xml
 
 # Keystore files
 *.jks
@@ -48,14 +48,14 @@ google-services.json
 /.obsidian
 
 # Flutter / Dart
+**/doc/api/
 .dart_tool/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-**/doc/api/
 /coverage/
-app.*.symbols
 app.*.map.json
+app.*.symbols
 
 # flutter Miscellaneous
 *.class
@@ -79,21 +79,21 @@ app.*.map.json
 /dev/docs/flutter.docs.zip
 /dev/docs/lib/
 /dev/docs/pubspec.yaml
-/dev/integration_tests/**/xcuserdata
 /dev/integration_tests/**/Pods
+/dev/integration_tests/**/xcuserdata
 /packages/flutter/coverage/
-version
 analysis_benchmark.json
+version
 
-# packages file containing multi-root paths
+# flutter packages file containing multi-root paths
 .packages.generated
 
 # Flutter/Dart/Pub related
 **/doc/api/
+**/generated_plugin_registrant.dart
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-**/generated_plugin_registrant.dart
 .packages
 .pub-preload-cache/
 .pub/
@@ -103,18 +103,18 @@ linked_*.ds
 unlinked.ds
 unlinked_spec.ds
 
-# Android related
+# flutter Android related
+**/android/**/GeneratedPluginRegistrant.java
 **/android/**/gradle-wrapper.jar
-.gradle/
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat
-**/android/local.properties
-**/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
+**/android/local.properties
 *.jks
+.gradle/
 
-# iOS/XCode related
+# flutter iOS/XCode related
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3
 **/ios/**/*.moved-aside
@@ -122,12 +122,12 @@ unlinked_spec.ds
 **/ios/**/*.perspectivev3
 **/ios/**/*sync/
 **/ios/**/.sconsign.dblite
+**/ios/**/.symlinks/
 **/ios/**/.tags*
 **/ios/**/.vagrant/
 **/ios/**/DerivedData/
 **/ios/**/Icon?
 **/ios/**/Pods/
-**/ios/**/.symlinks/
 **/ios/**/profile
 **/ios/**/xcuserdata
 **/ios/.generated/
@@ -136,66 +136,65 @@ unlinked_spec.ds
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
 **/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/ephemeral
 **/ios/Flutter/app.flx
 **/ios/Flutter/app.zip
+**/ios/Flutter/ephemeral
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
-**/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/ServiceDefinitions.json
 
-# macOS
+# flutter macOS
 **/Flutter/ephemeral/
 **/Pods/
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/macos/Flutter/ephemeral
 **/xcuserdata/
 
-# Windows
+# flutter Windows
 **/windows/flutter/generated_plugin_registrant.cc
 **/windows/flutter/generated_plugin_registrant.h
 **/windows/flutter/generated_plugins.cmake
 
-# Linux
+# flutter Linux
 **/linux/flutter/generated_plugin_registrant.cc
 **/linux/flutter/generated_plugin_registrant.h
 **/linux/flutter/generated_plugins.cmake
 
-# Coverage
+# flutter Coverage
 coverage/
 
-# Symbols
+# flutter Symbols
 app.*.symbols
 
-# Exceptions to above rules.
+# flutter Exceptions to above rules.
 !**/ios/**/default.mode1v3
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
-!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
 # Platform specific ephemeral files
-**/flutter/ephemeral/
 **/Flutter/ephemeral/
+**/flutter/ephemeral/
 
-# iOS / macOS
+# flutter iOS / macOS
+**/*sync/
+**/.symlinks/
+**/.vagrant/
+**/DerivedData/
+**/Pods/
 **/dgph
 *.mode1v3
 *.mode2v3
 *.moved-aside
 *.pbxuser
 *.perspectivev3
-**/*sync/
 .sconsign.dblite
 .tags*
-**/.vagrant/
-**/DerivedData/
 Icon?
-**/Pods/
-**/.symlinks/
-# profile
-xcuserdata
+# profile # leaving this one in causes the androidmanifest.xml to get removed...
 **/.generated/
 **/Flutter/App.framework
 **/Flutter/Flutter.framework
@@ -205,8 +204,9 @@ xcuserdata
 **/Flutter/app.zip
 **/Flutter/flutter_assets/
 **/Flutter/flutter_export_environment.sh
-ServiceDefinitions.json
 **/Runner/GeneratedPluginRegistrant.*
+ServiceDefinitions.json
+xcuserdata
 
 !default.mode1v3
 !default.mode2v3
@@ -214,14 +214,14 @@ ServiceDefinitions.json
 !default.perspectivev3
 
 # Windows
+!*.[Cc]ache/
+*.[Cc]ache
+*.sln.docstates
 *.suo
 *.user
 *.userosscache
-*.sln.docstates
 x64/
 x86/
-*.[Cc]ache
-!*.[Cc]ache/
 
 # Pigeon generated bindings
 frontend/lib/thinker_api.dart
