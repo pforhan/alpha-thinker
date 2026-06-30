@@ -32,7 +32,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] allow swipe-to-ignore (left) and swipe-to-ask-later (right)
 - [x] add animations for ask later, shuffle, and ignore / unignore actions.
 - [x] ability to edit project synopsis. Provide the means to clear prior answers or keep them.
-- [ ] When ask later saves answers as draft they should show up when that question is opened again. 
+- [x] When ask later saves answers as draft they should show up when that question is opened again. 
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)

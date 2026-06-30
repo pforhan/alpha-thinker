@@ -29,7 +29,7 @@ class _AnswerDialogState extends State<AnswerDialog> {
     super.initState();
     _answerController = TextEditingController();
     final current = widget.question.currentAnswer;
-    if (current != null && current.isAnswered) {
+    if (current != null) {
       _answerController.text = current.text;
     }
   }
