@@ -37,6 +37,7 @@ dependencies:
   pigeon: ^26.3.4
   get_it: ^9.2.1
   shared_preferences: ^2.5.5
+  meta: any
 
 dev_dependencies:
   flutter_test:

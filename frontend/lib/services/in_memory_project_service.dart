@@ -20,7 +20,7 @@ class InMemoryProjectService implements ProjectService {
       id: id,
       synopsis: synopsis,
       editableTitle: synopsis.length > 30
-          ? synopsis.substring(0, 30) + '...'
+          ? '${synopsis.substring(0, 30)}...'
           : synopsis,
       createdAt: now,
       updatedAt: now,
@@ -370,7 +370,7 @@ class InMemoryProjectService implements ProjectService {
 
     project.synopsis = synopsis;
     project.editableTitle =
-    synopsis.length > 30 ? synopsis.substring(0, 30) + '...' : synopsis;
+    synopsis.length > 30 ? '${synopsis.substring(0, 30)}...' : synopsis;
     project.updatedAt = now;
 
     if (updateMode == ProjectUpdateMode.clear) {

@@ -7,7 +7,6 @@ import '../services/preference_service.dart';
 import '../widgets/question_item.dart';
 import '../widgets/answer_dialog.dart';
 import '../widgets/edit_project_dialog.dart';
-import 'dart:math';
 
 class ProjectDetailScreen extends StatefulWidget {
   final ProjectDto project;
