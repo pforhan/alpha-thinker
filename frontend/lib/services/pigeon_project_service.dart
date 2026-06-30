@@ -39,5 +39,5 @@ class PigeonProjectService implements ProjectService {
   Future<void> deleteAnswer(String projectId, String questionId, int answerId) => _api.deleteAnswer(projectId, questionId, answerId);
 
   @override
-  Future<ProjectDto> updateProject(String id, String synopsis, bool clearAnswers) => _api.updateProject(id, synopsis, clearAnswers);
+  Future<ProjectDto> updateProject(String id, String synopsis, ProjectUpdateMode updateMode) => _api.updateProject(id, synopsis, updateMode);
 }

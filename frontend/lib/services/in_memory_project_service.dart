@@ -336,7 +336,7 @@ class InMemoryProjectService implements ProjectService {
   }
 
   @override
-  Future<ProjectDto> updateProject(String id, String synopsis, bool clearAnswers) async {
+  Future<ProjectDto> updateProject(String id, String synopsis, ProjectUpdateMode updateMode) async {
     final pIndex = _projects.indexWhere((p) => p.id == id);
     if (pIndex == -1) throw Exception('Project not found');
 
@@ -347,7 +347,7 @@ class InMemoryProjectService implements ProjectService {
     project.editableTitle = synopsis.length > 30 ? synopsis.substring(0, 30) + '...' : synopsis;
     project.updatedAt = now;
 
-    if (clearAnswers) {
+    if (updateMode == ProjectUpdateMode.clear) {
       final qs = _questions[id];
       if (qs != null) {
         for (var q in qs) {

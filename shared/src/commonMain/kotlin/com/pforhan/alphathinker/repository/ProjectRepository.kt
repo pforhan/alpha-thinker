@@ -1,5 +1,6 @@
 package com.pforhan.alphathinker.repository
 
+import com.pforhan.alphathinker.ProjectUpdateMode
 import com.pforhan.alphathinker.llm.LLMIntegration
 import com.pforhan.alphathinker.model.Answer
 import com.pforhan.alphathinker.model.Question
@@ -59,17 +60,20 @@ class ProjectRepository(
     suspend fun updateProject(
         id: String,
         synopsis: String,
-        clearAnswers: Boolean = false
+        mode: ProjectUpdateMode
     ): Project? {
         val project = storage.getProject(id) ?: return null
         val now = Clock.System.now()
         
-        val updatedQuestions = if (clearAnswers) {
-            project.questions.map { q ->
+        val updatedQuestions = when (mode) {
+            ProjectUpdateMode.CLEAR -> project.questions.map { q ->
                 q.copy(answers = q.answers.map { a -> a.copy(deletedAt = now) })
             }
-        } else {
-            project.questions
+            ProjectUpdateMode.REVALIDATE -> {
+                // TODO: AI revalidation logic
+                project.questions
+            }
+            ProjectUpdateMode.KEEP -> project.questions
         }
 
         val updatedProject = project.copy(
@@ -177,8 +181,6 @@ class ProjectRepository(
         )
         return storage.saveProject(updatedProject)
     }
-
-
 
     suspend fun deleteAllProjects() {
         storage.deleteAllProjects()

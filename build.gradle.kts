@@ -10,7 +10,7 @@ plugins {
 }
 
 val pigeonDartOut = "frontend/lib/thinker_api.dart"
-val pigeonKotlinOut = "shared/src/androidMain/kotlin/com/pforhan/alphathinker/ThinkerApi.kt"
+val pigeonKotlinOut = "shared/src/commonMain/kotlin/com/pforhan/alphathinker/ThinkerApi.kt"
 
 tasks.register("clean") {
     group = "build"

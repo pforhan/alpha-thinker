@@ -3,7 +3,7 @@ import '../thinker_api.dart';
 
 class EditProjectDialog extends StatefulWidget {
   final ProjectDto project;
-  final Function(String synopsis, bool clearAnswers) onSave;
+  final Function(String synopsis, ProjectUpdateMode mode) onSave;
 
   const EditProjectDialog({
     super.key,
@@ -17,7 +17,7 @@ class EditProjectDialog extends StatefulWidget {
 
 class _EditProjectDialogState extends State<EditProjectDialog> {
   late TextEditingController _controller;
-  bool _clearAnswers = false;
+  ProjectUpdateMode _mode = ProjectUpdateMode.keep;
 
   @override
   void initState() {
@@ -35,30 +35,48 @@ class _EditProjectDialogState extends State<EditProjectDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Edit Synopsis'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _controller,
-            maxLines: null,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'Enter project synopsis...',
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const Text('Clear all prior answers?'),
-              Checkbox(
-                value: _clearAnswers,
-                onChanged: (val) {
-                  setState(() => _clearAnswers = val ?? false);
-                },
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _controller,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Enter project synopsis...',
+                labelText: 'Synopsis',
               ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Handling prior answers:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            RadioListTile<ProjectUpdateMode>(
+              title: const Text('Keep existing answers'),
+              value: ProjectUpdateMode.keep,
+              groupValue: _mode,
+              onChanged: (val) => setState(() => _mode = val!),
+            ),
+            RadioListTile<ProjectUpdateMode>(
+              title: const Text('Clear all answers'),
+              value: ProjectUpdateMode.clear,
+              groupValue: _mode,
+              onChanged: (val) => setState(() => _mode = val!),
+            ),
+            // TODO when we have LLM integration
+            // RadioListTile<ProjectUpdateMode>(
+            //   title: const Text('AI Revalidate relevance'),
+            //   value: ProjectUpdateMode.revalidate,
+            //   groupValue: _mode,
+            //   onChanged: (val) => setState(() => _mode = val!),
+            // ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -67,7 +85,7 @@ class _EditProjectDialogState extends State<EditProjectDialog> {
         ),
         TextButton(
           onPressed: () {
-            widget.onSave(_controller.text, _clearAnswers);
+            widget.onSave(_controller.text, _mode);
             Navigator.pop(context);
           },
           child: const Text('Save'),

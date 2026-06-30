@@ -57,6 +57,12 @@ class AnswerDto {
   });
 }
 
+enum ProjectUpdateMode {
+  keep,
+  clear,
+  revalidate,
+}
+
 @HostApi()
 abstract class ThinkerApi {
   @async
@@ -75,8 +81,9 @@ abstract class ThinkerApi {
    void ignoreQuestion(String projectId, String questionId);
   @async
    void unignoreQuestion(String projectId, String questionId);
-   @async
+  @async
    void deleteAnswer(String projectId, String questionId, int answerId);
-   @async
-   ProjectDto updateProject(String id, String synopsis, bool clearAnswers);
- }
+    @async
+    ProjectDto updateProject(String id, String synopsis, ProjectUpdateMode updateMode);
+  }
+

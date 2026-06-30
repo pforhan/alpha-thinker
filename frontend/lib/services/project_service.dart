@@ -10,5 +10,5 @@ abstract class ProjectService {
   Future<void> ignoreQuestion(String projectId, String questionId);
   Future<void> unignoreQuestion(String projectId, String questionId);
   Future<void> deleteAnswer(String projectId, String questionId, int answerId);
-  Future<ProjectDto> updateProject(String id, String synopsis, bool clearAnswers);
+  Future<ProjectDto> updateProject(String id, String synopsis, ProjectUpdateMode updateMode);
 }

@@ -191,9 +191,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     }
   }
 
-  Future<void> _updateSynopsis(String newSynopsis, bool clearAnswers) async {
+  Future<void> _updateSynopsis(String newSynopsis, ProjectUpdateMode mode) async {
     try {
-      final updatedProject = await _service.updateProject(widget.project.id, newSynopsis, clearAnswers);
+      final updatedProject = await _service.updateProject(
+        widget.project.id, 
+        newSynopsis, 
+        mode,
+      );
       setState(() {
         _currentProject = updatedProject;
       });
@@ -211,7 +215,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       context: context,
       builder: (context) => EditProjectDialog(
         project: _currentProject,
-        onSave: (synopsis, clearAnswers) => _updateSynopsis(synopsis, clearAnswers),
+        onSave: (synopsis, mode) => _updateSynopsis(synopsis, mode),
       ),
     );
   }

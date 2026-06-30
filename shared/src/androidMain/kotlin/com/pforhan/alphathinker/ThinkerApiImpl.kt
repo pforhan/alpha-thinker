@@ -127,10 +127,10 @@ class ThinkerApiImpl(
         }
     }
 
-    override fun updateProject(id: String, synopsis: String, clearAnswers: Boolean, callback: (Result<ProjectDto>) -> Unit) {
+    override fun updateProject(id: String, synopsis: String, updateMode: ProjectUpdateMode, callback: (Result<ProjectDto>) -> Unit) {
         scope.launch {
             try {
-                val project = repository.updateProject(id, synopsis, clearAnswers)
+                val project = repository.updateProject(id, synopsis, updateMode)
                 if (project != null) {
                     callback(Result.success(project.toDto()))
                 } else {
