@@ -11,6 +11,7 @@ import 'dart:math';
 
 class ProjectDetailScreen extends StatefulWidget {
   final ProjectDto project;
+
   const ProjectDetailScreen({super.key, required this.project});
 
   @override
@@ -55,13 +56,16 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       if (filtered.length > 3) {
         filtered = filtered.take(3).toList();
       }
-     } else if (_filter == 'Answered') {
-       filtered.sort((a, b) => (b.currentAnswer?.modifiedAt ?? b.currentAnswer?.answeredAt ?? 0).compareTo(a.currentAnswer?.modifiedAt ?? a.currentAnswer?.answeredAt ?? 0));
-     } else if (_filter == 'Ignored') {
-       filtered.sort((a, b) => (b.ignoredAt ?? 0).compareTo(a.ignoredAt ?? 0));
-     }
-     return filtered;
-   }
+    } else if (_filter == 'Answered') {
+      filtered.sort((a, b) =>
+          (b.currentAnswer?.modifiedAt ?? b.currentAnswer?.answeredAt ?? 0)
+              .compareTo(
+              a.currentAnswer?.modifiedAt ?? a.currentAnswer?.answeredAt ?? 0));
+    } else if (_filter == 'Ignored') {
+      filtered.sort((a, b) => (b.ignoredAt ?? 0).compareTo(a.ignoredAt ?? 0));
+    }
+    return filtered;
+  }
 
   Future<void> _loadQuestions() async {
     setState(() => _loading = true);
@@ -69,19 +73,20 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       final project = await _service.getProject(widget.project.id);
       setState(() => _currentProject = project);
       final questions = project.questions;
-      
+
       if (_filter == 'Unanswered') {
         final unanswered = questions.where((q) => q.isUnanswered).toList();
 
         if (unanswered.isNotEmpty) {
           final savedOrder = await _prefs.getQuestionOrder(widget.project.id);
           List<String> order = savedOrder;
-          
+
           if (order.isEmpty) {
-            order = unanswered.map((q) => q.id).toList()..shuffle();
+            order = unanswered.map((q) => q.id).toList()
+              ..shuffle();
             await _prefs.saveQuestionOrder(widget.project.id, order);
           }
-          
+
           _unansweredOrder = order;
         }
       }
@@ -127,13 +132,15 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     if (_unansweredOrder == null || _unansweredOrder!.isEmpty) return;
 
     final order = List<String>.from(_unansweredOrder!);
-    final remaining = order.where((id) => !currentVisibleIds.contains(id)).toList();
-    
+    final remaining = order
+        .where((id) => !currentVisibleIds.contains(id))
+        .toList();
+
     if (remaining.isEmpty) return;
 
     // Move current visible ones to the end
     final newOrder = [...remaining, ...currentVisibleIds];
-    
+
     setState(() {
       _unansweredOrder = newOrder;
     });
@@ -142,14 +149,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
   Future<void> _askLater(QuestionDto question) async {
     if (_unansweredOrder == null) return;
-    
+
     final order = List<String>.from(_unansweredOrder!);
     final id = question.id;
     if (!order.contains(id)) return;
 
     order.remove(id);
     order.add(id);
-    
+
     setState(() {
       _unansweredOrder = order;
     });
@@ -159,28 +166,31 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   Future<void> _answerQuestion(QuestionDto question) async {
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AnswerDialog(
-        project: widget.project,
-        question: question,
-        onSubmit: (answer) async {
-          if (answer.isNotEmpty) {
-            try {
-              await _service.updateAnswer(widget.project.id, question.id, answer, false, false);
-            } catch (e) {
-              debugPrint('Error updating answer: $e');
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error updating answer: $e'),
-                    duration: const Duration(seconds: 10),
-                    action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
-                  ),
-                );
+      builder: (context) =>
+          AnswerDialog(
+            project: widget.project,
+            question: question,
+            onSubmit: (answer) async {
+              if (answer.isNotEmpty) {
+                try {
+                  await _service.updateAnswer(
+                      widget.project.id, question.id, answer, false, false);
+                } catch (e) {
+                  debugPrint('Error updating answer: $e');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error updating answer: $e'),
+                        duration: const Duration(seconds: 10),
+                        action: SnackBarAction(
+                            label: 'Dismiss', onPressed: () {}),
+                      ),
+                    );
+                  }
+                }
               }
-            }
-          }
-        },
-      ),
+            },
+          ),
     );
 
     if (result == 'submit' || result == 'deleted') {
@@ -191,11 +201,12 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     }
   }
 
-  Future<void> _updateSynopsis(String newSynopsis, ProjectUpdateMode mode) async {
+  Future<void> _updateSynopsis(String newSynopsis,
+      ProjectUpdateMode mode) async {
     try {
       final updatedProject = await _service.updateProject(
-        widget.project.id, 
-        newSynopsis, 
+        widget.project.id,
+        newSynopsis,
         mode,
       );
       setState(() {
@@ -213,10 +224,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   Future<void> _editSynopsis() async {
     await showDialog(
       context: context,
-      builder: (context) => EditProjectDialog(
-        project: _currentProject,
-        onSave: (synopsis, mode) => _updateSynopsis(synopsis, mode),
-      ),
+      builder: (context) =>
+          EditProjectDialog(
+            project: _currentProject,
+            onSave: (synopsis, mode) => _updateSynopsis(synopsis, mode),
+          ),
     );
   }
 
@@ -226,7 +238,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Questions:', style: Theme.of(context).textTheme.titleMedium),
+          Text('Questions:', style: Theme
+              .of(context)
+              .textTheme
+              .titleMedium),
           SizedBox(
             height: 30,
             child: SingleChildScrollView(
@@ -301,7 +316,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       onDeleteAnswer: () async {
         final current = question.currentAnswer;
         if (current != null) {
-          await _service.deleteAnswer(widget.project.id, question.id, current.id);
+          await _service.deleteAnswer(
+              widget.project.id, question.id, current.id);
           _loadQuestions();
         }
       },
@@ -332,7 +348,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Synopsis:', style: Theme.of(context).textTheme.titleSmall),
+                    Text('Synopsis:', style: Theme
+                        .of(context)
+                        .textTheme
+                        .titleSmall),
                     IconButton(
                       icon: const Icon(Icons.edit, size: 20),
                       onPressed: _editSynopsis,
@@ -347,34 +366,36 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           _buildFilterChips(),
           _buildShuffleButton(),
           Expanded(
-             child: _loading
-                 ? const Center(child: CircularProgressIndicator())
-                 : Builder(
-                     builder: (context) {
-                       final filteredQuestions = _getFilteredQuestions();
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : Builder(
+              builder: (context) {
+                final filteredQuestions = _getFilteredQuestions();
 
-                       if (filteredQuestions.isEmpty) {
-                         return Center(
-                           child: Text(
-                             _filter == 'Unanswered' 
-                               ? 'No unanswered questions.' 
-                               : 'No ${_filter.toLowerCase()} questions.',
-                             textAlign: TextAlign.center,
-                           ),
-                         );
-                       }
+                if (filteredQuestions.isEmpty) {
+                  return Center(
+                    child: Text(
+                      _filter == 'Unanswered'
+                          ? 'No unanswered questions.'
+                          : 'No ${_filter.toLowerCase()} questions.',
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
 
-                        return AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          child: ListView.builder(
-                            key: ValueKey(_filter + (_unansweredOrder?.join(',') ?? '')),
-                            itemCount: filteredQuestions.length,
-                            itemBuilder: (context, index) => _buildQuestionItem(filteredQuestions[index]),
-                          ),
-                        );
-                     },
-                   ),
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: ListView.builder(
+                    key: ValueKey(
+                        _filter + (_unansweredOrder?.join(',') ?? '')),
+                    itemCount: filteredQuestions.length,
+                    itemBuilder: (context, index) =>
+                        _buildQuestionItem(filteredQuestions[index]),
+                  ),
+                );
+              },
             ),
+          ),
         ],
       ),
 

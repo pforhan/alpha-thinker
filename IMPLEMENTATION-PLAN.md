@@ -41,6 +41,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] break up bracket storms with multiple methods to make the code easier to read.
 - [x] break up project_detail_screen.dart further, moving the dialog out at least
 - [ ] reformat all code with 2-space indents
+- [ ] combine new project dialog with edit project dialog
 - [ ] auto archive functionality should be for project updates, not question or answer updates.
 - [ ] clean up Answer.isAnswered
 - [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage

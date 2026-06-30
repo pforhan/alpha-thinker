@@ -136,9 +136,10 @@ class QuestionItem extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: ListTile(
           title: Text(question.text),
-          subtitle: hasAnswer 
-            ? Text(question.currentAnswer!.text, maxLines: 1, overflow: TextOverflow.ellipsis)
-            : (isIgnored ? const Text('Ignored') : null),
+          subtitle: hasAnswer
+              ? Text(question.currentAnswer!.text, maxLines: 1,
+              overflow: TextOverflow.ellipsis)
+              : (isIgnored ? const Text('Ignored') : null),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -153,7 +154,8 @@ class QuestionItem extends StatelessWidget {
               Tooltip(
                 message: isIgnored ? 'Show question' : 'Ignore question',
                 child: IconButton(
-                  icon: Icon(isIgnored ? Icons.visibility : Icons.visibility_off),
+                  icon: Icon(
+                      isIgnored ? Icons.visibility : Icons.visibility_off),
                   onPressed: isIgnored ? onUnignore : onIgnore,
                 ),
               ),

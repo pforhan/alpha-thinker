@@ -5,7 +5,8 @@ class PigeonProjectService implements ProjectService {
   final ThinkerApi _api = ThinkerApi();
 
   @override
-  Future<ProjectDto> createProject(String synopsis) => _api.createProject(synopsis);
+  Future<ProjectDto> createProject(String synopsis) =>
+      _api.createProject(synopsis);
 
   @override
   Future<List<ProjectDto>> getAllProjects() async {
@@ -26,18 +27,24 @@ class PigeonProjectService implements ProjectService {
   Future<void> deleteProject(String id) => _api.deleteProject(id);
 
   @override
-  Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive, bool isDraft) =>
+  Future<void> updateAnswer(String projectId, String questionId, String text,
+      bool autoArchive, bool isDraft) =>
       _api.updateAnswer(projectId, questionId, text, autoArchive, isDraft);
-  
-  @override
-  Future<void> ignoreQuestion(String projectId, String questionId) => _api.ignoreQuestion(projectId, questionId);
 
   @override
-  Future<void> unignoreQuestion(String projectId, String questionId) => _api.unignoreQuestion(projectId, questionId);
+  Future<void> ignoreQuestion(String projectId, String questionId) =>
+      _api.ignoreQuestion(projectId, questionId);
 
   @override
-  Future<void> deleteAnswer(String projectId, String questionId, int answerId) => _api.deleteAnswer(projectId, questionId, answerId);
+  Future<void> unignoreQuestion(String projectId, String questionId) =>
+      _api.unignoreQuestion(projectId, questionId);
 
   @override
-  Future<ProjectDto> updateProject(String id, String synopsis, ProjectUpdateMode updateMode) => _api.updateProject(id, synopsis, updateMode);
+  Future<void> deleteAnswer(String projectId, String questionId,
+      int answerId) => _api.deleteAnswer(projectId, questionId, answerId);
+
+  @override
+  Future<ProjectDto> updateProject(String id, String synopsis,
+      ProjectUpdateMode updateMode) =>
+      _api.updateProject(id, synopsis, updateMode);
 }

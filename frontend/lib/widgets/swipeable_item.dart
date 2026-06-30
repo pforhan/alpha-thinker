@@ -29,12 +29,15 @@ class SwipeableItemState extends State<SwipeableItem> {
   Widget build(BuildContext context) {
     return Dismissible(
       key: Key(widget.id),
-      background: widget.background ?? (widget.backgroundColor != null 
-        ? Container(color: widget.backgroundColor!, alignment: Alignment.centerLeft) 
-        : const SizedBox.shrink()),
-      secondaryBackground: widget.secondaryBackground ?? (widget.secondaryBackgroundColor != null 
-        ? Container(color: widget.secondaryBackgroundColor!, alignment: Alignment.centerRight) 
-        : const SizedBox.shrink()),
+      background: widget.background ?? (widget.backgroundColor != null
+          ? Container(
+          color: widget.backgroundColor!, alignment: Alignment.centerLeft)
+          : const SizedBox.shrink()),
+      secondaryBackground: widget.secondaryBackground ??
+          (widget.secondaryBackgroundColor != null
+              ? Container(color: widget.secondaryBackgroundColor!,
+              alignment: Alignment.centerRight)
+              : const SizedBox.shrink()),
       onDismissed: widget.onDismissed,
       child: widget.child,
     );

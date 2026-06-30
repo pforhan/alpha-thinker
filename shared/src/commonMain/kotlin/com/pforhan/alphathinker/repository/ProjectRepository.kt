@@ -3,235 +3,237 @@ package com.pforhan.alphathinker.repository
 import com.pforhan.alphathinker.ProjectUpdateMode
 import com.pforhan.alphathinker.llm.LLMIntegration
 import com.pforhan.alphathinker.model.Answer
-import com.pforhan.alphathinker.model.Question
 import com.pforhan.alphathinker.model.Project
+import com.pforhan.alphathinker.model.Question
 import com.pforhan.alphathinker.util.randomUUID
 import kotlinx.datetime.Clock
 
 class ProjectRepository(
     private val storage: Storage,
-    private val llm: LLMIntegration
+    private val llm: LLMIntegration,
 ) {
-    interface Storage {
-        suspend fun saveProject(project: Project): Project
-        suspend fun getProject(id: String): Project?
-        suspend fun getAllProjects(): List<Project>
-        suspend fun deleteProject(id: String)
-        suspend fun deleteAllProjects()
-    }
+  interface Storage {
+    suspend fun saveProject(project: Project): Project
+    suspend fun getProject(id: String): Project?
+    suspend fun getAllProjects(): List<Project>
+    suspend fun deleteProject(id: String)
+    suspend fun deleteAllProjects()
+  }
 
-    suspend fun createProject(synopsis: String): Project {
-        val now = Clock.System.now()
-        val projectId = randomUUID()
-        val project = Project(
-            id = projectId,
-            synopsis = synopsis.trim(),
-            editableTitle = synopsis.take(30).trim() + "...",
-            status = "Draft",
-            questions = emptyList(),
-            createdAt = now,
-            updatedAt = now
-        )
-        val saved = storage.saveProject(project)
+  suspend fun createProject(synopsis: String): Project {
+    val now = Clock.System.now()
+    val projectId = randomUUID()
+    val project = Project(
+      id = projectId,
+      synopsis = synopsis.trim(),
+      editableTitle = synopsis.take(30).trim() + "...",
+      status = "Draft",
+      questions = emptyList(),
+      createdAt = now,
+      updatedAt = now
+    )
+    val saved = storage.saveProject(project)
 
-        val contextId = randomUUID()
-        val questions = llm.generateInitialQuestions(saved.synopsis)
-            .map { it.copy(id = randomUUID(), contextId = contextId) }
+    val contextId = randomUUID()
+    val questions = llm.generateInitialQuestions(saved.synopsis)
+      .map { it.copy(id = randomUUID(), contextId = contextId) }
 
-        val updated = saved.copy(
-            questions = questions,
-            updatedAt = Clock.System.now()
-        )
-        return storage.saveProject(updated)
-    }
+    val updated = saved.copy(
+      questions = questions,
+      updatedAt = Clock.System.now()
+    )
+    return storage.saveProject(updated)
+  }
 
   suspend fun deleteProject(id: String) {
     return storage.deleteProject(id)
   }
 
-    suspend fun getProject(id: String): Project? {
-        return storage.getProject(id)
+  suspend fun getProject(id: String): Project? {
+    return storage.getProject(id)
+  }
+
+  suspend fun getAllProjects(): List<Project> {
+    return storage.getAllProjects()
+  }
+
+  suspend fun updateProject(
+      id: String,
+      synopsis: String,
+      mode: ProjectUpdateMode,
+  ): Project? {
+    val project = storage.getProject(id) ?: return null
+    val now = Clock.System.now()
+
+    val updatedQuestions = when (mode) {
+      ProjectUpdateMode.CLEAR -> project.questions.map { q ->
+        q.copy(answers = q.answers.map { a -> a.copy(deletedAt = now) })
+      }
+
+      ProjectUpdateMode.REVALIDATE -> {
+        // TODO: AI revalidation logic
+        project.questions
+      }
+
+      ProjectUpdateMode.KEEP -> project.questions
     }
 
-    suspend fun getAllProjects(): List<Project> {
-        return storage.getAllProjects()
+    val updatedProject = project.copy(
+      synopsis = synopsis.trim(),
+      editableTitle = synopsis.take(30).trim() + "...",
+      questions = updatedQuestions,
+      updatedAt = now
+    )
+    return storage.saveProject(updatedProject)
+  }
+
+  suspend fun getUnansweredQuestions(project: Project): List<Question> {
+    return project.questions.filterNot { question ->
+      (question.currentAnswer?.isAnswered ?: false) || question.isIgnored
+    }
+  }
+
+  suspend fun updateAnswer(
+      projectId: String,
+      questionId: String,
+      text: String,
+      autoIgnore: Boolean = false,
+      isDraft: Boolean = false,
+  ): Project? {
+    val project = storage.getProject(projectId) ?: return null
+    val question = project.questions.find { it.id == questionId } ?: return null
+
+    if (isDraft && question.currentAnswer?.isAnswered == true) {
+      throw IllegalStateException("Cannot add a draft answer to a question that is already answered")
     }
 
-    suspend fun updateProject(
-        id: String,
-        synopsis: String,
-        mode: ProjectUpdateMode
-    ): Project? {
-        val project = storage.getProject(id) ?: return null
-        val now = Clock.System.now()
-        
-        val updatedQuestions = when (mode) {
-            ProjectUpdateMode.CLEAR -> project.questions.map { q ->
-                q.copy(answers = q.answers.map { a -> a.copy(deletedAt = now) })
-            }
-            ProjectUpdateMode.REVALIDATE -> {
-                // TODO: AI revalidation logic
-                project.questions
-            }
-            ProjectUpdateMode.KEEP -> project.questions
-        }
+    val now = Clock.System.now()
 
-        val updatedProject = project.copy(
-            synopsis = synopsis.trim(),
-            editableTitle = synopsis.take(30).trim() + "...",
-            questions = updatedQuestions,
-            updatedAt = now
+    val newAnswer =
+      Answer(id = 0, questionId = questionId, text = text, answeredAt = if (isDraft) null else now)
+
+    val updatedQuestions = project.questions.map { q ->
+      if (q.id == questionId) {
+        q.copy(
+          answers = q.answers + newAnswer,
+          ignoredAt = if (autoIgnore) now else q.ignoredAt
         )
-        return storage.saveProject(updatedProject)
+      } else {
+        q
+      }
     }
 
-    suspend fun getUnansweredQuestions(project: Project): List<Question> {
-        return project.questions.filterNot { question ->
-                (question.currentAnswer?.isAnswered ?: false) || question.isIgnored
-        }
+    val answered = allQuestionsAnswered(project, updatedQuestions)
+
+    val updatedProject = if (answered) {
+      val contextId = randomUUID()
+      val newQs = llm.generateFollowUpQuestions(
+        project.synopsis
+      ).map { it.copy(id = randomUUID(), contextId = contextId) }
+
+      project.copy(
+        questions = project.questions + newQs,
+        updatedAt = Clock.System.now()
+      )
+    } else {
+      project.copy(
+        questions = updatedQuestions,
+        updatedAt = Clock.System.now()
+      )
     }
 
-    suspend fun updateAnswer(
-        projectId: String,
-        questionId: String,
-        text: String,
-        autoIgnore: Boolean = false,
-        isDraft: Boolean = false
-    ): Project? {
-        val project = storage.getProject(projectId) ?: return null
-        val question = project.questions.find { it.id == questionId } ?: return null
+    return storage.saveProject(updatedProject)
+  }
 
-        if (isDraft && question.currentAnswer?.isAnswered == true) {
-            throw IllegalStateException("Cannot add a draft answer to a question that is already answered")
-        }
+  private fun allQuestionsAnswered(project: Project, questions: List<Question>): Boolean {
+    val activeQuestions = questions.filterNot { it.isIgnored }
+    return activeQuestions.all { it.currentAnswer?.isAnswered == true }
+  }
 
-        val now = Clock.System.now()
-
-        
-        val newAnswer = Answer(id = 0, questionId = questionId, text = text, answeredAt = if (isDraft) null else now)
-        
-        val updatedQuestions = project.questions.map { q ->
-            if (q.id == questionId) {
-                q.copy(
-                    answers = q.answers + newAnswer,
-                    ignoredAt = if (autoIgnore) now else q.ignoredAt
-                )
-            } else {
-                q
-            }
-        }
-        
-        val answered = allQuestionsAnswered(project, updatedQuestions)
-        
-        val updatedProject = if (answered) {
-            val contextId = randomUUID()
-            val newQs = llm.generateFollowUpQuestions(
-              project.synopsis
-            ).map { it.copy(id = randomUUID(), contextId = contextId) }
-            
-            project.copy(
-                questions = project.questions + newQs,
-                updatedAt = Clock.System.now()
-            )
-        } else {
-            project.copy(
-                questions = updatedQuestions,
-                updatedAt = Clock.System.now()
-            )
-        }
-        
-        return storage.saveProject(updatedProject)
+  suspend fun ignoreQuestion(
+      projectId: String,
+      questionId: String,
+  ): Project? {
+    val project = storage.getProject(projectId) ?: return null
+    val now = Clock.System.now()
+    val updatedQuestions = project.questions.map { q ->
+      if (q.id == questionId) q.copy(ignoredAt = now) else q
     }
 
-    private fun allQuestionsAnswered(project: Project, questions: List<Question>): Boolean {
-        val activeQuestions = questions.filterNot { it.isIgnored }
-        return activeQuestions.all { it.currentAnswer?.isAnswered == true }
+    val updatedProject = project.copy(
+      questions = updatedQuestions,
+      updatedAt = now
+    )
+    return storage.saveProject(updatedProject)
+  }
+
+  suspend fun unignoreQuestion(
+      projectId: String,
+      questionId: String,
+  ): Project? {
+    val project = storage.getProject(projectId) ?: return null
+    val now = Clock.System.now()
+    val updatedQuestions = project.questions.map { q ->
+      if (q.id == questionId) q.copy(ignoredAt = null) else q
     }
 
-    suspend fun ignoreQuestion(
-        projectId: String,
-        questionId: String
-    ): Project? {
-        val project = storage.getProject(projectId) ?: return null
-        val now = Clock.System.now()
-        val updatedQuestions = project.questions.map { q ->
-            if (q.id == questionId) q.copy(ignoredAt = now) else q
-        }
+    val updatedProject = project.copy(
+      questions = updatedQuestions,
+      updatedAt = now
+    )
+    return storage.saveProject(updatedProject)
+  }
 
-        val updatedProject = project.copy(
-            questions = updatedQuestions,
-            updatedAt = now
-        )
-        return storage.saveProject(updatedProject)
+  suspend fun deleteAllProjects() {
+    storage.deleteAllProjects()
+  }
+
+  suspend fun deleteAnswer(
+      projectId: String,
+      questionId: String,
+      answerId: Long,
+  ): Project? {
+    val project = storage.getProject(projectId) ?: return null
+    val now = Clock.System.now()
+    val updatedQuestions = project.questions.map { q ->
+      if (q.id == questionId) {
+        q.copy(answers = q.answers.map { a ->
+          if (a.id == answerId) a.copy(deletedAt = now) else a
+        })
+      } else {
+        q
+      }
     }
+    return storage.saveProject(project.copy(questions = updatedQuestions, updatedAt = now))
+  }
 
-    suspend fun unignoreQuestion(
-        projectId: String,
-        questionId: String
-    ): Project? {
-        val project = storage.getProject(projectId) ?: return null
-        val now = Clock.System.now()
-        val updatedQuestions = project.questions.map { q ->
-            if (q.id == questionId) q.copy(ignoredAt = null) else q
-        }
+  suspend fun exportProject(project: Project): String {
+    val sb = StringBuilder()
+    sb.appendLine("# ${project.synopsis}")
+    sb.appendLine()
+    sb.appendLine("## Overview")
+    sb.appendLine("${project.synopsis}")
+    sb.appendLine()
 
-        val updatedProject = project.copy(
-            questions = updatedQuestions,
-            updatedAt = now
-        )
-        return storage.saveProject(updatedProject)
-    }
-
-    suspend fun deleteAllProjects() {
-        storage.deleteAllProjects()
-    }
-
-    suspend fun deleteAnswer(
-        projectId: String,
-        questionId: String,
-        answerId: Long
-    ): Project? {
-        val project = storage.getProject(projectId) ?: return null
-        val now = Clock.System.now()
-        val updatedQuestions = project.questions.map { q ->
-            if (q.id == questionId) {
-                q.copy(answers = q.answers.map { a ->
-                    if (a.id == answerId) a.copy(deletedAt = now) else a
-                })
-            } else {
-                q
-            }
-        }
-        return storage.saveProject(project.copy(questions = updatedQuestions, updatedAt = now))
-    }
-
-    suspend fun exportProject(project: Project): String {
-        val sb = StringBuilder()
-        sb.appendLine("# ${project.synopsis}")
+    project.questions.sortedBy { it.timestamp }.forEach { question ->
+      sb.appendLine("### Q: ${question.text}")
+      val answer = question.currentAnswer
+      if (answer != null && answer.isAnswered) {
         sb.appendLine()
-        sb.appendLine("## Overview")
-        sb.appendLine("${project.synopsis}")
-        sb.appendLine()
-
-        project.questions.sortedBy { it.timestamp }.forEach { question ->
-            sb.appendLine("### Q: ${question.text}")
-            val answer = question.currentAnswer
-            if (answer != null && answer.isAnswered) {
-                sb.appendLine()
-                sb.appendLine("| **Answer:** | ${answer.text} |")
-                sb.appendLine("|-------------|--------")
-                sb.appendLine("| **Answered:** | ${answer.answeredAt} |")
-                if (answer.modifiedAt != null) {
-                    sb.appendLine("| **Modified:** | ${answer.modifiedAt} |")
-                }
-            } else {
-                sb.appendLine()
-                sb.appendLine("|**Status:** | unanswered |")
-                sb.appendLine("|------------|----------")
-            }
-            sb.appendLine()
+        sb.appendLine("| **Answer:** | ${answer.text} |")
+        sb.appendLine("|-------------|--------")
+        sb.appendLine("| **Answered:** | ${answer.answeredAt} |")
+        if (answer.modifiedAt != null) {
+          sb.appendLine("| **Modified:** | ${answer.modifiedAt} |")
         }
-
-        return sb.toString()
+      } else {
+        sb.appendLine()
+        sb.appendLine("|**Status:** | unanswered |")
+        sb.appendLine("|------------|----------")
+      }
+      sb.appendLine()
     }
+
+    return sb.toString()
+  }
 }

@@ -3,9 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PreferenceService {
   static const String _questionOrderKey = 'question_order_';
 
-  Future<void> saveQuestionOrder(String projectId, List<String> questionIds) async {
+  Future<void> saveQuestionOrder(String projectId,
+      List<String> questionIds) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_questionOrderKey$projectId', questionIds.join(','));
+    await prefs.setString(
+        '$_questionOrderKey$projectId', questionIds.join(','));
   }
 
   Future<List<String>> getQuestionOrder(String projectId) async {

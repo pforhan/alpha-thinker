@@ -8,7 +8,7 @@ data class Answer(
   val text: String,
   val answeredAt: Instant?,
   val modifiedAt: Instant? = null,
-  val deletedAt: Instant? = null
+  val deletedAt: Instant? = null,
 ) {
   val isAnswered: Boolean
     get() = text.isNotBlank() && answeredAt != null

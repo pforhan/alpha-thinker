@@ -1,7 +1,11 @@
 import 'thinker_api.dart';
 
 extension AnswerDtoExtension on AnswerDto {
-  bool get isAnswered => answeredAt != null && text.trim().isNotEmpty;
+  bool get isAnswered =>
+      answeredAt != null && text
+          .trim()
+          .isNotEmpty;
+
   bool get isDraft => answeredAt == null;
 }
 
@@ -13,7 +17,9 @@ extension QuestionDtoExtension on QuestionDto {
   }
 
   bool get isAnswered => currentAnswer?.isAnswered ?? false;
+
   bool get isIgnored => ignoredAt != null;
+
   bool get isUnanswered => !isAnswered && !isIgnored;
 }
 

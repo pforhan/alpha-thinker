@@ -49,32 +49,34 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     final synopsisController = TextEditingController();
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New Project'),
-        content: TextField(
-          controller: synopsisController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Enter your project idea (synopsis)...',
+      builder: (context) =>
+          AlertDialog(
+            title: const Text('New Project'),
+            content: TextField(
+              controller: synopsisController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'Enter your project idea (synopsis)...',
+              ),
+              maxLines: 3,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Create'),
+              ),
+            ],
           ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
     );
 
     if (result == true && synopsisController.text.isNotEmpty) {
       try {
-        final newProject = await _service.createProject(synopsisController.text);
+        final newProject = await _service.createProject(
+            synopsisController.text);
         await _refreshProjects();
         if (mounted) {
           Navigator.push(
@@ -122,7 +124,8 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
         final project = _projects![index];
         return ListTile(
           title: Text(project.editableTitle),
-          subtitle: Text(project.synopsis, maxLines: 2, overflow: TextOverflow.ellipsis),
+          subtitle: Text(
+              project.synopsis, maxLines: 2, overflow: TextOverflow.ellipsis),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             Navigator.push(
@@ -141,16 +144,19 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   Future<void> _confirmDeleteProject(ProjectDto project) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Project?'),
-        content: const Text('This action cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red))),
-        ],
-      ),
+      builder: (context) =>
+          AlertDialog(
+            title: const Text('Delete Project?'),
+            content: const Text('This action cannot be undone.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel')),
+              TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text(
+                      'Delete', style: TextStyle(color: Colors.red))),
+            ],
+          ),
     );
     if (confirm == true) {
       await _service.deleteProject(project.id);
@@ -173,8 +179,8 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : (_projects == null || _projects!.isEmpty)
-              ? _buildEmptyState()
-              : _buildProjectList(),
+          ? _buildEmptyState()
+          : _buildProjectList(),
       floatingActionButton: FloatingActionButton(
         onPressed: _createProject,
         child: const Icon(Icons.add),

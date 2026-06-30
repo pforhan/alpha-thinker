@@ -34,7 +34,7 @@ class QuestionDto {
     required this.text,
     required this.timestamp,
     required this.contextId,
-     this.ignoredAt,
+    this.ignoredAt,
     required this.answers,
   });
 }
@@ -67,23 +67,34 @@ enum ProjectUpdateMode {
 abstract class ThinkerApi {
   @async
   ProjectDto createProject(String synopsis);
+
   @async
   List<ProjectDto> getAllProjects();
+
   @async
   ProjectDto getProject(String id);
+
   @async
   List<QuestionDto> getUnansweredQuestions(String projectId);
+
   @async
   void deleteProject(String id);
+
   @async
-  void updateAnswer(String projectId, String questionId, String text, bool autoArchive, bool isDraft);
+  void updateAnswer(String projectId, String questionId, String text,
+      bool autoArchive, bool isDraft);
+
   @async
-   void ignoreQuestion(String projectId, String questionId);
+  void ignoreQuestion(String projectId, String questionId);
+
   @async
-   void unignoreQuestion(String projectId, String questionId);
+  void unignoreQuestion(String projectId, String questionId);
+
   @async
-   void deleteAnswer(String projectId, String questionId, int answerId);
-    @async
-    ProjectDto updateProject(String id, String synopsis, ProjectUpdateMode updateMode);
-  }
+  void deleteAnswer(String projectId, String questionId, int answerId);
+
+  @async
+  ProjectDto updateProject(String id, String synopsis,
+      ProjectUpdateMode updateMode);
+}
 

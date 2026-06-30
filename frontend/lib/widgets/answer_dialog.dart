@@ -43,7 +43,9 @@ class _AnswerDialogState extends State<AnswerDialog> {
   Future<void> _handleAskLater() async {
     if (_answerController.text.isNotEmpty) {
       try {
-        await _service.updateAnswer(widget.project.id, widget.question.id, _answerController.text, false, true);
+        await _service.updateAnswer(
+            widget.project.id, widget.question.id, _answerController.text,
+            false, true);
       } catch (e) {
         debugPrint('Error saving draft: $e');
       }
@@ -55,7 +57,8 @@ class _AnswerDialogState extends State<AnswerDialog> {
     final current = widget.question.currentAnswer;
     if (current != null) {
       try {
-        await _service.deleteAnswer(widget.project.id, widget.question.id, current.id);
+        await _service.deleteAnswer(
+            widget.project.id, widget.question.id, current.id);
       } catch (e) {
         debugPrint('Error deleting answer: $e');
       }
@@ -89,7 +92,8 @@ class _AnswerDialogState extends State<AnswerDialog> {
         if (current != null && current.isAnswered)
           TextButton(
             onPressed: _handleDeleteAnswer,
-            child: const Text('Delete Answer', style: TextStyle(color: Colors.red)),
+            child: const Text(
+                'Delete Answer', style: TextStyle(color: Colors.red)),
           ),
         ElevatedButton(
           onPressed: () async {

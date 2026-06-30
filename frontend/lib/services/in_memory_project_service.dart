@@ -9,12 +9,19 @@ class InMemoryProjectService implements ProjectService {
 
   @override
   Future<ProjectDto> createProject(String synopsis) async {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final id = DateTime
+        .now()
+        .millisecondsSinceEpoch
+        .toString();
+    final now = DateTime
+        .now()
+        .millisecondsSinceEpoch;
     final project = ProjectDto(
       id: id,
       synopsis: synopsis,
-      editableTitle: synopsis.length > 30 ? synopsis.substring(0, 30) + '...' : synopsis,
+      editableTitle: synopsis.length > 30
+          ? synopsis.substring(0, 30) + '...'
+          : synopsis,
       createdAt: now,
       updatedAt: now,
       status: 'Draft',
@@ -178,7 +185,7 @@ class InMemoryProjectService implements ProjectService {
   Future<ProjectDto> getProject(String id) async {
     final project = _projects.firstWhere((p) => p.id == id);
     final qs = _questions[id] ?? [];
-    
+
     return ProjectDto(
       id: project.id,
       synopsis: project.synopsis,
@@ -207,34 +214,39 @@ class InMemoryProjectService implements ProjectService {
   }
 
   @override
-  Future<void> updateAnswer(String projectId, String questionId, String text, bool autoArchive, bool isDraft) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    
+  Future<void> updateAnswer(String projectId, String questionId, String text,
+      bool autoArchive, bool isDraft) async {
+    final now = DateTime
+        .now()
+        .millisecondsSinceEpoch;
+
     final qs = _questions[projectId];
     if (qs == null) return;
-    
+
     final qIndex = qs.indexWhere((q) => q.id == questionId);
     if (qIndex == -1) return;
-    
+
     final question = qs[qIndex];
 
     if (isDraft && question.isAnswered) {
       throw Exception('Cannot add a draft answer to an answered question');
     }
-    
+
     if (isDraft) {
       question.answers.clear();
     }
 
     final newAnswer = AnswerDto(
-      id: DateTime.now().millisecondsSinceEpoch,
+      id: DateTime
+          .now()
+          .millisecondsSinceEpoch,
       questionId: questionId,
       text: text,
       answeredAt: isDraft ? null : now,
     );
-    
+
     question.answers.add(newAnswer);
-    
+
     if (autoArchive) {
       qs[qIndex] = QuestionDto(
         id: question.id,
@@ -245,7 +257,7 @@ class InMemoryProjectService implements ProjectService {
         answers: question.answers,
       );
     }
-    
+
     final pIndex = _projects.indexWhere((p) => p.id == projectId);
     if (pIndex != -1) {
       _projects[pIndex].updatedAt = now;
@@ -254,7 +266,9 @@ class InMemoryProjectService implements ProjectService {
 
   @override
   Future<void> ignoreQuestion(String projectId, String questionId) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime
+        .now()
+        .millisecondsSinceEpoch;
     final qs = _questions[projectId];
     if (qs == null) return;
 
@@ -278,8 +292,10 @@ class InMemoryProjectService implements ProjectService {
   }
 
   @override
-  Future<void> deleteAnswer(String projectId, String questionId, int answerId) async {
-    debugPrint('Attempting to delete answer $answerId for question $questionId in project $projectId');
+  Future<void> deleteAnswer(String projectId, String questionId,
+      int answerId) async {
+    debugPrint(
+        'Attempting to delete answer $answerId for question $questionId in project $projectId');
     final qs = _questions[projectId];
     if (qs == null) {
       debugPrint('Delete failed: Project questions not found.');
@@ -288,7 +304,8 @@ class InMemoryProjectService implements ProjectService {
 
     final qIndex = qs.indexWhere((q) => q.id == questionId);
     if (qIndex == -1) {
-      debugPrint('Delete failed: Question $questionId not found in project $projectId');
+      debugPrint(
+          'Delete failed: Question $questionId not found in project $projectId');
       return;
     }
 
@@ -303,16 +320,21 @@ class InMemoryProjectService implements ProjectService {
         text: answer.text,
         answeredAt: answer.answeredAt,
         modifiedAt: answer.modifiedAt,
-        deletedAt: DateTime.now().millisecondsSinceEpoch,
+        deletedAt: DateTime
+            .now()
+            .millisecondsSinceEpoch,
       );
     } else {
-      debugPrint('Delete failed: Answer $answerId not found for question $questionId');
+      debugPrint(
+          'Delete failed: Answer $answerId not found for question $questionId');
     }
   }
 
   @override
   Future<void> unignoreQuestion(String projectId, String questionId) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime
+        .now()
+        .millisecondsSinceEpoch;
     final qs = _questions[projectId];
     if (qs == null) return;
 
@@ -336,15 +358,19 @@ class InMemoryProjectService implements ProjectService {
   }
 
   @override
-  Future<ProjectDto> updateProject(String id, String synopsis, ProjectUpdateMode updateMode) async {
+  Future<ProjectDto> updateProject(String id, String synopsis,
+      ProjectUpdateMode updateMode) async {
     final pIndex = _projects.indexWhere((p) => p.id == id);
     if (pIndex == -1) throw Exception('Project not found');
 
     final project = _projects[pIndex];
-    final now = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime
+        .now()
+        .millisecondsSinceEpoch;
 
     project.synopsis = synopsis;
-    project.editableTitle = synopsis.length > 30 ? synopsis.substring(0, 30) + '...' : synopsis;
+    project.editableTitle =
+    synopsis.length > 30 ? synopsis.substring(0, 30) + '...' : synopsis;
     project.updatedAt = now;
 
     if (updateMode == ProjectUpdateMode.clear) {
