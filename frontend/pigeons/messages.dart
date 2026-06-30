@@ -77,4 +77,6 @@ abstract class ThinkerApi {
    void unignoreQuestion(String projectId, String questionId);
    @async
    void deleteAnswer(String projectId, String questionId, int answerId);
+   @async
+   ProjectDto updateProject(String id, String synopsis, bool clearAnswers);
  }

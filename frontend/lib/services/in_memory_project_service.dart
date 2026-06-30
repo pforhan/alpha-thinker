@@ -334,4 +334,38 @@ class InMemoryProjectService implements ProjectService {
       _projects[pIndex].updatedAt = now;
     }
   }
+
+  @override
+  Future<ProjectDto> updateProject(String id, String synopsis, bool clearAnswers) async {
+    final pIndex = _projects.indexWhere((p) => p.id == id);
+    if (pIndex == -1) throw Exception('Project not found');
+
+    final project = _projects[pIndex];
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    project.synopsis = synopsis;
+    project.editableTitle = synopsis.length > 30 ? synopsis.substring(0, 30) + '...' : synopsis;
+    project.updatedAt = now;
+
+    if (clearAnswers) {
+      final qs = _questions[id];
+      if (qs != null) {
+        for (var q in qs) {
+          for (var i = 0; i < q.answers.length; i++) {
+            final a = q.answers[i];
+            q.answers[i] = AnswerDto(
+              id: a.id,
+              questionId: a.questionId,
+              text: a.text,
+              answeredAt: a.answeredAt,
+              modifiedAt: a.modifiedAt,
+              deletedAt: now,
+            );
+          }
+        }
+      }
+    }
+
+    return project;
+  }
 }

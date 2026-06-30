@@ -56,6 +56,31 @@ class ProjectRepository(
         return storage.getAllProjects()
     }
 
+    suspend fun updateProject(
+        id: String,
+        synopsis: String,
+        clearAnswers: Boolean = false
+    ): Project? {
+        val project = storage.getProject(id) ?: return null
+        val now = Clock.System.now()
+        
+        val updatedQuestions = if (clearAnswers) {
+            project.questions.map { q ->
+                q.copy(answers = q.answers.map { a -> a.copy(deletedAt = now) })
+            }
+        } else {
+            project.questions
+        }
+
+        val updatedProject = project.copy(
+            synopsis = synopsis.trim(),
+            editableTitle = synopsis.take(30).trim() + "...",
+            questions = updatedQuestions,
+            updatedAt = now
+        )
+        return storage.saveProject(updatedProject)
+    }
+
     suspend fun getUnansweredQuestions(project: Project): List<Question> {
         return project.questions.filterNot { question ->
                 (question.currentAnswer?.isAnswered ?: false) || question.isIgnored

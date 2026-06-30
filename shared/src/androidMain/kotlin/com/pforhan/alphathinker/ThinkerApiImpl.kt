@@ -126,6 +126,21 @@ class ThinkerApiImpl(
             }
         }
     }
+
+    override fun updateProject(id: String, synopsis: String, clearAnswers: Boolean, callback: (Result<ProjectDto>) -> Unit) {
+        scope.launch {
+            try {
+                val project = repository.updateProject(id, synopsis, clearAnswers)
+                if (project != null) {
+                    callback(Result.success(project.toDto()))
+                } else {
+                    callback(Result.failure(Exception("Project not found")))
+                }
+            } catch (e: Exception) {
+                callback(Result.failure(e))
+            }
+        }
+    }
 }
 
 fun Project.toDto(): ProjectDto = ProjectDto(

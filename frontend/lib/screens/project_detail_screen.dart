@@ -6,6 +6,7 @@ import '../services/project_service.dart';
 import '../services/preference_service.dart';
 import '../widgets/question_item.dart';
 import '../widgets/answer_dialog.dart';
+import '../widgets/edit_project_dialog.dart';
 import 'dart:math';
 
 class ProjectDetailScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class ProjectDetailScreen extends StatefulWidget {
 class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   final ProjectService _service = getIt<ProjectService>();
   final PreferenceService _prefs = getIt<PreferenceService>();
+  late ProjectDto _currentProject;
   List<QuestionDto>? _questions;
   List<String>? _unansweredOrder;
   bool _loading = true;
@@ -27,6 +29,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _currentProject = widget.project;
     _loadQuestions();
   }
 
@@ -64,6 +67,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     setState(() => _loading = true);
     try {
       final project = await _service.getProject(widget.project.id);
+      setState(() => _currentProject = project);
       final questions = project.questions;
       
       if (_filter == 'Unanswered') {
@@ -187,6 +191,31 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     }
   }
 
+  Future<void> _updateSynopsis(String newSynopsis, bool clearAnswers) async {
+    try {
+      final updatedProject = await _service.updateProject(widget.project.id, newSynopsis, clearAnswers);
+      setState(() {
+        _currentProject = updatedProject;
+      });
+      _loadQuestions();
+    } catch (e) {
+      debugPrint('Error updating synopsis: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating synopsis: $e')),
+      );
+    }
+  }
+
+  Future<void> _editSynopsis() async {
+    await showDialog(
+      context: context,
+      builder: (context) => EditProjectDialog(
+        project: _currentProject,
+        onSave: (synopsis, clearAnswers) => _updateSynopsis(synopsis, clearAnswers),
+      ),
+    );
+  }
+
   Widget _buildFilterChips() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -280,7 +309,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.project.editableTitle),
+        title: Text(_currentProject.editableTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _editSynopsis,
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,8 +325,17 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Synopsis:', style: Theme.of(context).textTheme.titleSmall),
-                Text(widget.project.synopsis),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Synopsis:', style: Theme.of(context).textTheme.titleSmall),
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 20),
+                      onPressed: _editSynopsis,
+                    ),
+                  ],
+                ),
+                Text(_currentProject.synopsis),
               ],
             ),
           ),

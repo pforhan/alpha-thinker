@@ -31,7 +31,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] add ask later to the unanswered question editor dialog
 - [x] allow swipe-to-ignore (left) and swipe-to-ask-later (right)
 - [x] add animations for ask later, shuffle, and ignore / unignore actions.
-- [ ] ability to edit project synopsis. Provide the means to clear prior answers or keep them.
+- [x] ability to edit project synopsis. Provide the means to clear prior answers or keep them.
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global pool with Lite mode (seed questions + global questions)
@@ -51,7 +51,8 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Better text instead of "Submit" for adding / editing answers
 - [ ] need to integrate MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
-- [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it. 
+- [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
+- [ ] probably should be able to unignore a question from the dialog popup, or force unignore before modifying the answer field.
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Integrate LiteRT-LM for automated question generation
