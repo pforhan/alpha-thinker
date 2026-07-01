@@ -53,6 +53,7 @@ class _EditProjectDialogState extends State<EditProjectDialog> {
               const SizedBox(height: 8),
               TextField(
                 controller: _titleController,
+                maxLength: 30,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Project title',
@@ -73,6 +74,7 @@ class _EditProjectDialogState extends State<EditProjectDialog> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: _titleController,
+                      maxLength: 30,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         hintText: 'Project title',

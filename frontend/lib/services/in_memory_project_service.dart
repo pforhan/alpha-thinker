@@ -2,6 +2,17 @@ import '../thinker_api.dart';
 import '../thinker_api_extensions.dart';
 import 'project_service.dart';
 import 'package:flutter/foundation.dart'; // TODO remove after removing debugPrints
+// import 'package:characters/characters.dart';
+
+String generateTitleFromSynopsis(String synopsis) {
+  final trimmed = synopsis.trim();
+  if (trimmed.isEmpty) return '';
+
+  // Match until a period, a newline, or up to 30 characters
+  final match = RegExp(r'^[^.\n]{1,30}').stringMatch(trimmed);
+
+  return (match ?? '').trim();
+}
 
 class InMemoryProjectService implements ProjectService {
   final List<ProjectDto> _projects = [];
@@ -16,12 +27,13 @@ class InMemoryProjectService implements ProjectService {
     final now = DateTime
         .now()
         .millisecondsSinceEpoch;
+    final trimmedTitle = title?.trim() ?? "";
     final project = ProjectDto(
       id: id,
       synopsis: synopsis.trim(),
-      editableTitle: title?.trim() ?? (synopsis.trim().length > 30
-          ? '${synopsis.trim().substring(0, 30)}...'
-          : synopsis.trim()),
+      editableTitle: trimmedTitle.isNotEmpty == true
+          ? trimmedTitle.substring(0, trimmedTitle.length.clamp(0, 30))
+          : generateTitleFromSynopsis(synopsis),
       createdAt: now,
       updatedAt: now,
       status: 'Draft',
@@ -358,7 +370,7 @@ class InMemoryProjectService implements ProjectService {
         .millisecondsSinceEpoch;
 
     project.synopsis = synopsis.trim();
-    project.editableTitle = title.trim();
+    project.editableTitle = title.trim().substring(0, title.trim().length.clamp(0, 30));
     project.updatedAt = now;
 
     if (updateMode == ProjectUpdateMode.clear) {

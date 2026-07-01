@@ -8,9 +8,15 @@ import com.pforhan.alphathinker.model.Question
 import com.pforhan.alphathinker.util.randomUUID
 import kotlinx.datetime.Clock
 
+internal fun generateTitleFromSynopsis(synopsis: String): String = synopsis.trim()
+  .substringBefore('\n')
+  .substringBefore('.')
+  .take(30)
+  .trim()
+
 class ProjectRepository(
-    private val storage: Storage,
-    private val llm: LLMIntegration,
+  private val storage: Storage,
+  private val llm: LLMIntegration,
 ) {
   interface Storage {
     suspend fun saveProject(project: Project): Project
@@ -23,10 +29,15 @@ class ProjectRepository(
   suspend fun createProject(synopsis: String, title: String? = null): Project {
     val now = Clock.System.now()
     val projectId = randomUUID()
+
+    val trimmedTitle = title.orEmpty().trim()
+
     val project = Project(
       id = projectId,
       synopsis = synopsis.trim(),
-      editableTitle = title?.trim() ?: (synopsis.take(30).trim() + "..."),
+      editableTitle = trimmedTitle.takeIf { it.isNotEmpty() }
+        ?.substring(0, trimmedTitle.length.coerceAtMost(30))
+        ?: generateTitleFromSynopsis(synopsis),
       status = "Draft",
       questions = emptyList(),
       createdAt = now,
@@ -58,21 +69,21 @@ class ProjectRepository(
   }
 
   suspend fun updateProject(
-      id: String,
-      title: String,
-      synopsis: String,
-      mode: ProjectUpdateMode,
+    id: String,
+    title: String,
+    synopsis: String,
+    mode: ProjectUpdateMode,
   ): Project? {
     val project = storage.getProject(id) ?: return null
     val now = Clock.System.now()
 
     val updatedQuestions = when (mode) {
-       ProjectUpdateMode.CLEAR -> project.questions.map { q ->
-         q.copy(
-           answers = q.answers.map { a -> a.copy(deletedAt = now) },
-           ignoredAt = null
-         )
-       }
+      ProjectUpdateMode.CLEAR -> project.questions.map { q ->
+        q.copy(
+          answers = q.answers.map { a -> a.copy(deletedAt = now) },
+          ignoredAt = null
+        )
+      }
 
       ProjectUpdateMode.REVALIDATE -> {
         // TODO: AI revalidation logic
@@ -84,7 +95,7 @@ class ProjectRepository(
 
     val updatedProject = project.copy(
       synopsis = synopsis.trim(),
-      editableTitle = title.trim(),
+      editableTitle = title.trim().substring(0, title.trim().length.coerceAtMost(30)),
       questions = updatedQuestions,
       updatedAt = now
     )
@@ -98,10 +109,10 @@ class ProjectRepository(
   }
 
   suspend fun updateAnswer(
-      projectId: String,
-      questionId: String,
-      text: String,
-      isDraft: Boolean = false,
+    projectId: String,
+    questionId: String,
+    text: String,
+    isDraft: Boolean = false,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val question = project.questions.find { it.id == questionId } ?: return null
@@ -153,8 +164,8 @@ class ProjectRepository(
   }
 
   suspend fun ignoreQuestion(
-      projectId: String,
-      questionId: String,
+    projectId: String,
+    questionId: String,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val now = Clock.System.now()
@@ -170,8 +181,8 @@ class ProjectRepository(
   }
 
   suspend fun unignoreQuestion(
-      projectId: String,
-      questionId: String,
+    projectId: String,
+    questionId: String,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val now = Clock.System.now()
@@ -191,9 +202,9 @@ class ProjectRepository(
   }
 
   suspend fun deleteAnswer(
-      projectId: String,
-      questionId: String,
-      answerId: Long,
+    projectId: String,
+    questionId: String,
+    answerId: Long,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val now = Clock.System.now()
