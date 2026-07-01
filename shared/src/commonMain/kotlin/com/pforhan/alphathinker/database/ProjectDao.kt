@@ -3,6 +3,7 @@ package com.pforhan.alphathinker.database
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +21,14 @@ interface ProjectDao {
   @Query("SELECT * FROM projects WHERE id = :id")
   suspend fun getProjectById(id: String): ProjectEntity?
 
+  @Transaction
+  @Query("SELECT * FROM projects WHERE id = :id")
+  suspend fun getProjectWithQuestions(id: String): ProjectWithQuestions?
+
+  @Transaction
+  @Query("SELECT * FROM projects")
+  suspend fun getAllProjectsWithQuestions(): List<ProjectWithQuestions>
+
   @Delete
   suspend fun deleteProject(project: ProjectEntity)
 
@@ -34,6 +43,10 @@ interface QuestionDao {
 
   @Query("SELECT * FROM questions WHERE projectId = :projectId")
   suspend fun getQuestionsForProject(projectId: String): List<QuestionEntity>
+
+  @Transaction
+  @Query("SELECT * FROM questions WHERE id = :id")
+  suspend fun getQuestionWithAnswers(id: String): QuestionWithAnswers?
 
   @Delete
   suspend fun deleteQuestion(question: QuestionEntity)

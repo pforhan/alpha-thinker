@@ -8,74 +8,21 @@ import kotlinx.datetime.Instant
 
 class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage {
   override suspend fun saveProject(project: Project): Project {
-    val entity = ProjectEntity(
-      id = project.id,
-      synopsis = project.synopsis,
-      editableTitle = project.editableTitle,
-      createdAt = project.createdAt.toEpochMilliseconds(),
-      updatedAt = project.updatedAt.toEpochMilliseconds(),
-      status = project.status
-    )
-    database.projectDao().upsertProject(entity)
+    database.projectDao().upsertProject(project.toEntity())
 
-    // Save questions
     project.questions.forEach { q ->
-      database.questionDao().upsertQuestion(
-        QuestionEntity(
-          id = q.id,
-          projectId = project.id,
-          text = q.text,
-          createdAt = q.timestamp.toEpochMilliseconds(),
-          ignoredAt = q.ignoredAt?.toEpochMilliseconds()
-        )
-      )
+      database.questionDao().upsertQuestion(q.toEntity(project.id))
     }
 
-    // Save answers
     project.questions.flatMap { it.answers }.forEach { a ->
-      database.answerDao().upsertAnswer(
-        AnswerEntity(
-          questionId = a.questionId,
-          text = a.text,
-          answeredAt = a.answeredAt?.toEpochMilliseconds(),
-          modifiedAt = a.modifiedAt?.toEpochMilliseconds()
-        )
-      )
+      database.answerDao().upsertAnswer(a.toEntity())
     }
 
     return project
   }
 
   override suspend fun getProject(id: String): Project? {
-    val entity = database.projectDao().getProjectById(id) ?: return null
-    val questions = database.questionDao().getQuestionsForProject(id).map { qe ->
-      val qAnswers = database.answerDao().getAnswersForQuestion(qe.id).map { ae ->
-        Answer(
-          questionId = ae.questionId,
-          text = ae.text,
-          answeredAt = ae.answeredAt?.let { Instant.fromEpochMilliseconds(it) },
-          modifiedAt = ae.modifiedAt?.let { Instant.fromEpochMilliseconds(it) }
-        )
-      }
-      Question(
-        id = qe.id,
-        text = qe.text,
-        timestamp = Instant.fromEpochMilliseconds(qe.createdAt),
-        contextId = "", // Not stored in entity currently
-        ignoredAt = qe.ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
-        answers = qAnswers
-      )
-    }
-
-    return Project(
-      id = entity.id,
-      synopsis = entity.synopsis,
-      editableTitle = entity.editableTitle,
-      status = entity.status,
-      questions = questions,
-      createdAt = Instant.fromEpochMilliseconds(entity.createdAt),
-      updatedAt = Instant.fromEpochMilliseconds(entity.updatedAt)
-    )
+    return database.projectDao().getProjectWithQuestions(id)?.toDomainModel()
   }
 
   override suspend fun getAllProjects(): List<Project> {
@@ -85,7 +32,7 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
         synopsis = entity.synopsis,
         editableTitle = entity.editableTitle,
         status = entity.status,
-        questions = emptyList(), // Not loading all questions for list view
+        questions = emptyList(),
         createdAt = Instant.fromEpochMilliseconds(entity.createdAt),
         updatedAt = Instant.fromEpochMilliseconds(entity.updatedAt)
       )
@@ -103,3 +50,56 @@ class RoomStorage(private val database: AppDatabase) : ProjectRepository.Storage
     database.projectDao().deleteAllProjects()
   }
 }
+
+private fun Project.toEntity() = ProjectEntity(
+  id = id,
+  synopsis = synopsis,
+  editableTitle = editableTitle,
+  createdAt = createdAt.toEpochMilliseconds(),
+  updatedAt = updatedAt.toEpochMilliseconds(),
+  status = status
+)
+
+private fun Question.toEntity(projectId: String) = QuestionEntity(
+  id = id,
+  projectId = projectId,
+  text = text,
+  createdAt = timestamp.toEpochMilliseconds(),
+  ignoredAt = ignoredAt?.toEpochMilliseconds()
+)
+
+private fun Answer.toEntity() = AnswerEntity(
+  questionId = questionId,
+  text = text,
+  answeredAt = answeredAt?.toEpochMilliseconds(),
+  modifiedAt = modifiedAt?.toEpochMilliseconds(),
+  deletedAt = deletedAt?.toEpochMilliseconds()
+)
+
+private fun ProjectWithQuestions.toDomainModel() = Project(
+  id = project.id,
+  synopsis = project.synopsis,
+  editableTitle = project.editableTitle,
+  status = project.status,
+  questions = questions.map { it.toDomainModel() },
+  createdAt = Instant.fromEpochMilliseconds(project.createdAt),
+  updatedAt = Instant.fromEpochMilliseconds(project.updatedAt)
+)
+
+private fun QuestionWithAnswers.toDomainModel() = Question(
+  id = question.id,
+  text = question.text,
+  timestamp = Instant.fromEpochMilliseconds(question.createdAt),
+  contextId = "",
+  ignoredAt = question.ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
+  answers = answers.map { it.toDomainModel() }
+)
+
+private fun AnswerEntity.toDomainModel() = Answer(
+  id = id,
+  questionId = questionId,
+  text = text,
+  answeredAt = answeredAt?.let { Instant.fromEpochMilliseconds(it) },
+  modifiedAt = modifiedAt?.let { Instant.fromEpochMilliseconds(it) },
+  deletedAt = deletedAt?.let { Instant.fromEpochMilliseconds(it) }
+)

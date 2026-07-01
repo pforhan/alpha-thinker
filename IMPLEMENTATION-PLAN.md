@@ -47,7 +47,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] auto archive functionality should be for project updates, not question or answer updates.
 - [x] clean up Answer.isAnswered
 - [x] Smarter default title generation.  Take characters from synposis up until sentence end, newline, or 30 characters, whichever is first.  Limit manual title editing to 30 characters.
-- [ ] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
+- [x] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
 - [ ] Change filenames with "pigeon" in them to something more appropriate
 - [ ] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker
 - [ ] reformat files to 2-space indent

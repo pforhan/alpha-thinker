@@ -1,7 +1,11 @@
 package com.pforhan.alphathinker.database
 
+import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.Relation
 
 @Entity(tableName = "projects")
 data class ProjectEntity(
@@ -13,7 +17,16 @@ data class ProjectEntity(
   val status: String,
 )
 
-@Entity(tableName = "questions")
+@Entity(
+  tableName = "questions",
+  foreignKeys = [ForeignKey(
+    entity = ProjectEntity::class,
+    parentColumns = ["id"],
+    childColumns = ["projectId"],
+    onDelete = ForeignKey.CASCADE
+  )],
+  indices = [Index("projectId")]
+)
 data class QuestionEntity(
   @PrimaryKey val id: String,
   val projectId: String,
@@ -22,7 +35,16 @@ data class QuestionEntity(
   val ignoredAt: Long? = null,
 )
 
-@Entity(tableName = "answers")
+@Entity(
+  tableName = "answers",
+  foreignKeys = [ForeignKey(
+    entity = QuestionEntity::class,
+    parentColumns = ["id"],
+    childColumns = ["questionId"],
+    onDelete = ForeignKey.CASCADE
+  )],
+  indices = [Index("questionId")]
+)
 data class AnswerEntity(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   val questionId: String,
@@ -30,4 +52,22 @@ data class AnswerEntity(
   val answeredAt: Long? = null,
   val modifiedAt: Long? = null,
   val deletedAt: Long? = null,
+)
+
+data class QuestionWithAnswers(
+  @Embedded val question: QuestionEntity,
+  @Relation(
+    parentColumn = "id",
+    entityColumn = "questionId"
+  )
+  val answers: List<AnswerEntity>
+)
+
+data class ProjectWithQuestions(
+  @Embedded val project: ProjectEntity,
+  @Relation(
+    parentColumn = "id",
+    entityColumn = "projectId"
+  )
+  val questions: List<QuestionWithAnswers>
 )
