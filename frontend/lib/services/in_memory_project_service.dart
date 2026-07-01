@@ -202,7 +202,7 @@ class InMemoryProjectService implements ProjectService {
     final questions = _questions[projectId] ?? [];
     return questions.where((q) {
       final current = q.currentAnswer;
-      final isAnswered = current != null && current.isAnswered;
+      final isAnswered = current != null && current.isComplete;
       return !isAnswered && q.ignoredAt == null;
     }).toList();
   }
@@ -215,7 +215,7 @@ class InMemoryProjectService implements ProjectService {
 
   @override
   Future<void> updateAnswer(String projectId, String questionId, String text,
-      bool autoArchive, bool isDraft) async {
+      bool isDraft) async {
     final now = DateTime
         .now()
         .millisecondsSinceEpoch;
@@ -246,17 +246,6 @@ class InMemoryProjectService implements ProjectService {
     );
 
     question.answers.add(newAnswer);
-
-    if (autoArchive) {
-      qs[qIndex] = QuestionDto(
-        id: question.id,
-        text: question.text,
-        timestamp: question.timestamp,
-        contextId: question.contextId,
-        ignoredAt: now,
-        answers: question.answers,
-      );
-    }
 
     final pIndex = _projects.indexWhere((p) => p.id == projectId);
     if (pIndex != -1) {

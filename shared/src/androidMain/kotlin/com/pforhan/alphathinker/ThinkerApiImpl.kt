@@ -83,13 +83,12 @@ class ThinkerApiImpl(
       projectId: String,
       questionId: String,
       text: String,
-      autoIgnore: Boolean,
       isDraft: Boolean,
       callback: (Result<Unit>) -> Unit,
   ) {
     scope.launch {
       try {
-        repository.updateAnswer(projectId, questionId, text.trim(), autoIgnore, isDraft)
+        repository.updateAnswer(projectId, questionId, text.trim(), isDraft)
         callback(Result.success(Unit))
       } catch (e: Exception) {
         callback(Result.failure(e))

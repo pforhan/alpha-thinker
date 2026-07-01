@@ -82,7 +82,7 @@ abstract class ThinkerApi {
 
   @async
   void updateAnswer(String projectId, String questionId, String text,
-      bool autoArchive, bool isDraft);
+      bool isDraft);
 
   @async
   void ignoreQuestion(String projectId, String questionId);

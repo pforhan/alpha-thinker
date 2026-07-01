@@ -45,7 +45,7 @@ class _AnswerDialogState extends State<AnswerDialog> {
       try {
         await _service.updateAnswer(
             widget.project.id, widget.question.id, _answerController.text.trim(),
-            false, true);
+            true);
       } catch (e) {
         debugPrint('Error saving draft: $e');
       }
@@ -84,12 +84,12 @@ class _AnswerDialogState extends State<AnswerDialog> {
           onPressed: () => Navigator.pop(context, 'cancel'),
           child: const Text('Cancel'),
         ),
-        if (current == null || !current.isAnswered)
+        if (current == null || !current.isComplete)
           TextButton(
             onPressed: _handleAskLater,
             child: const Text('Ask Later'),
           ),
-        if (current != null && current.isAnswered)
+        if (current != null && current.isComplete)
           TextButton(
             onPressed: _handleDeleteAnswer,
             child: const Text(

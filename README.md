@@ -25,6 +25,7 @@ To get the application running, simply execute one of the following commands fro
 ```
 
 This command automatically handles the generation of Pigeon bindings and builds the KMP shared module before launching the app.
+Note: using gradle to launch flutter means the flutter TUI won't be responsive even if it displays its run key commands.
 
 ### Build Details (Optional)
 

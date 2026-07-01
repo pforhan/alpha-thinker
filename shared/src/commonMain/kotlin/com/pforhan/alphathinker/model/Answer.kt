@@ -10,6 +10,9 @@ data class Answer(
   val modifiedAt: Instant? = null,
   val deletedAt: Instant? = null,
 ) {
-  val isAnswered: Boolean
-    get() = text.isNotBlank() && answeredAt != null
+  val isCommplete: Boolean
+    get() = text.isNotBlank() && !isDraft
+
+  val isDraft: Boolean
+    get() = answeredAt == null
 }

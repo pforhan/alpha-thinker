@@ -173,7 +173,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               if (answer.isNotEmpty) {
                 try {
                   await _service.updateAnswer(
-                      widget.project.id, question.id, answer, false, false);
+                      widget.project.id, question.id, answer, false);
                 } catch (e) {
                   debugPrint('Error updating answer: $e');
                   if (mounted) {

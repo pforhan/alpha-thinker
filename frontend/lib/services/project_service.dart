@@ -12,7 +12,7 @@ abstract class ProjectService {
   Future<void> deleteProject(String id);
 
   Future<void> updateAnswer(String projectId, String questionId, String text,
-      bool autoArchive, bool isDraft);
+      bool isDraft);
 
   Future<void> ignoreQuestion(String projectId, String questionId);
 
