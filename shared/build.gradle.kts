@@ -36,7 +36,7 @@ kotlin {
   }
 }
 android {
-  namespace = "com.pforhan.alphathinker.shared"
+  namespace = "com.pforhan.thinker.shared"
   compileSdk = libs.versions.compileSdk.get().toInt()
   defaultConfig {
     minSdk = 26

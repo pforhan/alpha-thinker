@@ -225,4 +225,4 @@ x86/
 
 # Pigeon generated bindings
 frontend/lib/thinker_api.dart
-shared/src/commonMain/kotlin/com/pforhan/alphathinker/ThinkerApi.kt
+shared/src/commonMain/kotlin/alphainterplanetary/thinker/ThinkerApi.kt

@@ -34,9 +34,6 @@ This document tracks the specific engineering tasks required to move from design
 - [x] ability to edit project synopsis. Provide the means to clear prior answers or keep them.
 - [x] When ask later saves answers as draft they should show up when that question is opened again. 
 - [x] During edit project, clear all answers should also reset question state
-- [ ] Implement answer revision history UI (list with timestamps)
-- [ ] Implement global question pool management (create/edit questions usable across projects)
-- [ ] Integrate global pool with Lite mode (seed questions + global questions)
 
 ## Phase 2.5: cleanup
 - [x] break up bracket storms with multiple methods to make the code easier to read.
@@ -48,9 +45,8 @@ This document tracks the specific engineering tasks required to move from design
 - [x] clean up Answer.isAnswered
 - [x] Smarter default title generation.  Take characters from synposis up until sentence end, newline, or 30 characters, whichever is first.  Limit manual title editing to 30 characters.
 - [x] Make better use of Room annotations, e.g. @Relation on our DB objects to simplify RoomStorage
-- [ ] Change filenames with "pigeon" in them to something more appropriate
-- [ ] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker
-- [ ] reformat files to 2-space indent
+- [x] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker
+- [x] reformat files to 2-space indent
 - [ ] make a QuestionFilter enum and gather any related strings in it to provide type safety
 - [ ] Rename LLMIntegration to QuestionGenerator
 - [ ] Make a QuestionDAO since questions and answers can be updated independently of a project.
@@ -59,6 +55,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
 - [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
 - [ ] probably should be able to unignore a question from the dialog popup, or force unignore before modifying the answer field.
+- [ ] Change filenames with "pigeon" in them to something more appropriate
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Integrate LiteRT-LM for automated question generation
@@ -74,6 +71,10 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Plan and implement the export pipeline (Markdown synthesis -> File System)
 - [ ] Implement System/Debug Workspace (LLM Log, Console, and Task Manager)
 - [ ] **Export Pipeline:** Implement the Markdown synthesis and file system export.
+- [ ] Implement answer revision history UI (list with timestamps)
+- [ ] Implement global question pool management (create/edit questions usable across projects)
+- [ ] Integrate global question pool with Lite version seed questions and edge version generated questions
+
 
 ## Phase 5: Refinement & UX
 - [ ] Prototype and refine "Iterative Question Card" interaction

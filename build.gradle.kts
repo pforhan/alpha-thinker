@@ -10,7 +10,7 @@ plugins {
 }
 
 val pigeonDartOut = "frontend/lib/thinker_api.dart"
-val pigeonKotlinOut = "shared/src/commonMain/kotlin/com/pforhan/alphathinker/ThinkerApi.kt"
+val pigeonKotlinOut = "shared/src/commonMain/kotlin/alphainterplanetary/thinker/ThinkerApi.kt"
 
 tasks.register("clean") {
   group = "build"
@@ -30,7 +30,7 @@ tasks.register<Exec>("generatePigeon") {
   commandLine(
     "bash",
     "-c",
-    "flutter pub get && dart run pigeon --input pigeons/messages.dart --dart_out ../$pigeonDartOut --kotlin_out ../$pigeonKotlinOut --kotlin_package \"com.pforhan.alphathinker\" --package_name \"com.pforhan.alphathinker\""
+    "flutter pub get && dart run pigeon --input pigeons/messages.dart --dart_out ../$pigeonDartOut --kotlin_out ../$pigeonKotlinOut --kotlin_package \"alphainterplanetary.thinker\" --package_name \"alphainterplanetary.thinker\""
   )
 }
 
@@ -47,7 +47,7 @@ tasks.register<Exec>("runAndroid") {
   description = "Runs the application on Android"
   workingDir = file("frontend")
   dependsOn(":shared:assemble", "generatePigeon")
-  commandLine("flutter", "run", "-d", "android")
+  commandLine("sh", "-c", "DEVICE=$(flutter devices | awk -F' • ' '/android/{print $2; exit}') && exec flutter run -d \"\$DEVICE\"")
 }
 
 tasks.register<Exec>("runIos") {
@@ -55,7 +55,7 @@ tasks.register<Exec>("runIos") {
   description = "Runs the application on iOS"
   workingDir = file("frontend")
   dependsOn(":shared:assemble", "generatePigeon")
-  commandLine("flutter", "run", "-d", "ios")
+  commandLine("sh", "-c", "DEVICE=$(flutter devices | awk -F' • ' '/ios/{print $2; exit}') && exec flutter run -d \"\$DEVICE\"")
 }
 
 tasks.register<Exec>("runDesktop") {
