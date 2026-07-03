@@ -2,10 +2,10 @@ package alphainterplanetary.thinker.llm
 
 import alphainterplanetary.thinker.model.Question
 
-class FallbackLLMIntegration(
-  private val primary: LLMIntegration,
-  private val fallback: LLMIntegration = SeedQuestionsLLMIntegration(),
-) : LLMIntegration {
+class FallbackQuestionGenerator(
+  private val primary: QuestionGenerator,
+  private val fallback: QuestionGenerator = SeedQuestionsGenerator(),
+) : QuestionGenerator {
   override suspend fun generateInitialQuestions(synopsis: String): List<Question> {
     return try {
       primary.generateInitialQuestions(synopsis)

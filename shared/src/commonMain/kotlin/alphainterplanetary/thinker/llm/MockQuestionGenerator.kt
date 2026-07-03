@@ -4,7 +4,7 @@ import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.datetime.Clock.System
 
-class MockLLMIntegration : LLMIntegration {
+class MockQuestionGenerator : QuestionGenerator {
   private var roundCounter = 0
 
   private val initialQuestionTemplates = listOf(

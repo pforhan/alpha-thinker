@@ -48,7 +48,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] repackage files from com.pforhan.alphathinker to alphainterplanetary.alphathinker
 - [x] reformat files to 2-space indent
 - [x] make a QuestionFilter enum and gather any related strings in it to provide type safety
-- [ ] Rename LLMIntegration to QuestionGenerator
+- [x] Rename LLMIntegration to QuestionGenerator
 - [ ] Make a QuestionDAO since questions and answers can be updated independently of a project.
 - [ ] Better text instead of "Submit" for adding / editing answers
 - [ ] need to integrate MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently

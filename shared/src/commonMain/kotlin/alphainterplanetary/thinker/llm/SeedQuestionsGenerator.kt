@@ -4,7 +4,7 @@ import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.datetime.Clock.System
 
-class SeedQuestionsLLMIntegration : LLMIntegration {
+class SeedQuestionsGenerator : QuestionGenerator {
   override suspend fun generateInitialQuestions(synopsis: String): List<Question> {
     val now = System.now()
     return seedQuestions.map { text ->

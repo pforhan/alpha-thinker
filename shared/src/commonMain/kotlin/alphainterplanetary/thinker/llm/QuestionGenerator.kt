@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.llm
 
 import alphainterplanetary.thinker.model.Question
 
-interface LLMIntegration {
+interface QuestionGenerator {
   @Throws(AnalysisFailure::class)
   suspend fun generateInitialQuestions(synopsis: String): List<Question>
 

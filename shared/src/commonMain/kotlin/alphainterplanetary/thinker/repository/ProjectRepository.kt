@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
-import alphainterplanetary.thinker.llm.LLMIntegration
+import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
@@ -16,7 +16,7 @@ internal fun generateTitleFromSynopsis(synopsis: String): String = synopsis.trim
 
 class ProjectRepository(
   private val storage: Storage,
-  private val llm: LLMIntegration,
+  private val generator: QuestionGenerator,
 ) {
   interface Storage {
     suspend fun saveProject(project: Project): Project
@@ -46,7 +46,7 @@ class ProjectRepository(
     val saved = storage.saveProject(project)
 
     val contextId = randomUUID()
-    val questions = llm.generateInitialQuestions(saved.synopsis)
+    val questions = generator.generateInitialQuestions(saved.synopsis)
       .map { it.copy(id = randomUUID(), contextId = contextId) }
 
     val updated = saved.copy(
@@ -140,7 +140,7 @@ class ProjectRepository(
 
     val updatedProject = if (answered) {
       val contextId = randomUUID()
-      val newQs = llm.generateFollowUpQuestions(
+      val newQs = generator.generateFollowUpQuestions(
         project.synopsis
       ).map { it.copy(id = randomUUID(), contextId = contextId) }
 
