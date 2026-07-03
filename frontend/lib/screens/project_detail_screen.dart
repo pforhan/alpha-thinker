@@ -7,6 +7,7 @@ import '../services/preference_service.dart';
 import '../widgets/question_item.dart';
 import '../widgets/answer_dialog.dart';
 import '../widgets/edit_project_dialog.dart';
+import '../enums/question_filter.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final ProjectDto project;
@@ -24,7 +25,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   List<QuestionDto>? _questions;
   List<String>? _unansweredOrder;
   bool _loading = true;
-  String _filter = 'Unanswered';
+  QuestionFilter _filter = QuestionFilter.unanswered;
 
   @override
   void initState() {
@@ -35,15 +36,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
   List<QuestionDto> _getFilteredQuestions() {
     if (_questions == null) return [];
+    var filtered = _filter.apply(_questions!);
 
-    var filtered = _questions!.where((q) {
-      if (_filter == 'Unanswered') return q.isUnanswered;
-      if (_filter == 'Answered') return q.isAnswered && !q.isIgnored;
-      if (_filter == 'Ignored') return q.isIgnored;
-      return true;
-    }).toList();
-
-    if (_filter == 'Unanswered' && _unansweredOrder != null) {
+    if (_filter == QuestionFilter.unanswered && _unansweredOrder != null) {
       filtered.sort((a, b) {
         final indexA = _unansweredOrder!.indexOf(a.id);
         final indexB = _unansweredOrder!.indexOf(b.id);
@@ -55,12 +50,12 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       if (filtered.length > 3) {
         filtered = filtered.take(3).toList();
       }
-    } else if (_filter == 'Answered') {
+    } else if (_filter == QuestionFilter.answered) {
       filtered.sort((a, b) =>
           (b.currentAnswer?.modifiedAt ?? b.currentAnswer?.answeredAt ?? 0)
               .compareTo(
               a.currentAnswer?.modifiedAt ?? a.currentAnswer?.answeredAt ?? 0));
-    } else if (_filter == 'Ignored') {
+    } else if (_filter == QuestionFilter.ignored) {
       filtered.sort((a, b) => (b.ignoredAt ?? 0).compareTo(a.ignoredAt ?? 0));
     }
     return filtered;
@@ -73,7 +68,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       setState(() => _currentProject = project);
       final questions = project.questions;
 
-      if (_filter == 'Unanswered') {
+      if (_filter == QuestionFilter.unanswered) {
         final unanswered = questions.where((q) => q.isUnanswered).toList();
 
         if (unanswered.isNotEmpty) {
@@ -248,11 +243,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildFilterChip('Unanswered'),
+                  _buildFilterChip(QuestionFilter.unanswered),
                   const SizedBox(width: 8),
-                  _buildFilterChip('Answered'),
+                  _buildFilterChip(QuestionFilter.answered),
                   const SizedBox(width: 8),
-                  _buildFilterChip('Ignored'),
+                  _buildFilterChip(QuestionFilter.ignored),
                 ],
               ),
             ),
@@ -262,9 +257,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     );
   }
 
-  Widget _buildFilterChip(String filter) {
+  Widget _buildFilterChip(QuestionFilter filter) {
     return ChoiceChip(
-      label: Text(filter),
+      label: Text(filter.displayLabel),
       selected: _filter == filter,
       onSelected: (selected) {
         setState(() => _filter = filter);
@@ -273,7 +268,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }
 
   Widget _buildShuffleButton() {
-    if (_filter != 'Unanswered') return const SizedBox.shrink();
+    if (_filter != QuestionFilter.unanswered) return const SizedBox.shrink();
 
     final unanswered = _questions?.where((q) => q.isUnanswered).toList() ?? [];
     if (unanswered.length <= 3) return const SizedBox.shrink();
@@ -369,9 +364,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 if (filteredQuestions.isEmpty) {
                   return Center(
                     child: Text(
-                      _filter == 'Unanswered'
-                          ? 'No unanswered questions.'
-                          : 'No ${_filter.toLowerCase()} questions.',
+                      'No ${_filter.displayLabel.toLowerCase()} questions.',
                       textAlign: TextAlign.center,
                     ),
                   );
@@ -381,7 +374,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                   duration: const Duration(milliseconds: 300),
                   child: ListView.builder(
                     key: ValueKey(
-                        _filter + (_unansweredOrder?.join(',') ?? '')),
+                        '${_filter.name}-${_unansweredOrder?.join(',') ?? ''}'),
                     itemCount: filteredQuestions.length,
                     itemBuilder: (context, index) =>
                         _buildQuestionItem(filteredQuestions[index]),

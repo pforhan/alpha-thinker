@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../thinker_api.dart';
 import '../thinker_api_extensions.dart';
+import '../enums/question_filter.dart';
 import 'swipeable_item.dart';
 
 class QuestionItem extends StatelessWidget {
   final QuestionDto question;
-  final String filter;
+  final QuestionFilter filter;
   final VoidCallback onAskLater;
   final VoidCallback onIgnore;
   final VoidCallback onUnignore;
@@ -32,7 +33,7 @@ class QuestionItem extends StatelessWidget {
     Widget? secondaryBackground;
     Function(DismissDirection direction)? onDismissed;
 
-    if (filter == 'Unanswered') {
+    if (filter == QuestionFilter.unanswered) {
       background = Container(
         color: Colors.blue,
         alignment: Alignment.centerLeft,
@@ -65,7 +66,7 @@ class QuestionItem extends StatelessWidget {
           onIgnore();
         }
       };
-    } else if (filter == 'Answered') {
+    } else if (filter == QuestionFilter.answered) {
       background = Container(
         color: Colors.grey,
         alignment: Alignment.centerLeft,
@@ -98,7 +99,7 @@ class QuestionItem extends StatelessWidget {
           onDeleteAnswer();
         }
       };
-    } else if (filter == 'Ignored') {
+    } else if (filter == QuestionFilter.ignored) {
       background = Container(
         color: Colors.green,
         alignment: Alignment.centerLeft,
@@ -143,7 +144,7 @@ class QuestionItem extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (filter == 'Unanswered' && !hasAnswer && !isIgnored)
+              if (filter == QuestionFilter.unanswered && !hasAnswer && !isIgnored)
                 Tooltip(
                   message: 'Ask later',
                   child: IconButton(
