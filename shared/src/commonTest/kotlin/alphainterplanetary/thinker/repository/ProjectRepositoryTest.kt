@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.repository
 
-import alphainterplanetary.thinker.repository.generateTitleFromSynopsis
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

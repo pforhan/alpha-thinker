@@ -1,7 +1,8 @@
-import '../thinker_api.dart';
+import '../models/project_models.dart';
 import 'project_service.dart';
+import 'thinker_api_manual.dart';
 
-class PigeonProjectService implements ProjectService {
+class ManualProjectService implements ProjectService {
   final ThinkerApi _api = ThinkerApi();
 
   @override
@@ -10,8 +11,7 @@ class PigeonProjectService implements ProjectService {
 
   @override
   Future<List<ProjectDto>> getAllProjects() async {
-    final projects = await _api.getAllProjects();
-    return projects.cast<ProjectDto>();
+    return await _api.getAllProjects();
   }
 
   @override
@@ -19,8 +19,7 @@ class PigeonProjectService implements ProjectService {
 
   @override
   Future<List<QuestionDto>> getUnansweredQuestions(String projectId) async {
-    final questions = await _api.getUnansweredQuestions(projectId);
-    return questions.cast<QuestionDto>();
+    return await _api.getUnansweredQuestions(projectId);
   }
 
   @override
@@ -41,7 +40,8 @@ class PigeonProjectService implements ProjectService {
 
   @override
   Future<void> deleteAnswer(String projectId, String questionId,
-      int answerId) => _api.deleteAnswer(projectId, questionId, answerId);
+      int answerId) =>
+      _api.deleteAnswer(projectId, questionId, answerId);
 
   @override
   Future<ProjectDto> updateProject(String id, String title, String synopsis,

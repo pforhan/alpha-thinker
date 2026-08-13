@@ -9,36 +9,11 @@ plugins {
   alias(libs.plugins.ksp) apply false
 }
 
-val pigeonDartOut = "frontend/lib/thinker_api.dart"
-val pigeonKotlinOut = "shared/src/commonMain/kotlin/alphainterplanetary/thinker/ThinkerApi.kt"
-
-tasks.register("clean") {
-  group = "build"
-  description = "Deletes build directories and generated Pigeon bindings"
-  doLast {
-    delete(file("build"))
-    delete(file(pigeonDartOut))
-    delete(file(pigeonKotlinOut))
-  }
-}
-
-tasks.register<Exec>("generatePigeon") {
-  group = "build"
-  description = "Generates Pigeon bindings for Flutter and KMP"
-  workingDir = file("frontend")
-
-  commandLine(
-    "bash",
-    "-c",
-    "flutter pub get && dart run pigeon --input pigeons/messages.dart --dart_out ../$pigeonDartOut --kotlin_out ../$pigeonKotlinOut --kotlin_package \"alphainterplanetary.thinker\" --package_name \"alphainterplanetary.thinker\""
-  )
-}
-
 tasks.register<Exec>("runWeb") {
   group = "application"
   description = "Runs the application on Web"
   workingDir = file("frontend")
-  dependsOn(":shared:assemble", "generatePigeon")
+  dependsOn(":shared:assemble")
   commandLine("flutter", "run", "-d", "chrome")
 }
 
@@ -46,7 +21,7 @@ tasks.register<Exec>("runAndroid") {
   group = "application"
   description = "Runs the application on Android"
   workingDir = file("frontend")
-  dependsOn(":shared:assemble", "generatePigeon")
+  dependsOn(":shared:assemble")
   commandLine("sh", "-c", "DEVICE=$(flutter devices | awk -F' • ' '/android/{print $2; exit}') && exec flutter run -d \"\$DEVICE\"")
 }
 
@@ -54,7 +29,7 @@ tasks.register<Exec>("runIos") {
   group = "application"
   description = "Runs the application on iOS"
   workingDir = file("frontend")
-  dependsOn(":shared:assemble", "generatePigeon")
+  dependsOn(":shared:assemble")
   commandLine("sh", "-c", "DEVICE=$(flutter devices | awk -F' • ' '/ios/{print $2; exit}') && exec flutter run -d \"\$DEVICE\"")
 }
 
@@ -62,7 +37,7 @@ tasks.register<Exec>("runDesktop") {
   group = "application"
   description = "Runs the application on the current desktop platform"
   workingDir = file("frontend")
-  dependsOn(":shared:assemble", "generatePigeon")
+  dependsOn(":shared:assemble")
 
   val os = System.getProperty("os.name").lowercase()
   val device = when {
@@ -74,14 +49,6 @@ tasks.register<Exec>("runDesktop") {
   commandLine("flutter", "run", "-d", device)
 }
 
-gradle.projectsEvaluated {
-  project(":shared").tasks.configureEach {
-    if (name.contains("compile") || name.contains("assemble")) {
-      dependsOn(":generatePigeon")
-    }
-  }
-}
-
 repositories {
   google()
   mavenCentral()
@@ -89,4 +56,3 @@ repositories {
     url = uri("https://storage.googleapis.com/download.flutter.io")
   }
 }
-
