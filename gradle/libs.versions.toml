@@ -4,12 +4,16 @@ compileSdk = "36"
 kotlin = "2.2.10"
 composeMultiplatform = "1.8.0"
 kotlinxSerialization = "1.8.1"
-navigationCompose = "2.8.0-alpha10"
+kotlinxCoroutines = "1.10.2"
+navigationCompose = "2.7.7"
 coreKtx = "1.15.0"
 appcompat = "1.7.0"
+activityCompose = "1.9.3"
 lifecycleRuntimeKtx = "2.8.7"
 koin = "4.0.0"
 ksp = "2.3.2"
+materialIconsCore = "1.7.8"
+materialIconsExtended = "1.7.8"
 
 room = "2.7.0-alpha11"
 kotlinxDatetime = "0.6.1"
@@ -19,11 +23,15 @@ flutterEngine = "1.0.0-c416acfeb8126e097f758c664aaa3da929e27da0"
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 composeMultiplatform-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime", version.ref = "composeMultiplatform" }
+material-icons-core = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "materialIconsCore" }
+material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "materialIconsExtended" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }

@@ -50,6 +50,8 @@ This document tracks the specific engineering tasks required to move from design
 - [x] make a QuestionFilter enum and gather any related strings in it to provide type safety
 - [x] Rename LLMIntegration to QuestionGenerator
 - [x] Make a QuestionDAO since questions and answers can be updated independently of a project.
+- [ ] Convert to KMP / Compose, away from flutter
+- [ ] Remove pigeon codegen
 - [ ] Better text instead of "Submit" for adding / editing answers
 - [ ] need to integrate MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.

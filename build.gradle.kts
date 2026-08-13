@@ -74,8 +74,6 @@ tasks.register<Exec>("runDesktop") {
   commandLine("flutter", "run", "-d", device)
 }
 
-
-
 gradle.projectsEvaluated {
   project(":shared").tasks.configureEach {
     if (name.contains("compile") || name.contains("assemble")) {
@@ -84,4 +82,11 @@ gradle.projectsEvaluated {
   }
 }
 
+repositories {
+  google()
+  mavenCentral()
+  maven {
+    url = uri("https://storage.googleapis.com/download.flutter.io")
+  }
+}
 

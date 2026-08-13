@@ -226,3 +226,4 @@ x86/
 # Pigeon generated bindings
 frontend/lib/thinker_api.dart
 shared/src/commonMain/kotlin/alphainterplanetary/thinker/ThinkerApi.kt
+shared/src/androidMain/kotlin/alphainterplanetary/thinker/pigeon/ThinkerApi.kt

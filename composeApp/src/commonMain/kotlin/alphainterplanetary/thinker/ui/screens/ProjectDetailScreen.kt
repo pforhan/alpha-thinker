@@ -1,0 +1,154 @@
+package alphainterplanetary.thinker.ui.screens
+
+import alphainterplanetary.thinker.data.ThinkerRepository
+import alphainterplanetary.thinker.database.RoomStorage
+import alphainterplanetary.thinker.llm.SeedQuestionsGenerator
+import alphainterplanetary.thinker.model.isUnanswered
+import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.ui.components.EditProjectDialog
+import alphainterplanetary.thinker.ui.components.QuestionFilter
+import alphainterplanetary.thinker.ui.components.QuestionFilterBar
+import alphainterplanetary.thinker.ui.components.QuestionItem
+import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProjectDetailScreen(
+    projectId: String,
+    onBack: () -> Unit,
+    onProjectUpdated: () -> Unit
+) {
+    val repository = remember {
+        ThinkerRepository(ProjectRepository(RoomStorage(null!!), SeedQuestionsGenerator()))
+    }
+    val viewModel = remember { ProjectDetailViewModel(repository) }
+    
+    LaunchedEffect(projectId) {
+        viewModel.loadProject(projectId)
+    }
+
+    val project by viewModel.project.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    var selectedFilter by remember { mutableStateOf(QuestionFilter.Unanswered) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var questionOrderState by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(project?.editableTitle ?: "Loading...") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showEditDialog = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Project")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (isLoading || project == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                 Column(
+                     modifier = Modifier
+                         .fillMaxWidth()
+                         .padding(16.dp)
+                 ) {
+                     Text("Synopsis:", style = MaterialTheme.typography.titleSmall)
+                     Text(project?.synopsis ?: "")
+                 }
+                
+                HorizontalDivider()
+
+              QuestionFilterBar(
+                  selectedFilter = selectedFilter,
+                  onFilterSelected = { selectedFilter = it }
+              )
+                
+                if (project != null && questionOrderState.isEmpty() && selectedFilter == QuestionFilter.Unanswered) {
+                    // Initialize order
+                    LaunchedEffect(project) {
+                        val unanswered = project?.questions?.filter { it.isUnanswered } ?: emptyList()
+                        questionOrderState = unanswered.map { it.id }
+                    }
+                }
+                
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(project?.questions ?: emptyList()) { question ->
+                            QuestionItem(
+                                question = question,
+                                filter = selectedFilter,
+                                onAnswerClick = { /* TODO */ },
+                                onIgnore = { viewModel.ignoreQuestion(projectId, question.id) },
+                                onUnignore = { viewModel.unignoreQuestion(projectId, question.id) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showEditDialog && project != null) {
+        EditProjectDialog(
+            project = project!!,
+            onDismiss = { showEditDialog = false },
+            onSave = { title, synopsis, mode ->
+                viewModel.updateProject(projectId, title, synopsis, mode)
+                showEditDialog = false
+                onProjectUpdated()
+            }
+        )
+    }
+}

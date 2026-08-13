@@ -10,11 +10,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://packages.jetbrains.com/kotlinwmks-internal-release") }
+        maven {
+          url = uri("https://storage.googleapis.com/download.flutter.io")
+        }
     }
 }
 
 rootProject.name = "alphathinker"
 
 include(":shared")
-project(":shared").projectDir = file("shared")
+include(":composeApp")

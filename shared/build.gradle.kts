@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
   alias(libs.plugins.androidLibrary)
@@ -17,6 +19,12 @@ kotlin {
     }
   }
 
+  // jvm("desktop") {
+  //   compilerOptions {
+  //     jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+  //   }
+  // }
+
   sourceSets {
     commonMain.dependencies {
       implementation(libs.kotlinx.serialization.json)
@@ -27,7 +35,7 @@ kotlin {
       implementation(libs.composeMultiplatform.runtime)
     }
     commonTest.dependencies {
-      implementation(kotlin("test"))
+      // implementation(kotlin("test"))
     }
     androidMain.dependencies {
       implementation(libs.androidx.core.ktx)
@@ -35,8 +43,8 @@ kotlin {
     }
   }
 }
-android {
-  namespace = "com.pforhan.thinker.shared"
+configure<LibraryExtension> {
+  namespace = "alphainterplanetary.thinker.shared"
   compileSdk = libs.versions.compileSdk.get().toInt()
   defaultConfig {
     minSdk = 26
@@ -45,16 +53,8 @@ android {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
   }
+}
 
-  repositories {
-    google()
-    mavenCentral()
-    maven {
-      url = uri("https://storage.googleapis.com/download.flutter.io")
-    }
-  }
-
-  dependencies {
-    compileOnly(libs.flutter.embedding)
-  }
+dependencies {
+  compileOnly(libs.flutter.embedding)
 }
