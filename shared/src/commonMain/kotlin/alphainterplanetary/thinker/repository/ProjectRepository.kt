@@ -104,7 +104,7 @@ class ProjectRepository(
 
   suspend fun getUnansweredQuestions(project: Project): List<Question> {
     return project.questions.filterNot { question ->
-      (question.currentAnswer?.isCommplete ?: false) || question.isIgnored
+      (question.currentAnswer?.isComplete ?: false) || question.isIgnored
     }
   }
 
@@ -117,7 +117,7 @@ class ProjectRepository(
     val project = storage.getProject(projectId) ?: return null
     val question = project.questions.find { it.id == questionId } ?: return null
 
-    if (isDraft && question.currentAnswer?.isCommplete == true) {
+    if (isDraft && question.currentAnswer?.isComplete == true) {
       throw IllegalStateException("Cannot add a draft answer to a question that is already answered")
     }
 
@@ -160,7 +160,7 @@ class ProjectRepository(
 
   private fun allQuestionsAnswered(project: Project, questions: List<Question>): Boolean {
     val activeQuestions = questions.filterNot { it.isIgnored }
-    return activeQuestions.all { it.currentAnswer?.isCommplete == true }
+    return activeQuestions.all { it.currentAnswer?.isComplete == true }
   }
 
   suspend fun ignoreQuestion(
@@ -231,7 +231,7 @@ class ProjectRepository(
     project.questions.sortedBy { it.timestamp }.forEach { question ->
       sb.appendLine("### Q: ${question.text}")
       val answer = question.currentAnswer
-      if (answer != null && answer.isCommplete) {
+      if (answer != null && answer.isComplete) {
         sb.appendLine()
         sb.appendLine("| **Answer:** | ${answer.text} |")
         sb.appendLine("|-------------|--------")

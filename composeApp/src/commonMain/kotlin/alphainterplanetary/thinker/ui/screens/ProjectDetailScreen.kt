@@ -3,7 +3,6 @@ package alphainterplanetary.thinker.ui.screens
 import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.database.RoomStorage
 import alphainterplanetary.thinker.llm.SeedQuestionsGenerator
-import alphainterplanetary.thinker.model.isUnanswered
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.QuestionFilter
@@ -13,7 +12,6 @@ import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -49,7 +47,7 @@ fun ProjectDetailScreen(
     onProjectUpdated: () -> Unit
 ) {
     val repository = remember {
-        ThinkerRepository(ProjectRepository(RoomStorage(null!!), SeedQuestionsGenerator()))
+        ThinkerRepository(ProjectRepository(RoomStorage(null), SeedQuestionsGenerator()))
     }
     val viewModel = remember { ProjectDetailViewModel(repository) }
     

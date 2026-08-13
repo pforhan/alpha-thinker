@@ -90,6 +90,18 @@ class QuestionDto {
       'answers': answers.map((a) => a.toMap()).toList(),
     };
   }
+
+  bool get isAnswered => currentAnswer?.isComplete ?? false;
+
+  bool get isIgnored => ignoredAt != null;
+
+  AnswerDto? get currentAnswer {
+    if (answers.isEmpty) return null;
+    final last = answers.last;
+    return last.deletedAt == null ? last : null;
+  }
+
+  bool get isUnanswered => !isAnswered && !isIgnored;
 }
 
 class AnswerDto {
@@ -130,4 +142,13 @@ class AnswerDto {
       'deletedAt': deletedAt,
     };
   }
+
+  bool get isComplete => !isDraft && text.trim().isNotEmpty;
+
+  bool get isDraft => answeredAt == null;
+}
+
+extension ProjectDtoExtension on ProjectDto {
+  List<QuestionDto> get unansweredQuestions =>
+      questions.where((q) => q.isUnanswered).toList();
 }

@@ -10,6 +10,12 @@ data class Question(
   val ignoredAt: Instant? = null,
   val answers: List<Answer> = emptyList(),
 ) {
+  val isAnswered: Boolean
+    get() = currentAnswer?.isComplete == true
+
+  val isUnanswered: Boolean
+    get() = !isAnswered && !isIgnored
+
   val isIgnored: Boolean
     get() = ignoredAt != null
 

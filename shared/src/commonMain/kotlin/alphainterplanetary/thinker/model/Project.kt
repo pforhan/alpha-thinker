@@ -10,4 +10,7 @@ data class Project(
   val questions: List<Question>,
   val createdAt: Instant,
   val updatedAt: Instant,
-)
+) {
+  val unansweredQuestions: List<Question>
+    get() = questions.filter { it.isUnanswered }
+}
