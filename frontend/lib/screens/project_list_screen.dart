@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/project_models.dart';
 import '../injection.dart';
-import '../thinker_api.dart';
 import '../services/project_service.dart';
 import 'project_detail_screen.dart';
 import '../widgets/edit_project_dialog.dart';

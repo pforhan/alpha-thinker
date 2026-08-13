@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../thinker_api.dart';
-import '../thinker_api_extensions.dart';
-import '../services/project_service.dart';
+
 import '../injection.dart';
+import '../models/project_models.dart';
+import '../services/project_service.dart';
+import '../thinker_api_extensions.dart';
 
 class AnswerDialog extends StatefulWidget {
   final ProjectDto project;

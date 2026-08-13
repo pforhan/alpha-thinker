@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../thinker_api.dart';
+import '../models/project_models.dart';
 
 class EditProjectDialog extends StatefulWidget {
   final ProjectDto? project;

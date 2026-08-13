@@ -1,4 +1,4 @@
-import '../thinker_api.dart';
+import '../models/project_models.dart';
 
 abstract class ProjectService {
   Future<ProjectDto> createProject(String synopsis, {String? title});

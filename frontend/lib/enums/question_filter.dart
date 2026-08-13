@@ -1,4 +1,4 @@
-import '../thinker_api.dart';
+import '../models/project_models.dart';
 import '../thinker_api_extensions.dart';
 
 enum QuestionFilter {

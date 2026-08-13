@@ -1,8 +1,7 @@
-import '../thinker_api.dart';
+import 'package:flutter/foundation.dart';
+import '../models/project_models.dart';
 import '../thinker_api_extensions.dart';
 import 'project_service.dart';
-import 'package:flutter/foundation.dart'; // TODO remove after removing debugPrints
-// import 'package:characters/characters.dart';
 
 String generateTitleFromSynopsis(String synopsis) {
   final trimmed = synopsis.trim();

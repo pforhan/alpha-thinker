@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+
+import '../enums/question_filter.dart';
 import '../injection.dart';
-import '../thinker_api.dart';
-import '../thinker_api_extensions.dart';
-import '../services/project_service.dart';
+import '../models/project_models.dart';
 import '../services/preference_service.dart';
-import '../widgets/question_item.dart';
+import '../services/project_service.dart';
+import '../thinker_api_extensions.dart';
 import '../widgets/answer_dialog.dart';
 import '../widgets/edit_project_dialog.dart';
-import '../enums/question_filter.dart';
+import '../widgets/question_item.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final ProjectDto project;

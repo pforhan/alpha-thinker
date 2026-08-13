@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../thinker_api.dart';
-import '../thinker_api_extensions.dart';
+
 import '../enums/question_filter.dart';
+import '../models/project_models.dart';
+import '../thinker_api_extensions.dart';
 import 'swipeable_item.dart';
 
 class QuestionItem extends StatelessWidget {

@@ -1,4 +1,4 @@
-import 'thinker_api.dart';
+import '../models/project_models.dart';
 
 extension AnswerDtoExtension on AnswerDto {
   bool get isComplete =>
