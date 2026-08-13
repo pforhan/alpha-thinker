@@ -7,28 +7,31 @@ plugins {
 }
 
 kotlin {
-  androidTarget {
-    compilerOptions {
-      jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-  }
+   androidTarget {
+     compilerOptions {
+       jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+     }
+   }
 
   // jvm("desktop")
 
   sourceSets {
-    commonMain.dependencies {
-      implementation(compose.runtime)
-      implementation(compose.foundation)
-      implementation(compose.material3)
-      implementation(compose.ui)
-      implementation(compose.components.resources)
-      implementation(libs.kotlinx.serialization.json)
-      implementation(libs.kotlinx.coroutines.core)
-      implementation(libs.kotlinx.datetime)
-      implementation(project(":shared"))
-      implementation(libs.material.icons.core)
-      implementation(libs.material.icons.extended)
-    }
+     commonMain.dependencies {
+       implementation(compose.runtime)
+       implementation(compose.foundation)
+       implementation(compose.material3)
+       implementation(compose.ui)
+       implementation(compose.components.resources)
+       implementation(libs.kotlinx.serialization.json)
+       implementation(libs.kotlinx.coroutines.core)
+       implementation(libs.kotlinx.datetime)
+       implementation(libs.room.runtime)
+       implementation(libs.room.ktx)
+       implementation(libs.sqlite.bundled)
+       implementation(libs.composeMultiplatform.runtime)
+       implementation(libs.material.icons.core)
+       implementation(libs.material.icons.extended)
+     }
 
     androidMain.dependencies {
       implementation(libs.androidx.core.ktx)
@@ -63,8 +66,8 @@ android {
     }
   }
 
-  compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-  }
+   compileOptions {
+     sourceCompatibility = JavaVersion.VERSION_21
+     targetCompatibility = JavaVersion.VERSION_21
+   }
 }

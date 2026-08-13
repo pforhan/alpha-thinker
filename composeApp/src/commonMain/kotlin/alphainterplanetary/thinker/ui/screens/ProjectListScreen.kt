@@ -55,9 +55,7 @@ fun ProjectListScreen(
     
     val repository = remember {
         val generator = SeedQuestionsGenerator()
-        // TODO: Initialize with actual Room database
-        // For now, using in-memory for demo - will need proper DB setup
-        ThinkerRepository(ProjectRepository(RoomStorage(null!!), generator))
+        ThinkerRepository(ProjectRepository(RoomStorage(getDatabase()), generator))
     }
     val viewModel = remember { ProjectListViewModel(repository) }
     

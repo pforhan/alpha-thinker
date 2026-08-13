@@ -1,6 +1,10 @@
 package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.data.ThinkerRepository
+import alphainterplanetary.thinker.database.AnswerDao
+import alphainterplanetary.thinker.database.AppDatabase
+import alphainterplanetary.thinker.database.ProjectDao
+import alphainterplanetary.thinker.database.QuestionDao
 import alphainterplanetary.thinker.database.RoomStorage
 import alphainterplanetary.thinker.llm.SeedQuestionsGenerator
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -38,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.room.InvalidationTracker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +52,7 @@ fun ProjectDetailScreen(
     onProjectUpdated: () -> Unit
 ) {
     val repository = remember {
-        ThinkerRepository(ProjectRepository(RoomStorage(null), SeedQuestionsGenerator()))
+        ThinkerRepository(ProjectRepository(RoomStorage(getDatabase()), SeedQuestionsGenerator()))
     }
     val viewModel = remember { ProjectDetailViewModel(repository) }
     
@@ -149,4 +154,26 @@ fun ProjectDetailScreen(
             }
         )
     }
+}
+
+fun getDatabase(): AppDatabase = object : AppDatabase() {
+  override fun projectDao(): ProjectDao {
+    TODO("Not yet implemented")
+  }
+
+  override fun questionDao(): QuestionDao {
+    TODO("Not yet implemented")
+  }
+
+  override fun answerDao(): AnswerDao {
+    TODO("Not yet implemented")
+  }
+
+  override fun clearAllTables() {
+    TODO("Not yet implemented")
+  }
+
+  override fun createInvalidationTracker(): InvalidationTracker {
+    TODO("Not yet implemented")
+  }
 }

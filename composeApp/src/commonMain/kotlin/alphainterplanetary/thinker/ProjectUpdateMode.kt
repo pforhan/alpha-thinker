@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker
 
 enum class ProjectUpdateMode {
-    KEEP,
-    CLEAR,
-    REVALIDATE
+  KEEP,
+  CLEAR,
+  REVALIDATE
 }

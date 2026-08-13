@@ -18,5 +18,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "alphathinker"
 
-include(":shared")
 include(":composeApp")
