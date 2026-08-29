@@ -50,14 +50,16 @@ This document tracks the specific engineering tasks required to move from design
 - [x] make a QuestionFilter enum and gather any related strings in it to provide type safety
 - [x] Rename LLMIntegration to QuestionGenerator
 - [x] Make a QuestionDAO since questions and answers can be updated independently of a project.
-- [ ] Convert to KMP / Compose, away from flutter
 - [x] Remove pigeon codegen
+- [ ] Convert to KMP / Compose, away from flutter
+  - [ ] Set up Compose Multiplatform Web target
+  - [ ] Set up Compose Multiplatform iOS target
+  - [ ] Set up Compose Multiplatform Desktop (macOS / JVM) target
 - [ ] Better text instead of "Submit" for adding / editing answers
 - [ ] need to integrate MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
 - [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
 - [ ] probably should be able to unignore a question from the dialog popup, or force unignore before modifying the answer field.
-- [ ] Change filenames with "pigeon" in them to something more appropriate
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 
