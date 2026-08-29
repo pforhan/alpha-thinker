@@ -8,37 +8,38 @@ Alpha Thinker is available in two versions:
 
 ## Building
 
+The app is a Kotlin Multiplatform / Compose Multiplatform project. Build and run it with standard Gradle tasks from the root of the repository. The UI implementation lives in `composeApp/`.
+
 ### Prerequisites
-- **Flutter SDK**: Required for the frontend.
+
 - **JDK 21**: Required for the KMP shared module and Android app.
 - **Android Studio / Xcode**: For platform-specific builds.
 
-### Setup Instructions
+### Android
 
-To get the application running, simply execute one of the following commands from the root directory:
+Android is the currently active target in `composeApp/build.gradle.kts`.
 
 ```bash
-./gradlew runWeb
-./gradlew runDesktop
-./gradlew runAndroid
-./gradlew runIos
+./gradlew :composeApp:assembleDebug   # build the debug APK
+./gradlew :composeApp:installDebug    # install the debug APK on a connected device or running emulator
+./gradlew :composeApp:testDebugUnitTest  # run unit tests
+./gradlew :composeApp:lint            # run the Android linter
 ```
 
-Note: using gradle to launch flutter means the flutter TUI won't be responsive even if it displays its run key commands.
+### iOS, Web, and Desktop
 
-### Build Details (Optional)
+The iOS, web, and desktop targets are not yet enabled in `composeApp/build.gradle.kts`. When a target is enabled, it will be built and run via the generated Gradle tasks:
 
-For developers who need more granular control, the following tasks are available:
-- `./gradlew :shared:assemble`: Builds the KMP shared module.
-- `./gradlew run`: Runs the full application.
+- **iOS**: Build and run through Xcode (`composeApp/iosApp`); Gradle provides the Kotlin/Native tasks, e.g. `./gradlew :composeApp:iosSimulatorArm64Test` for tests.
+- **Web**: `./gradlew :composeApp:wasmJsRun`.
+- **Desktop** (JVM): `./gradlew :composeApp:run`.
 
-### Configuration Notes
+### All Targets
 
-- **Flutter Engine Version**: The `shared` module requires a specific `flutter_embedding_debug` version that matches your local Flutter SDK's engine version. This is tracked in `gradle/libs.versions.toml` under `flutterEngine`. To update it to match your local SDK:
-    ```bash
-    cat $(flutter doctor -v | grep "Flutter SDK at" | awk '{print $4}')/bin/internal/engine.version
-    ```
-    Then update `flutterEngine` and the `flutter-embedding` library entry in `libs.versions.toml`.
+```bash
+./gradlew build   # assemble and test all enabled targets
+./gradlew check   # run all verification tasks (tests + lint)
+```
 
 ## Design Documentation
 
