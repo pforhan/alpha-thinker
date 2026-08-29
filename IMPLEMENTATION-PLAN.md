@@ -60,12 +60,15 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Change filenames with "pigeon" in them to something more appropriate
 
 ## Phase 3: Intelligence Integration (Edge Version)
-- [ ] Integrate LiteRT-LM for automated question generation
+- [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 
+- [ ] Determine if we actually need multiple flavors, or if we can just fall back to basic mode inside a single binary
+- [ ] Add option to disable LLM usage
+- [ ] Integrate selected LLM solution for automated question generation
 - [ ] Implement "Auto-Archive" logic and app-wide settings
 - [ ] Implement background notification for long-running LLM tasks
 - [ ] Integrate global questions pool with Edge mode (LLM recommendations + global questions)
 - [ ] **LLM Interface:** Create the abstraction for the inference engine.
-- [ ] **Inference Implementation:** Integrate LiteRT-LM and MediaPipe for the Edge mode.
+- [ ] **Inference Implementation:** Integrate selected LLM inference solution for the Edge mode (evaluation in progress: ondevice-ai vs LiteRT-LM).
 - [ ] **Fallback Mechanism:** Implement the automatic switch from Edge to Lite upon inference failure.
 
 ## Phase 4: Advanced Features & Export

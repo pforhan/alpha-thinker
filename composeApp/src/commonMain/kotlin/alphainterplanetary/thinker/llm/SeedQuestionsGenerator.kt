@@ -3,8 +3,9 @@ package alphainterplanetary.thinker.llm
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.datetime.Clock.System
+import com.jakewharton.inject.Inject
 
-class SeedQuestionsGenerator : QuestionGenerator {
+class SeedQuestionsGenerator @Inject constructor() : QuestionGenerator {
   override suspend fun generateInitialQuestions(synopsis: String): List<Question> {
     val now = System.now()
     return seedQuestions.map { text ->
@@ -44,7 +45,7 @@ class SeedQuestionsGenerator : QuestionGenerator {
       "How will this project be maintained or supported later?",
       "What is the estimated total budget?",
       "Are there any legal, ethical, or compliance factors?",
-      "How will you promote or distribute the final result?",
+      "What will you promote or distribute the final result?",
       "What is the very first step you need to take?"
     )
   }

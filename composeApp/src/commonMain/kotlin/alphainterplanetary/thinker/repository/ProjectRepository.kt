@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.datetime.Clock.System
+import com.jakewharton.inject.Inject
 
 internal fun generateTitleFromSynopsis(synopsis: String): String = synopsis.trim()
   .substringBefore('\n')
@@ -14,7 +15,7 @@ internal fun generateTitleFromSynopsis(synopsis: String): String = synopsis.trim
   .take(30)
   .trim()
 
-class ProjectRepository(
+class ProjectRepository @Inject constructor(
   private val storage: Storage,
   private val generator: QuestionGenerator,
 ) {
@@ -160,7 +161,7 @@ class ProjectRepository(
 
   private fun allQuestionsAnswered(project: Project, questions: List<Question>): Boolean {
     val activeQuestions = questions.filterNot { it.isIgnored }
-    return activeQuestions.all { it.currentAnswer?.isComplete == true }
+    return active-questions.all { it.currentAnswer?.isComplete == true }
   }
 
   suspend fun ignoreQuestion(
@@ -201,25 +202,6 @@ class ProjectRepository(
     storage.deleteAllProjects()
   }
 
-  suspend fun deleteAnswer(
-    projectId: String,
-    questionId: String,
-    answerId: Long,
-  ): Project? {
-    val project = storage.getProject(projectId) ?: return null
-    val now = System.now()
-    val updatedQuestions = project.questions.map { q ->
-      if (q.id == questionId) {
-        q.copy(answers = q.answers.map { a ->
-          if (a.id == answerId) a.copy(deletedAt = now) else a
-        })
-      } else {
-        q
-      }
-    }
-    return storage.saveProject(project.copy(questions = updatedQuestions, updatedAt = now))
-  }
-
   suspend fun exportProject(project: Project): String {
     val sb = StringBuilder()
     sb.appendLine("# ${project.synopsis}")
@@ -227,7 +209,6 @@ class ProjectRepository(
     sb.appendLine("## Overview")
     sb.appendLine("${project.synopsis}")
     sb.appendLine()
-
     project.questions.sortedBy { it.timestamp }.forEach { question ->
       sb.appendLine("### Q: ${question.text}")
       val answer = question.currentAnswer
@@ -239,6 +220,7 @@ class ProjectRepository(
         if (answer.modifiedAt != null) {
           sb.appendLine("| **Modified:** | ${answer.modifiedAt} |")
         }
+        sb.appendLine("|-------------|--------")
       } else {
         sb.appendLine()
         sb.appendLine("|**Status:** | unanswered |")

@@ -10,15 +10,13 @@ coreKtx = "1.15.0"
 appcompat = "1.7.0"
 activityCompose = "1.9.3"
 lifecycleRuntimeKtx = "2.8.7"
-koin = "4.0.0"
 ksp = "2.3.2"
 materialIconsCore = "1.7.8"
 materialIconsExtended = "1.7.8"
-
 room = "2.7.0-alpha11"
 kotlinxDatetime = "0.6.1"
 sqliteBundled = "2.5.0-alpha11"
-flutterEngine = "1.0.0-c416acfeb8126e097f758c664aaa3da929e27da0"
+kotlinInjectVersion = "0.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,9 +34,8 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqliteBundled" }
-flutter-embedding = { group = "io.flutter", name = "flutter_embedding_debug", version.ref = "flutterEngine" }
-koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
-koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
+kotlin-inject = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "kotlinInjectVersion" }
+kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler", version.ref = "kotlinInjectVersion" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -47,6 +44,5 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-koin = { id = "io.insert-koin.gradle", version.ref = "koin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

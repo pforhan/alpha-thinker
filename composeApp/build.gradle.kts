@@ -4,6 +4,7 @@ plugins {
   alias(libs.plugins.composeMultiplatform)
   alias(libs.plugins.kotlinCompose)
   alias(libs.plugins.kotlinSerialization)
+  alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -31,6 +32,7 @@ kotlin {
        implementation(libs.composeMultiplatform.runtime)
        implementation(libs.material.icons.core)
        implementation(libs.material.icons.extended)
+       implementation(libs.kotlin.inject)
      }
 
     androidMain.dependencies {
@@ -46,6 +48,11 @@ kotlin {
     //     }
     // }
   }
+}
+
+dependencies {
+  add("kspCommonMainMetadata", libs.kotlin.inject.compiler)
+  add("kspAndroid", libs.kotlin.inject.compiler)
 }
 
 android {

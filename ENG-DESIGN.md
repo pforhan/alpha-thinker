@@ -9,7 +9,7 @@ This document outlines the technical investigations and design decisions require
 
 ### Key Decisions
 - **Layered Architecture:** The UI layer (Flutter) remains "logic-free," acting as a presentation layer that observes the KMP engine. Complex business logic and data management reside within the KMP layer.
-- **Inference Engine:** We will utilize **Google's LiteRT-LM and MediaPipe** for on-device LLM execution (Alpha Thinker Edge), specifically leveraging `litertlm-kmp`.
+- **Inference Engine:** Under evaluation — options include **ondevice-ai** (KMP library for system-installed edge LLMs like Gemini Nano and Apple Foundation) or **Google's LiteRT-LM and MediaPipe** (`litertlm-kmp`). The choice will depend on seamlessness of integration and device support.
 - **Resilience & Fallback:** If the LLM inference fails (e.g., due to resource constraints or malformed output), the app will transparently fall back to the **Alpha Thinker Lite** implementation using the hardcoded seed questions.
 - **State Management:** Flutter best practices will be followed for UI state management.
 - **Unified UX:** The visual styling and user interface will remain consistent across both the Lite and Edge editions.
@@ -19,7 +19,7 @@ This document outlines the technical investigations and design decisions require
 This iteration proposes a clear separation of concerns:
 1. **Frontend UI:** Flutter/Dart for a single, unified, and cross-platform user experience.
 2. **Core Logic/Engine:** Kotlin Multiplatform (KMP) for handling core domain logic, data persistence, and heavy computational lifting.
-3. **LLM Inference Layer:** Local edge-LLM execution powered by LiteRT-LM via [litertlm-kmp](https://github.com/sagar-develop/litertlm-kmp), enabling offline-first autonomous question generation and synthesis.
+3. **LLM Inference Layer:** Local edge-LLM execution for offline-first autonomous question generation and synthesis. Solution under evaluation: [ondevice-ai](https://github.com/nicklama/ondevice-ai) (system-installed LLMs) or [litertlm-kmp](https://github.com/sagar-develop/litertlm-kmp) (LiteRT-LM).
 
 This model allows the shared KMP layer to be the 'source of truth' for the application's business logic, decoupling it from UI platform specifics.
 
