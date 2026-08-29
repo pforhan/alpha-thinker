@@ -51,6 +51,8 @@ Both Editions share the same general UI, but differ in source of question materi
 ### 4.3 LLM Integration (Alpha Thinker Edge Only)
 - Generate a set of tailored initial questions based on the project synopsis.
 - Generate follow-up questions based on the project's current state and previous answerss.
+- Optional lookup and web search capabilities, invoked by the LLM as needed (e.g., via agentic tools such as Koog) rather than always-on.
+- App-wide setting (Edge Only) to enable/disable lookup and web search, presented on the same settings screen as the LLM on/off toggle.
 
 ### 4.4 Seed Questions (Alpha Thinker Lite Only)
 The Lite version includes these 20 generic questions to guide the user:
@@ -99,7 +101,7 @@ The Lite version includes these 20 generic questions to guide the user:
 - **Discovery**: When creating a new project or adding questions to an existing one, users can browse and select from the global pool.
 
 ### 5.5 System / Debug Workspace
-- **LLM Interaction Log**: A specialized view showing all historical LLM interactions, including the exact prompt sent, the response received, and the timing/latency for each.
+- **LLM Interaction Log**: A specialized view showing all historical LLM interactions, including the exact prompt sent, the response received, and the timing/latency for each. When the LLM invokes tools (e.g., lookup / web search), the log also captures each tool call: the tool name, its arguments, the results returned, and per-call timing.
 - **Debug LLM Console (Debug builds only)**: An interactive interface allowing developers to manually initiate LLM sessions, test prompts, and verify model behavior in real-time.
 - **Task Manager**: Visibility into long-running background tasks (like a cohesive document rewrite) with status and completion indicators.
 

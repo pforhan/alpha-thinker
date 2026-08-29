@@ -62,7 +62,11 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 
 - [ ] Determine if we actually need multiple flavors, or if we can just fall back to basic mode inside a single binary
-- [ ] Add option to disable LLM usage
+- [ ] Add setting to disable LLM usage (Settings screen)
+- [ ] Add setting to enable/disable LLM lookup & web search
+- [ ] Evaluate Koog (JetBrains KMP AI-agent framework) for agentic lookup + web search tools (research in ENG-DESIGN.md)
+- [ ] Integrate Koog tool-calling so the LLM performs lookup / web search only as needed
+- [ ] Implement graceful degradation when search is unavailable/offline, and route tool/search results through the LLM interaction log
 - [ ] Integrate selected LLM solution for automated question generation
 - [ ] Implement "Auto-Archive" logic and app-wide settings
 - [ ] Implement background notification for long-running LLM tasks
@@ -74,12 +78,11 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 4: Advanced Features & Export
 - [ ] Implement Markdown export functionality
 - [ ] Plan and implement the export pipeline (Markdown synthesis -> File System)
-- [ ] Implement System/Debug Workspace (LLM Log, Console, and Task Manager)
+- [ ] Implement System/Debug Workspace (LLM Log, Console, and Task Manager); the LLM log should surface any tool calls made during an interaction (tool name, arguments, results, per-call latency)
 - [ ] **Export Pipeline:** Implement the Markdown synthesis and file system export.
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global question pool with Lite version seed questions and edge version generated questions
-
 
 ## Phase 5: Refinement & UX
 - [ ] Prototype and refine "Iterative Question Card" interaction
