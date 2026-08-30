@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.ui.screens
 import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.ui.components.CreateProjectDialog
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +64,15 @@ fun ProjectListScreen(
 
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val createdProject by viewModel.createdProject.collectAsState()
+
+    LaunchedEffect(createdProject) {
+        val project = createdProject
+        if (project != null) {
+            viewModel.consumeCreatedProject()
+            onProjectCreated(project)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -131,5 +141,17 @@ fun ProjectListScreen(
                 }
             }
         }
+    }
+
+    if (showCreateDialog) {
+        CreateProjectDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { title, synopsis ->
+                if (synopsis.isNotBlank()) {
+                    viewModel.createProject(synopsis, title.ifBlank { null })
+                }
+                showCreateDialog = false
+            }
+        )
     }
 }

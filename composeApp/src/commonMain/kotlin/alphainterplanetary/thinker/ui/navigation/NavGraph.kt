@@ -6,7 +6,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import alphainterplanetary.thinker.di.AppComponent
-import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.ui.screens.ProjectDetailScreen
 import alphainterplanetary.thinker.ui.screens.ProjectListScreen
 
@@ -21,7 +20,6 @@ sealed class Screen(val route: String) {
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
     appComponent: AppComponent,
-    onProjectCreated: (Project) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -33,7 +31,9 @@ fun NavGraph(
                 onProjectClick = { project ->
                     navController.navigate(Screen.ProjectDetail.createRoute(project.id))
                 },
-                onProjectCreated = onProjectCreated
+                onProjectCreated = { project ->
+                    navController.navigate(Screen.ProjectDetail.createRoute(project.id))
+                }
             )
         }
         composable(Screen.ProjectDetail.route) { backStackEntry ->

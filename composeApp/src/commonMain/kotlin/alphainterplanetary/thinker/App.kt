@@ -21,7 +21,6 @@ fun App() {
             NavGraph(
                 navController = navController,
                 appComponent = appComponent,
-                onProjectCreated = { }
             )
         }
     }

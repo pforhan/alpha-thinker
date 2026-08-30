@@ -26,12 +26,20 @@ class ProjectListViewModel(private val repository: ThinkerRepository) {
         }
     }
 
+    private val _createdProject = MutableStateFlow<Project?>(null)
+    val createdProject: StateFlow<Project?> = _createdProject.asStateFlow()
+
     fun createProject(synopsis: String, title: String?) {
         repository.createProject(synopsis, title) { result ->
-            result.onSuccess {
+            result.onSuccess { project ->
+                _createdProject.value = project
                 loadProjects()
             }
         }
+    }
+
+    fun consumeCreatedProject() {
+        _createdProject.value = null
     }
 
     fun deleteProject(id: String) {
