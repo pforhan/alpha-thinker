@@ -5,8 +5,9 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.repository.ProjectRepository.Storage
 import kotlinx.datetime.Instant
+import me.tatarka.inject.annotations.Inject
 
-class RoomStorage(private val database: AppDatabase) : Storage {
+class RoomStorage @Inject constructor(private val database: AppDatabase) : Storage {
   override suspend fun saveProject(project: Project): Project {
     database.projectDao().upsertProject(project.toEntity())
 
@@ -22,7 +23,11 @@ class RoomStorage(private val database: AppDatabase) : Storage {
   }
 
   override suspend fun getProject(id: String): Project? {
-    return database.projectDao().getProjectWithQuestions(id)?.toDomainModel()
+    val data = database.projectDao().getProjectWithQuestions(id) ?: return null
+    val questions = data.questions.map { question ->
+      question.toDomainModel(database.answerDao().getAnswersForQuestion(question.id))
+    }
+    return data.project.toDomainModel(questions)
   }
 
   override suspend fun getAllProjects(): List<Project> {
@@ -76,24 +81,28 @@ private fun Answer.toEntity() = AnswerEntity(
   deletedAt = deletedAt?.toEpochMilliseconds()
 )
 
-private fun ProjectWithQuestions.toDomainModel() = Project(
-  id = project.id,
-  synopsis = project.synopsis,
-  editableTitle = project.editableTitle,
-  status = project.status,
-  questions = questions.map { it.toDomainModel() },
-  createdAt = Instant.fromEpochMilliseconds(project.createdAt),
-  updatedAt = Instant.fromEpochMilliseconds(project.updatedAt)
-)
+private fun ProjectEntity.toDomainModel(questions: List<Question>): Project {
+  return Project(
+    id = id,
+    synopsis = synopsis,
+    editableTitle = editableTitle,
+    status = status,
+    questions = questions,
+    createdAt = Instant.fromEpochMilliseconds(createdAt),
+    updatedAt = Instant.fromEpochMilliseconds(updatedAt)
+  )
+}
 
-private fun QuestionWithAnswers.toDomainModel() = Question(
-  id = question.id,
-  text = question.text,
-  timestamp = Instant.fromEpochMilliseconds(question.createdAt),
-  contextId = "",
-  ignoredAt = question.ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
-  answers = answers.map { it.toDomainModel() }
-)
+private fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question {
+  return Question(
+    id = id,
+    text = text,
+    timestamp = Instant.fromEpochMilliseconds(createdAt),
+    contextId = "",
+    ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
+    answers = answers.map { it.toDomainModel() }
+  )
+}
 
 private fun AnswerEntity.toDomainModel() = Answer(
   id = id,

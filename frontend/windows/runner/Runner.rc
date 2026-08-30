@@ -94,11 +94,11 @@ BEGIN
 "040904e4"
 BEGIN
         VALUE
-"CompanyName", "com.pforhan" "\0"
+"CompanyName", "alphainterplanetary" "\0"
 VALUE "FileDescription", "frontend" "\0"
 VALUE "FileVersion", VERSION_AS_STRING "\0"
 VALUE "InternalName", "frontend" "\0"
-VALUE "LegalCopyright", "Copyright (C) 2026 com.pforhan. All rights reserved." "\0"
+VALUE "LegalCopyright", "Copyright (C) 2026 alphainterplanetary. All rights reserved." "\0"
 VALUE "OriginalFilename", "frontend.exe" "\0"
 VALUE "ProductName", "frontend" "\0"
 VALUE "ProductVersion", VERSION_AS_STRING "\0"

@@ -54,20 +54,11 @@ data class AnswerEntity(
   val deletedAt: Long? = null,
 )
 
-data class QuestionWithAnswers(
-  @Embedded val question: QuestionEntity,
-  @Relation(
-    parentColumn = "id",
-    entityColumn = "questionId"
-  )
-  val answers: List<AnswerEntity>
-)
-
 data class ProjectWithQuestions(
   @Embedded val project: ProjectEntity,
   @Relation(
     parentColumn = "id",
     entityColumn = "projectId"
   )
-  val questions: List<QuestionWithAnswers>
+  val questions: List<QuestionEntity>
 )

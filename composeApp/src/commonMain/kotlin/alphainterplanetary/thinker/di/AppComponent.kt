@@ -1,41 +1,53 @@
 package alphainterplanetary.thinker.di
 
+import alphainterplanetary.thinker.database.AnswerDao
 import alphainterplanetary.thinker.database.AppDatabase
 import alphainterplanetary.thinker.database.ProjectDao
 import alphainterplanetary.thinker.database.QuestionDao
-import alphainterplanetary.thinker.database.AnswerDao
 import alphainterplanetary.thinker.database.RoomStorage
+import alphainterplanetary.thinker.database.getRoomDatabase
+import alphainterplanetary.thinker.database.provideDatabaseBuilder
 import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.llm.SeedQuestionsGenerator
 import alphainterplanetary.thinker.repository.ProjectRepository
-import com.jakewharton.inject.Component
-import com.jakewharton.inject.Provides
+import me.tatarka.inject.annotations.Component
+import me.tatarka.inject.annotations.KmpComponentCreate
+import me.tatarka.inject.annotations.Provides
 
 @Component
-interface AppComponent {
-    val projectRepository: ProjectRepository
+abstract class AppComponent {
+  abstract val projectRepository: ProjectRepository
 
-    val appDatabase: AppDatabase
+  abstract val appDatabase: AppDatabase
 
-    val projectDao: ProjectDao
+  abstract val projectDao: ProjectDao
 
-    val questionDao: QuestionDao
+  abstract val questionDao: QuestionDao
 
-    val answerDao: AnswerDao
+  abstract val answerDao: AnswerDao
 
-    val storage: ProjectRepository.Storage
+  abstract val questionGenerator: QuestionGenerator
 
-    val questionGenerator: QuestionGenerator
+  private val database by lazy { getRoomDatabase(provideDatabaseBuilder()) }
 
-    @Provides
-    fun provideProjectRepository(
-        storage: ProjectRepository.Storage,
-        generator: QuestionGenerator
-    ): ProjectRepository = ProjectRepository(storage, generator)
+  @Provides
+  fun providesStorage(database: AppDatabase): ProjectRepository.Storage = RoomStorage(database)
 
-    @Provides
-    fun provideStorage(database: AppDatabase): ProjectRepository.Storage = RoomStorage(database)
+  @Provides
+  fun providesQuestionGenerator(): QuestionGenerator = SeedQuestionsGenerator()
 
-    @Provides
-    fun provideQuestionGenerator(): QuestionGenerator = SeedQuestionsGenerator()
+  @Provides
+  fun providesDatabase(): AppDatabase = database
+
+  @Provides
+  fun providesProjectDao(database: AppDatabase): ProjectDao = database.projectDao()
+
+  @Provides
+  fun providesQuestionDao(database: AppDatabase): QuestionDao = database.questionDao()
+
+  @Provides
+  fun providesAnswerDao(database: AppDatabase): AnswerDao = database.answerDao()
 }
+
+@KmpComponentCreate
+expect fun createAppComponent(): AppComponent

@@ -51,16 +51,16 @@ kotlin {
 }
 
 dependencies {
-  add("kspCommonMainMetadata", libs.kotlin.inject.compiler)
   add("kspAndroid", libs.kotlin.inject.compiler)
+  add("kspAndroid", libs.room.compiler)
 }
 
 android {
-  namespace = "com.pforhan.alphathinker"
+  namespace = "alphainterplanetary.thinker"
   compileSdk = libs.versions.compileSdk.get().toInt()
 
   defaultConfig {
-    applicationId = "com.pforhan.alphathinker"
+    applicationId = "alphainterplanetary.thinker"
     minSdk = 26
     targetSdk = libs.versions.compileSdk.get().toInt()
     versionCode = 1

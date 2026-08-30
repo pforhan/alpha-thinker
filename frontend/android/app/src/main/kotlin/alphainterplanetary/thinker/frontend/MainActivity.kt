@@ -1,4 +1,4 @@
-package com.pforhan.frontend
+package alphainterplanetary.thinker.frontend
 
 import io.flutter.embedding.android.FlutterActivity
 

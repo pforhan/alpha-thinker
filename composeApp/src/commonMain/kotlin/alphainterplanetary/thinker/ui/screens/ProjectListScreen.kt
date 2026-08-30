@@ -1,10 +1,8 @@
 package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.data.ThinkerRepository
-import alphainterplanetary.thinker.database.RoomStorage
-import alphainterplanetary.thinker.llm.SeedQuestionsGenerator
+import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
-import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,14 +46,14 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectListScreen(
+    appComponent: AppComponent,
     onProjectClick: (Project) -> Unit,
     onProjectCreated: (Project) -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     
     val repository = remember {
-        val generator = SeedQuestionsGenerator()
-        ThinkerRepository(ProjectRepository(RoomStorage(getDatabase()), generator))
+        ThinkerRepository(appComponent.projectRepository)
     }
     val viewModel = remember { ProjectListViewModel(repository) }
     

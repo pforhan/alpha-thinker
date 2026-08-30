@@ -52,9 +52,9 @@ This document tracks the specific engineering tasks required to move from design
 - [x] Make a QuestionDAO since questions and answers can be updated independently of a project.
 - [x] Remove pigeon codegen
 - [ ] Convert to KMP / Compose, away from flutter
-  - [ ] Set up Compose Multiplatform Web target
-  - [ ] Set up Compose Multiplatform iOS target
-  - [ ] Set up Compose Multiplatform Desktop (macOS / JVM) target
+- [ ] Set up Compose Multiplatform Web target
+- [ ] Set up Compose Multiplatform iOS target
+- [ ] Set up Compose Multiplatform Desktop (macOS / JVM) target
 - [ ] Better text instead of "Submit" for adding / editing answers
 - [ ] need to integrate MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.

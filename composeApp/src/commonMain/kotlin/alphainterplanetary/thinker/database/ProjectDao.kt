@@ -44,10 +44,6 @@ interface QuestionDao {
   @Query("SELECT * FROM questions WHERE projectId = :projectId")
   suspend fun getQuestionsForProject(projectId: String): List<QuestionEntity>
 
-  @Transaction
-  @Query("SELECT * FROM questions WHERE id = :id")
-  suspend fun getQuestionWithAnswers(id: String): QuestionWithAnswers?
-
   @Delete
   suspend fun deleteQuestion(question: QuestionEntity)
 }

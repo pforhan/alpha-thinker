@@ -34,8 +34,8 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqliteBundled" }
-kotlin-inject = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "kotlinInjectVersion" }
-kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler", version.ref = "kotlinInjectVersion" }
+kotlin-inject = { module = "me.tatarka.inject:kotlin-inject-runtime-kmp", version.ref = "kotlinInjectVersion" }
+kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInjectVersion" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

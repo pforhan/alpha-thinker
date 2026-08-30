@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.llm
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.datetime.Clock.System
-import com.jakewharton.inject.Inject
+import me.tatarka.inject.annotations.Inject
 
 class SeedQuestionsGenerator @Inject constructor() : QuestionGenerator {
   override suspend fun generateInitialQuestions(synopsis: String): List<Question> {
