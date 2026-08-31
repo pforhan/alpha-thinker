@@ -2,7 +2,8 @@
 
     <application
         android:label="Alpha Thinker"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.AlphaThinker">
         <activity
             android:name=".MainActivity"
             android:exported="true"

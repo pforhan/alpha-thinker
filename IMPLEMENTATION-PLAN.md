@@ -54,7 +54,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Convert to KMP / Compose, away from flutter
   - [x] **ProjectList: wire up the add-project button.** `ProjectListScreen` sets `showCreateDialog = true` but never renders a dialog, so the Add FAB and "Create your first project" button do nothing. Add a new-project dialog (Flutter `EditProjectDialog` with `project == null`): optional "Add title" reveal, synopsis autofocus, Create button, default title generation from synopsis.
   - [x] **ProjectList: navigate into the new project after creation.** Flutter pushes `ProjectDetailScreen` for the freshly created project; Compose's `onProjectCreated` callback is a no-op.
-  - [ ] **Android entry polish (theme + edge-to-edge):** add `composeApp/src/androidMain/res/values/themes.xml` defining `Theme.AlphaThinker` with parent `android:Theme.Material.Light.NoActionBar`, then set `android:theme="@style/Theme.AlphaThinker"` on `<application>` in `composeApp/src/androidMain/AndroidManifest.xml` (currently no theme is declared, so the default action-bar theme is used under Compose). Also call `enableEdgeToEdge()` from `androidx.activity` in `MainActivity.onCreate()` before `setContent { App() }` so Compose controls the system bars. Do these together since both touch the Activity/manifest theme setup.
+  - [x] **Android entry polish (theme + edge-to-edge):** add `composeApp/src/androidMain/res/values/themes.xml` defining `Theme.AlphaThinker` with parent `android:Theme.Material.Light.NoActionBar`, then set `android:theme="@style/Theme.AlphaThinker"` on `<application>` in `composeApp/src/androidMain/AndroidManifest.xml` (currently no theme is declared, so the default action-bar theme is used under Compose). Also call `enableEdgeToEdge()` from `androidx.activity` in `MainActivity.onCreate()` before `setContent { App() }` so Compose controls the system bars. Do these together since both touch the Activity/manifest theme setup.
   - [ ] **ProjectList/Detail: surface load/create errors** via snackbar instead of silently clearing the list (`viewModel` currently swallows failures to empty).
   - [ ] ProjectDetail - Edit project dialog returns to the project list.  Should remain on project detail. If "clear all" selected on save, reset the filter to default.
   - [ ] **ProjectDetail: actually apply the selected filter.** The LazyColumn iterates `project.questions` unfiltered, so Answered/Ignored/Unanswered chips don't filter. Apply the equivalent of `QuestionFilter.apply` (Flutter `question_filter.dart`): unanswered = `isUnanswered`, answered = `isAnswered && !isIgnored`, ignored = `isIgnored`.
@@ -79,13 +79,14 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Better text instead of "Submit" for adding / editing answers
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
 - [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
+- [ ] **KMP: swipe-to-ignore / swipe-to-ask-later on question rows**, mimicking the Flutter `Dismissible` behavior in `frontend/lib/widgets/question_item.dart` (via `SwipeableItem`). Per filter: *unanswered* — swipe right = Ask Later (blue background), swipe left = Ignore (red); *answered* — swipe right = Ignore (grey), swipe left = Delete Answer (red); *ignored* — swipe either way = Unignore (green). Also add the background rows with icon+label shown under the card while swiping.
 - [ ] probably should be able to unignore a question from the dialog popup, or force unignore before modifying the answer field.
 - [ ] ProjectList: do we need a reload button?
 - [ ] ProjectDetail: question filter pills are not aligned with the Questions header.  For some screens we may need them to take less horizontal space as well. 
 - [ ] **KMP: fix back navigation + synopsis edit affordance.** `ProjectDetailScreen` top-app-bar `navigationIcon` uses the Edit icon (should be a Back arrow); the synopsis body has no edit affordance (Flutter has an edit IconButton beside "Synopsis:" opening the edit dialog; Compose only reaches it via the top bar).
 - [ ] **KMP: EditProjectDialog polish.** Refine the Compose edit dialog to match Flutter — 30-char title cap, multiline synopsis autofocus, and optional title reveal for new projects (the create flow itself is in Phase 2.5).
 - [ ] **ProjectList: come up with a way to delete a project** with a confirm dialog ("This action cannot be undone."). perhaps just a delete icon in the list?
-- [ ] 
+- [ ] projectdetail: need the right icon for unignore
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 
