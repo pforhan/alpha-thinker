@@ -7,7 +7,6 @@ data class Question(
   val text: String,
   val timestamp: Instant,
   val contextId: String,
-  val sortOrder: Int,
   val ignoredAt: Instant? = null,
   val answers: List<Answer> = emptyList(),
 ) {

@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -26,6 +27,7 @@ fun QuestionItem(
     question: Question,
     filter: QuestionFilter,
     onAnswerClick: () -> Unit,
+    onAskLater: () -> Unit,
     onIgnore: () -> Unit,
     onUnignore: () -> Unit
 ) {
@@ -68,13 +70,16 @@ fun QuestionItem(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (filter == QuestionFilter.Unanswered && !question.isAnswered && !question.isIgnored) {
+                    IconButton(onClick = onAskLater) {
+                        Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Ask later")
+                    }
                     IconButton(onClick = onIgnore) {
                         Icon(Icons.Default.VisibilityOff, contentDescription = "Ignore")
                     }
                 } else if (filter == QuestionFilter.Answered || filter == QuestionFilter.Ignored) {
-                    IconButton(onClick = onIgnore) {
+                    IconButton(onClick = if (question.isIgnored) onUnignore else onIgnore) {
                         Icon(
-                            if (question.isIgnored) Icons.Default.Edit else Icons.Default.VisibilityOff,
+                            if (question.isIgnored) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                             contentDescription = if (question.isIgnored) "Unignore" else "Ignore"
                         )
                     }

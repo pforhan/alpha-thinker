@@ -93,18 +93,18 @@ class MockQuestionGenerator : QuestionGenerator {
     )
   )
 
-  override suspend fun generateInitialQuestions(@Suppress("UNUSED_PARAMETER") synopsis: String): List<Question> {
-    return getInitialQuestions()
+  override suspend fun generateInitialQuestions(@Suppress("UNUSED_PARAMETER") synopsis: String, contextId: String): List<Question> {
+    return getInitialQuestions(contextId)
   }
 
   override suspend fun generateFollowUpQuestions(
     @Suppress("UNUSED_PARAMETER") synopsis: String,
+    contextId: String,
   ): List<Question> {
-    return getFollowUpQuestions(roundCounter++)
+    return getFollowUpQuestions(roundCounter++, contextId)
   }
 
-  @Suppress("UNUSED_PARAM")
-  private fun getInitialQuestions(): List<Question> {
+  private fun getInitialQuestions(contextId: String): List<Question> {
     val templateIndex = roundCounter % initialQuestionTemplates.size
     val template = initialQuestionTemplates[templateIndex]
     roundCounter++
@@ -114,14 +114,12 @@ class MockQuestionGenerator : QuestionGenerator {
         id = randomUUID(),
         text = text,
         timestamp = System.now(),
-        contextId = "",
-        sortOrder = 0
+        contextId = contextId
       )
     }
   }
 
-  @Suppress("UNUSED_PARAM")
-  private fun getFollowUpQuestions(previousRound: Int): List<Question> {
+  private fun getFollowUpQuestions(previousRound: Int, contextId: String): List<Question> {
     // Use previous round to offset template selection
     val templateIndex = (previousRound) % followUpTemplates.size
     val template = followUpTemplates[templateIndex]
@@ -131,8 +129,7 @@ class MockQuestionGenerator : QuestionGenerator {
         id = randomUUID(),
         text = text,
         timestamp = System.now(),
-        contextId = "",
-        sortOrder = 0
+        contextId = contextId
       )
     }
   }

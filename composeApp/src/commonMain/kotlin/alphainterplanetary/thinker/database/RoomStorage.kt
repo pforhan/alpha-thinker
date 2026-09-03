@@ -11,8 +11,8 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
   override suspend fun saveProject(project: Project): Project {
     database.projectDao().upsertProject(project.toEntity())
 
-    project.questions.forEach { q ->
-      database.questionDao().upsertQuestion(q.toEntity(project.id))
+    project.questions.forEachIndexed { index, q ->
+      database.questionDao().upsertQuestion(q.toEntity(project.id, index))
     }
 
     project.questions.flatMap { it.answers }.forEach { a ->
@@ -71,12 +71,12 @@ private fun Project.toEntity() = ProjectEntity(
   status = status
 )
 
-private fun Question.toEntity(projectId: String) = QuestionEntity(
+private fun Question.toEntity(projectId: String, index: Int) = QuestionEntity(
   id = id,
   projectId = projectId,
   text = text,
   createdAt = timestamp.toEpochMilliseconds(),
-  sortOrder = sortOrder,
+  sortOrder = index,
   ignoredAt = ignoredAt?.toEpochMilliseconds()
 )
 
@@ -106,7 +106,6 @@ private fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question 
     text = text,
     timestamp = Instant.fromEpochMilliseconds(createdAt),
     contextId = "",
-    sortOrder = sortOrder,
     ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
     answers = answers.map { it.toDomainModel() }
   )

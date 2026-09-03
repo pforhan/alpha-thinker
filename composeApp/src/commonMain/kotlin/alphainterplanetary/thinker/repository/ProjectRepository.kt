@@ -5,7 +5,6 @@ import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
-import alphainterplanetary.thinker.model.withUniqueSortOrder
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.datetime.Clock.System
 import me.tatarka.inject.annotations.Inject
@@ -49,11 +48,8 @@ class ProjectRepository @Inject constructor(
     val saved = storage.saveProject(project)
 
     val contextId = randomUUID()
-    val questions = generator.generateInitialQuestions(saved.synopsis)
+    val questions = generator.generateInitialQuestions(saved.synopsis, contextId)
       .shuffled()
-      .mapIndexed { index, q ->
-        q.copy(id = randomUUID(), contextId = contextId, sortOrder = index)
-      }
 
     val updated = saved.copy(
       questions = questions,
@@ -67,7 +63,7 @@ class ProjectRepository @Inject constructor(
   }
 
   suspend fun getProject(id: String): Project? {
-    return storage.getProject(id)?.withUniqueSortOrder()
+    return storage.getProject(id)
   }
 
   suspend fun getAllProjects(): List<Project> {
@@ -91,10 +87,9 @@ class ProjectRepository @Inject constructor(
       ProjectUpdateMode.CLEAR -> project.questions.map { q ->
         q.copy(
           answers = q.answers.map { a -> a.copy(deletedAt = now) },
-          ignoredAt = null,
-          sortOrder = 0
+          ignoredAt = null
         )
-      }.withUniqueSortOrder()
+      }
 
       ProjectUpdateMode.REVALIDATE -> {
         // TODO: AI revalidation logic
@@ -151,15 +146,7 @@ class ProjectRepository @Inject constructor(
 
     val updatedProject = if (answered) {
       val contextId = randomUUID()
-      val newQs = generator.generateFollowUpQuestions(
-        project.synopsis
-      ).mapIndexed { index, q ->
-        q.copy(
-          id = randomUUID(),
-          contextId = contextId,
-          sortOrder = project.questions.size + index
-        )
-      }
+      val newQs = generator.generateFollowUpQuestions(project.synopsis, contextId)
 
       project.copy(
         questions = project.questions + newQs,

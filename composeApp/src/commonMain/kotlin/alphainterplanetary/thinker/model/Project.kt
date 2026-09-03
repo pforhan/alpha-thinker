@@ -15,34 +15,18 @@ data class Project(
     get() = questions.filter { it.isUnanswered }
 
   val questionOrderIds: List<String>
-    get() = questionsOrdered.map { it.id }
-
-  fun withUniqueSortOrder(): Project {
-    return copy(questions = questions.withUniqueSortOrder())
-  }
+    get() = questions.map { it.id }
 
   fun moveToEnd(questionId: String): Project {
-    val ordered = questionsOrdered
-    val target = ordered.find { it.id == questionId } ?: return this
-    if (ordered.last().id == questionId) return this
-    val moved = ordered.filterNot { it.id == questionId } + target
-    return copy(questions = moved.withUniqueSortOrder())
+    val target = questions.find { it.id == questionId } ?: return this
+    if (questions.lastOrNull()?.id == questionId) return this
+    return copy(questions = questions.filterNot { it.id == questionId } + target)
   }
 
   fun rotateToEnd(questionIds: List<String>): Project {
-    val ordered = questionsOrdered
     val ids = questionIds.toSet()
-    val toMove = ordered.filter { it.id in ids }
+    val toMove = questions.filter { it.id in ids }
     if (toMove.isEmpty()) return this
-    val remaining = ordered.filter { it.id !in ids }
-    return copy(questions = (remaining + toMove).withUniqueSortOrder())
+    return copy(questions = questions.filterNot { it.id in ids } + toMove)
   }
-
-  private val questionsOrdered: List<Question>
-    get() = questions.withUniqueSortOrder()
-}
-
-fun List<Question>.withUniqueSortOrder(): List<Question> {
-  return sortedWith(compareBy({ it.sortOrder }, { it.timestamp }))
-    .mapIndexed { idx, q -> q.copy(sortOrder = idx) }
 }

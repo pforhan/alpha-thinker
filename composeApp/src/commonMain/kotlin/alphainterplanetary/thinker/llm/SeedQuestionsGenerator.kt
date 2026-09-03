@@ -6,21 +6,21 @@ import kotlinx.datetime.Clock.System
 import me.tatarka.inject.annotations.Inject
 
 class SeedQuestionsGenerator @Inject constructor() : QuestionGenerator {
-  override suspend fun generateInitialQuestions(synopsis: String): List<Question> {
+  override suspend fun generateInitialQuestions(synopsis: String, contextId: String): List<Question> {
     val now = System.now()
     return seedQuestions.map { text ->
       Question(
         id = randomUUID(),
         text = text,
         timestamp = now,
-        contextId = "seed",
-        sortOrder = 0
+        contextId = contextId
       )
     }
   }
 
   override suspend fun generateFollowUpQuestions(
-    synopsis: String,
+    @Suppress("UNUSED_PARAMETER") synopsis: String,
+    @Suppress("UNUSED_PARAMETER") contextId: String,
   ): List<Question> {
     // Lite edition has no automated follow-up questions
     return emptyList()

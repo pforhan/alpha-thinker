@@ -10,6 +10,7 @@ import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -76,12 +78,18 @@ fun ProjectDetailScreen(
         val loadedProject = project ?: return@remember emptyList()
         val all = selectedFilter.apply(loadedProject.questions)
         when (selectedFilter) {
-            QuestionFilter.Unanswered -> all.sortedBy { it.sortOrder }
+            QuestionFilter.Unanswered -> all
+                .take(3)
             QuestionFilter.Answered -> all
                 .sortedByDescending { it.currentAnswer?.modifiedAt ?: it.currentAnswer?.answeredAt }
             QuestionFilter.Ignored -> all
                 .sortedByDescending { it.ignoredAt }
         }
+    }
+
+    val showShuffle = remember(project, selectedFilter, filteredQuestions) {
+        selectedFilter == QuestionFilter.Unanswered &&
+            (project?.unansweredQuestions?.size ?: 0) > 3
     }
 
     Scaffold(
@@ -131,7 +139,9 @@ fun ProjectDetailScreen(
 
               QuestionFilterBar(
                   selectedFilter = selectedFilter,
-                  onFilterSelected = { selectedFilter = it }
+                  onFilterSelected = { selectedFilter = it },
+                  shuffleEnabled = showShuffle,
+                  onShuffle = { viewModel.shuffle() }
               )
                 
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -144,6 +154,7 @@ fun ProjectDetailScreen(
                                 question = question,
                                 filter = selectedFilter,
                                 onAnswerClick = { /* TODO */ },
+                                onAskLater = { viewModel.askLater(question.id) },
                                 onIgnore = { viewModel.ignoreQuestion(projectId, question.id) },
                                 onUnignore = { viewModel.unignoreQuestion(projectId, question.id) }
                             )

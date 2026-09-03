@@ -58,11 +58,11 @@ This document tracks the specific engineering tasks required to move from design
   - [x] **ProjectList/Detail: surface load/create errors** via snackbar instead of silently clearing the list (`viewModel` currently swallows failures to empty).
   - [x] ProjectDetail - Edit project dialog returns to the project list.  Should remain on project detail. If "clear all" selected on save, reset the filter to default.
   - [x] **ProjectDetail: actually apply the selected filter.** The LazyColumn iterates `project.questions` unfiltered, so Answered/Ignored/Unanswered chips don't filter. Apply the equivalent of `QuestionFilter.apply` (Flutter `question_filter.dart`): unanswered = `isUnanswered`, answered = `isAnswered && !isIgnored`, ignored = `isIgnored`.
-  - [x] ProjectDetail should never have to deal with a null project
+  - [ ] ProjectDetail and ProjectDetailViewModel should never have to deal with a null project
   - [x] **ProjectDetail: persist question order** across launches (Flutter `PreferenceService.saveQuestionOrder` / `getQuestionOrder`). No equivalent storage/DI plumbing exists in Compose.
-  - [ ] **ProjectDetail: unanswered ordering + 3-card rotation.** Flutter persists a shuffled per-project question order (PreferenceService), shows only 3 unanswered at a time, and rotates cards in as they're answered/shuffled. Compose has a transient, buggy `questionOrderState` that's never used to order/filter the list.
-  - [ ] **ProjectDetail: Shuffle button** for unanswered (rotate current visible to end, pull next from front), disabled when only <=3 unanswered. Missing.
-  - [ ] **ProjectDetail / repository: "Ask later" support.** `ProjectRepository` has no reorder concept; Compose `QuestionItem` has no ask-later callback. Add reorder-to-end of the unanswered order (Flutter `_askLater`).
+  - [x] **ProjectDetail: unanswered ordering + 3-card rotation.** Flutter persists a shuffled per-project question order (PreferenceService), shows only 3 unanswered at a time, and rotates cards in as they're answered/shuffled. Compose has a transient, buggy `questionOrderState` that's never used to order/filter the list.
+  - [x] **ProjectDetail: Shuffle button** for unanswered (rotate current visible to end, pull next from front), disabled when only <=3 unanswered. Missing.
+  - [x] **ProjectDetail / repository: "Ask later" support.** `ProjectRepository` has no reorder concept; Compose `QuestionItem` has no ask-later callback. Add reorder-to-end of the unanswered order (Flutter `_askLater`).
   - [ ] **ProjectDetail: open AnswerDialog on question tap.** `onAnswerClick = { /* TODO */ }` is unimplemented — the core Q&A workspace (view full answer, update answer, save draft) is dead. ViewModel already has `updateAnswer`/`deleteAnswer` but nothing calls them.
   - [ ] **AnswerDialog parity:** complete the Compose dialog — autofocus the field, "Ask Later" (saves draft, returns `ask_later`), "Delete Answer" when a complete answer exists (returns `deleted`), and have the detail screen reload on submit/deleted/ask_later (Flutter `_answerQuestion` result handling).
   - [ ] **QuestionItem parity:** add swipe-to-ignore (left) and swipe-to-ask-later (right) for unanswered (Flutter `SwipeableItem`/`Dismissible`), and "Ask Later" action button (rotate_left icon) on unanswered items. Currently Compose only shows a single Ignore/Unignore icon, and its icon-selection logic is wrong (uses Edit icon for unignore; calls `onIgnore` on unanswered regardless of state).
@@ -72,6 +72,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] **Verify Room + DI on device/emulator:** install the debug APK and confirm (a) first launch no longer hits the old `NotImplementedError` from `AppDatabaseConstructor`, (b) project/answer data persists across a force-stop/relaunch (Room writes to `alphathinker.db`), (c) the app survives rotation / backgrounding without crashes, and (d) only one `AppDatabase` connection is opened (the `providesDatabase()` lazy singleton in `AppComponent`).
 - [ ] Place Storage interface in the database package 
 - [ ] split viewmodels into their own files
+- [ ] merge filter and sort functionality into QuestionFilter, rename to something like QuestionViewMode
 
 ## Phase 2.6: multiplatform support
 - [ ] Set up Compose Multiplatform Web target
@@ -81,7 +82,6 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 2.7: UI cleanup
 - [ ] Better text instead of "Submit" for adding / editing answers
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
-- [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
 - [ ] **KMP: swipe-to-ignore / swipe-to-ask-later on question rows**, mimicking the Flutter `Dismissible` behavior in `frontend/lib/widgets/question_item.dart` (via `SwipeableItem`). Per filter: *unanswered* — swipe right = Ask Later (blue background), swipe left = Ignore (red); *answered* — swipe right = Ignore (grey), swipe left = Delete Answer (red); *ignored* — swipe either way = Unignore (green). Also add the background rows with icon+label shown under the card while swiping.
 - [ ] probably should be able to unignore a question from the dialog popup, or force unignore before modifying the answer field.
 - [ ] ProjectList: do we need a reload button?
@@ -91,6 +91,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] **ProjectList: delete a project** with a confirm dialog ("This action cannot be undone."). Add a delete action
 - [ ] **ProjectList: edit a project** Add an edit action
 - [ ] projectdetail: need the right icon for unignore
+- [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 

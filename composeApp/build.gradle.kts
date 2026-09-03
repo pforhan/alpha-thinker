@@ -35,11 +35,21 @@ kotlin {
        implementation(libs.kotlin.inject)
      }
 
+     commonTest.dependencies {
+       implementation(kotlin("test"))
+     }
+
     androidMain.dependencies {
       implementation(libs.androidx.core.ktx)
       implementation(libs.androidx.activity.compose)
       implementation(libs.androidx.lifecycle.runtime.ktx)
       implementation(libs.androidx.navigation.compose)
+    }
+
+    val androidUnitTest by getting {
+      dependencies {
+        implementation(libs.junit4)
+      }
     }
 
     // val desktopMain by getting {

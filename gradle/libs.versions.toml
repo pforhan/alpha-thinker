@@ -17,6 +17,7 @@ room = "2.7.0-alpha11"
 kotlinxDatetime = "0.6.1"
 sqliteBundled = "2.5.0-alpha11"
 kotlinInjectVersion = "0.9.0"
+junit4 = "4.13.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,6 +37,7 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqliteBundled" }
 kotlin-inject = { module = "me.tatarka.inject:kotlin-inject-runtime-kmp", version.ref = "kotlinInjectVersion" }
 kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInjectVersion" }
+junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
