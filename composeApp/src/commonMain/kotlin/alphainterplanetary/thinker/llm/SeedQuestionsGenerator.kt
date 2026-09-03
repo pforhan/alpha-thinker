@@ -6,7 +6,10 @@ import kotlinx.datetime.Clock.System
 import me.tatarka.inject.annotations.Inject
 
 class SeedQuestionsGenerator @Inject constructor() : QuestionGenerator {
-  override suspend fun generateInitialQuestions(synopsis: String, contextId: String): List<Question> {
+  override suspend fun generateInitialQuestions(
+    synopsis: String,
+    contextId: String,
+  ): List<Question> {
     val now = System.now()
     return seedQuestions.map { text ->
       Question(

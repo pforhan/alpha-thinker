@@ -61,5 +61,5 @@ data class ProjectWithQuestions(
     parentColumn = "id",
     entityColumn = "projectId"
   )
-  val questions: List<QuestionEntity>
+  val questions: List<QuestionEntity>,
 )

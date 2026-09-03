@@ -22,7 +22,8 @@ abstract class AppDatabase : RoomDatabase() {
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
   override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
-    connection.prepare("ALTER TABLE questions ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0").step()
+    connection.prepare("ALTER TABLE questions ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
+      .step()
     connection.prepare(
       """
       UPDATE questions SET sortOrder = (

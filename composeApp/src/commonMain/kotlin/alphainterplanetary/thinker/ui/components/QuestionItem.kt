@@ -24,67 +24,67 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun QuestionItem(
-    question: Question,
-    filter: QuestionFilter,
-    onAnswerClick: () -> Unit,
-    onAskLater: () -> Unit,
-    onIgnore: () -> Unit,
-    onUnignore: () -> Unit
+  question: Question,
+  filter: QuestionFilter,
+  onAnswerClick: () -> Unit,
+  onAskLater: () -> Unit,
+  onIgnore: () -> Unit,
+  onUnignore: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        onClick = onAnswerClick
+  Card(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(horizontal = 16.dp),
+    onClick = onAnswerClick
+  ) {
+    Column(
+      modifier = Modifier.padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = question.text,
-                style = MaterialTheme.typography.bodyLarge
+      Text(
+        text = question.text,
+        style = MaterialTheme.typography.bodyLarge
+      )
+
+      if (question.currentAnswer != null) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+          text = question.currentAnswer!!.text,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+      } else if (question.isIgnored) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+          text = "Ignored",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.error
+        )
+      }
+
+      Spacer(modifier = Modifier.height(8.dp))
+
+      Row(
+        horizontalArrangement = Arrangement.End,
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        if (filter == QuestionFilter.Unanswered && !question.isAnswered && !question.isIgnored) {
+          IconButton(onClick = onAskLater) {
+            Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Ask later")
+          }
+          IconButton(onClick = onIgnore) {
+            Icon(Icons.Default.VisibilityOff, contentDescription = "Ignore")
+          }
+        } else if (filter == QuestionFilter.Answered || filter == QuestionFilter.Ignored) {
+          IconButton(onClick = if (question.isIgnored) onUnignore else onIgnore) {
+            Icon(
+              if (question.isIgnored) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+              contentDescription = if (question.isIgnored) "Unignore" else "Ignore"
             )
-            
-            if (question.currentAnswer != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = question.currentAnswer!!.text,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else if (question.isIgnored) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Ignored",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (filter == QuestionFilter.Unanswered && !question.isAnswered && !question.isIgnored) {
-                    IconButton(onClick = onAskLater) {
-                        Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Ask later")
-                    }
-                    IconButton(onClick = onIgnore) {
-                        Icon(Icons.Default.VisibilityOff, contentDescription = "Ignore")
-                    }
-                } else if (filter == QuestionFilter.Answered || filter == QuestionFilter.Ignored) {
-                    IconButton(onClick = if (question.isIgnored) onUnignore else onIgnore) {
-                        Icon(
-                            if (question.isIgnored) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (question.isIgnored) "Unignore" else "Ignore"
-                        )
-                    }
-                }
-            }
+          }
         }
+      }
     }
+  }
 }

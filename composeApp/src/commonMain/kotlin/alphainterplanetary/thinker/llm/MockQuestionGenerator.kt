@@ -93,7 +93,10 @@ class MockQuestionGenerator : QuestionGenerator {
     )
   )
 
-  override suspend fun generateInitialQuestions(@Suppress("UNUSED_PARAMETER") synopsis: String, contextId: String): List<Question> {
+  override suspend fun generateInitialQuestions(
+    @Suppress("UNUSED_PARAMETER") synopsis: String,
+    contextId: String,
+  ): List<Question> {
     return getInitialQuestions(contextId)
   }
 
