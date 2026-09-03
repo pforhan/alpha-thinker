@@ -71,7 +71,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] **Move DB context init into an Application subclass:** add `composeApp/src/androidMain/kotlin/alphainterplanetary/thinker/AlphaThinkerApplication.kt` (`class AlphaThinkerApplication : Application() { override fun onCreate() { initDatabase(this) } }`), register it via `android:name=".AlphaThinkerApplication"` in the manifest, and strip `initDatabase(applicationContext)` out of `MainActivity` so it only does `setContent { App() }`. This makes the Room context available before any DI access and independent of Activity lifecycle. (Later: consider removing the module-global context entirely by passing the platform context into `AppComponent` as a constructor arg, but that needs a common-typed abstraction since KMP can't reference `android.content.Context`.)
 - [x] **Verify Room + DI on device/emulator:** install the debug APK and confirm (a) first launch no longer hits the old `NotImplementedError` from `AppDatabaseConstructor`, (b) project/answer data persists across a force-stop/relaunch (Room writes to `alphathinker.db`), (c) the app survives rotation / backgrounding without crashes, and (d) only one `AppDatabase` connection is opened (the `providesDatabase()` lazy singleton in `AppComponent`).
 - [ ] Place Storage interface in the database package 
-- [ ] split viewmodels into their own files
+- [x] split viewmodels into their own files
 - [ ] merge filter and sort functionality into QuestionFilter, rename to something like QuestionViewMode
 
 ## Phase 2.6: multiplatform support
