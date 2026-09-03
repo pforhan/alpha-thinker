@@ -13,7 +13,8 @@ class SeedQuestionsGenerator @Inject constructor() : QuestionGenerator {
         id = randomUUID(),
         text = text,
         timestamp = now,
-        contextId = "seed"
+        contextId = "seed",
+        sortOrder = 0
       )
     }
   }

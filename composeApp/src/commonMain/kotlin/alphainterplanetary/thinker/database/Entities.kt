@@ -32,6 +32,7 @@ data class QuestionEntity(
   val projectId: String,
   val text: String,
   val createdAt: Long,
+  val sortOrder: Int = 0,
   val ignoredAt: Long? = null,
 )
 

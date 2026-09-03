@@ -24,9 +24,11 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
 
   override suspend fun getProject(id: String): Project? {
     val data = database.projectDao().getProjectWithQuestions(id) ?: return null
-    val questions = data.questions.map { question ->
-      question.toDomainModel(database.answerDao().getAnswersForQuestion(question.id))
-    }
+    val questions = data.questions
+      .sortedBy { it.sortOrder }
+      .map { question ->
+        question.toDomainModel(database.answerDao().getAnswersForQuestion(question.id))
+      }
     return data.project.toDomainModel(questions)
   }
 
@@ -54,6 +56,10 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
   override suspend fun deleteAllProjects() {
     database.projectDao().deleteAllProjects()
   }
+
+  override suspend fun saveQuestionOrder(projectId: String, order: List<String>) {
+    database.questionDao().updateSortOrderForProject(order)
+  }
 }
 
 private fun Project.toEntity() = ProjectEntity(
@@ -70,6 +76,7 @@ private fun Question.toEntity(projectId: String) = QuestionEntity(
   projectId = projectId,
   text = text,
   createdAt = timestamp.toEpochMilliseconds(),
+  sortOrder = sortOrder,
   ignoredAt = ignoredAt?.toEpochMilliseconds()
 )
 
@@ -99,6 +106,7 @@ private fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question 
     text = text,
     timestamp = Instant.fromEpochMilliseconds(createdAt),
     contextId = "",
+    sortOrder = sortOrder,
     ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
     answers = answers.map { it.toDomainModel() }
   )

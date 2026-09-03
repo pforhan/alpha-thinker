@@ -108,4 +108,15 @@ class ThinkerRepository(
             }
         }
     }
+
+    fun saveQuestionOrder(projectId: String, order: List<String>, onResult: (Result<Unit>) -> Unit) {
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                repository.saveQuestionOrder(projectId, order)
+                onResult(Result.success(Unit))
+            } catch (e: Exception) {
+                onResult(Result.failure(e))
+            }
+        }
+    }
 }

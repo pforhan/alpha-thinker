@@ -80,14 +80,33 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
     fun loadProject(id: String) {
         _isLoading.value = true
         repository.getProject(id) { result ->
-            result.onSuccess { project ->
-                _project.value = project
+            result.onSuccess { loaded ->
+                _project.value = loaded
             }.onFailure { e ->
                 _project.value = null
                 _error.value = "Failed to load project: ${e.message ?: "Unknown error"}"
             }
             _isLoading.value = false
         }
+    }
+
+    fun askLater(questionId: String) {
+        val current = _project.value ?: return
+        val reordered = current.moveToEnd(questionId)
+        if (reordered == current) return
+        persistOrder(reordered)
+    }
+
+    fun shuffle() {
+        val current = _project.value ?: return
+        val unanswered = current.unansweredQuestions
+        if (unanswered.size <= 3) return
+        persistOrder(current.rotateToEnd(unanswered.take(3).map { it.id }))
+    }
+
+    private fun persistOrder(reordered: Project) {
+        _project.value = reordered
+        repository.saveQuestionOrder(reordered.id, reordered.questionOrderIds) { }
     }
 
     fun updateAnswer(projectId: String, questionId: String, text: String, isDraft: Boolean) {

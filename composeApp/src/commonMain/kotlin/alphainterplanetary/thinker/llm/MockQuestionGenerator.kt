@@ -114,7 +114,8 @@ class MockQuestionGenerator : QuestionGenerator {
         id = randomUUID(),
         text = text,
         timestamp = System.now(),
-        contextId = ""
+        contextId = "",
+        sortOrder = 0
       )
     }
   }
@@ -130,7 +131,8 @@ class MockQuestionGenerator : QuestionGenerator {
         id = randomUUID(),
         text = text,
         timestamp = System.now(),
-        contextId = ""
+        contextId = "",
+        sortOrder = 0
       )
     }
   }

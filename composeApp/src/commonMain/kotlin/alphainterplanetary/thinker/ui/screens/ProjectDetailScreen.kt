@@ -71,14 +71,12 @@ fun ProjectDetailScreen(
 
     var selectedFilter by remember { mutableStateOf(QuestionFilter.Unanswered) }
     var showEditDialog by remember { mutableStateOf(false) }
-    var questionOrderState by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    val filteredQuestions = remember(project, selectedFilter, questionOrderState) {
+    val filteredQuestions = remember(project, selectedFilter) {
         val loadedProject = project ?: return@remember emptyList()
         val all = selectedFilter.apply(loadedProject.questions)
         when (selectedFilter) {
-            QuestionFilter.Unanswered -> all
-                .sortedBy { questionOrderState.indexOf(it.id).let { if (it == -1) Int.MAX_VALUE else it } }
+            QuestionFilter.Unanswered -> all.sortedBy { it.sortOrder }
             QuestionFilter.Answered -> all
                 .sortedByDescending { it.currentAnswer?.modifiedAt ?: it.currentAnswer?.answeredAt }
             QuestionFilter.Ignored -> all
@@ -135,14 +133,6 @@ fun ProjectDetailScreen(
                   selectedFilter = selectedFilter,
                   onFilterSelected = { selectedFilter = it }
               )
-                
-                if (questionOrderState.isEmpty() && selectedFilter == QuestionFilter.Unanswered) {
-                    // Initialize order
-                    LaunchedEffect(currentProject) {
-                        val unanswered = currentProject.questions.filter { it.isUnanswered }
-                        questionOrderState = unanswered.map { it.id }
-                    }
-                }
                 
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(

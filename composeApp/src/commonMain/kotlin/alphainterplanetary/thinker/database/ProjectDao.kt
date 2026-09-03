@@ -41,8 +41,18 @@ interface QuestionDao {
   @Upsert
   suspend fun upsertQuestion(question: QuestionEntity): Long
 
-  @Query("SELECT * FROM questions WHERE projectId = :projectId")
+  @Query("SELECT * FROM questions WHERE projectId = :projectId ORDER BY sortOrder ASC")
   suspend fun getQuestionsForProject(projectId: String): List<QuestionEntity>
+
+  @Query("UPDATE questions SET sortOrder = :sortOrder WHERE id = :questionId")
+  suspend fun updateSortOrder(questionId: String, sortOrder: Int)
+
+  @Transaction
+  suspend fun updateSortOrderForProject(order: List<String>) {
+    order.forEachIndexed { index, questionId ->
+      updateSortOrder(questionId, index)
+    }
+  }
 
   @Delete
   suspend fun deleteQuestion(question: QuestionEntity)
