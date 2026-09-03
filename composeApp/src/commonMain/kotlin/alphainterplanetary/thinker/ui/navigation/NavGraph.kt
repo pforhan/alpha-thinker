@@ -41,13 +41,7 @@ fun NavGraph(
             ProjectDetailScreen(
                 appComponent = appComponent,
                 projectId = projectId,
-                onBack = { navController.popBackStack() },
-                onProjectUpdated = {
-                    navController.popBackStack()
-                    navController.navigate(Screen.ProjectList.route) {
-                        popUpTo(Screen.ProjectList.route) { inclusive = true }
-                    }
-                }
+                onBack = { navController.popBackStack() }
             )
         }
     }

@@ -55,8 +55,8 @@ This document tracks the specific engineering tasks required to move from design
   - [x] **ProjectList: wire up the add-project button.** `ProjectListScreen` sets `showCreateDialog = true` but never renders a dialog, so the Add FAB and "Create your first project" button do nothing. Add a new-project dialog (Flutter `EditProjectDialog` with `project == null`): optional "Add title" reveal, synopsis autofocus, Create button, default title generation from synopsis.
   - [x] **ProjectList: navigate into the new project after creation.** Flutter pushes `ProjectDetailScreen` for the freshly created project; Compose's `onProjectCreated` callback is a no-op.
   - [x] **Android entry polish (theme + edge-to-edge):** add `composeApp/src/androidMain/res/values/themes.xml` defining `Theme.AlphaThinker` with parent `android:Theme.Material.Light.NoActionBar`, then set `android:theme="@style/Theme.AlphaThinker"` on `<application>` in `composeApp/src/androidMain/AndroidManifest.xml` (currently no theme is declared, so the default action-bar theme is used under Compose). Also call `enableEdgeToEdge()` from `androidx.activity` in `MainActivity.onCreate()` before `setContent { App() }` so Compose controls the system bars. Do these together since both touch the Activity/manifest theme setup.
-  - [ ] **ProjectList/Detail: surface load/create errors** via snackbar instead of silently clearing the list (`viewModel` currently swallows failures to empty).
-  - [ ] ProjectDetail - Edit project dialog returns to the project list.  Should remain on project detail. If "clear all" selected on save, reset the filter to default.
+  - [x] **ProjectList/Detail: surface load/create errors** via snackbar instead of silently clearing the list (`viewModel` currently swallows failures to empty).
+  - [x] ProjectDetail - Edit project dialog returns to the project list.  Should remain on project detail. If "clear all" selected on save, reset the filter to default.
   - [ ] **ProjectDetail: actually apply the selected filter.** The LazyColumn iterates `project.questions` unfiltered, so Answered/Ignored/Unanswered chips don't filter. Apply the equivalent of `QuestionFilter.apply` (Flutter `question_filter.dart`): unanswered = `isUnanswered`, answered = `isAnswered && !isIgnored`, ignored = `isIgnored`.
   - [ ] **ProjectDetail: unanswered ordering + 3-card rotation.** Flutter persists a shuffled per-project question order (PreferenceService), shows only 3 unanswered at a time, and rotates cards in as they're answered/shuffled. Compose has a transient, buggy `questionOrderState` that's never used to order/filter the list.
   - [ ] **ProjectDetail: persist question order** across launches (Flutter `PreferenceService.saveQuestionOrder` / `getQuestionOrder`). No equivalent storage/DI plumbing exists in Compose.
@@ -85,7 +85,8 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] ProjectDetail: question filter pills are not aligned with the Questions header.  For some screens we may need them to take less horizontal space as well. 
 - [ ] **KMP: fix back navigation + synopsis edit affordance.** `ProjectDetailScreen` top-app-bar `navigationIcon` uses the Edit icon (should be a Back arrow); the synopsis body has no edit affordance (Flutter has an edit IconButton beside "Synopsis:" opening the edit dialog; Compose only reaches it via the top bar).
 - [ ] **KMP: EditProjectDialog polish.** Refine the Compose edit dialog to match Flutter — 30-char title cap, multiline synopsis autofocus, and optional title reveal for new projects (the create flow itself is in Phase 2.5).
-- [ ] **ProjectList: come up with a way to delete a project** with a confirm dialog ("This action cannot be undone."). perhaps just a delete icon in the list?
+- [ ] **ProjectList: delete a project** with a confirm dialog ("This action cannot be undone."). Add a delete action
+- [ ] **ProjectList: edit a project** Add an edit action
 - [ ] projectdetail: need the right icon for unignore
 
 ## Phase 3: Intelligence Integration (Edge Version)

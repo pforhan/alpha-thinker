@@ -30,6 +30,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -57,6 +59,7 @@ fun ProjectListScreen(
         ThinkerRepository(appComponent.projectRepository)
     }
     val viewModel = remember { ProjectListViewModel(repository) }
+    val snackbarHostState = remember { SnackbarHostState() }
     
     LaunchedEffect(Unit) {
         viewModel.loadProjects()
@@ -65,6 +68,14 @@ fun ProjectListScreen(
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val createdProject by viewModel.createdProject.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    LaunchedEffect(error) {
+        error?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
 
     LaunchedEffect(createdProject) {
         val project = createdProject
@@ -75,6 +86,7 @@ fun ProjectListScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Alpha Thinker") },
