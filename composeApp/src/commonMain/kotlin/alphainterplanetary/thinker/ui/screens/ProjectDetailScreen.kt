@@ -74,17 +74,15 @@ fun ProjectDetailScreen(
     var questionOrderState by remember { mutableStateOf<List<String>>(emptyList()) }
 
     val filteredQuestions = remember(project, selectedFilter, questionOrderState) {
-        if (project == null) emptyList()
-        else selectedFilter.apply(project!!.questions).let { filtered ->
-            when (selectedFilter) {
-                QuestionFilter.Unanswered -> {
-                    filtered.sortedBy { questionOrderState.indexOf(it.id).let { if (it == -1) Int.MAX_VALUE else it } }
-                }
-                QuestionFilter.Answered -> filtered.sortedByDescending {
-                    it.currentAnswer?.modifiedAt ?: it.currentAnswer?.answeredAt
-                }
-                QuestionFilter.Ignored -> filtered.sortedByDescending { it.ignoredAt }
-            }
+        val loadedProject = project ?: return@remember emptyList()
+        val all = selectedFilter.apply(loadedProject.questions)
+        when (selectedFilter) {
+            QuestionFilter.Unanswered -> all
+                .sortedBy { questionOrderState.indexOf(it.id).let { if (it == -1) Int.MAX_VALUE else it } }
+            QuestionFilter.Answered -> all
+                .sortedByDescending { it.currentAnswer?.modifiedAt ?: it.currentAnswer?.answeredAt }
+            QuestionFilter.Ignored -> all
+                .sortedByDescending { it.ignoredAt }
         }
     }
 
@@ -116,6 +114,7 @@ fun ProjectDetailScreen(
                 CircularProgressIndicator()
             }
         } else {
+            val currentProject = project!!
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -127,7 +126,7 @@ fun ProjectDetailScreen(
                          .padding(16.dp)
                  ) {
                      Text("Synopsis:", style = MaterialTheme.typography.titleSmall)
-                     Text(project?.synopsis ?: "")
+                     Text(currentProject.synopsis)
                  }
                 
                 HorizontalDivider()
@@ -137,10 +136,10 @@ fun ProjectDetailScreen(
                   onFilterSelected = { selectedFilter = it }
               )
                 
-                if (project != null && questionOrderState.isEmpty() && selectedFilter == QuestionFilter.Unanswered) {
+                if (questionOrderState.isEmpty() && selectedFilter == QuestionFilter.Unanswered) {
                     // Initialize order
-                    LaunchedEffect(project) {
-                        val unanswered = project?.questions?.filter { it.isUnanswered } ?: emptyList()
+                    LaunchedEffect(currentProject) {
+                        val unanswered = currentProject.questions.filter { it.isUnanswered }
                         questionOrderState = unanswered.map { it.id }
                     }
                 }
@@ -165,7 +164,7 @@ fun ProjectDetailScreen(
         }
     }
 
-    if (showEditDialog && project != null) {
+    if (showEditDialog) {
         EditProjectDialog(
             project = project!!,
             onDismiss = { showEditDialog = false },
