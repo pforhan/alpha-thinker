@@ -73,6 +73,21 @@ fun ProjectDetailScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var questionOrderState by remember { mutableStateOf<List<String>>(emptyList()) }
 
+    val filteredQuestions = remember(project, selectedFilter, questionOrderState) {
+        if (project == null) emptyList()
+        else selectedFilter.apply(project!!.questions).let { filtered ->
+            when (selectedFilter) {
+                QuestionFilter.Unanswered -> {
+                    filtered.sortedBy { questionOrderState.indexOf(it.id).let { if (it == -1) Int.MAX_VALUE else it } }
+                }
+                QuestionFilter.Answered -> filtered.sortedByDescending {
+                    it.currentAnswer?.modifiedAt ?: it.currentAnswer?.answeredAt
+                }
+                QuestionFilter.Ignored -> filtered.sortedByDescending { it.ignoredAt }
+            }
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -135,7 +150,7 @@ fun ProjectDetailScreen(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(project?.questions ?: emptyList()) { question ->
+                        items(filteredQuestions) { question ->
                             QuestionItem(
                                 question = question,
                                 filter = selectedFilter,
