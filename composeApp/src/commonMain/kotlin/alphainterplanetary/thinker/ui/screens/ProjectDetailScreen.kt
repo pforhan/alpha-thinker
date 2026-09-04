@@ -176,14 +176,7 @@ private fun ProjectDetailContent(
   }
 
   Column(modifier = modifier) {
-    Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp)
-    ) {
-      Text("Synopsis:", style = MaterialTheme.typography.titleSmall)
-      Text(project.synopsis)
-    }
+    ProjectSynopsis(synopsis = project.synopsis)
 
     HorizontalDivider()
 
@@ -230,5 +223,17 @@ private fun ProjectDetailError(
     Button(onClick = onRetry) {
       Text("Retry")
     }
+  }
+}
+
+@Composable
+private fun ProjectSynopsis(synopsis: String) {
+  Column(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(16.dp),
+  ) {
+    Text("Synopsis:", style = MaterialTheme.typography.titleSmall)
+    Text(synopsis)
   }
 }

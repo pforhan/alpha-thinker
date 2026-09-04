@@ -94,70 +94,22 @@ fun ProjectListScreen(
     Box(modifier = Modifier.padding(paddingValues)) {
       when (val ui = uiState) {
         ProjectListUiState.Loading -> {
-          Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-          ) {
-            CircularProgressIndicator()
-          }
+          ProjectListLoading()
         }
 
         is ProjectListUiState.Success -> {
-          if (ui.projects.isEmpty()) {
-            Column(
-              modifier = Modifier.fillMaxSize(),
-              verticalArrangement = Arrangement.Center,
-              horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-              Text("No projects yet.")
-              Spacer(modifier = Modifier.height(16.dp))
-              Button(onClick = { showCreateDialog = true }) {
-                Text("Create your first project")
-              }
-            }
-          } else {
-            LazyColumn(
-              modifier = Modifier.fillMaxSize(),
-              verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-              items(ui.projects, key = { it.id }) { project ->
-                Card(
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .clickable { onProjectClick(project) }
-                ) {
-                  ListItem(
-                    headlineContent = { Text(project.editableTitle) },
-                    supportingContent = {
-                      Text(
-                        project.synopsis,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                      )
-                    },
-                    trailingContent = {
-                      Icon(AutoMirrored.Filled.ArrowForward, contentDescription = null)
-                    }
-                  )
-                }
-              }
-            }
-          }
+          ProjectListSuccess(
+            projects = ui.projects,
+            onProjectClick = onProjectClick,
+            onCreateClick = { showCreateDialog = true },
+          )
         }
 
         is ProjectListUiState.Error -> {
-          Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-          ) {
-            Text(ui.message)
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { viewModel.loadProjects() }) {
-              Text("Retry")
-            }
-          }
+          ProjectListError(
+            message = ui.message,
+            onRetry = { viewModel.loadProjects() },
+          )
         }
       }
     }
@@ -173,5 +125,98 @@ fun ProjectListScreen(
         showCreateDialog = false
       }
     )
+  }
+}
+
+@Composable
+private fun ProjectListLoading() {
+  Box(
+    modifier = Modifier.fillMaxSize(),
+    contentAlignment = Alignment.Center,
+  ) {
+    CircularProgressIndicator()
+  }
+}
+
+@Composable
+private fun ProjectListEmpty(onCreateClick: () -> Unit) {
+  Column(
+    modifier = Modifier.fillMaxSize(),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    Text("No projects yet.")
+    Spacer(modifier = Modifier.height(16.dp))
+    Button(onClick = onCreateClick) {
+      Text("Create your first project")
+    }
+  }
+}
+
+@Composable
+private fun ProjectListItem(
+  project: Project,
+  onClick: () -> Unit,
+) {
+  Card(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(horizontal = 16.dp)
+      .clickable(onClick = onClick),
+  ) {
+    ListItem(
+      headlineContent = { Text(project.editableTitle) },
+      supportingContent = {
+        Text(
+          project.synopsis,
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
+        )
+      },
+      trailingContent = {
+        Icon(AutoMirrored.Filled.ArrowForward, contentDescription = null)
+      },
+    )
+  }
+}
+
+@Composable
+private fun ProjectListSuccess(
+  projects: List<Project>,
+  onProjectClick: (Project) -> Unit,
+  onCreateClick: () -> Unit,
+) {
+  if (projects.isEmpty()) {
+    ProjectListEmpty(onCreateClick = onCreateClick)
+  } else {
+    LazyColumn(
+      modifier = Modifier.fillMaxSize(),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      items(projects, key = { it.id }) { project ->
+        ProjectListItem(
+          project = project,
+          onClick = { onProjectClick(project) },
+        )
+      }
+    }
+  }
+}
+
+@Composable
+private fun ProjectListError(
+  message: String,
+  onRetry: () -> Unit,
+) {
+  Column(
+    modifier = Modifier.fillMaxSize(),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    Text(message)
+    Spacer(modifier = Modifier.height(16.dp))
+    Button(onClick = onRetry) {
+      Text("Retry")
+    }
   }
 }

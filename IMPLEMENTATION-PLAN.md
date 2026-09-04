@@ -92,6 +92,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] **ProjectList: edit a project** Add an edit action
 - [ ] projectdetail: need the right icon for unignore
 - [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
+- [ ] add sort options to project list, included created and modified
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 
