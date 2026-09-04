@@ -4,6 +4,9 @@ import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.ui.components.AnswerDialog
+import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.QuestionFilter
 import alphainterplanetary.thinker.ui.components.QuestionFilterBar
@@ -64,6 +67,7 @@ fun ProjectDetailScreen(
 
   var selectedFilter by remember { mutableStateOf(QuestionFilter.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
+  var selectedQuestion by remember { mutableStateOf<Question?>(null) }
 
   Scaffold(
     topBar = {
@@ -108,6 +112,7 @@ fun ProjectDetailScreen(
           onAskLater = { viewModel.askLater(it) },
           onIgnore = { viewModel.ignoreQuestion(projectId, it) },
           onUnignore = { viewModel.unignoreQuestion(projectId, it) },
+          onAnswerClick = { selectedQuestion = it },
           modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
@@ -143,6 +148,32 @@ fun ProjectDetailScreen(
       )
     }
   }
+
+  val questionToShow = selectedQuestion
+  if (questionToShow != null) {
+    AnswerDialog(
+      question = questionToShow,
+      onDismiss = { selectedQuestion = null },
+      onResult = { result, text ->
+        when (result) {
+          AnswerDialogResult.Submitted -> {
+            viewModel.updateAnswer(projectId, questionToShow.id, text.trim(), isDraft = false)
+          }
+          AnswerDialogResult.AskLater -> {
+            viewModel.updateAnswer(projectId, questionToShow.id, text.trim(), isDraft = true)
+            viewModel.askLater(questionToShow.id)
+          }
+          AnswerDialogResult.DeletedAnswer -> {
+            val answerId = questionToShow.currentAnswer?.id
+            if (answerId != null) {
+              viewModel.deleteAnswer(projectId, questionToShow.id, answerId)
+            }
+          }
+        }
+        selectedQuestion = null
+      }
+    )
+  }
 }
 
 @Composable
@@ -154,6 +185,7 @@ private fun ProjectDetailContent(
   onAskLater: (String) -> Unit,
   onIgnore: (String) -> Unit,
   onUnignore: (String) -> Unit,
+  onAnswerClick: (Question) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val filteredQuestions = remember(project, selectedFilter) {
@@ -196,7 +228,7 @@ private fun ProjectDetailContent(
           QuestionItem(
             question = question,
             filter = selectedFilter,
-            onAnswerClick = { /* TODO */ },
+            onAnswerClick = { onAnswerClick(question) },
             onAskLater = { onAskLater(question.id) },
             onIgnore = { onIgnore(question.id) },
             onUnignore = { onUnignore(question.id) }

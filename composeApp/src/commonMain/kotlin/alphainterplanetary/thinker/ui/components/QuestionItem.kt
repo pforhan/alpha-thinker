@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
@@ -18,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,9 +50,25 @@ fun QuestionItem(
 
       if (question.currentAnswer != null) {
         Spacer(modifier = Modifier.height(8.dp))
+        if (question.currentAnswer!!.isDraft) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+              Icons.Default.Edit,
+              contentDescription = "Draft",
+              modifier = Modifier.height(14.dp),
+              tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+              text = "Draft:",
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+        }
         Text(
-          text = question.currentAnswer!!.text,
-          maxLines = 1,
+          text = question.currentAnswer!!.text.replace(Regex("\\s+"), " ").trim(),
+          maxLines = 2,
           overflow = TextOverflow.Ellipsis,
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant

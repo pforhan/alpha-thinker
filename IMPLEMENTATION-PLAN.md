@@ -58,20 +58,22 @@ This document tracks the specific engineering tasks required to move from design
   - [x] **ProjectList/Detail: surface load/create errors** via snackbar instead of silently clearing the list (`viewModel` currently swallows failures to empty).
   - [x] ProjectDetail - Edit project dialog returns to the project list.  Should remain on project detail. If "clear all" selected on save, reset the filter to default.
   - [x] **ProjectDetail: actually apply the selected filter.** The LazyColumn iterates `project.questions` unfiltered, so Answered/Ignored/Unanswered chips don't filter. Apply the equivalent of `QuestionFilter.apply` (Flutter `question_filter.dart`): unanswered = `isUnanswered`, answered = `isAnswered && !isIgnored`, ignored = `isIgnored`.
-  - [ ] ProjectDetail and ProjectDetailViewModel should never have to deal with a null project
+  - [x] ProjectDetail and ProjectDetailViewModel should never have to deal with a null project
   - [x] **ProjectDetail: persist question order** across launches (Flutter `PreferenceService.saveQuestionOrder` / `getQuestionOrder`). No equivalent storage/DI plumbing exists in Compose.
   - [x] **ProjectDetail: unanswered ordering + 3-card rotation.** Flutter persists a shuffled per-project question order (PreferenceService), shows only 3 unanswered at a time, and rotates cards in as they're answered/shuffled. Compose has a transient, buggy `questionOrderState` that's never used to order/filter the list.
   - [x] **ProjectDetail: Shuffle button** for unanswered (rotate current visible to end, pull next from front), disabled when only <=3 unanswered. Missing.
   - [x] **ProjectDetail / repository: "Ask later" support.** `ProjectRepository` has no reorder concept; Compose `QuestionItem` has no ask-later callback. Add reorder-to-end of the unanswered order (Flutter `_askLater`).
-  - [ ] **ProjectDetail: open AnswerDialog on question tap.** `onAnswerClick = { /* TODO */ }` is unimplemented — the core Q&A workspace (view full answer, update answer, save draft) is dead. ViewModel already has `updateAnswer`/`deleteAnswer` but nothing calls them.
-  - [ ] **AnswerDialog parity:** complete the Compose dialog — autofocus the field, "Ask Later" (saves draft, returns `ask_later`), "Delete Answer" when a complete answer exists (returns `deleted`), and have the detail screen reload on submit/deleted/ask_later (Flutter `_answerQuestion` result handling).
+  - [x] **ProjectDetail: open AnswerDialog on question tap.** `onAnswerClick = { /* TODO */ }` is unimplemented — the core Q&A workspace (view full answer, update answer, save draft) is dead. ViewModel already has `updateAnswer`/`deleteAnswer` but nothing calls them.
+  - [x] **AnswerDialog parity:** complete the Compose dialog — autofocus the field, "Ask Later" (saves draft, returns `ask_later`), "Delete Answer" when a complete answer exists (returns `deleted`), and have the detail screen reload on submit/deleted/ask_later (Flutter `_answerQuestion` result handling).
   - [ ] **Data: persist `contextId`.** `RoomStorage` hardcodes `contextId = ""` on load (`QuestionEntity` has no column); Flutter model carries it.
+  - [ ] Answer dialog shouldn't have to deal with 
 - [ ] need to integrate/combine MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
 - [x] **Move DB context init into an Application subclass:** add `composeApp/src/androidMain/kotlin/alphainterplanetary/thinker/AlphaThinkerApplication.kt` (`class AlphaThinkerApplication : Application() { override fun onCreate() { initDatabase(this) } }`), register it via `android:name=".AlphaThinkerApplication"` in the manifest, and strip `initDatabase(applicationContext)` out of `MainActivity` so it only does `setContent { App() }`. This makes the Room context available before any DI access and independent of Activity lifecycle. (Later: consider removing the module-global context entirely by passing the platform context into `AppComponent` as a constructor arg, but that needs a common-typed abstraction since KMP can't reference `android.content.Context`.)
 - [x] **Verify Room + DI on device/emulator:** install the debug APK and confirm (a) first launch no longer hits the old `NotImplementedError` from `AppDatabaseConstructor`, (b) project/answer data persists across a force-stop/relaunch (Room writes to `alphathinker.db`), (c) the app survives rotation / backgrounding without crashes, and (d) only one `AppDatabase` connection is opened (the `providesDatabase()` lazy singleton in `AppComponent`).
 - [ ] Place Storage interface in the database package 
 - [x] split viewmodels into their own files
 - [ ] merge filter and sort functionality into QuestionFilter, rename to something like QuestionViewMode
+- [ ] debug tool: create a couple sample projects with a mix of ignored and answered and drafts already popuplated.  Some of the values should be big enough to stretch limits (like a very very long answer) so we can see how the UI behaves with a mix of simple and extreme.
 
 ## Phase 2.6: multiplatform support
 - [ ] Set up Compose Multiplatform Web target
@@ -79,7 +81,9 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Set up Compose Multiplatform Desktop (macOS / JVM) target
 
 ## Phase 2.7: UI cleanup
-- [ ] Better text instead of "Submit" for adding / editing answers
+- [ ] Better text instead of "Submit" for adding / editing answers. Let's make the answer dialog have a closed button and a completed toggle or checkbox that moves things from draft to answered.
+- [ ] new filter type for draft answers (default sort is latest edits first)
+- [ ] if a dialog close action would cause data to be lost, show a prompt.  Example: type in changes to Edit Project then tap off the dialog area to dismiss (or tap cancel).  Same with answer dialog
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
 - [ ] **QuestionItem parity:** add swipe-to-ignore (left) and swipe-to-ask-later (right) for unanswered (Flutter `SwipeableItem`/`Dismissible`), and "Ask Later" action button (rotate_left icon) on unanswered items. Currently Compose only shows a single Ignore/Unignore icon, and its icon-selection logic is wrong (uses Edit icon for unignore; calls `onIgnore` on unanswered regardless of state).
 - [ ] **KMP: swipe-to-ignore / swipe-to-ask-later on question rows**, mimicking the Flutter `Dismissible` behavior in `frontend/lib/widgets/question_item.dart` (via `SwipeableItem`). Per filter: *unanswered* — swipe right = Ask Later (blue background), swipe left = Ignore (red); *answered* — swipe right = Ignore (grey), swipe left = Delete Answer (red); *ignored* — swipe either way = Unignore (green). Also add the background rows with icon+label shown under the card while swiping.
@@ -92,7 +96,9 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] **ProjectList: edit a project** Add an edit action
 - [ ] projectdetail: need the right icon for unignore
 - [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
-- [ ] add sort options to project list, included created and modified
+- [ ] add sort options to project list, including created and modified
+- [ ] Clean up a lot of the hardcoded font size, color, etc options by using a proper theme with named styles
+- [ ] Answer dialog: add an affordance to clear the text area
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 
