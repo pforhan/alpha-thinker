@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
+import alphainterplanetary.thinker.ui.viewmodel.ProjectListUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,8 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -59,23 +58,13 @@ fun ProjectListScreen(
     ThinkerRepository(appComponent.projectRepository)
   }
   val viewModel = remember { ProjectListViewModel(repository) }
-  val snackbarHostState = remember { SnackbarHostState() }
 
   LaunchedEffect(Unit) {
     viewModel.loadProjects()
   }
 
-  val projects by viewModel.projects.collectAsState()
-  val isLoading by viewModel.isLoading.collectAsState()
+  val uiState by viewModel.uiState.collectAsState()
   val createdProject by viewModel.createdProject.collectAsState()
-  val error by viewModel.error.collectAsState()
-
-  LaunchedEffect(error) {
-    error?.let {
-      snackbarHostState.showSnackbar(it)
-      viewModel.clearError()
-    }
-  }
 
   LaunchedEffect(createdProject) {
     val project = createdProject
@@ -86,7 +75,6 @@ fun ProjectListScreen(
   }
 
   Scaffold(
-    snackbarHost = { SnackbarHost(snackbarHostState) },
     topBar = {
       TopAppBar(
         title = { Text("Alpha Thinker") },
@@ -104,50 +92,70 @@ fun ProjectListScreen(
     }
   ) { paddingValues ->
     Box(modifier = Modifier.padding(paddingValues)) {
-      if (isLoading) {
-        Box(
-          modifier = Modifier.fillMaxSize(),
-          contentAlignment = Alignment.Center
-        ) {
-          CircularProgressIndicator()
-        }
-      } else if (projects.isEmpty()) {
-        Column(
-          modifier = Modifier.fillMaxSize(),
-          verticalArrangement = Arrangement.Center,
-          horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-          Text("No projects yet.")
-          Spacer(modifier = Modifier.height(16.dp))
-          Button(onClick = { showCreateDialog = true }) {
-            Text("Create your first project")
+      when (val ui = uiState) {
+        ProjectListUiState.Loading -> {
+          Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+          ) {
+            CircularProgressIndicator()
           }
         }
-      } else {
-        LazyColumn(
-          modifier = Modifier.fillMaxSize(),
-          verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          items(projects, key = { it.id }) { project ->
-            Card(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clickable { onProjectClick(project) }
+
+        is ProjectListUiState.Success -> {
+          if (ui.projects.isEmpty()) {
+            Column(
+              modifier = Modifier.fillMaxSize(),
+              verticalArrangement = Arrangement.Center,
+              horizontalAlignment = Alignment.CenterHorizontally
             ) {
-              ListItem(
-                headlineContent = { Text(project.editableTitle) },
-                supportingContent = {
-                  Text(
-                    project.synopsis,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+              Text("No projects yet.")
+              Spacer(modifier = Modifier.height(16.dp))
+              Button(onClick = { showCreateDialog = true }) {
+                Text("Create your first project")
+              }
+            }
+          } else {
+            LazyColumn(
+              modifier = Modifier.fillMaxSize(),
+              verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              items(ui.projects, key = { it.id }) { project ->
+                Card(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clickable { onProjectClick(project) }
+                ) {
+                  ListItem(
+                    headlineContent = { Text(project.editableTitle) },
+                    supportingContent = {
+                      Text(
+                        project.synopsis,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                      )
+                    },
+                    trailingContent = {
+                      Icon(AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    }
                   )
-                },
-                trailingContent = {
-                  Icon(AutoMirrored.Filled.ArrowForward, contentDescription = null)
                 }
-              )
+              }
+            }
+          }
+        }
+
+        is ProjectListUiState.Error -> {
+          Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(ui.message)
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { viewModel.loadProjects() }) {
+              Text("Retry")
             }
           }
         }

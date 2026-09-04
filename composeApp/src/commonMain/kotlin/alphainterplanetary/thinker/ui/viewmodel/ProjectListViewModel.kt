@@ -6,30 +6,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+sealed interface ProjectListUiState {
+  data object Loading : ProjectListUiState
+  data class Success(val projects: List<Project>) : ProjectListUiState
+  data class Error(val message: String) : ProjectListUiState
+}
+
 class ProjectListViewModel(private val repository: ThinkerRepository) {
-  private val _projects = MutableStateFlow<List<Project>>(emptyList())
-  val projects: StateFlow<List<Project>> = _projects.asStateFlow()
-
-  private val _isLoading = MutableStateFlow(false)
-  val isLoading: StateFlow<Boolean> = _isLoading
-
-  private val _error = MutableStateFlow<String?>(null)
-  val error: StateFlow<String?> = _error.asStateFlow()
-
-  fun clearError() {
-    _error.value = null
-  }
+  private val _uiState = MutableStateFlow<ProjectListUiState>(ProjectListUiState.Loading)
+  val uiState: StateFlow<ProjectListUiState> = _uiState.asStateFlow()
 
   fun loadProjects() {
-    _isLoading.value = true
+    _uiState.value = ProjectListUiState.Loading
     repository.getAllProjects { result ->
       result.onSuccess { projects ->
-        _projects.value = projects
+        _uiState.value = ProjectListUiState.Success(projects)
       }.onFailure { e ->
-        _projects.value = emptyList()
-        _error.value = "Failed to load projects: ${e.message ?: "Unknown error"}"
+        _uiState.value = ProjectListUiState.Error(
+          "Failed to load projects: ${e.message ?: "Unknown error"}"
+        )
       }
-      _isLoading.value = false
     }
   }
 
@@ -42,7 +38,9 @@ class ProjectListViewModel(private val repository: ThinkerRepository) {
         _createdProject.value = project
         loadProjects()
       }.onFailure { e ->
-        _error.value = "Failed to create project: ${e.message ?: "Unknown error"}"
+        _uiState.value = ProjectListUiState.Error(
+          "Failed to create project: ${e.message ?: "Unknown error"}"
+        )
       }
     }
   }
@@ -56,7 +54,9 @@ class ProjectListViewModel(private val repository: ThinkerRepository) {
       result.onSuccess {
         loadProjects()
       }.onFailure { e ->
-        _error.value = "Failed to delete project: ${e.message ?: "Unknown error"}"
+        _uiState.value = ProjectListUiState.Error(
+          "Failed to delete project: ${e.message ?: "Unknown error"}"
+        )
       }
     }
   }
