@@ -55,7 +55,7 @@ fun ProjectDetailScreen(
   onBack: () -> Unit,
 ) {
   val repository = remember {
-    ThinkerRepository(appComponent.projectRepository)
+    ThinkerRepository(appComponent.projectRepository, appComponent.sampleProjectGenerator)
   }
   val viewModel = remember { ProjectDetailViewModel(repository) }
 

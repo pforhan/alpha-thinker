@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons.AutoMirrored
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,11 +52,12 @@ fun ProjectListScreen(
   appComponent: AppComponent,
   onProjectClick: (Project) -> Unit,
   onProjectCreated: (Project) -> Unit,
+  onSettingsClick: () -> Unit,
 ) {
   var showCreateDialog by remember { mutableStateOf(false) }
 
   val repository = remember {
-    ThinkerRepository(appComponent.projectRepository)
+    ThinkerRepository(appComponent.projectRepository, appComponent.sampleProjectGenerator)
   }
   val viewModel = remember { ProjectListViewModel(repository) }
 
@@ -79,6 +81,9 @@ fun ProjectListScreen(
       TopAppBar(
         title = { Text("Alpha Thinker") },
         actions = {
+          IconButton(onClick = onSettingsClick) {
+            Icon(Icons.Filled.Settings, contentDescription = "Settings")
+          }
           IconButton(onClick = { viewModel.loadProjects() }) {
             Icon(Icons.Default.Refresh, contentDescription = "Refresh")
           }

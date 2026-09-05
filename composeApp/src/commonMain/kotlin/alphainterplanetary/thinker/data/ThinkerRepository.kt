@@ -3,12 +3,14 @@ package alphainterplanetary.thinker.data
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class ThinkerRepository(
   private val repository: ProjectRepository,
+  private val sampleProjectGenerator: SampleProjectGenerator,
 ) {
   fun createProject(synopsis: String, title: String?, onResult: (Result<Project>) -> Unit) {
     CoroutineScope(Dispatchers.Default).launch {
@@ -130,6 +132,17 @@ class ThinkerRepository(
     CoroutineScope(Dispatchers.Default).launch {
       try {
         repository.saveQuestionOrder(projectId, order)
+        onResult(Result.success(Unit))
+      } catch (e: Exception) {
+        onResult(Result.failure(e))
+      }
+    }
+  }
+
+  fun generateSampleProjects(onResult: (Result<Unit>) -> Unit) {
+    CoroutineScope(Dispatchers.Default).launch {
+      try {
+        sampleProjectGenerator.generate()
         onResult(Result.success(Unit))
       } catch (e: Exception) {
         onResult(Result.failure(e))

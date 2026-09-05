@@ -11,6 +11,7 @@ import alphainterplanetary.thinker.database.provideDatabaseBuilder
 import alphainterplanetary.thinker.llm.HardcodedQuestionGenerator
 import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.KmpComponentCreate
 import me.tatarka.inject.annotations.Provides
@@ -18,6 +19,8 @@ import me.tatarka.inject.annotations.Provides
 @Component
 abstract class AppComponent {
   abstract val projectRepository: ProjectRepository
+
+  abstract val sampleProjectGenerator: SampleProjectGenerator
 
   abstract val appDatabase: AppDatabase
 
