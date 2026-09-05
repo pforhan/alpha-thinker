@@ -1,11 +1,12 @@
 package alphainterplanetary.thinker.model
 
 import kotlinx.datetime.Instant
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-class ProjectOrderTest {
+class ProjectTest {
 
   private fun question(id: String, answered: Boolean = false) = Question(
     id = id,
@@ -13,6 +14,14 @@ class ProjectOrderTest {
     timestamp = Instant.fromEpochMilliseconds(0),
     contextId = "",
     answers = if (answered) listOf(Answer(1, id, "a", Instant.fromEpochMilliseconds(1), null, null)) else emptyList()
+  )
+
+  private fun answeredQuestion(id: String) = question(id, answered = true)
+
+  private fun ignoredQuestion(id: String) = question(id).copy(ignoredAt = Instant.fromEpochMilliseconds(2))
+
+  private fun draftQuestion(id: String) = question(id).copy(
+    answers = listOf(Answer(1, id, "draft", null, null, null))
   )
 
   private fun project(vararg qs: Question) = Project(
@@ -89,5 +98,47 @@ class ProjectOrderTest {
     val after = p.moveToEnd("a")
     assertEquals(setOf("a", "b", "c"), after.questions.map { it.id }.toSet())
     assertTrue(after.questions.first { it.id == "b" }.isAnswered)
+  }
+
+  @Test
+  fun `unansweredQuestions excludes answered and ignored questions`() {
+    val p = project(answeredQuestion("a"), ignoredQuestion("b"), question("c"), draftQuestion("d"))
+
+    assertEquals(listOf("c", "d"), p.unansweredQuestions.map { it.id })
+  }
+
+  @Test
+  fun `activeQuestions excludes only ignored questions`() {
+    val p = project(answeredQuestion("a"), ignoredQuestion("b"), question("c"))
+
+    assertEquals(listOf("a", "c"), p.activeQuestions.map { it.id })
+  }
+
+  @Test
+  fun `allActiveQuestionsAnswered is true when every active question is answered`() {
+    val p = project(answeredQuestion("a"), answeredQuestion("b"), ignoredQuestion("c"))
+
+    assertTrue(p.allActiveQuestionsAnswered)
+  }
+
+  @Test
+  fun `allActiveQuestionsAnswered is false when an active question is unanswered`() {
+    val p = project(answeredQuestion("a"), question("b"))
+
+    assertFalse(p.allActiveQuestionsAnswered)
+  }
+
+  @Test
+  fun `allActiveQuestionsAnswered is false when an active question only has a draft`() {
+    val p = project(answeredQuestion("a"), draftQuestion("b"))
+
+    assertFalse(p.allActiveQuestionsAnswered)
+  }
+
+  @Test
+  fun `allActiveQuestionsAnswered is false when there are no active questions`() {
+    val p = project(ignoredQuestion("a"), ignoredQuestion("b"))
+
+    assertFalse(p.allActiveQuestionsAnswered)
   }
 }

@@ -4,10 +4,23 @@ import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.datetime.Clock.System
 import me.tatarka.inject.annotations.Inject
+import org.jetbrains.annotations.TestOnly
 
 class SeedQuestionsGenerator @Inject constructor() : QuestionGenerator {
+  override suspend fun recommendTitle(synopsis: String): String = generateTitleFromSynopsis(synopsis)
+
+  @TestOnly
+  fun generateTitleFromSynopsisForTest(synopsis: String): String = generateTitleFromSynopsis(synopsis)
+
+  private fun generateTitleFromSynopsis(synopsis: String): String = synopsis.trim()
+    .substringBefore('\n')
+    .substringBefore('.')
+    .take(30)
+    .trim()
+
   override suspend fun generateInitialQuestions(
-    synopsis: String,
+    @Suppress("UNUSED_PARAMETER") editableTitle: String,
+    @Suppress("UNUSED_PARAMETER") synopsis: String,
     contextId: String,
   ): List<Question> {
     val now = System.now()
@@ -23,6 +36,7 @@ class SeedQuestionsGenerator @Inject constructor() : QuestionGenerator {
 
   override suspend fun generateFollowUpQuestions(
     @Suppress("UNUSED_PARAMETER") synopsis: String,
+    @Suppress("UNUSED_PARAMETER") previousQuestions: List<Question>,
     @Suppress("UNUSED_PARAMETER") contextId: String,
   ): List<Question> {
     // Lite edition has no automated follow-up questions

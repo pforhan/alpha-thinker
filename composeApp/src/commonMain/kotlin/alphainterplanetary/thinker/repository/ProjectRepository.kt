@@ -10,12 +10,6 @@ import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.datetime.Clock.System
 import me.tatarka.inject.annotations.Inject
 
-internal fun generateTitleFromSynopsis(synopsis: String): String = synopsis.trim()
-  .substringBefore('\n')
-  .substringBefore('.')
-  .take(30)
-  .trim()
-
 class ProjectRepository @Inject constructor(
   private val storage: Storage,
   private val generator: QuestionGenerator,
@@ -27,12 +21,14 @@ class ProjectRepository @Inject constructor(
 
     val trimmedTitle = title.orEmpty().trim()
 
+    val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
+      ?.substring(0, trimmedTitle.length.coerceAtMost(30))
+      ?: generator.recommendTitle(synopsis)
+
     val project = Project(
       id = projectId,
       synopsis = synopsis.trim(),
-      editableTitle = trimmedTitle.takeIf { it.isNotEmpty() }
-        ?.substring(0, trimmedTitle.length.coerceAtMost(30))
-        ?: generateTitleFromSynopsis(synopsis),
+      editableTitle = resolvedTitle,
       status = "Draft",
       questions = emptyList(),
       createdAt = now,
@@ -41,7 +37,11 @@ class ProjectRepository @Inject constructor(
     val saved = storage.saveProject(project)
 
     val contextId = randomUUID()
-    val questions = generator.generateInitialQuestions(saved.synopsis, contextId)
+    val questions = generator.generateInitialQuestions(
+      editableTitle = saved.editableTitle,
+      synopsis = saved.synopsis,
+      contextId = contextId
+    )
       .shuffled()
 
     val updated = saved.copy(
@@ -102,9 +102,7 @@ class ProjectRepository @Inject constructor(
   }
 
   suspend fun getUnansweredQuestions(project: Project): List<Question> {
-    return project.questions.filterNot { question ->
-      (question.currentAnswer?.isComplete ?: false) || question.isIgnored
-    }
+    return project.unansweredQuestions
   }
 
   suspend fun updateAnswer(
@@ -135,29 +133,29 @@ class ProjectRepository @Inject constructor(
       }
     }
 
-    val answered = allQuestionsAnswered(project, updatedQuestions)
+    val updatedProject = project.copy(
+      questions = updatedQuestions,
+      updatedAt = System.now()
+    )
 
-    val updatedProject = if (answered) {
+    val answered = updatedProject.allActiveQuestionsAnswered
+
+    val finalProject = if (answered) {
       val contextId = randomUUID()
-      val newQs = generator.generateFollowUpQuestions(project.synopsis, contextId)
+      val newQs = generator.generateFollowUpQuestions(
+        synopsis = project.synopsis,
+        previousQuestions = project.questions,
+        contextId = contextId
+      )
 
-      project.copy(
-        questions = project.questions + newQs,
-        updatedAt = System.now()
+      updatedProject.copy(
+        questions = updatedProject.questions + newQs,
       )
     } else {
-      project.copy(
-        questions = updatedQuestions,
-        updatedAt = System.now()
-      )
+      updatedProject
     }
 
-    return storage.saveProject(updatedProject)
-  }
-
-  private fun allQuestionsAnswered(project: Project, questions: List<Question>): Boolean {
-    val activeQuestions = questions.filterNot { it.isIgnored }
-    return activeQuestions.all { it.currentAnswer?.isComplete == true }
+    return storage.saveProject(finalProject)
   }
 
   suspend fun ignoreQuestion(

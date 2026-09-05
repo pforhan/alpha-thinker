@@ -37,6 +37,7 @@ kotlin {
 
      commonTest.dependencies {
        implementation(kotlin("test"))
+       implementation(libs.kotlinx.coroutines.test)
      }
 
     androidMain.dependencies {
@@ -44,12 +45,6 @@ kotlin {
       implementation(libs.androidx.activity.compose)
       implementation(libs.androidx.lifecycle.runtime.ktx)
       implementation(libs.androidx.navigation.compose)
-    }
-
-    val androidUnitTest by getting {
-      dependencies {
-        implementation(libs.junit4)
-      }
     }
 
     // val desktopMain by getting {

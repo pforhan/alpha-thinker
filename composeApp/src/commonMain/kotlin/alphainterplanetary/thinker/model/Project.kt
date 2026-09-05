@@ -14,6 +14,13 @@ data class Project(
   val unansweredQuestions: List<Question>
     get() = questions.filter { it.isUnanswered }
 
+  val activeQuestions: List<Question>
+    get() = questions.filterNot { it.isIgnored }
+
+  val allActiveQuestionsAnswered: Boolean
+    get() = activeQuestions.isNotEmpty() &&
+      activeQuestions.all { it.currentAnswer?.isComplete == true }
+
   val questionOrderIds: List<String>
     get() = questions.map { it.id }
 

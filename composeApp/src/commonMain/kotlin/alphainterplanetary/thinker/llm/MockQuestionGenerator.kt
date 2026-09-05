@@ -93,7 +93,14 @@ class MockQuestionGenerator : QuestionGenerator {
     )
   )
 
+  override suspend fun recommendTitle(synopsis: String): String = synopsis.trim()
+    .substringBefore('\n')
+    .substringBefore('.')
+    .take(30)
+    .trim()
+
   override suspend fun generateInitialQuestions(
+    @Suppress("UNUSED_PARAMETER") editableTitle: String,
     @Suppress("UNUSED_PARAMETER") synopsis: String,
     contextId: String,
   ): List<Question> {
@@ -102,6 +109,7 @@ class MockQuestionGenerator : QuestionGenerator {
 
   override suspend fun generateFollowUpQuestions(
     @Suppress("UNUSED_PARAMETER") synopsis: String,
+    @Suppress("UNUSED_PARAMETER") previousQuestions: List<Question>,
     contextId: String,
   ): List<Question> {
     return getFollowUpQuestions(roundCounter++, contextId)

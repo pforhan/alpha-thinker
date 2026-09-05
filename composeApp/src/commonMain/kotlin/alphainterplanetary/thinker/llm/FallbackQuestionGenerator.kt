@@ -6,25 +6,35 @@ class FallbackQuestionGenerator(
   private val primary: QuestionGenerator,
   private val fallback: QuestionGenerator = SeedQuestionsGenerator(),
 ) : QuestionGenerator {
+  override suspend fun recommendTitle(synopsis: String): String {
+    return try {
+      primary.recommendTitle(synopsis)
+    } catch (e: Exception) {
+      fallback.recommendTitle(synopsis)
+    }
+  }
+
   override suspend fun generateInitialQuestions(
+    editableTitle: String,
     synopsis: String,
     contextId: String,
   ): List<Question> {
     return try {
-      primary.generateInitialQuestions(synopsis, contextId)
+      primary.generateInitialQuestions(editableTitle, synopsis, contextId)
     } catch (e: Exception) {
-      fallback.generateInitialQuestions(synopsis, contextId)
+      fallback.generateInitialQuestions(editableTitle, synopsis, contextId)
     }
   }
 
   override suspend fun generateFollowUpQuestions(
     synopsis: String,
+    previousQuestions: List<Question>,
     contextId: String,
   ): List<Question> {
     return try {
-      primary.generateFollowUpQuestions(synopsis, contextId)
+      primary.generateFollowUpQuestions(synopsis, previousQuestions, contextId)
     } catch (e: Exception) {
-      fallback.generateFollowUpQuestions(synopsis, contextId)
+      fallback.generateFollowUpQuestions(synopsis, previousQuestions, contextId)
     }
   }
 }
