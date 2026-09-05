@@ -8,8 +8,8 @@ import alphainterplanetary.thinker.database.RoomStorage
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getRoomDatabase
 import alphainterplanetary.thinker.database.provideDatabaseBuilder
+import alphainterplanetary.thinker.llm.HardcodedQuestionGenerator
 import alphainterplanetary.thinker.llm.QuestionGenerator
-import alphainterplanetary.thinker.llm.SeedQuestionsGenerator
 import alphainterplanetary.thinker.repository.ProjectRepository
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.KmpComponentCreate
@@ -35,7 +35,7 @@ abstract class AppComponent {
   fun providesStorage(database: AppDatabase): Storage = RoomStorage(database)
 
   @Provides
-  fun providesQuestionGenerator(): QuestionGenerator = SeedQuestionsGenerator()
+  fun providesQuestionGenerator(): QuestionGenerator = HardcodedQuestionGenerator()
 
   @Provides
   fun providesDatabase(): AppDatabase = database
