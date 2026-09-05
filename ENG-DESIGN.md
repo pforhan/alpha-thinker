@@ -69,6 +69,17 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
    *   `category` (String, Optional: To help organize global questions)
    *   `createdAt` (Timestamp)
 
+### Note: Question Context (`contextId`)
+
+`Question.contextId` is meant to record *what caused a question to be asked*
+(e.g., the initial project idea, a specific follow-up round, or a user-created
+question). Since dynamic/LLM question generation is not implemented yet, the
+exact semantics are still ambiguous. For now each question simply carries the
+random batch id it was generated with (`ProjectRepository` creates a fresh
+`randomUUID()` per generation round), and the field is persisted as-is. We will
+revisit the meaning and values of `contextId` once question generation and the
+`LLMInteraction` log (prompt, generation payload, tool calls) are in place.
+
 ### Research: Koog for Lookup & Web Search Tools
 
 [Koog](https://github.com/jetbrains/koog) is a JetBrains Kotlin Multiplatform

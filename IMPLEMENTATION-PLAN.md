@@ -51,7 +51,7 @@ This document tracks the specific engineering tasks required to move from design
 - [x] Rename LLMIntegration to QuestionGenerator
 - [x] Make a QuestionDAO since questions and answers can be updated independently of a project.
 - [x] Remove pigeon codegen
-- [ ] Convert to KMP / Compose, away from flutter
+- [x] Convert to KMP / Compose, away from flutter (marked done although there's more in Phase 2.7 to do)
   - [x] **ProjectList: wire up the add-project button.** `ProjectListScreen` sets `showCreateDialog = true` but never renders a dialog, so the Add FAB and "Create your first project" button do nothing. Add a new-project dialog (Flutter `EditProjectDialog` with `project == null`): optional "Add title" reveal, synopsis autofocus, Create button, default title generation from synopsis.
   - [x] **ProjectList: navigate into the new project after creation.** Flutter pushes `ProjectDetailScreen` for the freshly created project; Compose's `onProjectCreated` callback is a no-op.
   - [x] **Android entry polish (theme + edge-to-edge):** add `composeApp/src/androidMain/res/values/themes.xml` defining `Theme.AlphaThinker` with parent `android:Theme.Material.Light.NoActionBar`, then set `android:theme="@style/Theme.AlphaThinker"` on `<application>` in `composeApp/src/androidMain/AndroidManifest.xml` (currently no theme is declared, so the default action-bar theme is used under Compose). Also call `enableEdgeToEdge()` from `androidx.activity` in `MainActivity.onCreate()` before `setContent { App() }` so Compose controls the system bars. Do these together since both touch the Activity/manifest theme setup.
@@ -65,15 +65,14 @@ This document tracks the specific engineering tasks required to move from design
   - [x] **ProjectDetail / repository: "Ask later" support.** `ProjectRepository` has no reorder concept; Compose `QuestionItem` has no ask-later callback. Add reorder-to-end of the unanswered order (Flutter `_askLater`).
   - [x] **ProjectDetail: open AnswerDialog on question tap.** `onAnswerClick = { /* TODO */ }` is unimplemented — the core Q&A workspace (view full answer, update answer, save draft) is dead. ViewModel already has `updateAnswer`/`deleteAnswer` but nothing calls them.
   - [x] **AnswerDialog parity:** complete the Compose dialog — autofocus the field, "Ask Later" (saves draft, returns `ask_later`), "Delete Answer" when a complete answer exists (returns `deleted`), and have the detail screen reload on submit/deleted/ask_later (Flutter `_answerQuestion` result handling).
-  - [ ] **Data: persist `contextId`.** `RoomStorage` hardcodes `contextId = ""` on load (`QuestionEntity` has no column); Flutter model carries it.
-  - [ ] Answer dialog shouldn't have to deal with 
+  - [x] **Data: persist `contextId`.** `RoomStorage` hardcodes `contextId = ""` on load (`QuestionEntity` has no column); Flutter model carries it.
+- [ ] Place Storage interface in the database package
+- [ ] merge filter and sort functionality into QuestionFilter, rename to something like QuestionViewMode
+- [ ] debug tool: Start a (mostly empty) settings screen, and have a place tools can show up.  create a couple sample projects with a mix of ignored and answered and drafts already popuplated.  Some of the values should be big enough to stretch limits (like a very very long answer) so we can see how the UI behaves with a mix of simple and extreme.
 - [ ] need to integrate/combine MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
 - [x] **Move DB context init into an Application subclass:** add `composeApp/src/androidMain/kotlin/alphainterplanetary/thinker/AlphaThinkerApplication.kt` (`class AlphaThinkerApplication : Application() { override fun onCreate() { initDatabase(this) } }`), register it via `android:name=".AlphaThinkerApplication"` in the manifest, and strip `initDatabase(applicationContext)` out of `MainActivity` so it only does `setContent { App() }`. This makes the Room context available before any DI access and independent of Activity lifecycle. (Later: consider removing the module-global context entirely by passing the platform context into `AppComponent` as a constructor arg, but that needs a common-typed abstraction since KMP can't reference `android.content.Context`.)
 - [x] **Verify Room + DI on device/emulator:** install the debug APK and confirm (a) first launch no longer hits the old `NotImplementedError` from `AppDatabaseConstructor`, (b) project/answer data persists across a force-stop/relaunch (Room writes to `alphathinker.db`), (c) the app survives rotation / backgrounding without crashes, and (d) only one `AppDatabase` connection is opened (the `providesDatabase()` lazy singleton in `AppComponent`).
-- [ ] Place Storage interface in the database package 
 - [x] split viewmodels into their own files
-- [ ] merge filter and sort functionality into QuestionFilter, rename to something like QuestionViewMode
-- [ ] debug tool: create a couple sample projects with a mix of ignored and answered and drafts already popuplated.  Some of the values should be big enough to stretch limits (like a very very long answer) so we can see how the UI behaves with a mix of simple and extreme.
 
 ## Phase 2.6: multiplatform support
 - [ ] Set up Compose Multiplatform Web target
@@ -81,24 +80,26 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Set up Compose Multiplatform Desktop (macOS / JVM) target
 
 ## Phase 2.7: UI cleanup
+- [ ] **AnswerDialog: hide "Ask Later" for completed questions.** Flutter only shows "Ask Later" when the question has no complete answer (`current == null || !current.isComplete`); Compose always shows it, and triggering it on a completed question throws `IllegalStateException` ("Cannot add a draft answer to a question that is already answered") and drops the whole detail screen into the full Error state.
 - [ ] Better text instead of "Submit" for adding / editing answers. Let's make the answer dialog have a closed button and a completed toggle or checkbox that moves things from draft to answered.
 - [ ] new filter type for draft answers (default sort is latest edits first)
 - [ ] if a dialog close action would cause data to be lost, show a prompt.  Example: type in changes to Edit Project then tap off the dialog area to dismiss (or tap cancel).  Same with answer dialog
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
-- [ ] **QuestionItem parity:** add swipe-to-ignore (left) and swipe-to-ask-later (right) for unanswered (Flutter `SwipeableItem`/`Dismissible`), and "Ask Later" action button (rotate_left icon) on unanswered items. Currently Compose only shows a single Ignore/Unignore icon, and its icon-selection logic is wrong (uses Edit icon for unignore; calls `onIgnore` on unanswered regardless of state).
 - [ ] **KMP: swipe-to-ignore / swipe-to-ask-later on question rows**, mimicking the Flutter `Dismissible` behavior in `frontend/lib/widgets/question_item.dart` (via `SwipeableItem`). Per filter: *unanswered* — swipe right = Ask Later (blue background), swipe left = Ignore (red); *answered* — swipe right = Ignore (grey), swipe left = Delete Answer (red); *ignored* — swipe either way = Unignore (green). Also add the background rows with icon+label shown under the card while swiping.
 - [ ] probably should be able to unignore a question from the dialog popup, or force unignore before modifying the answer field.
-- [ ] ProjectList: do we need a reload button?
+- [ ] ProjectList: is the top-bar Refresh button actually needed? The list already auto-reloads when it re-enters composition (navigation back from detail), and the Error state has its own Retry button — so the Refresh action looks redundant and can likely be removed.
 - [ ] ProjectDetail: question filter pills are not aligned with the Questions header.  For some screens we may need them to take less horizontal space as well. 
-- [ ] **KMP: fix back navigation + synopsis edit affordance.** `ProjectDetailScreen` top-app-bar `navigationIcon` uses the Edit icon (should be a Back arrow); the synopsis body has no edit affordance (Flutter has an edit IconButton beside "Synopsis:" opening the edit dialog; Compose only reaches it via the top bar).
-- [ ] **KMP: EditProjectDialog polish.** Refine the Compose edit dialog to match Flutter — 30-char title cap, multiline synopsis autofocus, and optional title reveal for new projects (the create flow itself is in Phase 2.5).
+- [ ] **KMP: synopsis edit affordance.** the synopsis body has no edit affordance (Flutter has an edit IconButton beside "Synopsis:" opening the edit dialog; Compose only reaches it via the top bar).
+- [x] **KMP: EditProjectDialog polish.** Refine the Compose edit dialog to match Flutter — 30-char title cap, multiline synopsis autofocus, and optional title reveal for new projects (the create flow itself is in Phase 2.5).
 - [ ] **ProjectList: delete a project** with a confirm dialog ("This action cannot be undone."). Add a delete action
 - [ ] **ProjectList: edit a project** Add an edit action
-- [ ] projectdetail: need the right icon for unignore
+- [x] projectdetail: unignore icon — now uses the correct Visibility icon (matches Flutter).
 - [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
 - [ ] add sort options to project list, including created and modified
 - [ ] Clean up a lot of the hardcoded font size, color, etc options by using a proper theme with named styles
 - [ ] Answer dialog: add an affordance to clear the text area
+- [ ] **ProjectDetail: per-filter empty message.** Flutter shows "No {filter} questions." when the selected filter has no results; Compose renders an empty list instead.
+- [ ] **ProjectDetail: question-list transition.** Flutter wraps the question list in a 300ms `AnimatedSwitcher` keyed on filter + question order; Compose has no cross-fade on filter/reorder changes.
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 

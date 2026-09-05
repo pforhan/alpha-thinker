@@ -75,6 +75,7 @@ private fun Question.toEntity(projectId: String, index: Int) = QuestionEntity(
   id = id,
   projectId = projectId,
   text = text,
+  contextId = contextId,
   createdAt = timestamp.toEpochMilliseconds(),
   sortOrder = index,
   ignoredAt = ignoredAt?.toEpochMilliseconds()
@@ -105,7 +106,7 @@ private fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question 
     id = id,
     text = text,
     timestamp = Instant.fromEpochMilliseconds(createdAt),
-    contextId = "",
+    contextId = contextId,
     ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
     answers = answers.map { it.toDomainModel() }
   )

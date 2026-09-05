@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 
 @Database(
   entities = [ProjectEntity::class, QuestionEntity::class, AnswerEntity::class],
-  version = 2,
+  version = 3,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -35,6 +35,13 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
   }
 }
 
+val MIGRATION_2_3 = object : Migration(2, 3) {
+  override fun migrate(connection: androidx.sqlite.SQLiteConnection) {
+    connection.prepare("ALTER TABLE questions ADD COLUMN contextId TEXT NOT NULL DEFAULT ''")
+      .step()
+  }
+}
+
 @Suppress("KotlinNoActualForExpect")
 expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase>
 
@@ -42,7 +49,7 @@ expect fun provideDatabaseBuilder(): RoomDatabase.Builder<AppDatabase>
 
 fun getRoomDatabase(builder: RoomDatabase.Builder<AppDatabase>): AppDatabase {
   return builder
-    .addMigrations(MIGRATION_1_2)
+    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
     .setDriver(BundledSQLiteDriver())
     .setQueryCoroutineContext(Dispatchers.IO)
     .build()
