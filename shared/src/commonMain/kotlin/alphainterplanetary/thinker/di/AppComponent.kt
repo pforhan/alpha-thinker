@@ -17,7 +17,7 @@ import me.tatarka.inject.annotations.KmpComponentCreate
 import me.tatarka.inject.annotations.Provides
 
 @Component
-abstract class AppComponent {
+abstract class AppComponent(@get:Provides val platformContext: PlatformContext) {
   abstract val projectRepository: ProjectRepository
 
   abstract val sampleProjectGenerator: SampleProjectGenerator
@@ -32,7 +32,7 @@ abstract class AppComponent {
 
   abstract val questionGenerator: QuestionGenerator
 
-  private val database by lazy { getRoomDatabase(provideDatabaseBuilder()) }
+  private val database by lazy { getRoomDatabase(provideDatabaseBuilder(platformContext)) }
 
   @Provides
   fun providesStorage(database: AppDatabase): Storage = RoomStorage(database)
@@ -54,4 +54,4 @@ abstract class AppComponent {
 }
 
 @KmpComponentCreate
-expect fun createAppComponent(): AppComponent
+expect fun createAppComponent(platformContext: PlatformContext): AppComponent

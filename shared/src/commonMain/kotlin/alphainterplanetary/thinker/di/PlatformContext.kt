@@ -1,0 +1,3 @@
+package alphainterplanetary.thinker.di
+
+interface PlatformContext

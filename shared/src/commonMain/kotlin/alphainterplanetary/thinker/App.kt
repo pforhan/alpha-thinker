@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker
 
+import alphainterplanetary.thinker.di.PlatformContext
 import alphainterplanetary.thinker.di.createAppComponent
 import alphainterplanetary.thinker.ui.navigation.NavGraph
 import androidx.compose.material3.MaterialTheme
@@ -10,14 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 
 @Composable
-fun App() {
+fun App(platformContext: PlatformContext) {
   MaterialTheme {
     Surface(
       modifier = Modifier,
       color = MaterialTheme.colorScheme.background
     ) {
       val navController = rememberNavController()
-      val appComponent = remember { createAppComponent() }
+      val appComponent = remember { createAppComponent(platformContext) }
       NavGraph(
         navController = navController,
         appComponent = appComponent,

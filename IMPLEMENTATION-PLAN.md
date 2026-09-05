@@ -78,9 +78,9 @@ This document tracks the specific engineering tasks required to move from design
 - [x] split viewmodels into their own files
 - [x] set up some shared testing objects like InMemoryStorage
 - [x] clean up gradle build and kotlin compiler warnings -- resolved as part of the AGP 9 restructuring: `shared/` (KMP library via `com.android.kotlin.multiplatform.library`) + `androidApp/` (thin AGP-built-in-Kotlin entry). Builds warnings-free with `./gradlew build --warning-mode all` (only unfixable JVM `native-access` notices from Gradle internals remain); tests via `./gradlew :shared:allTests`.
-- [ ] recreate FallbackQuestionGenerator or equivalent -- we'll need this when an llm is unavailable or the user has turned it off
 
 ## Phase 2.6: multiplatform support
+- [x] **Remove module-global DB context:** stop capturing the Android `Context` in a module-level `@Volatile appContext` (`shared/src/androidMain/.../DatabaseUtils.kt`). Instead pass the platform context into DI as a constructor arg — give `AppComponent` a common-typed context abstraction (an interface actualized per target) so the Room database builder receives it explicitly and `initDatabase()` goes away. Prerequisite for clean iOS/desktop targets, since `commonMain` can't reference `android.content.Context`. (`PlatformContext` interface + Android `AndroidPlatformContext` per target; `createAppComponent(platformContext)`; `MainActivity` supplies it; `AlphaThinkerApplication` and its manifest entry removed.)
 - [ ] Set up Compose Multiplatform Web target
 - [ ] Set up Compose Multiplatform iOS target
 - [ ] Set up Compose Multiplatform Desktop (macOS / JVM) target
@@ -122,7 +122,7 @@ UI and domain work for the round/stage concept so the experience is ready before
 - [ ] **Persist generation tasks + LLM interaction log:** Room tables for task status/progress aligned with the `LLMInteraction` schema (prompt, payload, suggested questions, tool calls, durationMs) so long-running work and its history survive process death and feed the System/Debug workspace.
 - [ ] **LLM Interface:** Create the abstraction for the inference engine.
 - [ ] **Inference Implementation:** Integrate selected LLM inference solution for the Edge mode (evaluation in progress: ondevice-ai vs LiteRT-LM).
-- [ ] **Fallback Mechanism:** Implement the automatic switch from Edge to Lite upon inference failure.
+- [ ] **Fallback Mechanism:** recreate FallbackQuestionGenerator or equivalent -- we'll need this when an llm is unavailable or the user has turned it off.  Implement the automatic switch from Edge to Lite upon inference failure.
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 
 - [ ] Determine if we actually need multiple app flavors, or if we can just fall back to basic mode inside a single binary
 - [ ] Add setting to disable LLM usage (Settings screen)

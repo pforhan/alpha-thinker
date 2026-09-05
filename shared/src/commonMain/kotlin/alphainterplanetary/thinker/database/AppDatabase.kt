@@ -4,6 +4,7 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
+import alphainterplanetary.thinker.di.PlatformContext
 import androidx.room.migration.Migration
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +46,7 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 @Suppress("KotlinNoActualForExpect")
 expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase>
 
-expect fun provideDatabaseBuilder(): RoomDatabase.Builder<AppDatabase>
+expect fun provideDatabaseBuilder(context: PlatformContext): RoomDatabase.Builder<AppDatabase>
 
 fun getRoomDatabase(builder: RoomDatabase.Builder<AppDatabase>): AppDatabase {
   return builder
