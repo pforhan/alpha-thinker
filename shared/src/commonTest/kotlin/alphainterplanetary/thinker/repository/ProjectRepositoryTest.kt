@@ -90,7 +90,10 @@ class ProjectRepositoryTest {
     val project = repository.createProject("My synopsis")
 
     assertEquals(setOf("q1", "q2"), project.questions.map { it.id }.toSet())
-    assertEquals(setOf("q1", "q2"), storage.getProject(project.id)?.questions?.map { it.id }?.toSet())
+    assertEquals(
+      setOf("q1", "q2"),
+      storage.getProject(project.id)?.questions?.map { it.id }?.toSet()
+    )
   }
 
   // ---------- updateProject ----------

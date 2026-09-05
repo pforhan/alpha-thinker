@@ -10,7 +10,8 @@ private const val FOLLOW_UP_COUNT = 3
 
 class HardcodedQuestionGeneratorTest {
 
-  private val generator = HardcodedQuestionGenerator(initialCount = 20, followUpCount = FOLLOW_UP_COUNT)
+  private val generator =
+    HardcodedQuestionGenerator(initialCount = 20, followUpCount = FOLLOW_UP_COUNT)
 
   // ---------- recommendTitle ----------
 

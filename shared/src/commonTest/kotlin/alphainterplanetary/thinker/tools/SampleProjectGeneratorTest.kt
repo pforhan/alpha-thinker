@@ -19,18 +19,19 @@ class SampleProjectGeneratorTest {
   }
 
   @Test
-  fun `sparse project has a short synopsis with a couple answered and five unanswered questions`() = runTest {
-    val storage = InMemoryStorage()
-    val generator = SampleProjectGenerator(storage)
+  fun `sparse project has a short synopsis with a couple answered and five unanswered questions`() =
+    runTest {
+      val storage = InMemoryStorage()
+      val generator = SampleProjectGenerator(storage)
 
-    generator.generate()
+      generator.generate()
 
-    val sparse = storage.projects.getValue("sample-sparse")
-    assertTrue(sparse.synopsis.length < 200)
-    assertEquals(7, sparse.questions.size)
-    assertEquals(2, sparse.questions.count { it.isAnswered })
-    assertEquals(5, sparse.questions.count { it.isUnanswered })
-  }
+      val sparse = storage.projects.getValue("sample-sparse")
+      assertTrue(sparse.synopsis.length < 200)
+      assertEquals(7, sparse.questions.size)
+      assertEquals(2, sparse.questions.count { it.isAnswered })
+      assertEquals(5, sparse.questions.count { it.isUnanswered })
+    }
 
   @Test
   fun `complete project mixes answered, ignored, draft and unanswered questions`() = runTest {
@@ -61,7 +62,10 @@ class SampleProjectGeneratorTest {
     val stress = storage.projects.getValue("sample-stress")
     assertTrue(stress.editableTitle.length > 100, "stress title should be very long")
     assertTrue(stress.synopsis.length > 1000, "stress synopsis should be very long")
-    assertTrue(stress.questions.all { it.text.length > 100 }, "stress question texts should be long")
+    assertTrue(
+      stress.questions.all { it.text.length > 100 },
+      "stress question texts should be long"
+    )
     assertTrue(
       stress.questions.any { q -> q.currentAnswer?.isComplete == true && q.currentAnswer!!.text.length > 500 },
       "stress project should contain very long complete answers",

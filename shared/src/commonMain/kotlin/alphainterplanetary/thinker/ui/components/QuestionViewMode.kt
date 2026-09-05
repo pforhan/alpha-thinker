@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Question
-import kotlin.comparisons.compareByDescending
 
 enum class QuestionViewMode(val displayName: String) {
   Unanswered("Unanswered"),
@@ -15,9 +14,11 @@ enum class QuestionViewMode(val displayName: String) {
       Answered -> questions
         .filter { it.isAnswered && !it.isIgnored }
         .sortedWith(answerDateComparator)
+
       Draft -> questions
         .filter { it.currentAnswer?.isDraft == true }
         .sortedWith(answerDateComparator)
+
       Ignored -> questions
         .filter { it.isIgnored }
         .sortedWith(ignoredDateComparator)

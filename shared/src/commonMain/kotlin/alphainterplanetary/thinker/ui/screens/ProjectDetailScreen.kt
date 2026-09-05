@@ -8,9 +8,9 @@ import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
+import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
-import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import androidx.compose.foundation.layout.Arrangement
@@ -159,10 +159,12 @@ fun ProjectDetailScreen(
           AnswerDialogResult.Submitted -> {
             viewModel.updateAnswer(projectId, questionToShow.id, text.trim(), isDraft = false)
           }
+
           AnswerDialogResult.AskLater -> {
             viewModel.updateAnswer(projectId, questionToShow.id, text.trim(), isDraft = true)
             viewModel.askLater(questionToShow.id)
           }
+
           AnswerDialogResult.DeletedAnswer -> {
             val answerId = questionToShow.currentAnswer?.id
             if (answerId != null) {
