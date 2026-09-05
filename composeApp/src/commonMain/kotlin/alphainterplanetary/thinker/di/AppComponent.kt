@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.database.AppDatabase
 import alphainterplanetary.thinker.database.ProjectDao
 import alphainterplanetary.thinker.database.QuestionDao
 import alphainterplanetary.thinker.database.RoomStorage
+import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getRoomDatabase
 import alphainterplanetary.thinker.database.provideDatabaseBuilder
 import alphainterplanetary.thinker.llm.QuestionGenerator
@@ -31,7 +32,7 @@ abstract class AppComponent {
   private val database by lazy { getRoomDatabase(provideDatabaseBuilder()) }
 
   @Provides
-  fun providesStorage(database: AppDatabase): ProjectRepository.Storage = RoomStorage(database)
+  fun providesStorage(database: AppDatabase): Storage = RoomStorage(database)
 
   @Provides
   fun providesQuestionGenerator(): QuestionGenerator = SeedQuestionsGenerator()
