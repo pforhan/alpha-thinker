@@ -43,6 +43,8 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
 2. **Question:**
     *   `questionId` (Unique ID)
     *   `projectId` (Foreign Key: Links to the parent Project.)
+    *   `roundId` (Foreign Key: Links to the Round that surfaced this question —
+        the former `contextId`. See the Rounds note below.)
     *   `text` (String: The full question text, either seed, user-input, or LLM-generated.)
     *   `isArchived` (Boolean: Tracks manual deactivation.)
     *   `createdAt` (Timestamp: When the question was first surfaced.)
@@ -69,16 +71,86 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
    *   `category` (String, Optional: To help organize global questions)
    *   `createdAt` (Timestamp)
 
-### Note: Question Context (`contextId`)
+6. **Round:**
+   *   `roundId` (Unique ID — the value questions carry via `roundId`; one row per
+       generation/generation round, whether initial, follow-up, or user-created.)
+   *   `projectId` (Foreign Key: Links to the parent Project.)
+   *   `roundNumber` (Int: 1-based ordering within the project.)
+   *   `startedAt` (Timestamp: When the round's questions were first surfaced.)
+   *   `completedAt` (Timestamp, Optional: Set when the user wraps up the round;
+       `null` means the round is in progress.)
+   *   `status` (Derived: `InProgress` when `completedAt == null`, else `Completed`.)
 
-`Question.contextId` is meant to record *what caused a question to be asked*
-(e.g., the initial project idea, a specific follow-up round, or a user-created
-question). Since dynamic/LLM question generation is not implemented yet, the
-exact semantics are still ambiguous. For now each question simply carries the
-random batch id it was generated with (`ProjectRepository` creates a fresh
-`randomUUID()` per generation round), and the field is persisted as-is. We will
-revisit the meaning and values of `contextId` once question generation and the
-`LLMInteraction` log (prompt, generation payload, tool calls) are in place.
+### Rounds (formerly "Question Context")
+
+A **round** is the set of questions surfaced together (a generation batch).
+It is the user-facing "checkpoint" in the planning flow: users answer a round,
+wrap it up, and move to the next. Rounds are first-class entities so that
+round state (in-progress vs. wrapped, timing) survives restarts and so the
+LLM review (Phase 3) has something concrete to anchor to.
+
+- `Question.roundId` is a foreign key to `Round.roundId`; today's `contextId`
+  column becomes this FK — one UUID plays both roles, so no mapping table is
+  needed (the repository already stamps questions with a fresh `randomUUID()`
+  per generation round).
+- Reconstructing rounds is just a `GROUP BY roundId` query; wrap-up sets
+  `completedAt`, and the planning stage (Phase 2.8) equals the count of
+  completed rounds.
+- Hardcoded/fallback questions historically carried an empty `contextId`; with
+  a real Round on creation and per follow-up round, every question gets a
+  valid `roundId`.
+
+### Generation Task Framework
+
+LLM work — initial question generation, follow-up rounds, synopsis rewrites,
+cohesive document synthesis, auto-archive evaluation — is inherently
+long-running (seconds to minutes on edge devices). The core must never block a
+calling coroutine or the UI on inference; instead, generation is modeled as an
+observable background task.
+
+**GenerationTask model:**
+
+- `taskId` (Unique ID)
+- `projectId` (Foreign Key: Links to the parent Project.)
+- `kind` (Enum/type: `InitialQuestions`, `FollowUpQuestions`,
+  `SynopsisRewrite`, `AutoArchive`, ...)
+- `status` (Enum: `Queued`, `Running`, `Succeeded`, `Failed`)
+- `progress` (Float 0..1, Optional: indeterminate `null` for discrete question
+  rounds; denser values when an LLM streams a rewrite/synthesis)
+- `error` (String?, set when `Failed`)
+- `createdAt` / `startedAt` / `finishedAt` (Timestamps)
+
+**TaskRunner:**
+
+- One app-scoped instance owning a `CoroutineScope` (injected, app-lifetime).
+- `enqueue(projectId, kind, onProgress?, body: suspend () -> T): GenerationTask`
+  wraps a suspend body, transitions the task through
+  `Queued -> Running -> Succeeded | Failed`, and exposes live tasks via an
+  observable flow (`StateFlow<List<GenerationTask>>`, filterable by
+  `projectId`).
+- Body suspensions must be cooperative/cancellable; cancellation policy is
+  decided when background notification lands (IMPLEMENTATION-PLAN.md Phase 3).
+
+**Repository contract (LLM-ready):**
+
+- Mutating writes (`createProject`, `updateAnswer`, `updateProject`) persist
+  the user-facing state immediately and return immediately.
+- Generation is enqueued as a task instead of awaited inline. On success the
+  task body re-reads the project, performs the generation, and persists the
+  result (e.g., new questions appended). The UI observes task completion and
+  reloads the affected project.
+- `QuestionGenerator` is invoked statelessly with the project context it
+  needs: initial generation gets `synopsis` + the generated `editableTitle`;
+  follow-up generation gets the project's questions (completed answers via
+  `Question.currentAnswer`, skipped ones via `Question.isIgnored`). The same
+  call shape works for the hardcoded stand-in and a real LLM alike.
+
+**Roadmap / deferred:**
+
+- Tasks are in-memory for now. Persistence (plus the `LLMInteraction` log via
+  the schema above) will let task status and history survive process death and
+  feed the System/Debug workspace (PRD 5.5: LLM Interaction Log + Task Manager).
+- See IMPLEMENTATION-PLAN.md Phase 3 for the build order.
 
 ### Research: Koog for Lookup & Web Search Tools
 
