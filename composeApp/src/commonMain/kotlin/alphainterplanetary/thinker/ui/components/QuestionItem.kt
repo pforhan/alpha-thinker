@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun QuestionItem(
   question: Question,
-  filter: QuestionFilter,
+  view: QuestionViewMode,
   onAnswerClick: () -> Unit,
   onAskLater: () -> Unit,
   onIgnore: () -> Unit,
@@ -88,14 +88,18 @@ fun QuestionItem(
         horizontalArrangement = Arrangement.End,
         modifier = Modifier.fillMaxWidth()
       ) {
-        if (filter == QuestionFilter.Unanswered && !question.isAnswered && !question.isIgnored) {
+        if (view == QuestionViewMode.Unanswered && !question.isAnswered && !question.isIgnored) {
           IconButton(onClick = onAskLater) {
             Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Ask later")
           }
           IconButton(onClick = onIgnore) {
             Icon(Icons.Default.VisibilityOff, contentDescription = "Ignore")
           }
-        } else if (filter == QuestionFilter.Answered || filter == QuestionFilter.Ignored) {
+        } else if (
+          view == QuestionViewMode.Answered ||
+          view == QuestionViewMode.Draft ||
+          view == QuestionViewMode.Ignored
+        ) {
           IconButton(onClick = if (question.isIgnored) onUnignore else onIgnore) {
             Icon(
               if (question.isIgnored) Icons.Default.Visibility else Icons.Default.VisibilityOff,

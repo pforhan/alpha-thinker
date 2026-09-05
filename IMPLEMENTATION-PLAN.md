@@ -66,8 +66,8 @@ This document tracks the specific engineering tasks required to move from design
   - [x] **ProjectDetail: open AnswerDialog on question tap.** `onAnswerClick = { /* TODO */ }` is unimplemented — the core Q&A workspace (view full answer, update answer, save draft) is dead. ViewModel already has `updateAnswer`/`deleteAnswer` but nothing calls them.
   - [x] **AnswerDialog parity:** complete the Compose dialog — autofocus the field, "Ask Later" (saves draft, returns `ask_later`), "Delete Answer" when a complete answer exists (returns `deleted`), and have the detail screen reload on submit/deleted/ask_later (Flutter `_answerQuestion` result handling).
   - [x] **Data: persist `contextId`.** `RoomStorage` hardcodes `contextId = ""` on load (`QuestionEntity` has no column); Flutter model carries it.
-- [ ] Place Storage interface in the database package
-- [ ] merge filter and sort functionality into QuestionFilter, rename to something like QuestionViewMode
+- [x] Place Storage interface in the database package
+- [x] merge filter and sort functionality into QuestionViewMode (renamed from QuestionFilter), which now applies both filtering and sort (Answered by answer modified/answered date, Ignored by ignored date)
 - [ ] debug tool: Start a (mostly empty) settings screen, and have a place tools can show up.  create a couple sample projects with a mix of ignored and answered and drafts already popuplated.  Some of the values should be big enough to stretch limits (like a very very long answer) so we can see how the UI behaves with a mix of simple and extreme.
 - [ ] need to integrate/combine MockLLMIntegration and SeedQuestionsLLMIntegration because they're obviously doing the same thing but differently
 - [x] **Move DB context init into an Application subclass:** add `composeApp/src/androidMain/kotlin/alphainterplanetary/thinker/AlphaThinkerApplication.kt` (`class AlphaThinkerApplication : Application() { override fun onCreate() { initDatabase(this) } }`), register it via `android:name=".AlphaThinkerApplication"` in the manifest, and strip `initDatabase(applicationContext)` out of `MainActivity` so it only does `setContent { App() }`. This makes the Room context available before any DI access and independent of Activity lifecycle. (Later: consider removing the module-global context entirely by passing the platform context into `AppComponent` as a constructor arg, but that needs a common-typed abstraction since KMP can't reference `android.content.Context`.)
@@ -82,7 +82,7 @@ This document tracks the specific engineering tasks required to move from design
 ## Phase 2.7: UI cleanup
 - [ ] **AnswerDialog: hide "Ask Later" for completed questions.** Flutter only shows "Ask Later" when the question has no complete answer (`current == null || !current.isComplete`); Compose always shows it, and triggering it on a completed question throws `IllegalStateException` ("Cannot add a draft answer to a question that is already answered") and drops the whole detail screen into the full Error state.
 - [ ] Better text instead of "Submit" for adding / editing answers. Let's make the answer dialog have a closed button and a completed toggle or checkbox that moves things from draft to answered.
-- [ ] new filter type for draft answers (default sort is latest edits first)
+- [x] new Drafts view mode in the question list (filter `currentAnswer?.isDraft`, default sort latest edits first). 
 - [ ] if a dialog close action would cause data to be lost, show a prompt.  Example: type in changes to Edit Project then tap off the dialog area to dismiss (or tap cancel).  Same with answer dialog
 - [ ] consider revising how answer drafts work, or, if not, formalizing the behavior.
 - [ ] **KMP: swipe-to-ignore / swipe-to-ask-later on question rows**, mimicking the Flutter `Dismissible` behavior in `frontend/lib/widgets/question_item.dart` (via `SwipeableItem`). Per filter: *unanswered* — swipe right = Ask Later (blue background), swipe left = Ignore (red); *answered* — swipe right = Ignore (grey), swipe left = Delete Answer (red); *ignored* — swipe either way = Unignore (green). Also add the background rows with icon+label shown under the card while swiping.
@@ -95,7 +95,6 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] **ProjectList: edit a project** Add an edit action
 - [x] projectdetail: unignore icon — now uses the correct Visibility icon (matches Flutter).
 - [ ] figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
-- [ ] add sort options to project list, including created and modified
 - [ ] Clean up a lot of the hardcoded font size, color, etc options by using a proper theme with named styles
 - [ ] Answer dialog: add an affordance to clear the text area
 - [ ] **ProjectDetail: per-filter empty message.** Flutter shows "No {filter} questions." when the selected filter has no results; Compose renders an empty list instead.
@@ -131,6 +130,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] Design and implement navigation strategy for multi-platform (mobile/desktop)
 - [ ] Develop custom KSP processor for Room/Pigeon synchronization (Deferred)
 - [ ] **State Management:** Implement the BLoC/Riverpod architecture to observe KMP updates.
+- [ ] Move all strings to Compose MP standards for internationalization
 
 ## Phase 6: Testing & Verification
 - [ ] **KMP Unit Tests:** Verify business logic and fallback transitions.

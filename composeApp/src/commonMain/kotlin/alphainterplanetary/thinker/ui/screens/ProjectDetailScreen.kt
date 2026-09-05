@@ -8,8 +8,8 @@ import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
-import alphainterplanetary.thinker.ui.components.QuestionFilter
-import alphainterplanetary.thinker.ui.components.QuestionFilterBar
+import alphainterplanetary.thinker.ui.components.QuestionViewMode
+import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
 import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
@@ -65,7 +65,7 @@ fun ProjectDetailScreen(
 
   val uiState by viewModel.uiState.collectAsState()
 
-  var selectedFilter by remember { mutableStateOf(QuestionFilter.Unanswered) }
+  var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
   var selectedQuestion by remember { mutableStateOf<Question?>(null) }
 
@@ -106,8 +106,8 @@ fun ProjectDetailScreen(
       is ProjectDetailUiState.Success -> {
         ProjectDetailContent(
           project = ui.project,
-          selectedFilter = selectedFilter,
-          onFilterSelected = { selectedFilter = it },
+          selectedView = selectedView,
+          onViewSelected = { selectedView = it },
           onShuffle = { viewModel.shuffle() },
           onAskLater = { viewModel.askLater(it) },
           onIgnore = { viewModel.ignoreQuestion(projectId, it) },
@@ -142,7 +142,7 @@ fun ProjectDetailScreen(
           showEditDialog = false
           viewModel.loadProject(projectId)
           if (mode == ProjectUpdateMode.CLEAR) {
-            selectedFilter = QuestionFilter.Unanswered
+            selectedView = QuestionViewMode.Unanswered
           }
         }
       )
@@ -179,8 +179,8 @@ fun ProjectDetailScreen(
 @Composable
 private fun ProjectDetailContent(
   project: Project,
-  selectedFilter: QuestionFilter,
-  onFilterSelected: (QuestionFilter) -> Unit,
+  selectedView: QuestionViewMode,
+  onViewSelected: (QuestionViewMode) -> Unit,
   onShuffle: () -> Unit,
   onAskLater: (String) -> Unit,
   onIgnore: (String) -> Unit,
@@ -188,22 +188,13 @@ private fun ProjectDetailContent(
   onAnswerClick: (Question) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val filteredQuestions = remember(project, selectedFilter) {
-    val all = selectedFilter.apply(project.questions)
-    when (selectedFilter) {
-      QuestionFilter.Unanswered -> all
-        .take(3)
-
-      QuestionFilter.Answered -> all
-        .sortedByDescending { it.currentAnswer?.modifiedAt ?: it.currentAnswer?.answeredAt }
-
-      QuestionFilter.Ignored -> all
-        .sortedByDescending { it.ignoredAt }
-    }
+  val filteredQuestions = remember(project, selectedView) {
+    val all = selectedView.apply(project.questions)
+    if (selectedView == QuestionViewMode.Unanswered) all.take(3) else all
   }
 
-  val showShuffle = remember(project, selectedFilter, filteredQuestions) {
-    selectedFilter == QuestionFilter.Unanswered &&
+  val showShuffle = remember(project, selectedView, filteredQuestions) {
+    selectedView == QuestionViewMode.Unanswered &&
       project.unansweredQuestions.size > 3
   }
 
@@ -212,9 +203,9 @@ private fun ProjectDetailContent(
 
     HorizontalDivider()
 
-    QuestionFilterBar(
-      selectedFilter = selectedFilter,
-      onFilterSelected = onFilterSelected,
+    QuestionViewModeBar(
+      selectedView = selectedView,
+      onViewSelected = onViewSelected,
       shuffleEnabled = showShuffle,
       onShuffle = onShuffle
     )
@@ -227,7 +218,7 @@ private fun ProjectDetailContent(
         items(filteredQuestions) { question ->
           QuestionItem(
             question = question,
-            filter = selectedFilter,
+            view = selectedView,
             onAnswerClick = { onAnswerClick(question) },
             onAskLater = { onAskLater(question.id) },
             onIgnore = { onIgnore(question.id) },

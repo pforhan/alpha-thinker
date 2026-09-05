@@ -18,9 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun QuestionFilterBar(
-  selectedFilter: QuestionFilter,
-  onFilterSelected: (QuestionFilter) -> Unit,
+fun QuestionViewModeBar(
+  selectedView: QuestionViewMode,
+  onViewSelected: (QuestionViewMode) -> Unit,
   shuffleEnabled: Boolean = false,
   onShuffle: () -> Unit = {},
 ) {
@@ -33,11 +33,11 @@ fun QuestionFilterBar(
     Text("Questions:", style = MaterialTheme.typography.titleMedium)
 
     Row {
-      QuestionFilter.values().forEach { filter ->
+      QuestionViewMode.values().forEach { mode ->
         FilterChip(
-          selected = selectedFilter == filter,
-          onClick = { onFilterSelected(filter) },
-          label = { Text(filter.displayName) }
+          selected = selectedView == mode,
+          onClick = { onViewSelected(mode) },
+          label = { Text(mode.displayName) }
         )
         Spacer(modifier = Modifier.width(8.dp))
       }
