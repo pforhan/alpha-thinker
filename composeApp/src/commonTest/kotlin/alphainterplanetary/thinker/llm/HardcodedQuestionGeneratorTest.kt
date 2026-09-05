@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.llm
 
-import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.testutil.question
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,16 +11,6 @@ private const val FOLLOW_UP_COUNT = 3
 class HardcodedQuestionGeneratorTest {
 
   private val generator = HardcodedQuestionGenerator(initialCount = 20, followUpCount = FOLLOW_UP_COUNT)
-
-  private fun question(
-    id: String = "q",
-    text: String = id,
-  ): Question = Question(
-    id = id,
-    text = text,
-    timestamp = kotlinx.datetime.Instant.fromEpochMilliseconds(0),
-    contextId = "ctx",
-  )
 
   // ---------- recommendTitle ----------
 

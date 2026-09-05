@@ -1,5 +1,9 @@
 package alphainterplanetary.thinker.model
 
+import alphainterplanetary.thinker.testutil.answeredQuestion
+import alphainterplanetary.thinker.testutil.draftQuestion
+import alphainterplanetary.thinker.testutil.ignoredQuestion
+import alphainterplanetary.thinker.testutil.question
 import kotlinx.datetime.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -7,22 +11,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ProjectTest {
-
-  private fun question(id: String, answered: Boolean = false) = Question(
-    id = id,
-    text = id,
-    timestamp = Instant.fromEpochMilliseconds(0),
-    contextId = "",
-    answers = if (answered) listOf(Answer(1, id, "a", Instant.fromEpochMilliseconds(1), null, null)) else emptyList()
-  )
-
-  private fun answeredQuestion(id: String) = question(id, answered = true)
-
-  private fun ignoredQuestion(id: String) = question(id).copy(ignoredAt = Instant.fromEpochMilliseconds(2))
-
-  private fun draftQuestion(id: String) = question(id).copy(
-    answers = listOf(Answer(1, id, "draft", null, null, null))
-  )
 
   private fun project(vararg qs: Question) = Project(
     id = "p",
@@ -79,7 +67,7 @@ class ProjectTest {
   @Test
   fun `unanswered order is preserved across reorders and ignores settled questions`() {
     val p = project(
-      question("x", answered = true),
+      answeredQuestion("x"),
       question("a"), question("b"), question("c"), question("d")
     )
     // answered question x is not part of the unanswered deck
@@ -93,7 +81,7 @@ class ProjectTest {
   @Test
   fun `moveToEnd preserves the full question set and their payloads`() {
     val p = project(
-      question("a"), question("b", answered = true), question("c")
+      question("a"), answeredQuestion("b"), question("c")
     )
     val after = p.moveToEnd("a")
     assertEquals(setOf("a", "b", "c"), after.questions.map { it.id }.toSet())
