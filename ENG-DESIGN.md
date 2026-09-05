@@ -5,7 +5,7 @@
 This document outlines the technical investigations and design decisions required to implement Alpha Thinker.
 
 ### Build System
-**Gradle** is the primary build system for the **Kotlin Multiplatform (KMP) / Compose Multiplatform** application. Builds run standard Gradle tasks and cover the platform targets enabled in `composeApp/build.gradle.kts` (Android today; iOS, web, and desktop as they are enabled).
+**Gradle** is the primary build system for the **Kotlin Multiplatform (KMP) / Compose Multiplatform** application. Builds run standard Gradle tasks and cover the platform targets enabled in `shared/build.gradle.kts` (Android today; iOS, web, and desktop as they are enabled). Platform app entry points live in thin per-platform modules that depend on the shared module (`androidApp/` today).
 
 ### Key Decisions
 - **Layered Architecture:** The UI layer (Compose Multiplatform) remains "logic-free," acting as a presentation layer that observes the KMP engine. Complex business logic and data management reside within the KMP layer.

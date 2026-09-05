@@ -15,4 +15,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "alphathinker"
 
-include(":composeApp")
+include(":shared")
+include(":androidApp")
