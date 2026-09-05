@@ -104,17 +104,21 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] **ProjectDetail: question-list transition.** Flutter wraps the question list in a 300ms `AnimatedSwitcher` keyed on filter + question order; Compose has no cross-fade on filter/reorder changes.
 
 ## Phase 2.8: Rounds & Stages UI (pre-LLM)
-UI and domain work for the round/stage concept so the experience is ready before LLM integration. No themed stage names — stages are plain numeric values.
-- [ ] **First-class rounds:** add a `Round` entity (`roundId`, `projectId` FK, `roundNumber`, `startedAt`, `completedAt?`) and make `Question.contextId` a `roundId` foreign key to it (one UUID plays both roles). A round is the set of questions surfaced together in a generation batch; creating a project creates Round 0 of N around the initial questions, and each wrap-up closes the old round and opens the next. Grouping questions by `roundId` is then a real query instead of a reconstruction (see ENG-DESIGN.md "Rounds").
+UI and domain work for the round/stage concept so the experience is ready before LLM integration. No themed stage names — stages are plain numeric values. Depends on the Phase 2.5 generator-merge/interface items for the wrap-up's next-round generation.
+- [ ] **Round entity + schema migration:** add a `Round` entity (`roundId`, `projectId` FK, `roundNumber`, `startedAt`, `completedAt?`) and the Room changes as one unit — create the `rounds` table, backfill a round per distinct `(projectId, contextId)` from existing questions, and make `Question.contextId` a `roundId` foreign key to it (one UUID plays both roles). A round is the set of questions surfaced together in a generation batch; creating a project creates Round 1 around the initial questions, and each wrap-up closes the old round and opens the next. Grouping questions by `roundId` is then a real query instead of a reconstruction (see ENG-DESIGN.md "Rounds").
 - [ ] **Numeric planning stage:** add `planningStage: Int` to `Project` (persist in Room; default 1). The stage is derived to equal `completedRounds + 1`, advanced by one each time the user wraps up a round. Show it on the project detail header and the project list card.
 - [ ] **Stage completion %:** display the current stage's completion as a percentage (resolved / total questions in the current round, where resolved = answered or ignored), alongside the stage number.
 - [ ] **Wrap-up step:** add a "Wrap up this round" action on the project detail screen, enabled when all active questions in the current round are resolved (answered or ignored). Tapping it sets `Round.completedAt`, advances the stage, triggers next-round generation via the hardcoded generator (slots into the async `TaskRunner` seam in Phase 3), and plays a small celebratory animation.
 - [ ] **Manual wrap trigger:** remove the automatic "all answered -> generate follow-ups" transition in `ProjectRepository.updateAnswer` so next-round generation happens only from the user-initiated wrap-up (auto-advance can return as an optional setting in Phase 3).
-- [ ] **Round migration:** update the Room schema + migration to create the `rounds` table, backfill a round per distinct `(projectId, contextId)` from existing questions, and add the `roundId` FK/column.
 
 ## Phase 3: Intelligence Integration (Edge Version)
+- [ ] **Generation Task framework:** add `GenerationTask` + in-memory app-scoped `TaskRunner` (`StateFlow`-observable, injected coroutine scope); `createProject` / `updateAnswer` persist immediately and enqueue generation rather than awaiting inline; UI reloads the affected project when its task completes. See ENG-DESIGN.md "Generation Task Framework".
+- [ ] **Persist generation tasks + LLM interaction log:** Room tables for task status/progress aligned with the `LLMInteraction` schema (prompt, payload, suggested questions, tool calls, durationMs) so long-running work and its history survive process death and feed the System/Debug workspace.
+- [ ] **LLM Interface:** Create the abstraction for the inference engine.
+- [ ] **Inference Implementation:** Integrate selected LLM inference solution for the Edge mode (evaluation in progress: ondevice-ai vs LiteRT-LM).
+- [ ] **Fallback Mechanism:** Implement the automatic switch from Edge to Lite upon inference failure.
 - [ ] Evaluate on-device support; there's ondevice-ai for kmp which can talk to system-installed edge llms (gemini nano, apple foundation) that may be more seamless than litert-lm 
-- [ ] Determine if we actually need multiple flavors, or if we can just fall back to basic mode inside a single binary
+- [ ] Determine if we actually need multiple app flavors, or if we can just fall back to basic mode inside a single binary
 - [ ] Add setting to disable LLM usage (Settings screen)
 - [ ] Add setting to enable/disable LLM lookup & web search
 - [ ] Evaluate Koog (JetBrains KMP AI-agent framework) for agentic lookup + web search tools (research in ENG-DESIGN.md)
@@ -123,12 +127,7 @@ UI and domain work for the round/stage concept so the experience is ready before
 - [ ] Integrate selected LLM solution for automated question generation
 - [ ] Implement "Auto-Archive" logic and app-wide settings
 - [ ] Implement background notification for long-running LLM tasks
-- [ ] **Generation Task framework:** add `GenerationTask` + in-memory app-scoped `TaskRunner` (`StateFlow`-observable, injected coroutine scope); `createProject` / `updateAnswer` persist immediately and enqueue generation rather than awaiting inline; UI reloads the affected project when its task completes. See ENG-DESIGN.md "Generation Task Framework".
-- [ ] **Persist generation tasks + LLM interaction log:** Room tables for task status/progress aligned with the `LLMInteraction` schema (prompt, payload, suggested questions, tool calls, durationMs) so long-running work and its history survive process death and feed the System/Debug workspace.
 - [ ] Integrate global questions pool with Edge mode (LLM recommendations + global questions)
-- [ ] **LLM Interface:** Create the abstraction for the inference engine.
-- [ ] **Inference Implementation:** Integrate selected LLM inference solution for the Edge mode (evaluation in progress: ondevice-ai vs LiteRT-LM).
-- [ ] **Fallback Mechanism:** Implement the automatic switch from Edge to Lite upon inference failure.
 
 ## Phase 4: Advanced Features & Export
 - [ ] Implement Markdown export functionality
@@ -138,21 +137,15 @@ UI and domain work for the round/stage concept so the experience is ready before
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global question pool with Lite version seed questions and edge version generated questions
+- [ ] Allow users to change questions in the answer dialog
+- [ ] Allow users to set up a connection to a cloud LLM (OpenAI-compatible API)
 
 ## Phase 5: Refinement & UX
 - [ ] Prototype and refine "Iterative Question Card" interaction
 - [ ] Design and implement navigation strategy for multi-platform (mobile/desktop)
-- [ ] Develop custom KSP processor for Room/Pigeon synchronization (Deferred)
-- [ ] **State Management:** Implement the BLoC/Riverpod architecture to observe KMP updates.
 - [ ] Move all strings to Compose MP standards for internationalization
 
 ## Phase 6: Testing & Verification
 - [ ] **KMP Unit Tests:** Verify business logic and fallback transitions.
-- [ ] **Integration Tests:** Verify the Pigeon bridge and end-to-end data flow.
 - [ ] **Performance Benchmarking:** Measure LLM inference latency and resource impact.
-
-## Phase 7: Backend Integration & Deployment (Low Priority)
-- [ ] Implement a real backend service to replace `InMemoryProjectService` for Web
-- [ ] Unify backend connection strategy for both native and web apps
-- [ ] Add Gradle/scripting support to launch backend and frontend concurrently
 
