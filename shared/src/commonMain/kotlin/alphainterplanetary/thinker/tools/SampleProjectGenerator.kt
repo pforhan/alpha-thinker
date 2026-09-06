@@ -4,7 +4,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
-import kotlinx.datetime.Clock
+import alphainterplanetary.thinker.util.now
 import kotlinx.datetime.Instant
 import me.tatarka.inject.annotations.Inject
 
@@ -391,7 +391,7 @@ class SampleProjectGenerator @Inject constructor(
     answeredAt = answeredAt,
   )
 
-  private val now: Instant = Clock.System.now()
+  private val now: Instant = now()
 
   private fun daysAgo(days: Long, minutes: Long = 0): Instant {
     val millis = now.toEpochMilliseconds()

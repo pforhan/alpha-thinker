@@ -6,8 +6,8 @@ import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import kotlinx.datetime.Clock.System
 import me.tatarka.inject.annotations.Inject
 
 class ProjectRepository @Inject constructor(
@@ -16,7 +16,7 @@ class ProjectRepository @Inject constructor(
 ) {
 
   suspend fun createProject(synopsis: String, title: String? = null): Project {
-    val now = System.now()
+    val now = now()
     val projectId = randomUUID()
 
     val trimmedTitle = title.orEmpty().trim()
@@ -46,7 +46,7 @@ class ProjectRepository @Inject constructor(
 
     val updated = saved.copy(
       questions = questions,
-      updatedAt = System.now()
+      updatedAt = now()
     )
     return storage.saveProject(updated)
   }
@@ -74,7 +74,7 @@ class ProjectRepository @Inject constructor(
     mode: ProjectUpdateMode,
   ): Project? {
     val project = storage.getProject(id) ?: return null
-    val now = System.now()
+    val now = now()
 
     val updatedQuestions = when (mode) {
       ProjectUpdateMode.CLEAR -> project.questions.map { q ->
@@ -118,7 +118,7 @@ class ProjectRepository @Inject constructor(
       throw IllegalStateException("Cannot add a draft answer to a question that is already answered")
     }
 
-    val now = System.now()
+    val now = now()
 
     val newAnswer =
       Answer(id = 0, questionId = questionId, text = text, answeredAt = if (isDraft) null else now)
@@ -135,7 +135,7 @@ class ProjectRepository @Inject constructor(
 
     val updatedProject = project.copy(
       questions = updatedQuestions,
-      updatedAt = System.now()
+      updatedAt = now()
     )
 
     val answered = updatedProject.allActiveQuestionsAnswered
@@ -163,7 +163,7 @@ class ProjectRepository @Inject constructor(
     questionId: String,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
-    val now = System.now()
+    val now = now()
     val updatedQuestions = project.questions.map { q ->
       if (q.id == questionId) q.copy(ignoredAt = now) else q
     }
@@ -180,7 +180,7 @@ class ProjectRepository @Inject constructor(
     questionId: String,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
-    val now = System.now()
+    val now = now()
     val updatedQuestions = project.questions.map { q ->
       if (q.id == questionId) q.copy(ignoredAt = null) else q
     }
@@ -202,7 +202,7 @@ class ProjectRepository @Inject constructor(
     answerId: Long,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
-    val now = System.now()
+    val now = now()
     val updatedQuestions = project.questions.map { q ->
       if (q.id == questionId) {
         q.copy(answers = q.answers.map { a ->

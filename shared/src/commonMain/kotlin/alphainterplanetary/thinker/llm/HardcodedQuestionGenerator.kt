@@ -1,10 +1,9 @@
 package alphainterplanetary.thinker.llm
 
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import kotlinx.datetime.Clock.System
 import me.tatarka.inject.annotations.Inject
-import org.jetbrains.annotations.TestOnly
 
 class HardcodedQuestionGenerator @Inject constructor(
   private val initialCount: Int = 7,
@@ -14,7 +13,6 @@ class HardcodedQuestionGenerator @Inject constructor(
   override suspend fun recommendTitle(synopsis: String): String =
     generateTitleFromSynopsis(synopsis)
 
-  @TestOnly
   fun generateTitleFromSynopsisForTest(synopsis: String): String =
     generateTitleFromSynopsis(synopsis)
 
@@ -29,7 +27,7 @@ class HardcodedQuestionGenerator @Inject constructor(
     @Suppress("UNUSED_PARAMETER") synopsis: String,
     contextId: String,
   ): List<Question> {
-    val now = System.now()
+    val now = now()
     return questionPool
       .take(initialCount)
       .map { text ->
@@ -51,7 +49,7 @@ class HardcodedQuestionGenerator @Inject constructor(
     val remaining = questionPool.filter { it !in askedTexts }
     if (remaining.isEmpty()) return emptyList()
 
-    val now = System.now()
+    val now = now()
     return remaining
       .take(followUpCount)
       .map { text ->

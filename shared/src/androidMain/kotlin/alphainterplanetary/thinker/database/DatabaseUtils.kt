@@ -15,3 +15,7 @@ actual fun provideDatabaseBuilder(context: PlatformContext): RoomDatabase.Builde
     name = dbFile.absolutePath,
   )
 }
+
+actual fun provideStorage(context: PlatformContext): Storage {
+  return RoomStorage(getRoomDatabase(provideDatabaseBuilder(context)))
+}

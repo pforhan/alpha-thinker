@@ -17,3 +17,4 @@ rootProject.name = "alphathinker"
 
 include(":shared")
 include(":androidApp")
+include(":webApp")

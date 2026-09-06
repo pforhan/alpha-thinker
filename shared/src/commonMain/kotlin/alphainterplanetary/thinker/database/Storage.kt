@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.database
 
+import alphainterplanetary.thinker.di.PlatformContext
 import alphainterplanetary.thinker.model.Project
 
 interface Storage {
@@ -10,3 +11,5 @@ interface Storage {
   suspend fun deleteAllProjects()
   suspend fun saveQuestionOrder(projectId: String, order: List<String>)
 }
+
+expect fun provideStorage(context: PlatformContext): Storage

@@ -19,7 +19,15 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun NavGraph(
+actual fun NavApp(appComponent: AppComponent) {
+  NavGraph(
+    navController = rememberNavController(),
+    appComponent = appComponent,
+  )
+}
+
+@Composable
+private fun NavGraph(
   navController: NavHostController = rememberNavController(),
   appComponent: AppComponent,
 ) {

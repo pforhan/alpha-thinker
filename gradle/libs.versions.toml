@@ -6,7 +6,7 @@ composeMultiplatform = "1.10.3"
 composeMaterial3 = "1.10.0-alpha05"
 kotlinxSerialization = "1.8.1"
 kotlinxCoroutines = "1.10.2"
-navigationCompose = "2.7.7"
+navigationCompose = "2.9.0"
 coreKtx = "1.15.0"
 appcompat = "1.7.0"
 activityCompose = "1.9.3"
@@ -15,10 +15,11 @@ ksp = "2.3.2"
 materialIconsCore = "1.7.8"
 materialIconsExtended = "1.7.8"
 room = "2.7.0-alpha11"
-kotlinxDatetime = "0.6.1"
+kotlinxDatetime = "0.7.1"
 sqliteBundled = "2.5.0-alpha11"
 kotlinInjectVersion = "0.9.0"
 junit4 = "4.13.2"
+composeMaterialIcons = "1.7.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,8 +36,9 @@ compose-foundation = { group = "org.jetbrains.compose.foundation", name = "found
 compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "composeMaterial3" }
 compose-ui = { group = "org.jetbrains.compose.ui", name = "ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { group = "org.jetbrains.compose.components", name = "components-resources", version.ref = "composeMultiplatform" }
-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "materialIconsCore" }
-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "materialIconsExtended" }
+compose-html = { group = "org.jetbrains.compose.html", name = "html-core", version.ref = "composeMultiplatform" }
+compose-material-icons-core = { group = "org.jetbrains.compose.material", name = "material-icons-core", version.ref = "composeMaterialIcons" }
+compose-material-icons-extended = { group = "org.jetbrains.compose.material", name = "material-icons-extended", version.ref = "composeMaterialIcons" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
