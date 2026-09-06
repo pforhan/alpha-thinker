@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.testutil.FakeGenerator
-import alphainterplanetary.thinker.testutil.InMemoryStorage
+import alphainterplanetary.thinker.database.InMemoryStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import kotlinx.coroutines.test.runTest

@@ -1,11 +1,11 @@
 package alphainterplanetary.thinker.database
 
-import androidx.room.Embedded
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
-import androidx.room.Relation
+import androidx.room3.Embedded
+import androidx.room3.Entity
+import androidx.room3.ForeignKey
+import androidx.room3.Index
+import androidx.room3.PrimaryKey
+import androidx.room3.Relation
 
 @Entity(tableName = "projects")
 data class ProjectEntity(
@@ -59,8 +59,8 @@ data class AnswerEntity(
 data class ProjectWithQuestions(
   @Embedded val project: ProjectEntity,
   @Relation(
-    parentColumn = "id",
-    entityColumn = "projectId"
+    parentColumns = ["id"],
+    entityColumns = ["projectId"]
   )
   val questions: List<QuestionEntity>,
 )

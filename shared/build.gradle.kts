@@ -44,6 +44,9 @@ kotlin {
         }
       }
     }
+    compilerOptions {
+      freeCompilerArgs.addAll("-Xexpect-actual-classes")
+    }
     binaries.executable()
   }
 
@@ -58,6 +61,9 @@ kotlin {
           enabled = false
         }
       }
+    }
+    compilerOptions {
+      freeCompilerArgs.addAll("-Xexpect-actual-classes")
     }
     binaries.executable()
   }
@@ -77,11 +83,10 @@ kotlin {
       implementation(libs.kotlinx.serialization.json)
       implementation(libs.kotlinx.coroutines.core)
       implementation(libs.kotlin.inject)
+      implementation(libs.room.runtime)
     }
 
     androidMain.dependencies {
-      implementation(libs.room.runtime)
-      implementation(libs.room.ktx)
       implementation(libs.sqlite.bundled)
       implementation(libs.androidx.navigation.compose)
     }
@@ -97,7 +102,9 @@ dependencies {
   add("kspAndroid", libs.kotlin.inject.compiler)
   add("kspAndroid", libs.room.compiler)
   add("kspJs", libs.kotlin.inject.compiler)
+  add("kspJs", libs.room.compiler)
   add("kspWasmJs", libs.kotlin.inject.compiler)
+  add("kspWasmJs", libs.room.compiler)
 }
 
 tasks.named<KotlinJsTest>("wasmJsNodeTest") {

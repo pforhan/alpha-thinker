@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.tools
 
-import alphainterplanetary.thinker.testutil.InMemoryStorage
+import alphainterplanetary.thinker.database.InMemoryStorage
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

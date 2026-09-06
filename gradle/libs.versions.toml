@@ -12,8 +12,8 @@ appcompat = "1.7.0"
 activityCompose = "1.9.3"
 lifecycleRuntimeKtx = "2.8.7"
 ksp = "2.3.2"
-room = "2.7.0-alpha11"
-sqliteBundled = "2.5.0-alpha11"
+room = "3.0.2"
+sqlite = "2.7.0"
 kotlinInjectVersion = "0.9.0"
 junit4 = "4.13.2"
 composeMaterialIcons = "1.7.3"
@@ -35,10 +35,9 @@ compose-components-resources = { group = "org.jetbrains.compose.components", nam
 
 compose-material-icons-core = { group = "org.jetbrains.compose.material", name = "material-icons-core", version.ref = "composeMaterialIcons" }
 compose-material-icons-extended = { group = "org.jetbrains.compose.material", name = "material-icons-extended", version.ref = "composeMaterialIcons" }
-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqliteBundled" }
+room-runtime = { group = "androidx.room3", name = "room3-runtime", version.ref = "room" }
+room-compiler = { group = "androidx.room3", name = "room3-compiler", version.ref = "room" }
+sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqlite" }
 kotlin-inject = { module = "me.tatarka.inject:kotlin-inject-runtime-kmp", version.ref = "kotlinInjectVersion" }
 kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInjectVersion" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
