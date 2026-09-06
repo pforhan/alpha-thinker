@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Question
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 val defaultTestInstant: Instant = Instant.fromEpochMilliseconds(0)
 

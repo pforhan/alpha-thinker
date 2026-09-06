@@ -7,7 +7,7 @@ import alphainterplanetary.thinker.testutil.InMemoryStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.time.Clock
 import kotlin.test.assertEquals

@@ -76,7 +76,6 @@ kotlin {
       implementation(libs.compose.material.icons.extended)
       implementation(libs.kotlinx.serialization.json)
       implementation(libs.kotlinx.coroutines.core)
-      implementation(libs.kotlinx.datetime)
       implementation(libs.kotlin.inject)
     }
 

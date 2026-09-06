@@ -5,7 +5,7 @@ import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.now
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
 
 class SampleProjectGenerator @Inject constructor(

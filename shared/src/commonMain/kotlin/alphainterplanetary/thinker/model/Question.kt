@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 data class Question(
   val id: String,

@@ -4,7 +4,7 @@ import alphainterplanetary.thinker.testutil.answeredQuestion
 import alphainterplanetary.thinker.testutil.draftQuestion
 import alphainterplanetary.thinker.testutil.ignoredQuestion
 import alphainterplanetary.thinker.testutil.question
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.database
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
 
 class RoomStorage @Inject constructor(private val database: AppDatabase) : Storage {

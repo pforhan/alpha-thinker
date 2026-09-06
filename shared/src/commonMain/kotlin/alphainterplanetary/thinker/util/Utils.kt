@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.util
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 expect fun randomUUID(): String
 

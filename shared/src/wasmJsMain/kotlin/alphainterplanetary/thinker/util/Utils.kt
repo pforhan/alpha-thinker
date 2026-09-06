@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.util
 
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlin.time.Clock
 
 actual fun now(): Instant = Clock.System.now()

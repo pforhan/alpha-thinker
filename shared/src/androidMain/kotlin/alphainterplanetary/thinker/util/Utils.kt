@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.util
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import java.util.UUID
 import kotlin.time.Clock
 
