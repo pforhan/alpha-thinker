@@ -22,17 +22,28 @@ Android is the currently active platform. The shared module (`shared/build.gradl
 ```bash
 ./gradlew :androidApp:assembleDebug   # build the debug APK
 ./gradlew :androidApp:installDebug    # install the debug APK on a connected device or running emulator
-./gradlew :shared:allTests  # run tests for all targets (currently the JVM host-test run)
+./gradlew :shared:allTests  # run tests for all targets (Android host, JS, and wasmJS)
 ./gradlew :androidApp:lint            # run the Android linter
 ```
 
-### iOS, Web, and Desktop
+### Web
 
-The iOS, web, and desktop targets are not yet enabled in `shared/build.gradle.kts`. When a target is enabled, the shared module gains the corresponding KMP target and a dedicated app entry-point module (analogous to `androidApp`) is added for the platform:
+The web target is enabled: `shared/` exposes the `wasmJs` (and legacy `js(IR)`) targets, and the `webApp/` module is the web entry point. The shared UI renders with the Skia/Canvas backend via Compose for Web.
+
+```bash
+./gradlew :webApp:wasmJsBrowserDevelopmentRun   # start the dev server (http://localhost:8080)
+./gradlew :webApp:wasmJsBrowserDistribution     # build the production bundle
+./gradlew :webApp:wasmJsBrowserProductionRun    # serve the production bundle
+```
+
+The production bundle lands in `webApp/build/dist/wasmJs/productionExecutable/` — serve that directory with any static server. Browser tests run via `./gradlew :shared:wasmJsBrowserTest`; like the JS browser test, they require a Chromium binary, wired from the `CHROME_EXECUTABLE`/`CHROME_BIN` environment variable (the test disables itself when absent).
+
+### iOS and Desktop
+
+Not yet enabled. When iOS is enabled, the shared module gains the Kotlin/Native target and a dedicated app entry-point module (analogous to `androidApp`) is added for the platform:
 
 - **iOS**: Build and run through Xcode; Gradle provides the Kotlin/Native tasks, e.g. `./gradlew :shared:iosSimulatorArm64Test` for tests.
-- **Web**: `./gradlew :shared:wasmJsRun`.
-- **Desktop** (JVM): `./gradlew :shared:run`.
+- **Desktop** (JVM): build and run through the corresponding app entry-point module's JVM target.
 
 ### All Targets
 

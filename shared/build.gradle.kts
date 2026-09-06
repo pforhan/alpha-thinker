@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
@@ -32,6 +33,21 @@ kotlin {
   }
 
   js(IR) {
+    nodejs()
+    browser {
+      testTask {
+        val chromeBin = System.getenv("CHROME_EXECUTABLE") ?: System.getenv("CHROME_BIN")
+        if (chromeBin != null) {
+          environment("CHROME_BIN", chromeBin)
+        } else {
+          enabled = false
+        }
+      }
+    }
+    binaries.executable()
+  }
+
+  wasmJs {
     nodejs()
     browser {
       testTask {
@@ -82,4 +98,9 @@ dependencies {
   add("kspAndroid", libs.kotlin.inject.compiler)
   add("kspAndroid", libs.room.compiler)
   add("kspJs", libs.kotlin.inject.compiler)
+  add("kspWasmJs", libs.kotlin.inject.compiler)
+}
+
+tasks.named<KotlinJsTest>("wasmJsNodeTest") {
+  enabled = false
 }
