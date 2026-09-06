@@ -7,9 +7,9 @@ import alphainterplanetary.thinker.testutil.InMemoryStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.Clock.System
 import kotlinx.datetime.Instant
 import kotlin.test.Test
+import kotlin.time.Clock
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -19,7 +19,7 @@ import kotlin.test.fail
 
 class ProjectRepositoryTest {
 
-  private val now: Instant = System.now()
+  private val now: Instant = Clock.System.now()
 
   private suspend fun repo(
     storage: InMemoryStorage = InMemoryStorage(),

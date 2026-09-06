@@ -32,11 +32,25 @@ kotlin {
   }
 
   js(IR) {
-    browser()
+    nodejs()
+    browser {
+      testTask {
+        val chromeBin = System.getenv("CHROME_EXECUTABLE") ?: System.getenv("CHROME_BIN")
+        if (chromeBin != null) {
+          environment("CHROME_BIN", chromeBin)
+        } else {
+          enabled = false
+        }
+      }
+    }
     binaries.executable()
   }
 
   sourceSets {
+    all {
+      languageSettings.optIn("kotlin.time.ExperimentalTime")
+    }
+
     commonMain.dependencies {
       implementation(libs.compose.runtime)
       implementation(libs.compose.foundation)
