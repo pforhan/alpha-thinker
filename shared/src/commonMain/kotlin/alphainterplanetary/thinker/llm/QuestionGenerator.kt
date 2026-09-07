@@ -1,19 +1,20 @@
 package alphainterplanetary.thinker.llm
 
 import alphainterplanetary.thinker.model.Question
+import kotlin.coroutines.cancellation.CancellationException
 
 interface QuestionGenerator {
-  @Throws(AnalysisFailure::class)
+  @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun recommendTitle(synopsis: String): String
 
-  @Throws(AnalysisFailure::class)
+  @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun generateInitialQuestions(
     editableTitle: String,
     synopsis: String,
     contextId: String,
   ): List<Question>
 
-  @Throws(AnalysisFailure::class)
+  @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun generateFollowUpQuestions(
     synopsis: String,
     previousQuestions: List<Question>,

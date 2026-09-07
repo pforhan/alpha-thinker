@@ -34,7 +34,7 @@ class SampleProjectGeneratorTest {
     }
 
   @Test
-  fun `complete project mixes answered, ignored, draft and unanswered questions`() = runTest {
+  fun `complete project mixes answered - ignored - draft and unanswered questions`() = runTest {
     val storage = InMemoryStorage()
     val generator = SampleProjectGenerator(storage)
 

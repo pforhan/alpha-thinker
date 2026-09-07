@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 
 plugins {
@@ -75,6 +76,22 @@ kotlin {
     }
   }
 
+  val xcf = XCFramework("Shared")
+  listOf(
+    iosArm64(),
+    iosSimulatorArm64(),
+  ).forEach { iosTarget ->
+    iosTarget.binaries.framework {
+      baseName = "Shared"
+      isStatic = true
+      binaryOption("bundleId", "alphainterplanetary.thinker.Shared")
+      xcf.add(this)
+    }
+    iosTarget.compilerOptions {
+      freeCompilerArgs.addAll("-Xexpect-actual-classes")
+    }
+  }
+
   sourceSets {
     all {
       languageSettings.optIn("kotlin.time.ExperimentalTime")
@@ -117,6 +134,12 @@ kotlin {
       }
     }
 
+    val iosMain by creating {
+      dependencies {
+        implementation(libs.sqlite.bundled)
+      }
+    }
+
     commonTest.dependencies {
       implementation(kotlin("test"))
       implementation(libs.kotlinx.coroutines.test)
@@ -133,6 +156,10 @@ dependencies {
   add("kspWasmJs", libs.room.compiler)
   add("kspDesktop", libs.kotlin.inject.compiler)
   add("kspDesktop", libs.room.compiler)
+  add("kspIosArm64", libs.kotlin.inject.compiler)
+  add("kspIosArm64", libs.room.compiler)
+  add("kspIosSimulatorArm64", libs.kotlin.inject.compiler)
+  add("kspIosSimulatorArm64", libs.room.compiler)
 }
 
 tasks.named<KotlinJsTest>("wasmJsNodeTest") {

@@ -33,7 +33,7 @@ class ProjectTest {
   }
 
   @Test
-  fun `askLater on the first visible question rotates the deck, pulling in the next one`() {
+  fun `askLater on the first visible question rotates the deck - pulling in the next one`() {
     val p = project(question("a"), question("b"), question("c"), question("d"))
     assertEquals(listOf("a", "b", "c"), firstThree(p))
 

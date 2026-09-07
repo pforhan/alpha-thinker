@@ -77,12 +77,12 @@ class HardcodedQuestionGeneratorTest {
   }
 
   @Test
-  fun `recommendTitle handles multiple sentences, cuts at first`() {
+  fun `recommendTitle handles multiple sentences - cuts at first`() {
     assertEquals("First", title("First. Second. Third."))
   }
 
   @Test
-  fun `recommendTitle handles multiple newlines, cuts at first`() {
+  fun `recommendTitle handles multiple newlines - cuts at first`() {
     assertEquals("Line one", title("Line one\nLine two\nLine three"))
   }
 
