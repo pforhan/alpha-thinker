@@ -60,6 +60,9 @@ app.*.symbols
 # flutter Miscellaneous
 *.class
 *.lock
+# Kotlin/Gradle yarn lockfiles are tracked for reproducible web builds
+!kotlin-js-store/yarn.lock
+!kotlin-js-store/wasm/yarn.lock
 *.log
 *.pyc
 *.swp
