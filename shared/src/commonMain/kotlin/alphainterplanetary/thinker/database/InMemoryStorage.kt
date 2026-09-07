@@ -3,12 +3,11 @@ package alphainterplanetary.thinker.database
 import alphainterplanetary.thinker.model.Project
 
 /**
- * In-memory [Storage] used on web targets (and handy as a test double).
+ * In-memory [Storage] implementation (e.g. as a test double).
  *
- * Room/SQLite has no runnable storage on js/wasmJs in this build — the shared Room layer
- * compiles for every target, but web keeps data in process memory only. This means data does
- * not survive a page reload. See IMPLEMENTATION-PLAN.md Phase 2.6 for the follow-up to back
- * web storage with `sqlite-web` (`WebWorkerSQLiteDriver`) so it persists via OPFS.
+ * The web targets (`js`/`wasmJs`) now back [Storage] with Room/SQLite via `sqlite-web` and
+ * `WebWorkerSQLiteDriver`, persisting to OPFS so data survives page reloads (see
+ * IMPLEMENTATION-PLAN.md line 89).
  */
 class InMemoryStorage(
   val projects: MutableMap<String, Project> = mutableMapOf(),

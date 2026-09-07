@@ -1,17 +1,28 @@
 package alphainterplanetary.thinker.database
 
 import alphainterplanetary.thinker.di.PlatformContext
+import androidx.room3.Room
 import androidx.room3.RoomDatabase
+import androidx.sqlite.driver.web.WebWorkerSQLiteDriver
+import org.w3c.dom.Worker
 
-/**
- * Room/SQLite is not wired up on the web target yet — the shared Room layer still compiles for
- * wasmJs, but storage stays [InMemoryStorage] (data does not survive a page reload). See
- * IMPLEMENTATION-PLAN.md Phase 2.6 for the `sqlite-web` / `WebWorkerSQLiteDriver` follow-up.
- */
+private const val DATABASE_NAME = "alphathinker.db"
+
 actual fun provideDatabaseBuilder(context: PlatformContext): RoomDatabase.Builder<AppDatabase> {
-  error("Room persistence is not wired up on the web target; storage is InMemoryStorage here.")
+  return Room.databaseBuilder<AppDatabase>(
+    name = DATABASE_NAME,
+    factory = { AppDatabaseConstructor.initialize() }
+  ).setDriver(WebWorkerSQLiteDriver(createSQLiteWorker()))
 }
 
-private var storageInstance: Storage = InMemoryStorage()
+private var storageInstance: Storage? = null
 
-actual fun provideStorage(context: PlatformContext): Storage = storageInstance
+actual fun provideStorage(context: PlatformContext): Storage {
+  return storageInstance ?: RoomStorage(getRoomDatabase(provideDatabaseBuilder(context))).also {
+    storageInstance = it
+  }
+}
+
+@OptIn(ExperimentalWasmJsInterop::class)
+private fun createSQLiteWorker(): Worker =
+  js("""new Worker(new URL("sqlite-wasm-worker/worker.js", import.meta.url))""")

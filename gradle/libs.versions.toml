@@ -15,6 +15,7 @@ ksp = "2.3.2"
 room = "3.0.2"
 sqlite = "2.7.0"
 kotlinInjectVersion = "0.9.0"
+kotlinxBrowser = "0.3"
 junit4 = "4.13.2"
 composeMaterialIcons = "1.7.3"
 
@@ -38,6 +39,8 @@ compose-material-icons-extended = { group = "org.jetbrains.compose.material", na
 room-runtime = { group = "androidx.room3", name = "room3-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room3", name = "room3-compiler", version.ref = "room" }
 sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqlite" }
+sqlite-web = { group = "androidx.sqlite", name = "sqlite-web", version.ref = "sqlite" }
+kotlinx-browser = { group = "org.jetbrains.kotlinx", name = "kotlinx-browser", version.ref = "kotlinxBrowser" }
 kotlin-inject = { module = "me.tatarka.inject:kotlin-inject-runtime-kmp", version.ref = "kotlinInjectVersion" }
 kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInjectVersion" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
