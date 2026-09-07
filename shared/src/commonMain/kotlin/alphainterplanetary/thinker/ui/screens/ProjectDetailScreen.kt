@@ -13,6 +13,7 @@ import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
+import alphainterplanetary.thinker.util.normalizeWhitespace
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +86,13 @@ fun ProjectDetailScreen(
         is ProjectDetailUiState.Error -> "Error"
       }
       TopAppBar(
-        title = { Text(title) },
+        title = {
+          Text(
+            text = title.normalizeWhitespace(),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+          )
+        },
         navigationIcon = {
           IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -269,7 +277,11 @@ private fun ProjectSynopsis(synopsis: String) {
       .padding(16.dp),
   ) {
     Text("Synopsis:", style = MaterialTheme.typography.titleSmall)
-    Text(synopsis)
+    Text(
+      text = synopsis.normalizeWhitespace(),
+      maxLines = 5,
+      overflow = TextOverflow.Ellipsis,
+    )
   }
 }
 
