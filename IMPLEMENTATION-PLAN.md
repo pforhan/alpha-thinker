@@ -92,29 +92,30 @@ This document tracks the specific engineering tasks required to move from design
 
 ## Phase 2.7: UI cleanup
 - [x] Ignored filter disappeared on portrait when we added drafts filter -- perhaps an alternate UI when they don't have enough space?
-- [ ] ProjectList: truncate title to one line, replace all whitespace with single spaces (may want to extract an extension fun for this, see also QuestionItem.kt:70)
-- [ ] ProjectList: remove refresh button. The list already auto-reloads when it re-enters composition (navigation back from detail), and the Error state has its own Retry button — so the Refresh action looks redundant and can likely be removed.
-- [ ] **ProjectList: delete a project** with a confirm dialog ("This action cannot be undone."). Add a delete action
-- [ ] **ProjectList: edit a project** Add an edit action
-- [ ] ProjectList: swipe either way to delete a project (using above confirm dialog)
-- [ ] ProjectDetail: need to truncate title to two lines, synopsis to 5 lines, or make it scrollable.  Replace whitespace with a single space.  Need to come up with a way to view the full text of both.
+- [x] ProjectList: truncate title to one line, replace all whitespace with single spaces (may want to extract an extension fun for this, see also QuestionItem.kt:70)
+- [x] ProjectList: remove refresh button. The list already auto-reloads when it re-enters composition (navigation back from detail), and the Error state has its own Retry button — so the Refresh action looks redundant and can likely be removed.
+- [x] **ProjectList: delete a project** with a confirm dialog ("This action cannot be undone."). Add a delete action
+- [x] ProjectList: swipe either way to delete a project (using above confirm dialog)
 - [x] ProjectDetail: question filter pills are not aligned with the Questions header.  For some screens we may need them to take less horizontal space as well.
 - [x] ProjectDetail: new Drafts view mode in the question list (filter `currentAnswer?.isDraft`, default sort latest edits first).
-- [ ] **ProjectDetail: swipe-to-ignore / swipe-to-ask-later on question rows**, mimicking the Flutter `Dismissible` behavior in `frontend/lib/widgets/question_item.dart` (via `SwipeableItem`). Per filter: *unanswered* — swipe right = Ask Later (blue background), swipe left = Ignore (red); *answered* — swipe right = Ignore (grey), swipe left = Delete Answer (red); *ignored* — swipe either way = Unignore (green). Also add the background rows with icon+label shown under the card while swiping.
-- [ ] **ProjectDetail: synopsis edit affordance.** the synopsis body has no edit affordance (Flutter has an edit IconButton beside "Synopsis:" opening the edit dialog; Compose only reaches it via the top bar).
+- [x] projectdetail: unignore icon — now uses the correct Visibility icon (matches Flutter).
+- [x] **EditProjectDialog polish.** Refine the Compose edit dialog to match Flutter — 30-char title cap, multiline synopsis autofocus, and optional title reveal for new projects.
+- [ ] ProjectDetail: need to truncate title to two lines, synopsis to 5 lines, or make it scrollable.  Replace whitespace with a single space.  Need to come up with a way to view the full text of both -- it's okay if you have to view it in edit project details dialog.
 - [ ] **ProjectDetail: per-filter empty message.** Flutter shows "No {filter} questions." when the selected filter has no results; Compose renders an empty list instead.
 - [ ] **ProjectDetail: question-list transition.** Flutter wraps the question list in a 300ms `AnimatedSwitcher` keyed on filter + question order; Compose has no cross-fade on filter/reorder changes.
-- [x] **EditProjectDialog polish.** Refine the Compose edit dialog to match Flutter — 30-char title cap, multiline synopsis autofocus, and optional title reveal for new projects (the create flow itself is in Phase 2.5).
-- [x] projectdetail: unignore icon — now uses the correct Visibility icon (matches Flutter).
-- [ ] ProjectDetail: figure out how to dismiss question rows programmatically, will probably require a custom impl.  It should look and behave like dismissable but allow button taps to trigger it.
+- [ ] **ProjectDetail: synopsis edit affordance.** the synopsis body has no edit affordance (Flutter has an edit IconButton beside "Synopsis:" opening the edit dialog; Compose only reaches it via the top bar).
+- [ ] **ProjectDetail: swipe-to-ignore / swipe-to-ask-later on question rows**, mimicking the Flutter `Dismissible` behavior in `frontend/lib/widgets/question_item.dart` (via `SwipeableItem`). Per filter: *unanswered* — swipe right = Ask Later (blue background), swipe left = Ignore (red); *answered* — swipe right = Ignore (grey), swipe left = Delete Answer (red); *ignored* — swipe either way = Unignore (green). Also add the background rows with icon+label shown under the card while swiping.  Use what we learned on ProjectList's swipables -- rounded corners, icon near the edge, text of action, etc.
+- [ ] ProjectDetail: figure out how to dismiss question rows programmatically.  It should look and behave like dismissable but allow button taps to trigger it.
 - [ ] **AnswerDialog: hide "Ask Later" for completed questions.** Flutter only shows "Ask Later" when the question has no complete answer (`current == null || !current.isComplete`); Compose always shows it, and triggering it on a completed question throws `IllegalStateException` ("Cannot add a draft answer to a question that is already answered") and drops the whole detail screen into the full Error state.
 - [ ] AnswerDialog: Rework saving answers Let's make the answer dialog have a close button (or tap off the dialog) and a completed toggle or checkbox that moves things from draft to answered.  Clean up all other button placements
 - [ ] AnswerDialog: consider revising how answer drafts work, or, if not, formalizing the behavior.
 - [ ] AnswerDialog: probably should be able to unignore a question from the dialog popup, or force unignore before modifying the answer field.
 - [ ] AnswerDialog: add an affordance to clear the text area (either an in-component X or a delete answer button)
-- [ ] AnswerDialog: long questions should be limited to 4 lines and be scrollable if longer)
-- [ ] if a dialog close action would cause new/dirty data to be lost, show a prompt.  Example: type in changes to Edit Project then tap off the dialog area to dismiss (or tap cancel).  Same with answer dialog
-- [ ] Clean up a lot of the hardcoded font size, color, etc options by using a proper theme with named styles
+- [ ] AnswerDialog: long questions should be limited to 4 lines and be scrollable if longer.  See if any of our previous long-text-in-dialog findings help here.
+- [ ] anywhere: if a dialog close action would cause new/dirty data to be lost, show a prompt.  Example: type in changes to Edit Project then tap off the dialog area to dismiss (or tap cancel).  Same with answer dialog
+- [ ] anywhere: Clean up a lot of the hardcoded font size, color, etc options by using a proper theme with named styles
+- [ ] ProjectList: icons are too much repeated visual noise and take up a lot of space. Explore options for teaching the user naturally.
+- [ ] ProjectList: the swipe action shows fully before the delete confirmation dialog shows up. see if we can do a swipe into a confirm button so it feels more natural?
 
 
 ## Phase 2.8: Rounds & Stages UI (pre-LLM)

@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.util.normalizeWhitespace
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -67,7 +68,7 @@ fun QuestionItem(
           }
         }
         Text(
-          text = question.currentAnswer!!.text.replace(Regex("\\s+"), " ").trim(),
+          text = question.currentAnswer!!.text.normalizeWhitespace(),
           maxLines = 2,
           overflow = TextOverflow.Ellipsis,
           style = MaterialTheme.typography.bodyMedium,
