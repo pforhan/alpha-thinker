@@ -68,6 +68,13 @@ kotlin {
     binaries.executable()
   }
 
+  jvm("desktop") {
+    compilerOptions {
+      jvmTarget.set(JvmTarget.JVM_21)
+      freeCompilerArgs.addAll("-Xexpect-actual-classes")
+    }
+  }
+
   sourceSets {
     all {
       languageSettings.optIn("kotlin.time.ExperimentalTime")
@@ -104,6 +111,12 @@ kotlin {
       implementation(npm("@sqlite.org/sqlite-wasm", "3.50.4-build1"))
     }
 
+    val desktopMain by getting {
+      dependencies {
+        implementation(libs.sqlite.bundled)
+      }
+    }
+
     commonTest.dependencies {
       implementation(kotlin("test"))
       implementation(libs.kotlinx.coroutines.test)
@@ -118,6 +131,8 @@ dependencies {
   add("kspJs", libs.room.compiler)
   add("kspWasmJs", libs.kotlin.inject.compiler)
   add("kspWasmJs", libs.room.compiler)
+  add("kspDesktop", libs.kotlin.inject.compiler)
+  add("kspDesktop", libs.room.compiler)
 }
 
 tasks.named<KotlinJsTest>("wasmJsNodeTest") {
