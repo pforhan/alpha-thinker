@@ -53,6 +53,7 @@ fun QuestionViewModeBar(
             selected = selectedView == mode,
             onClick = { onViewSelected(mode) },
             label = { Text(mode.displayName) },
+            elevation = null,
           )
         }
       }
@@ -105,6 +106,7 @@ private fun WideViewModeBar(
           selected = selectedView == mode,
           onClick = { onViewSelected(mode) },
           label = { Text(mode.displayName) },
+          elevation = null,
         )
       }
     }
@@ -133,6 +135,7 @@ private fun CompactViewModeBar(
         selected = true,
         onClick = { expanded = true },
         label = { Text(selectedView.displayName) },
+        elevation = null,
         trailingIcon = {
           Icon(
             if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
