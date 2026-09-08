@@ -121,7 +121,13 @@ class ProjectRepository @Inject constructor(
     val now = now()
 
     val newAnswer =
-      Answer(id = 0, questionId = questionId, text = text, answeredAt = if (isDraft) null else now)
+      Answer(
+        id = 0,
+        questionId = questionId,
+        text = text,
+        answeredAt = if (isDraft) null else now,
+        createdAt = now,
+      )
 
     val updatedQuestions = project.questions.map { q ->
       if (q.id == questionId) {

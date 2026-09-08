@@ -20,6 +20,9 @@ data class Question(
     get() = ignoredAt != null
 
   val currentAnswer: Answer?
-    get() = answers.lastOrNull()?.takeIf { it.deletedAt == null }
+    get() = answers
+      .filterNot { it.deletedAt != null }
+      .sortedWith(compareBy<Answer> { it.createdAt }.thenBy { it.id })
+      .lastOrNull()
 }
 

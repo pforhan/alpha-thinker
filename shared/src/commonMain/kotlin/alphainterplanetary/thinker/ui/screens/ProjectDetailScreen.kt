@@ -11,6 +11,7 @@ import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
+import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import alphainterplanetary.thinker.util.normalizeWhitespace
@@ -45,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.LaunchedEffect
@@ -139,6 +141,12 @@ fun ProjectDetailScreen(
           onIgnore = { viewModel.ignoreQuestion(projectId, it) },
           onUnignore = { viewModel.unignoreQuestion(projectId, it) },
           onAnswerClick = { selectedQuestion = it },
+          onDeleteAnswer = {
+            val answerId = it.currentAnswer?.id
+            if (answerId != null) {
+              viewModel.deleteAnswer(projectId, it.id, answerId)
+            }
+          },
           onGenerateMore = { viewModel.generateMoreQuestions(projectId) },
           modifier = Modifier
             .fillMaxSize()
@@ -205,7 +213,7 @@ fun ProjectDetailScreen(
   }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun ProjectDetailContent(
   project: Project,
@@ -216,6 +224,7 @@ private fun ProjectDetailContent(
   onIgnore: (String) -> Unit,
   onUnignore: (String) -> Unit,
   onAnswerClick: (Question) -> Unit,
+  onDeleteAnswer: (Question) -> Unit,
   onGenerateMore: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -262,15 +271,37 @@ private fun ProjectDetailContent(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            items(filteredQuestions) { question ->
-              QuestionItem(
-                question = question,
-                view = view,
-                onAnswerClick = { onAnswerClick(question) },
-                onAskLater = { onAskLater(question.id) },
-                onIgnore = { onIgnore(question.id) },
-                onUnignore = { onUnignore(question.id) }
-              )
+            items(filteredQuestions, key = { it.id }) { question ->
+              SwipeableCard(
+                state = rememberSwipeToDismissBoxState(),
+                startAction = view.startAction,
+                endAction = view.endAction,
+                onSwipeStart = {
+                  when (view) {
+                    QuestionViewMode.Unanswered -> onAskLater(question.id)
+                    QuestionViewMode.Answered,
+                    QuestionViewMode.Draft -> onIgnore(question.id)
+                    QuestionViewMode.Ignored -> onUnignore(question.id)
+                  }
+                },
+                onSwipeEnd = {
+                  when (view) {
+                    QuestionViewMode.Unanswered -> onIgnore(question.id)
+                    QuestionViewMode.Answered,
+                    QuestionViewMode.Draft -> onDeleteAnswer(question)
+                    QuestionViewMode.Ignored -> onUnignore(question.id)
+                  }
+                },
+              ) {
+                QuestionItem(
+                  question = question,
+                  view = view,
+                  onAnswerClick = { onAnswerClick(question) },
+                  onAskLater = { onAskLater(question.id) },
+                  onIgnore = { onIgnore(question.id) },
+                  onUnignore = { onUnignore(question.id) }
+                )
+              }
             }
             if (showShuffle) {
               item {

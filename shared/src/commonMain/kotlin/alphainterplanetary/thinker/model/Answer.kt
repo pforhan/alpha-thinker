@@ -7,6 +7,7 @@ data class Answer(
   val questionId: String,
   val text: String,
   val answeredAt: Instant?,
+  val createdAt: Instant,
   val modifiedAt: Instant? = null,
   val deletedAt: Instant? = null,
 ) {

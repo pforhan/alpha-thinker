@@ -4,10 +4,11 @@ import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
+import alphainterplanetary.thinker.ui.components.SwipeAction
+import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListViewModel
 import alphainterplanetary.thinker.util.normalizeWhitespace
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,16 +30,13 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,7 +51,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -70,6 +67,7 @@ fun ProjectListScreen(
 ) {
   var showCreateDialog by remember { mutableStateOf(false) }
   var projectToDelete by remember { mutableStateOf<Project?>(null) }
+  var pendingDeletionId by remember { mutableStateOf<String?>(null) }
 
   val repository = remember {
     ThinkerRepository(appComponent.projectRepository, appComponent.sampleProjectGenerator)
@@ -117,10 +115,13 @@ fun ProjectListScreen(
         is ProjectListUiState.Success -> {
           ProjectListSuccess(
             projects = ui.projects,
-            pendingDeletionId = projectToDelete?.id,
+            pendingDeletionId = pendingDeletionId,
             onProjectClick = onProjectClick,
             onCreateClick = { showCreateDialog = true },
-            onDeleteProject = { projectToDelete = it },
+            onDeleteProject = {
+              projectToDelete = it
+              pendingDeletionId = it.id
+            },
           )
         }
 
@@ -149,7 +150,10 @@ fun ProjectListScreen(
   projectToDelete?.let { project ->
     ConfirmDeleteProjectDialog(
       project = project,
-      onDismiss = { projectToDelete = null },
+      onDismiss = {
+        projectToDelete = null
+        pendingDeletionId = null
+      },
       onConfirm = {
         projectToDelete = null
         viewModel.deleteProject(project.id)
@@ -183,6 +187,7 @@ private fun ProjectListEmpty(onCreateClick: () -> Unit) {
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProjectListItem(
   project: Project,
@@ -198,55 +203,13 @@ private fun ProjectListItem(
     }
   }
 
-  SwipeToDismissBox(
+  SwipeableCard(
     state = dismissState,
-    onDismiss = { onDelete() },
-    backgroundContent = {
-      val alignment = when (dismissState.dismissDirection) {
-        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-        SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-        SwipeToDismissBoxValue.Settled -> Alignment.Center
-      }
-      Box(
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(horizontal = 16.dp)
-          .clip(CardDefaults.shape)
-          .background(DeleteBackgroundColor),
-        contentAlignment = alignment,
-      ) {
-Row(
-        modifier = Modifier.padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-      ) {
-        val iconAtEdge = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
-        if (iconAtEdge) {
-          Text(
-            "Delete",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-          )
-          Icon(
-            Icons.Default.Delete,
-            contentDescription = null,
-            tint = Color.White,
-          )
-        } else {
-          Icon(
-            Icons.Default.Delete,
-            contentDescription = null,
-            tint = Color.White,
-          )
-          Text(
-            "Delete",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-          )
-        }
-      }
-      }
-    },
+    startAction = SwipeAction("Delete", Icons.Default.Delete, DeleteBackgroundColor),
+    endAction = SwipeAction("Delete", Icons.Default.Delete, DeleteBackgroundColor),
+    onSwipeStart = onDelete,
+    onSwipeEnd = onDelete,
+    settleAfterDismiss = false,
   ) {
     Card(
       modifier = Modifier

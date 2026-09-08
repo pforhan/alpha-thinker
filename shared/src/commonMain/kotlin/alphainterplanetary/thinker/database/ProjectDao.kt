@@ -63,7 +63,7 @@ interface AnswerDao {
   @Upsert
   suspend fun upsertAnswer(answer: AnswerEntity): Long
 
-  @Query("SELECT * FROM answers WHERE questionId = :questionId ORDER BY answeredAt DESC")
+  @Query("SELECT * FROM answers WHERE questionId = :questionId ORDER BY createdAt ASC, id ASC")
   suspend fun getAnswersForQuestion(questionId: String): List<AnswerEntity>
 
   @Delete

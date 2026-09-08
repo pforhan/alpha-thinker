@@ -81,9 +81,11 @@ private fun Question.toEntity(projectId: String, index: Int) = QuestionEntity(
 )
 
 private fun Answer.toEntity() = AnswerEntity(
+  id = id,
   questionId = questionId,
   text = text,
   answeredAt = answeredAt?.toEpochMilliseconds(),
+  createdAt = createdAt.toEpochMilliseconds(),
   modifiedAt = modifiedAt?.toEpochMilliseconds(),
   deletedAt = deletedAt?.toEpochMilliseconds()
 )
@@ -116,6 +118,7 @@ private fun AnswerEntity.toDomainModel() = Answer(
   questionId = questionId,
   text = text,
   answeredAt = answeredAt?.let { Instant.fromEpochMilliseconds(it) },
+  createdAt = Instant.fromEpochMilliseconds(createdAt),
   modifiedAt = modifiedAt?.let { Instant.fromEpochMilliseconds(it) },
   deletedAt = deletedAt?.let { Instant.fromEpochMilliseconds(it) }
 )

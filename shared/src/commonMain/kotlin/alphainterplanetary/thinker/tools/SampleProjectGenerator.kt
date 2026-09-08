@@ -262,6 +262,7 @@ class SampleProjectGenerator @Inject constructor(
                 "a phone. I need to prototype it early with real touch input before building " +
                 "the level editor around it.",
               answeredAt = null,
+              createdAt = daysAgo(3),
             ),
           ),
         ),
@@ -317,6 +318,7 @@ class SampleProjectGenerator @Inject constructor(
               questionId = "stress-q4",
               text = lipsum(2),
               answeredAt = null,
+              createdAt = daysAgo(2),
             ),
           ),
         ),
@@ -385,10 +387,12 @@ class SampleProjectGenerator @Inject constructor(
     questionId: String,
     text: String,
     answeredAt: Instant,
+    createdAt: Instant = answeredAt,
   ) = Answer(
     questionId = questionId,
     text = text,
     answeredAt = answeredAt,
+    createdAt = createdAt,
   )
 
   private val now: Instant = now()

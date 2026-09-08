@@ -34,11 +34,13 @@ fun answer(
   text: String,
   answeredAt: Instant? = defaultTestInstant,
   id: Long = 0,
+  createdAt: Instant = defaultTestInstant,
   deletedAt: Instant? = null,
 ): Answer = Answer(
   id = id,
   questionId = questionId,
   text = text,
   answeredAt = answeredAt,
+  createdAt = createdAt,
   deletedAt = deletedAt,
 )
