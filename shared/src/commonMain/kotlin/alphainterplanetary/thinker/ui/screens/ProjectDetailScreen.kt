@@ -55,6 +55,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -197,6 +205,7 @@ fun ProjectDetailScreen(
   }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun ProjectDetailContent(
   project: Project,
@@ -210,16 +219,6 @@ private fun ProjectDetailContent(
   onGenerateMore: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val filteredQuestions = remember(project, selectedView) {
-    val all = selectedView.apply(project.questions)
-    if (selectedView == QuestionViewMode.Unanswered) all.take(3) else all
-  }
-
-  val showShuffle = remember(project, selectedView, filteredQuestions) {
-    selectedView == QuestionViewMode.Unanswered &&
-      project.unansweredQuestions.size > 3
-  }
-
   Column(modifier = modifier) {
     ProjectSynopsis(synopsis = project.synopsis)
 
@@ -230,33 +229,53 @@ private fun ProjectDetailContent(
       onViewSelected = onViewSelected,
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
-      if (filteredQuestions.isEmpty()) {
-        QuestionEmptyState(
-          title = selectedView.emptyMessage,
-          recommendedViews = selectedView.recommendedViews(project.questions),
-          onViewSelected = onViewSelected,
-          onGenerateMore = if (selectedView == QuestionViewMode.Unanswered) onGenerateMore else null,
-          modifier = Modifier.fillMaxSize(),
-        )
-      } else {
-        LazyColumn(
-          modifier = Modifier.fillMaxSize(),
-          verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          items(filteredQuestions) { question ->
-            QuestionItem(
-              question = question,
-              view = selectedView,
-              onAnswerClick = { onAnswerClick(question) },
-              onAskLater = { onAskLater(question.id) },
-              onIgnore = { onIgnore(question.id) },
-              onUnignore = { onUnignore(question.id) }
-            )
-          }
-          if (showShuffle) {
-            item {
-              ShuffleRow(onClick = onShuffle)
+    AnimatedContent(
+      targetState = selectedView,
+      transitionSpec = {
+        fadeIn(tween(300)) + slideInVertically(tween(300)) { it / 4 } togetherWith
+          fadeOut(tween(200))
+      },
+      contentKey = { it },
+      label = "FilterContent",
+    ) { view ->
+      val filteredQuestions = remember(project, view) {
+        val all = view.apply(project.questions)
+        if (view == QuestionViewMode.Unanswered) all.take(3) else all
+      }
+
+      val showShuffle = remember(project, view, filteredQuestions) {
+        view == QuestionViewMode.Unanswered &&
+          project.unansweredQuestions.size > 3
+      }
+
+      Box(modifier = Modifier.fillMaxSize()) {
+        if (filteredQuestions.isEmpty()) {
+          QuestionEmptyState(
+            title = view.emptyMessage,
+            recommendedViews = view.recommendedViews(project.questions),
+            onViewSelected = onViewSelected,
+            onGenerateMore = if (view == QuestionViewMode.Unanswered) onGenerateMore else null,
+            modifier = Modifier.fillMaxSize(),
+          )
+        } else {
+          LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            items(filteredQuestions) { question ->
+              QuestionItem(
+                question = question,
+                view = view,
+                onAnswerClick = { onAnswerClick(question) },
+                onAskLater = { onAskLater(question.id) },
+                onIgnore = { onIgnore(question.id) },
+                onUnignore = { onUnignore(question.id) }
+              )
+            }
+            if (showShuffle) {
+              item {
+                ShuffleRow(onClick = onShuffle)
+              }
             }
           }
         }
