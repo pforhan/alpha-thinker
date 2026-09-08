@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,8 +43,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -128,6 +131,7 @@ fun ProjectDetailScreen(
           onIgnore = { viewModel.ignoreQuestion(projectId, it) },
           onUnignore = { viewModel.unignoreQuestion(projectId, it) },
           onAnswerClick = { selectedQuestion = it },
+          onGenerateMore = { viewModel.generateMoreQuestions(projectId) },
           modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
@@ -203,6 +207,7 @@ private fun ProjectDetailContent(
   onIgnore: (String) -> Unit,
   onUnignore: (String) -> Unit,
   onAnswerClick: (Question) -> Unit,
+  onGenerateMore: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val filteredQuestions = remember(project, selectedView) {
@@ -226,23 +231,92 @@ private fun ProjectDetailContent(
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-      LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        items(filteredQuestions) { question ->
-          QuestionItem(
-            question = question,
-            view = selectedView,
-            onAnswerClick = { onAnswerClick(question) },
-            onAskLater = { onAskLater(question.id) },
-            onIgnore = { onIgnore(question.id) },
-            onUnignore = { onUnignore(question.id) }
-          )
+      if (filteredQuestions.isEmpty()) {
+        QuestionEmptyState(
+          title = selectedView.emptyMessage,
+          recommendedViews = selectedView.recommendedViews(project.questions),
+          onViewSelected = onViewSelected,
+          onGenerateMore = if (selectedView == QuestionViewMode.Unanswered) onGenerateMore else null,
+          modifier = Modifier.fillMaxSize(),
+        )
+      } else {
+        LazyColumn(
+          modifier = Modifier.fillMaxSize(),
+          verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          items(filteredQuestions) { question ->
+            QuestionItem(
+              question = question,
+              view = selectedView,
+              onAnswerClick = { onAnswerClick(question) },
+              onAskLater = { onAskLater(question.id) },
+              onIgnore = { onIgnore(question.id) },
+              onUnignore = { onUnignore(question.id) }
+            )
+          }
+          if (showShuffle) {
+            item {
+              ShuffleRow(onClick = onShuffle)
+            }
+          }
         }
-        if (showShuffle) {
-          item {
-            ShuffleRow(onClick = onShuffle)
+      }
+    }
+  }
+}
+
+@Composable
+private fun QuestionEmptyState(
+  title: String,
+  recommendedViews: List<QuestionViewMode>,
+  onViewSelected: (QuestionViewMode) -> Unit,
+  onGenerateMore: (() -> Unit)?,
+  modifier: Modifier = Modifier,
+) {
+  Column(
+    modifier = modifier.padding(24.dp),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    Text(
+      text = title,
+      textAlign = TextAlign.Center,
+      style = MaterialTheme.typography.bodyLarge,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (onGenerateMore != null) {
+      Spacer(modifier = Modifier.height(22.dp))
+      Button(onClick = onGenerateMore) {
+        Text("Get more questions")
+      }
+    }
+    if (recommendedViews.isNotEmpty()) {
+      Spacer(modifier = Modifier.height(12.dp))
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+      ) {
+        Text(
+          text = "You have questions in:",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        recommendedViews.forEachIndexed { index, view ->
+          if (index > 0) {
+            Text(
+              text = "•",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+          TextButton(
+            onClick = { onViewSelected(view) },
+            contentPadding = PaddingValues(horizontal = 8.dp),
+          ) {
+            Text(
+              text = view.displayName,
+              style = MaterialTheme.typography.bodySmall,
+            )
           }
         }
       }

@@ -2,11 +2,11 @@ package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Question
 
-enum class QuestionViewMode(val displayName: String) {
-  Unanswered("Unanswered"),
-  Answered("Answered"),
-  Draft("Drafts"),
-  Ignored("Ignored");
+enum class QuestionViewMode(val displayName: String, val emptyMessage: String) {
+  Unanswered("Unanswered", "No unanswered questions."),
+  Answered("Answered", "No answered questions."),
+  Draft("Drafts", "No drafts."),
+  Ignored("Ignored", "No ignored questions.");
 
   fun apply(questions: List<Question>): List<Question> {
     return when (this) {
@@ -23,6 +23,12 @@ enum class QuestionViewMode(val displayName: String) {
         .filter { it.isIgnored }
         .sortedWith(ignoredDateComparator)
     }
+  }
+
+  fun recommendedViews(questions: List<Question>): List<QuestionViewMode> {
+    return entries
+      .filter { it != this && it.apply(questions).isNotEmpty() }
+      .sortedBy { if (it == Unanswered) 0 else 1 }
   }
 
   companion object {

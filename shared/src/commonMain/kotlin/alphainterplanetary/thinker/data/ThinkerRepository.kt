@@ -56,6 +56,17 @@ class ThinkerRepository(
     }
   }
 
+  fun generateMoreQuestions(projectId: String, onResult: (Result<Unit>) -> Unit) {
+    CoroutineScope(Dispatchers.Default).launch {
+      try {
+        repository.generateMoreQuestions(projectId)
+        onResult(Result.success(Unit))
+      } catch (e: Exception) {
+        onResult(Result.failure(e))
+      }
+    }
+  }
+
   fun updateAnswer(
     projectId: String,
     questionId: String,

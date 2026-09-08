@@ -48,6 +48,18 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
     persistOrder(current.rotateToEnd(unanswered.take(3).map { it.id }))
   }
 
+  fun generateMoreQuestions(projectId: String) {
+    repository.generateMoreQuestions(projectId) { result ->
+      result.onSuccess {
+        loadProject(projectId)
+      }.onFailure { e ->
+        _uiState.value = ProjectDetailUiState.Error(
+          "Failed to generate more questions: ${e.message ?: "Unknown error"}"
+        )
+      }
+    }
+  }
+
   private fun persistOrder(reordered: Project) {
     _uiState.value = ProjectDetailUiState.Success(reordered)
     repository.saveQuestionOrder(reordered.id, reordered.questionOrderIds) { }

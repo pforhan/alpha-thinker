@@ -158,6 +158,23 @@ class ProjectRepository @Inject constructor(
     return storage.saveProject(finalProject)
   }
 
+  suspend fun generateMoreQuestions(projectId: String): Project? {
+    val project = storage.getProject(projectId) ?: return null
+    val contextId = randomUUID()
+    val newQs = generator.generateFollowUpQuestions(
+      synopsis = project.synopsis,
+      previousQuestions = project.questions,
+      contextId = contextId
+    )
+    if (newQs.isEmpty()) return project
+    return storage.saveProject(
+      project.copy(
+        questions = project.questions + newQs,
+        updatedAt = now()
+      )
+    )
+  }
+
   suspend fun ignoreQuestion(
     projectId: String,
     questionId: String,
