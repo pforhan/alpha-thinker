@@ -48,12 +48,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 private val DeleteBackgroundColor = Color(0xFFD32F2F)
 
@@ -196,6 +198,7 @@ private fun ProjectListItem(
   onDelete: () -> Unit,
 ) {
   val dismissState = rememberSwipeToDismissBoxState()
+  val scope = rememberCoroutineScope()
 
   LaunchedEffect(pendingDeletionId) {
     if (pendingDeletionId == null && dismissState.settledValue != SwipeToDismissBoxValue.Settled) {
@@ -234,7 +237,11 @@ private fun ProjectListItem(
         },
         trailingContent = {
           Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onDelete) {
+            IconButton(
+              onClick = {
+                scope.launch { dismissState.dismiss(SwipeToDismissBoxValue.EndToStart) }
+              }
+            ) {
               Icon(
                 Icons.Default.Delete,
                 contentDescription = "Delete project",

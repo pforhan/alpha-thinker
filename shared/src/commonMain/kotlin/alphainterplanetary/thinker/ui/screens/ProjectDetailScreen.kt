@@ -267,8 +267,9 @@ private fun ProjectDetailContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             items(filteredQuestions, key = { it.id }) { question ->
+              val dismissState = rememberSwipeToDismissBoxState()
               SwipeableCard(
-                state = rememberSwipeToDismissBoxState(),
+                state = dismissState,
                 startAction = view.startAction,
                 endAction = view.endAction,
                 onSwipeStart = {
@@ -291,10 +292,8 @@ private fun ProjectDetailContent(
                 QuestionItem(
                   question = question,
                   view = view,
+                  dismissState = dismissState,
                   onAnswerClick = { onAnswerClick(question) },
-                  onAskLater = { onAskLater(question.id) },
-                  onIgnore = { onIgnore(question.id) },
-                  onUnignore = { onUnignore(question.id) }
                 )
               }
             }

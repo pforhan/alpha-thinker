@@ -16,25 +16,34 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuestionItem(
   question: Question,
   view: QuestionViewMode,
+  dismissState: SwipeToDismissBoxState,
   onAnswerClick: () -> Unit,
-  onAskLater: () -> Unit,
-  onIgnore: () -> Unit,
-  onUnignore: () -> Unit,
 ) {
+  val scope = rememberCoroutineScope()
+
+  fun swipeTo(target: SwipeToDismissBoxValue) {
+    scope.launch { dismissState.dismiss(target) }
+  }
   Card(
     modifier = Modifier
       .fillMaxWidth()
@@ -97,10 +106,10 @@ fun QuestionItem(
         modifier = Modifier.fillMaxWidth()
       ) {
         if (view == QuestionViewMode.Unanswered && !question.isAnswered && !question.isIgnored) {
-          IconButton(onClick = onAskLater) {
+          IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.StartToEnd) }) {
             Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Ask later")
           }
-          IconButton(onClick = onIgnore) {
+          IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.EndToStart) }) {
             Icon(Icons.Default.VisibilityOff, contentDescription = "Ignore")
           }
         } else if (
@@ -108,7 +117,7 @@ fun QuestionItem(
           view == QuestionViewMode.Draft ||
           view == QuestionViewMode.Ignored
         ) {
-          IconButton(onClick = if (question.isIgnored) onUnignore else onIgnore) {
+          IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.StartToEnd) }) {
             Icon(
               if (question.isIgnored) Icons.Default.Visibility else Icons.Default.VisibilityOff,
               contentDescription = if (question.isIgnored) "Unignore" else "Ignore"
