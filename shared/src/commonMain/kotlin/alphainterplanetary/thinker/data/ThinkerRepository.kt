@@ -11,9 +11,10 @@ import kotlinx.coroutines.launch
 class ThinkerRepository(
   private val repository: ProjectRepository,
   private val sampleProjectGenerator: SampleProjectGenerator,
+  private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) {
   fun createProject(synopsis: String, title: String?, onResult: (Result<Project>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         val project = repository.createProject(synopsis, title)
         onResult(Result.success(project))
@@ -24,7 +25,7 @@ class ThinkerRepository(
   }
 
   fun getAllProjects(onResult: (Result<List<Project>>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         val projects = repository.getAllProjects()
         onResult(Result.success(projects))
@@ -35,7 +36,7 @@ class ThinkerRepository(
   }
 
   fun getProject(id: String, onResult: (Result<Project?>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         val project = repository.getProject(id)
         onResult(Result.success(project))
@@ -46,7 +47,7 @@ class ThinkerRepository(
   }
 
   fun deleteProject(id: String, onResult: (Result<Unit>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         repository.deleteProject(id)
         onResult(Result.success(Unit))
@@ -57,7 +58,7 @@ class ThinkerRepository(
   }
 
   fun generateMoreQuestions(projectId: String, onResult: (Result<Unit>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         repository.generateMoreQuestions(projectId)
         onResult(Result.success(Unit))
@@ -74,7 +75,7 @@ class ThinkerRepository(
     completed: Boolean,
     onResult: (Result<Unit>) -> Unit,
   ) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         repository.saveAnswer(projectId, questionId, text, completed)
         onResult(Result.success(Unit))
@@ -85,7 +86,7 @@ class ThinkerRepository(
   }
 
   fun ignoreQuestion(projectId: String, questionId: String, onResult: (Result<Unit>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         repository.ignoreQuestion(projectId, questionId)
         onResult(Result.success(Unit))
@@ -96,7 +97,7 @@ class ThinkerRepository(
   }
 
   fun unignoreQuestion(projectId: String, questionId: String, onResult: (Result<Unit>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         repository.unignoreQuestion(projectId, questionId)
         onResult(Result.success(Unit))
@@ -113,7 +114,7 @@ class ThinkerRepository(
     mode: ProjectUpdateMode,
     onResult: (Result<Project?>) -> Unit,
   ) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         val project = repository.updateProject(id, title, synopsis, mode)
         onResult(Result.success(project))
@@ -123,8 +124,19 @@ class ThinkerRepository(
     }
   }
 
+  fun restoreProject(project: Project, onResult: (Result<Unit>) -> Unit) {
+    scope.launch {
+      try {
+        repository.restoreProject(project)
+        onResult(Result.success(Unit))
+      } catch (e: Exception) {
+        onResult(Result.failure(e))
+      }
+    }
+  }
+
   fun saveQuestionOrder(projectId: String, order: List<String>, onResult: (Result<Unit>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         repository.saveQuestionOrder(projectId, order)
         onResult(Result.success(Unit))
@@ -135,7 +147,7 @@ class ThinkerRepository(
   }
 
   fun generateSampleProjects(onResult: (Result<Unit>) -> Unit) {
-    CoroutineScope(Dispatchers.Default).launch {
+    scope.launch {
       try {
         sampleProjectGenerator.generate()
         onResult(Result.success(Unit))

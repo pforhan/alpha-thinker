@@ -67,6 +67,10 @@ class ProjectRepository @Inject constructor(
     storage.saveQuestionOrder(projectId, order)
   }
 
+  suspend fun restoreProject(project: Project): Project {
+    return storage.saveProject(project)
+  }
+
   suspend fun updateProject(
     id: String,
     title: String,

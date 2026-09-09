@@ -43,6 +43,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,6 +58,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,12 +91,29 @@ fun ProjectDetailScreen(
   }
 
   val uiState by viewModel.uiState.collectAsState()
+  val pendingUndo by viewModel.pendingUndo.collectAsState()
 
   var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
   var selectedQuestion by remember { mutableStateOf<Question?>(null) }
 
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  LaunchedEffect(pendingUndo) {
+    val undo = pendingUndo ?: return@LaunchedEffect
+    val result = snackbarHostState.showSnackbar(
+      message = undo.message,
+      actionLabel = "Undo",
+      duration = SnackbarDuration.Long,
+    )
+    when (result) {
+      SnackbarResult.ActionPerformed -> viewModel.undo(undo)
+      SnackbarResult.Dismissed -> Unit
+    }
+  }
+
   Scaffold(
+    snackbarHost = { SnackbarHost(snackbarHostState) },
     topBar = {
       val title = when (val ui = uiState) {
         ProjectDetailUiState.Loading -> "Loading..."
@@ -233,6 +255,8 @@ private fun ProjectDetailContent(
       onViewSelected = onViewSelected,
     )
 
+    val dismissScope = rememberCoroutineScope()
+
     AnimatedContent(
       targetState = selectedView,
       transitionSpec = {
@@ -272,6 +296,7 @@ private fun ProjectDetailContent(
                 state = dismissState,
                 startAction = view.startAction,
                 endAction = view.endAction,
+                resetScope = dismissScope,
                 onSwipeStart = {
                   when (view) {
                     QuestionViewMode.Unanswered -> onAskLater(question.id)

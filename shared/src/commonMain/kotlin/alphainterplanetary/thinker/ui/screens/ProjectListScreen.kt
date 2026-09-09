@@ -213,6 +213,7 @@ private fun ProjectListItem(
     onSwipeStart = onDelete,
     onSwipeEnd = onDelete,
     settleAfterDismiss = false,
+    resetScope = scope,
   ) {
     Card(
       modifier = Modifier

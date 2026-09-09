@@ -604,6 +604,77 @@ class ProjectRepositoryTest {
     assertFalse(q.isDraft)
   }
 
+  // ---------- restoreProject (undo) ----------
+
+  @Test
+  fun `restoreProject re-persists a pre-mutation snapshot`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(question("q1")),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage)
+
+    repository.ignoreQuestion("p1", "q1")
+    assertTrue(storage.getProject("p1")!!.questions.single().isIgnored)
+
+    repository.restoreProject(original)
+
+    val restored = storage.getProject("p1")
+    assertNotNull(restored)
+    assertNull(restored.questions.single().ignoredAt)
+    assertEquals(listOf("q1"), restored.questions.map { it.id })
+  }
+
+  @Test
+  fun `restoreProject re-links a deleted answer`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(
+        question("q1", answers = listOf(answer("q1", "A", id = "7"))),
+      ),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage)
+
+    repository.saveAnswer("p1", "q1", "", completed = false)
+    assertNull(storage.getProject("p1")!!.questions.single().currentAnswer)
+
+    repository.restoreProject(original)
+
+    val restored = storage.getProject("p1")
+    assertNotNull(restored)
+    assertEquals("A", restored.questions.single().currentAnswer?.text)
+  }
+
+  @Test
+  fun `restoreProject inserts a project that was missing`() = runTest {
+    val project = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(question("q1")),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val repository = repo()
+
+    repository.restoreProject(project)
+
+    assertEquals(project, repository.getProject(project.id))
+  }
+
   // ---------- exportProject ----------
 
   @Test

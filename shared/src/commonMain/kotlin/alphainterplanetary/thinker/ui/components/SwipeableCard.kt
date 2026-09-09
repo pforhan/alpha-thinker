@@ -15,12 +15,12 @@ import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,10 +32,9 @@ fun SwipeableCard(
   onSwipeStart: (() -> Unit)?,
   onSwipeEnd: (() -> Unit)?,
   settleAfterDismiss: Boolean = true,
+  resetScope: CoroutineScope,
   content: @Composable () -> Unit,
 ) {
-  val scope = rememberCoroutineScope()
-
   SwipeToDismissBox(
     state = state,
     enableDismissFromStartToEnd = startAction != null,
@@ -47,7 +46,7 @@ fun SwipeableCard(
         SwipeToDismissBoxValue.Settled -> Unit
       }
       if (settleAfterDismiss) {
-        scope.launch { state.reset() }
+        resetScope.launch { state.reset() }
       }
     },
     backgroundContent = {
