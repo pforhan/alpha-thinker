@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.now
+import alphainterplanetary.thinker.util.randomUUID
 import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
 
@@ -37,7 +38,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "1",
               questionId = "sparse-q1",
               text = "I have been using a 1:5 ratio of coffee to water and it comes out " +
                 "concentrated enough to dilute with milk or water.",
@@ -52,7 +52,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "2",
               questionId = "sparse-q2",
               text = "18 to 24 hours in the fridge seems right; anything shorter tastes weak.",
               createdAt = daysAgo(6),
@@ -115,7 +114,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "1",
               questionId = "complete-q1",
               text = "Players looking for a quick, thoughtful break get a bite-sized puzzle " +
                 "game they can finish in 3-5 minutes. No accounts, no forced progression, no " +
@@ -132,7 +130,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "2",
               questionId = "complete-q2",
               text = "Busy commuters in their late 20s to 40s who enjoy casual mobile games but " +
                 "hate pay-to-win mechanics. They value calm visuals and do not want a game that " +
@@ -148,7 +145,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "3",
               questionId = "complete-q3",
               text = "Launch a playable, polished MVP on the Play Store within the next two " +
                 "quarters (by end of Q2) and reach at least 1,000 installs in the first month, " +
@@ -164,7 +160,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "4",
               questionId = "complete-q4",
               text = "The core loop is sliding a single piece across a 5x5 board to match " +
                 "targets. Around 60 hand-crafted levels with a gentle difficulty curve, a hint " +
@@ -181,7 +176,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "5",
               questionId = "complete-q5",
               text = "One mechanic, 60 levels, a level-select screen, local high-score saving, " +
                 "a basic settings menu, and an About screen. Cut everything else: no music " +
@@ -197,7 +191,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "6",
               questionId = "complete-q6",
               text = "1) Scope creep: I keep wanting to add mechanics, so the game could " +
                 "balloon past my skill and budget. 2) Burnout from building everything solo on " +
@@ -214,7 +207,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "7",
               questionId = "complete-q7",
               text = "June 30 for the Play Store release. Level design finished by end of " +
                 "March, a closed beta with friends by end of April, and a soft launch through " +
@@ -230,7 +222,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "8",
               questionId = "complete-q8",
               text = "About eight hours a week of free time (Saturdays plus two weekday " +
                 "evenings), roughly $300 budget for asset packs, a testing device and the " +
@@ -299,7 +290,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "1",
               questionId = "stress-q2",
               text = lipsum(3),
               createdAt = daysAgo(2),
@@ -328,7 +318,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "2",
               questionId = "stress-q5",
               text = lipsum(3),
               createdAt = daysAgo(1),
@@ -342,7 +331,6 @@ class SampleProjectGenerator @Inject constructor(
           contextId = contextId,
           answers = listOf(
             completeAnswer(
-              id = "3",
               questionId = "stress-q6",
               text = lipsum(2),
               createdAt = daysAgo(0, 3),
@@ -389,13 +377,12 @@ class SampleProjectGenerator @Inject constructor(
     draftUpdatedAt = draftUpdatedAt,
   )
 
-private fun completeAnswer(
-    id: String,
+  private fun completeAnswer(
     questionId: String,
     text: String,
     createdAt: Instant,
   ): Answer = Answer(
-    id = id,
+    id = randomUUID(),
     questionId = questionId,
     text = text,
     createdAt = createdAt,

@@ -82,4 +82,18 @@ class SampleProjectGeneratorTest {
 
     assertEquals(3, storage.projects.size)
   }
+
+  @Test
+  fun `every answer id is unique across all projects`() = runTest {
+    val storage = InMemoryStorage()
+    val generator = SampleProjectGenerator(storage)
+
+    generator.generate()
+
+    val answerIds = storage.projects.values
+      .flatMap { it.questions }
+      .flatMap { it.answers }
+      .map { it.id }
+    assertEquals(answerIds.size, answerIds.toSet().size)
+  }
 }
