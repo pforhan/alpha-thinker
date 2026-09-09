@@ -2,18 +2,13 @@ package alphainterplanetary.thinker.model
 
 import kotlin.time.Instant
 
+/**
+ * A committed answer version. Rows are immutable: each edit/save creates a new
+ * version rather than mutating a previous one. [createdAt] is the commit time.
+ */
 data class Answer(
-  val id: Long = 0,
+  val id: String = "",
   val questionId: String,
   val text: String,
-  val answeredAt: Instant?,
   val createdAt: Instant,
-  val modifiedAt: Instant? = null,
-  val deletedAt: Instant? = null,
-) {
-  val isComplete: Boolean
-    get() = text.isNotBlank() && !isDraft
-
-  val isDraft: Boolean
-    get() = answeredAt == null
-}
+)

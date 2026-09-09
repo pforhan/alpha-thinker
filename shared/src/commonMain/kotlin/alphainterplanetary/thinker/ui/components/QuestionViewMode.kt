@@ -59,7 +59,7 @@ enum class QuestionViewMode(
         .sortedWith(answerDateComparator)
 
       Draft -> questions
-        .filter { it.currentAnswer?.isDraft == true }
+        .filter { it.isDraft }
         .sortedWith(answerDateComparator)
 
       Ignored -> questions
@@ -76,7 +76,7 @@ enum class QuestionViewMode(
 
   companion object {
     val answerDateComparator: Comparator<Question> =
-      compareByDescending { it.currentAnswer?.modifiedAt ?: it.currentAnswer?.answeredAt }
+      compareByDescending { it.currentAnswer?.createdAt ?: it.draftUpdatedAt ?: it.timestamp }
     val ignoredDateComparator: Comparator<Question> =
       compareByDescending { it.ignoredAt }
   }

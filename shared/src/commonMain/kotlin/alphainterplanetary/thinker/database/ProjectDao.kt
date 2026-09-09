@@ -65,7 +65,4 @@ interface AnswerDao {
 
   @Query("SELECT * FROM answers WHERE questionId = :questionId ORDER BY createdAt ASC, id ASC")
   suspend fun getAnswersForQuestion(questionId: String): List<AnswerEntity>
-
-  @Delete
-  suspend fun deleteAnswer(answer: AnswerEntity)
 }

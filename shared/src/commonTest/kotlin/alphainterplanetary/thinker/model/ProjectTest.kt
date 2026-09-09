@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.testutil.question
 import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -24,6 +25,61 @@ class ProjectTest {
 
   private fun firstThree(p: Project): List<String> =
     p.unansweredQuestions.map { it.id }.take(3)
+
+  // ---------- invariant rails ----------
+
+  @Test
+  fun `question cannot be committed and a draft at the same time`() {
+    assertFailsWith<IllegalArgumentException> {
+      Question(
+        id = "q",
+        text = "Q",
+        timestamp = Instant.fromEpochMilliseconds(0),
+        contextId = "ctx",
+        answerId = "1",
+        draftText = "draft",
+        draftUpdatedAt = Instant.fromEpochMilliseconds(0),
+        answers = listOf(
+          alphainterplanetary.thinker.model.Answer(
+            id = "1",
+            questionId = "q",
+            text = "a",
+            createdAt = Instant.fromEpochMilliseconds(0),
+          )
+        ),
+      )
+    }
+  }
+
+  @Test
+  fun `question with draft text requires a draft timestamp`() {
+    assertFailsWith<IllegalArgumentException> {
+      Question(
+        id = "q",
+        text = "Q",
+        timestamp = Instant.fromEpochMilliseconds(0),
+        contextId = "ctx",
+        draftText = "draft",
+        draftUpdatedAt = null,
+      )
+    }
+  }
+
+  @Test
+  fun `question answerId must reference a stored answer`() {
+    assertFailsWith<IllegalArgumentException> {
+      Question(
+        id = "q",
+        text = "Q",
+        timestamp = Instant.fromEpochMilliseconds(0),
+        contextId = "ctx",
+        answerId = "99",
+        answers = emptyList(),
+      )
+    }
+  }
+
+  // ---------- deck mechanics ----------
 
   @Test
   fun `moveToEnd pushes the question to the back of the list`() {

@@ -67,16 +67,16 @@ class ThinkerRepository(
     }
   }
 
-  fun updateAnswer(
+  fun saveAnswer(
     projectId: String,
     questionId: String,
     text: String,
-    isDraft: Boolean,
+    completed: Boolean,
     onResult: (Result<Unit>) -> Unit,
   ) {
     CoroutineScope(Dispatchers.Default).launch {
       try {
-        repository.updateAnswer(projectId, questionId, text, isDraft)
+        repository.saveAnswer(projectId, questionId, text, completed)
         onResult(Result.success(Unit))
       } catch (e: Exception) {
         onResult(Result.failure(e))
@@ -99,22 +99,6 @@ class ThinkerRepository(
     CoroutineScope(Dispatchers.Default).launch {
       try {
         repository.unignoreQuestion(projectId, questionId)
-        onResult(Result.success(Unit))
-      } catch (e: Exception) {
-        onResult(Result.failure(e))
-      }
-    }
-  }
-
-  fun deleteAnswer(
-    projectId: String,
-    questionId: String,
-    answerId: Long,
-    onResult: (Result<Unit>) -> Unit,
-  ) {
-    CoroutineScope(Dispatchers.Default).launch {
-      try {
-        repository.deleteAnswer(projectId, questionId, answerId)
         onResult(Result.success(Unit))
       } catch (e: Exception) {
         onResult(Result.failure(e))

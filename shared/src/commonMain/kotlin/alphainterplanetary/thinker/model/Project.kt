@@ -19,7 +19,7 @@ data class Project(
 
   val allActiveQuestionsAnswered: Boolean
     get() = activeQuestions.isNotEmpty() &&
-      activeQuestions.all { it.currentAnswer?.isComplete == true }
+      activeQuestions.all { it.isAnswered }
 
   val questionOrderIds: List<String>
     get() = questions.map { it.id }

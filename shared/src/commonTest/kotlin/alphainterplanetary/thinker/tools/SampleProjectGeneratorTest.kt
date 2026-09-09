@@ -46,9 +46,9 @@ class SampleProjectGeneratorTest {
     assertTrue(complete.questions.any { it.isUnanswered })
     assertTrue(
       complete.questions.any { q ->
-        q.currentAnswer?.isDraft == true && !q.isAnswered
+        q.isDraft && !q.isAnswered
       },
-      "complete project should contain a draft answer on an unanswered question",
+      "complete project should contain a draft on an unanswered question",
     )
   }
 
@@ -67,7 +67,7 @@ class SampleProjectGeneratorTest {
       "stress question texts should be long"
     )
     assertTrue(
-      stress.questions.any { q -> q.currentAnswer?.isComplete == true && q.currentAnswer!!.text.length > 500 },
+      stress.questions.any { q -> q.isAnswered && q.currentAnswer!!.text.length > 500 },
       "stress project should contain very long complete answers",
     )
   }

@@ -106,7 +106,7 @@ class ProjectRepositoryTest {
       editableTitle = "old title",
       status = "Draft",
       questions = listOf(
-        question("q1", answers = listOf(answer("q1", "Answer"))),
+        question("q1", answers = listOf(answer("q1", "Answer", id = "1"))),
         question("q2", ignoredAt = now),
       ),
       createdAt = now,
@@ -126,19 +126,21 @@ class ProjectRepositoryTest {
     assertEquals("New Title", updated.editableTitle)
     assertEquals("New Synopsis", updated.synopsis)
     assertEquals(1, updated.questions[0].answers.size)
+    assertTrue(updated.questions[0].isAnswered)
     assertNotNull(updated.questions[1].ignoredAt)
   }
 
   @Test
-  fun `updateProject CLEAR deletes answers and unignores`() = runTest {
+  fun `updateProject CLEAR resets answers drafts and ignore state`() = runTest {
     val original = Project(
       id = "p1",
       synopsis = "synopsis",
       editableTitle = "title",
       status = "Draft",
       questions = listOf(
-        question("q1", answers = listOf(answer("q1", "Answer", id = 7L))),
+        question("q1", answers = listOf(answer("q1", "Answer", id = "7"))),
         question("q2", ignoredAt = now),
+        question("q3", draftText = "draft", draftUpdatedAt = now),
       ),
       createdAt = now,
       updatedAt = now,
@@ -154,8 +156,11 @@ class ProjectRepositoryTest {
     )
 
     assertNotNull(updated)
-    assertEquals(null, updated.questions[0].currentAnswer)
+    assertNull(updated.questions[0].currentAnswer)
+    assertFalse(updated.questions[0].isAnswered)
     assertNull(updated.questions[1].ignoredAt)
+    assertFalse(updated.questions[2].isDraft)
+    assertNull(updated.questions[2].draftText)
   }
 
   @Test
@@ -182,10 +187,10 @@ class ProjectRepositoryTest {
       editableTitle = "t",
       status = "Draft",
       questions = listOf(
-        question("answered", answers = listOf(answer("answered", "A"))),
+        question("answered", answers = listOf(answer("answered", "A", id = "1"))),
         question("ignored", ignoredAt = now),
         question("open"),
-        question("draft", answers = listOf(answer("draft", "d", answeredAt = null))),
+        question("draft", draftText = "d", draftUpdatedAt = now),
       ),
       createdAt = now,
       updatedAt = now,
@@ -197,10 +202,10 @@ class ProjectRepositoryTest {
     assertEquals(listOf("open", "draft"), unanswered.map { it.id })
   }
 
-  // ---------- updateAnswer ----------
+  // ---------- saveAnswer ----------
 
   @Test
-  fun `updateAnswer adds a completed answer`() = runTest {
+  fun `saveAnswer commits a completed answer`() = runTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
@@ -213,22 +218,22 @@ class ProjectRepositoryTest {
     val storage = InMemoryStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
-    val updated = repository.updateAnswer(
+    val updated = repository.saveAnswer(
       projectId = "p1",
       questionId = "q1",
       text = "My answer",
-      isDraft = false,
+      completed = true,
     )
 
     assertNotNull(updated)
     val current = updated.questions.single().currentAnswer
     assertNotNull(current)
     assertEquals("My answer", current.text)
-    assertTrue(current.isComplete)
+    assertTrue(updated.questions.single().isAnswered)
   }
 
   @Test
-  fun `updateAnswer adds a draft answer`() = runTest {
+  fun `saveAnswer stores a draft`() = runTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
@@ -241,47 +246,167 @@ class ProjectRepositoryTest {
     val storage = InMemoryStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
-    val updated = repository.updateAnswer(
+    val updated = repository.saveAnswer(
       projectId = "p1",
       questionId = "q1",
       text = "Draft text",
-      isDraft = true,
+      completed = false,
     )
 
     assertNotNull(updated)
-    val current = updated.questions.single().currentAnswer
-    assertNotNull(current)
-    assertTrue(current.isDraft)
-    assertFalse(current.isComplete)
+    assertEquals("Draft text", updated.questions.single().draftText)
+    assertTrue(updated.questions.single().isDraft)
+    assertFalse(updated.questions.single().isAnswered)
   }
 
   @Test
-  fun `updateAnswer throws when adding a draft to a completed question`() = runTest {
+  fun `saveAnswer blank text clears the draft`() = runTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
       editableTitle = "t",
       status = "Draft",
-      questions = listOf(question("q1", answers = listOf(answer("q1", "Answer")))),
+      questions = listOf(question("q1", draftText = "in progress", draftUpdatedAt = now)),
       createdAt = now,
       updatedAt = now,
     )
     val storage = InMemoryStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
-    try {
-      repository.updateAnswer(projectId = "p1", questionId = "q1", text = "draft", isDraft = true)
-      fail("Expected IllegalStateException")
-    } catch (e: IllegalStateException) {
-      assertEquals(
-        "Cannot add a draft answer to a question that is already answered",
-        e.message,
-      )
-    }
+    val updated = repository.saveAnswer(
+      projectId = "p1",
+      questionId = "q1",
+      text = "",
+      completed = false,
+    )
+
+    assertNotNull(updated)
+    assertNull(updated.questions.single().draftText)
+    assertNull(updated.questions.single().draftUpdatedAt)
+    assertFalse(updated.questions.single().isDraft)
   }
 
   @Test
-  fun `updateAnswer generates follow-ups when all active questions are answered`() = runTest {
+  fun `saveAnswer editing a committed answer demotes it to a draft`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(
+        question("q1", answers = listOf(answer("q1", "Answer", id = "1"))),
+      ),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage)
+
+    val updated = repository.saveAnswer(
+      projectId = "p1",
+      questionId = "q1",
+      text = "Edited",
+      completed = false,
+    )
+
+    assertNotNull(updated)
+    val q = updated.questions.single()
+    assertNull(q.currentAnswer)
+    assertFalse(q.isAnswered)
+    assertTrue(q.isDraft)
+    assertEquals("Edited", q.draftText)
+    assertEquals(1, q.answers.size, "the committed version stays in immutable history")
+  }
+
+  @Test
+  fun `saveAnswer committing unchanged text is a no-op`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(
+        question("q1", answers = listOf(answer("q1", "Answer", id = "1"))),
+      ),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage)
+
+    val unchanged = repository.saveAnswer(
+      projectId = "p1",
+      questionId = "q1",
+      text = "Answer",
+      completed = true,
+    )
+
+    assertNotNull(unchanged)
+    val q = unchanged.questions.single()
+    assertEquals(1, q.answers.size, "no new version for identical committed text")
+    assertTrue(q.isAnswered)
+    assertEquals("Answer", q.currentAnswer?.text)
+  }
+
+  @Test
+  fun `saveAnswer commits a new version when text changes`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(
+        question("q1", answers = listOf(answer("q1", "First", id = "1"))),
+      ),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage)
+
+    val updated = repository.saveAnswer(
+      projectId = "p1",
+      questionId = "q1",
+      text = "Second",
+      completed = true,
+    )
+
+    assertNotNull(updated)
+    val q = updated.questions.single()
+    assertEquals(2, q.answers.size, "an edit appends an immutable version")
+    assertEquals("Second", q.currentAnswer?.text)
+    assertEquals(listOf("First", "Second"), q.answers.map { it.text })
+  }
+
+  @Test
+  fun `saveAnswer generating a draft for a question with no text leaves it unanswered`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(question("q1")),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage)
+
+    val updated = repository.saveAnswer(
+      projectId = "p1",
+      questionId = "q1",
+      text = "   ",
+      completed = false,
+    )
+
+    assertNotNull(updated)
+    val q = updated.questions.single()
+    assertFalse(q.isDraft)
+    assertFalse(q.isAnswered)
+  }
+
+  @Test
+  fun `saveAnswer generates follow-ups when all active questions are answered`() = runTest {
     val generator = FakeGenerator().apply {
       followUpQuestions += question("f1")
       followUpQuestions += question("f2")
@@ -298,11 +423,11 @@ class ProjectRepositoryTest {
     val storage = InMemoryStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage, generator = generator)
 
-    val updated = repository.updateAnswer(
+    val updated = repository.saveAnswer(
       projectId = "p1",
       questionId = "q1",
       text = "Answer",
-      isDraft = false,
+      completed = true,
     )
 
     assertNotNull(updated)
@@ -313,7 +438,7 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `updateAnswer does not generate follow-ups when not all answered`() = runTest {
+  fun `saveAnswer does not generate follow-ups when not all answered`() = runTest {
     val generator = FakeGenerator()
     val original = Project(
       id = "p1",
@@ -327,11 +452,11 @@ class ProjectRepositoryTest {
     val storage = InMemoryStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage, generator = generator)
 
-    val updated = repository.updateAnswer(
+    val updated = repository.saveAnswer(
       projectId = "p1",
       questionId = "q1",
       text = "Answer",
-      isDraft = false,
+      completed = true,
     )
 
     assertNotNull(updated)
@@ -340,7 +465,7 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `updateAnswer does not generate follow-ups when only ignored questions remain`() = runTest {
+  fun `saveAnswer does not generate follow-ups when only ignored questions remain`() = runTest {
     val generator = FakeGenerator()
     val original = Project(
       id = "p1",
@@ -354,20 +479,21 @@ class ProjectRepositoryTest {
     val storage = InMemoryStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage, generator = generator)
 
-    val updated = repository.updateAnswer(
+    val updated = repository.saveAnswer(
       projectId = "p1",
       questionId = "q1",
       text = "Answer",
-      isDraft = false,
+      completed = true,
     )
 
-    // The final remaining question is ignored; answering it should not trigger follow-ups.
+    // The question being answered is ignored; with no active questions left the
+    // all-answered check should not trigger follow-ups.
     assertTrue(generator.followUpCalls.isEmpty())
     assertNotNull(updated)
   }
 
   @Test
-  fun `updateAnswer returns null when question not found`() = runTest {
+  fun `saveAnswer returns null when question not found`() = runTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
@@ -380,7 +506,7 @@ class ProjectRepositoryTest {
     val storage = InMemoryStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
-    val result = repository.updateAnswer("p1", "missing", "text")
+    val result = repository.saveAnswer("p1", "missing", "text", completed = true)
 
     assertNull(result)
   }
@@ -427,40 +553,17 @@ class ProjectRepositoryTest {
     assertNull(updated.questions.single().ignoredAt)
   }
 
-  // ---------- deleteAnswer ----------
+  // ---------- deleting an answer (a blank draft) ----------
 
   @Test
-  fun `deleteAnswer marks the answer as deleted`() = runTest {
-    val original = Project(
-      id = "p1",
-      synopsis = "s",
-      editableTitle = "t",
-      status = "Draft",
-      questions = listOf(question("q1", answers = listOf(answer("q1", "A", id = 7L)))),
-      createdAt = now,
-      updatedAt = now,
-    )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
-    val repository = repo(storage = storage)
-
-    val updated = repository.deleteAnswer("p1", "q1", 7L)
-
-    assertNotNull(updated)
-    assertNull(updated.questions.single().currentAnswer)
-  }
-
-  @Test
-  fun `deleteAnswer leaves other answers intact`() = runTest {
+  fun `saving a blank draft removes the current answer but keeps history`() = runTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
       editableTitle = "t",
       status = "Draft",
       questions = listOf(
-        question(
-          "q1",
-          answers = listOf(answer("q1", "First", id = 1L), answer("q1", "Second", id = 2L)),
-        ),
+        question("q1", answers = listOf(answer("q1", "A", id = "7"))),
       ),
       createdAt = now,
       updatedAt = now,
@@ -468,10 +571,37 @@ class ProjectRepositoryTest {
     val storage = InMemoryStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
-    val updated = repository.deleteAnswer("p1", "q1", 1L)
+    val updated = repository.saveAnswer("p1", "q1", "", completed = false)
 
     assertNotNull(updated)
-    assertEquals("Second", updated.questions.single().currentAnswer?.text)
+    val q = updated.questions.single()
+    assertNull(q.currentAnswer)
+    assertFalse(q.isAnswered)
+    assertTrue(q.isUnanswered)
+    assertEquals(1, q.answers.size, "the version row stays in immutable history")
+  }
+
+  @Test
+  fun `saving a blank draft clears a pending draft`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(question("q1", draftText = "in progress", draftUpdatedAt = now)),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage)
+
+    val updated = repository.saveAnswer("p1", "q1", "", completed = false)
+
+    assertNotNull(updated)
+    val q = updated.questions.single()
+    assertNull(q.draftText)
+    assertNull(q.draftUpdatedAt)
+    assertFalse(q.isDraft)
   }
 
   // ---------- exportProject ----------

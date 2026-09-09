@@ -140,13 +140,8 @@ fun ProjectDetailScreen(
           onAskLater = { viewModel.askLater(it) },
           onIgnore = { viewModel.ignoreQuestion(projectId, it) },
           onUnignore = { viewModel.unignoreQuestion(projectId, it) },
-          onAnswerClick = { selectedQuestion = it },
-          onDeleteAnswer = {
-            val answerId = it.currentAnswer?.id
-            if (answerId != null) {
-              viewModel.deleteAnswer(projectId, it.id, answerId)
-            }
-          },
+onAnswerClick = { selectedQuestion = it },
+      onDeleteAnswer = { viewModel.saveAnswer(projectId, it.id, "", completed = false) },
           onGenerateMore = { viewModel.generateMoreQuestions(projectId) },
           modifier = Modifier
             .fillMaxSize()
@@ -192,19 +187,19 @@ fun ProjectDetailScreen(
       onResult = { result, text ->
         when (result) {
           AnswerDialogResult.Submitted -> {
-            viewModel.updateAnswer(projectId, questionToShow.id, text.trim(), isDraft = false)
+            viewModel.saveAnswer(projectId, questionToShow.id, text, completed = true)
           }
 
-          AnswerDialogResult.AskLater -> {
-            viewModel.updateAnswer(projectId, questionToShow.id, text.trim(), isDraft = true)
-            viewModel.askLater(questionToShow.id)
+          AnswerDialogResult.SavedDraft -> {
+            viewModel.saveAnswer(projectId, questionToShow.id, text, completed = false)
           }
 
           AnswerDialogResult.DeletedAnswer -> {
-            val answerId = questionToShow.currentAnswer?.id
-            if (answerId != null) {
-              viewModel.deleteAnswer(projectId, questionToShow.id, answerId)
-            }
+            viewModel.saveAnswer(projectId, questionToShow.id, "", completed = false)
+          }
+
+          AnswerDialogResult.Unignored -> {
+            viewModel.unignoreQuestion(projectId, questionToShow.id)
           }
         }
         selectedQuestion = null

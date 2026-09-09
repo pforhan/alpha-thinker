@@ -79,8 +79,10 @@ class ProjectRepository @Inject constructor(
     val updatedQuestions = when (mode) {
       ProjectUpdateMode.CLEAR -> project.questions.map { q ->
         q.copy(
-          answers = q.answers.map { a -> a.copy(deletedAt = now) },
-          ignoredAt = null
+          answerId = null,
+          draftText = null,
+          draftUpdatedAt = null,
+          ignoredAt = null,
         )
       }
 
@@ -105,43 +107,62 @@ class ProjectRepository @Inject constructor(
     return project.unansweredQuestions
   }
 
-  suspend fun updateAnswer(
+  /**
+   * Persists the answer state for a question. This is the only way a question's
+   * committed/draft state changes.
+   *
+   * [completed] is the toggle: `true` commits [text] as an immutable [Answer]
+   * version (a no-op when the committed text is unchanged); `false` stores
+   * [text] as a draft, clearing the draft entirely when the text is blank. A
+   * question is always either committed or a draft, never both, so saving a
+   * draft demotes any current answer out of "answered".
+   */
+  suspend fun saveAnswer(
     projectId: String,
     questionId: String,
     text: String,
-    isDraft: Boolean = false,
+    completed: Boolean,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val question = project.questions.find { it.id == questionId } ?: return null
+    val now = now()
+    val trimmed = text.trim()
 
-    if (isDraft && question.currentAnswer?.isComplete == true) {
-      throw IllegalStateException("Cannot add a draft answer to a question that is already answered")
+    val updatedQuestion = if (completed) {
+      val current = question.currentAnswer
+      if (current != null && current.text == trimmed) {
+        question
+      } else {
+        val newAnswer = Answer(
+          id = randomUUID(),
+          questionId = questionId,
+          text = trimmed,
+          createdAt = now,
+        )
+        question.copy(
+          answerId = newAnswer.id,
+          draftText = null,
+          draftUpdatedAt = null,
+          answers = question.answers + newAnswer,
+        )
+      }
+    } else {
+      question.copy(
+        answerId = null,
+        draftText = trimmed.takeIf { it.isNotBlank() },
+        draftUpdatedAt = if (trimmed.isNotBlank()) now else null,
+      )
     }
 
-    val now = now()
-
-    val newAnswer =
-      Answer(
-        id = 0,
-        questionId = questionId,
-        text = text,
-        answeredAt = if (isDraft) null else now,
-        createdAt = now,
-      )
+    if (updatedQuestion == question) return project
 
     val updatedQuestions = project.questions.map { q ->
-      if (q.id == questionId) {
-        q.copy(
-          answers = q.answers + newAnswer,
-        )
-      } else {
-        q
-      }
+      if (q.id == questionId) updatedQuestion else q
     }
 
     val updatedProject = project.copy(
       questions = updatedQuestions,
-      updatedAt = now()
+      updatedAt = now
     )
 
     val answered = updatedProject.allActiveQuestionsAnswered
@@ -219,25 +240,6 @@ class ProjectRepository @Inject constructor(
     storage.deleteAllProjects()
   }
 
-  suspend fun deleteAnswer(
-    projectId: String,
-    questionId: String,
-    answerId: Long,
-  ): Project? {
-    val project = storage.getProject(projectId) ?: return null
-    val now = now()
-    val updatedQuestions = project.questions.map { q ->
-      if (q.id == questionId) {
-        q.copy(answers = q.answers.map { a ->
-          if (a.id == answerId) a.copy(deletedAt = now) else a
-        })
-      } else {
-        q
-      }
-    }
-    return storage.saveProject(project.copy(questions = updatedQuestions, updatedAt = now))
-  }
-
   suspend fun exportProject(project: Project): String {
     val sb = StringBuilder()
     sb.appendLine("# ${project.synopsis}")
@@ -249,14 +251,11 @@ class ProjectRepository @Inject constructor(
     project.questions.sortedBy { it.timestamp }.forEach { question ->
       sb.appendLine("### Q: ${question.text}")
       val answer = question.currentAnswer
-      if (answer != null && answer.isComplete) {
+      if (answer != null) {
         sb.appendLine()
         sb.appendLine("| **Answer:** | ${answer.text} |")
         sb.appendLine("|-------------|--------")
-        sb.appendLine("| **Answered:** | ${answer.answeredAt} |")
-        if (answer.modifiedAt != null) {
-          sb.appendLine("| **Modified:** | ${answer.modifiedAt} |")
-        }
+        sb.appendLine("| **Answered:** | ${answer.createdAt} |")
       } else {
         sb.appendLine()
         sb.appendLine("|**Status:** | unanswered |")

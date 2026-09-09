@@ -77,17 +77,17 @@ private fun Question.toEntity(projectId: String, index: Int) = QuestionEntity(
   contextId = contextId,
   createdAt = timestamp.toEpochMilliseconds(),
   sortOrder = index,
-  ignoredAt = ignoredAt?.toEpochMilliseconds()
+  ignoredAt = ignoredAt?.toEpochMilliseconds(),
+  answerId = answerId,
+  draftText = draftText,
+  draftUpdatedAt = draftUpdatedAt?.toEpochMilliseconds(),
 )
 
 private fun Answer.toEntity() = AnswerEntity(
   id = id,
   questionId = questionId,
   text = text,
-  answeredAt = answeredAt?.toEpochMilliseconds(),
   createdAt = createdAt.toEpochMilliseconds(),
-  modifiedAt = modifiedAt?.toEpochMilliseconds(),
-  deletedAt = deletedAt?.toEpochMilliseconds()
 )
 
 private fun ProjectEntity.toDomainModel(questions: List<Question>): Project {
@@ -109,6 +109,9 @@ private fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question 
     timestamp = Instant.fromEpochMilliseconds(createdAt),
     contextId = contextId,
     ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
+    answerId = answerId,
+    draftText = draftText,
+    draftUpdatedAt = draftUpdatedAt?.let { Instant.fromEpochMilliseconds(it) },
     answers = answers.map { it.toDomainModel() }
   )
 }
@@ -117,8 +120,5 @@ private fun AnswerEntity.toDomainModel() = Answer(
   id = id,
   questionId = questionId,
   text = text,
-  answeredAt = answeredAt?.let { Instant.fromEpochMilliseconds(it) },
-  createdAt = Instant.fromEpochMilliseconds(createdAt),
-  modifiedAt = modifiedAt?.let { Instant.fromEpochMilliseconds(it) },
-  deletedAt = deletedAt?.let { Instant.fromEpochMilliseconds(it) }
+  createdAt = Instant.fromEpochMilliseconds(createdAt)
 )

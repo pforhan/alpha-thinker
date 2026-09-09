@@ -13,34 +13,36 @@ fun question(
   answers: List<Answer> = emptyList(),
   timestamp: Instant = defaultTestInstant,
   contextId: String = "ctx",
+  draftText: String? = null,
+  draftUpdatedAt: Instant? = null,
 ): Question = Question(
   id = id,
   text = text,
   timestamp = timestamp,
   contextId = contextId,
   ignoredAt = ignoredAt,
+  answerId = answers.lastOrNull()?.id,
+  draftText = draftText,
+  draftUpdatedAt = draftUpdatedAt,
   answers = answers,
 )
 
-fun answeredQuestion(id: String): Question = question(id, answers = listOf(answer(id, "a")))
+fun answeredQuestion(id: String): Question =
+  question(id, answers = listOf(answer(id, "a", id = "a1")))
 
 fun ignoredQuestion(id: String): Question = question(id, ignoredAt = defaultTestInstant)
 
 fun draftQuestion(id: String): Question =
-  question(id, answers = listOf(answer(id, "draft", answeredAt = null)))
+  question(id, draftText = "draft", draftUpdatedAt = defaultTestInstant)
 
 fun answer(
   questionId: String,
   text: String,
-  answeredAt: Instant? = defaultTestInstant,
-  id: Long = 0,
+  id: String = "",
   createdAt: Instant = defaultTestInstant,
-  deletedAt: Instant? = null,
 ): Answer = Answer(
   id = id,
   questionId = questionId,
   text = text,
-  answeredAt = answeredAt,
   createdAt = createdAt,
-  deletedAt = deletedAt,
 )

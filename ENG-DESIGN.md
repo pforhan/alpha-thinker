@@ -48,12 +48,26 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     *   `text` (String: The full question text, either seed, user-input, or LLM-generated.)
     *   `isArchived` (Boolean: Tracks manual deactivation.)
     *   `createdAt` (Timestamp: When the question was first surfaced.)
+    *   `ignoredAt` (Timestamp, Optional: When the question was ignored/skipped.)
+    *   `answerId` (Foreign Key, Optional: Points at the current committed
+        `Answer` version for this question; `null` means unanswered.)
+    *   `draftText` (String, Optional: In-progress answer text; `null` means no
+        draft. Mutually exclusive with `answerId` — a question is either
+        committed or a draft, never both, and the domain model `init` guards
+        enforce this.)
+    *   `draftUpdatedAt` (Timestamp, Optional: When the draft was last edited,
+        for "latest edits first" draft sorting.)
 
 3. **Answer:**
     *   `answerId` (Unique ID)
     *   `questionId` (Foreign Key: Links to the parent Question.)
     *   `responseText` (String: The user's written answer.)
-    *   `answeredAt` (Timestamp: When the answer was filled. All committed versions are stored; the most recent is the active answer. UI shall allow viewing/restoring previous versions by making a new version.)
+    *   `createdAt` (Timestamp: When this version was committed. Answer rows are
+        **immutable history** — every commit appends a new version rather than
+        mutating a previous one, and the current version is chosen by the
+        question's `answerId`. Deletion unpoints `answerId` (the version stays
+        in history) so old versions can be viewed/restored by making a new
+        version.)
 
 4. **LLMInteraction:**
     *   `llmInteractionId` (Unique ID)

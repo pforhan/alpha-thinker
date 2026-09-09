@@ -35,6 +35,9 @@ data class QuestionEntity(
   val createdAt: Long,
   val sortOrder: Int = 0,
   val ignoredAt: Long? = null,
+  val answerId: String? = null,
+  val draftText: String? = null,
+  val draftUpdatedAt: Long? = null,
 )
 
 @Entity(
@@ -48,13 +51,10 @@ data class QuestionEntity(
   indices = [Index("questionId")]
 )
 data class AnswerEntity(
-  @PrimaryKey(autoGenerate = true) val id: Long = 0,
+  @PrimaryKey val id: String = "",
   val questionId: String,
   val text: String,
-  val answeredAt: Long? = null,
   val createdAt: Long,
-  val modifiedAt: Long? = null,
-  val deletedAt: Long? = null,
 )
 
 data class ProjectWithQuestions(

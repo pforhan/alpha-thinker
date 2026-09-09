@@ -65,8 +65,8 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
     repository.saveQuestionOrder(reordered.id, reordered.questionOrderIds) { }
   }
 
-  fun updateAnswer(projectId: String, questionId: String, text: String, isDraft: Boolean) {
-    repository.updateAnswer(projectId, questionId, text, isDraft) { result ->
+  fun saveAnswer(projectId: String, questionId: String, text: String, completed: Boolean) {
+    repository.saveAnswer(projectId, questionId, text, completed) { result ->
       result.onSuccess {
         loadProject(projectId)
       }.onFailure { e ->
@@ -96,18 +96,6 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
       }.onFailure { e ->
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to unignore question: ${e.message ?: "Unknown error"}"
-        )
-      }
-    }
-  }
-
-  fun deleteAnswer(projectId: String, questionId: String, answerId: Long) {
-    repository.deleteAnswer(projectId, questionId, answerId) { result ->
-      result.onSuccess {
-        loadProject(projectId)
-      }.onFailure { e ->
-        _uiState.value = ProjectDetailUiState.Error(
-          "Failed to delete answer: ${e.message ?: "Unknown error"}"
         )
       }
     }

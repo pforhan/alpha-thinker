@@ -51,24 +51,31 @@ fun QuestionItem(
 
       if (question.currentAnswer != null) {
         Spacer(modifier = Modifier.height(8.dp))
-        if (question.currentAnswer!!.isDraft) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-              Icons.Default.Edit,
-              contentDescription = "Draft",
-              modifier = Modifier.height(14.dp),
-              tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-              text = "Draft:",
-              style = MaterialTheme.typography.labelSmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-        }
         Text(
           text = question.currentAnswer!!.text.normalizeWhitespace(),
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+      } else if (question.isDraft) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(
+            Icons.Default.Edit,
+            contentDescription = "Draft",
+            modifier = Modifier.height(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+          Spacer(modifier = Modifier.width(4.dp))
+          Text(
+            text = "Draft:",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
+        Text(
+          text = question.draftText!!.normalizeWhitespace(),
           maxLines = 2,
           overflow = TextOverflow.Ellipsis,
           style = MaterialTheme.typography.bodyMedium,

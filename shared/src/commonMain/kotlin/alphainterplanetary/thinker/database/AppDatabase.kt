@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 
 @Database(
   entities = [ProjectEntity::class, QuestionEntity::class, AnswerEntity::class],
-  version = 4,
+  version = 5,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
