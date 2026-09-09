@@ -114,12 +114,13 @@ This document tracks the specific engineering tasks required to move from design
 - [x] **AnswerDialog: unignore from the dialog.** Ignored questions show an "Unignore" action and editing is disabled until unignored.
 - [x] **AnswerDialog: clear-the-text affordance.** Added an inline trailing clear (X) in the answer field plus Delete Answer for committed answers.
 - [x] SampleProjectGenerator is slightly broken from our answer model retooling; lorem ipsum seems fine but the other projects have bad question references — answers now get real `randomUUID()` ids instead of the hardcoded `"1"`/`"2"`/`"3"`… scheme, which collided on the global `answers.id` primary key when `RoomStorage.saveProject` upserted later projects over earlier ones; `completeAnswer` drops its `id` param and generates a UUID at commit time (matching the model contract), and a test asserts every answer id is globally unique.
-- [ ] AnswerDialog: long questions should be limited to 4 lines and be scrollable if longer.  See if any of our previous long-text-in-dialog findings help here.
+- [x] AnswerDialog: long questions should be scrollable if longer than four lines.  The title of `AnswerDialog` detects overflow via `onTextLayout` (`hasVisualOverflow`); when the question exceeds 4 lines, the title swaps to a vertically scrollable `Text` bounded to the measured 4-line height so the dialog's footprint is unchanged but the full question is reachable by scrolling.  `heightIn(max = …)` + `verticalScroll` (the `SettingsScreen` pattern) caps the region instead of letting it grow unboundedly.
 - [ ] anywhere: figure out how to swipe rows programmatically and hook up any actions on the row to that swipe.  Apply to ProjectList and to projectdetail (This description was from the flutter implementation) It should look and behave like dismissable but allow button taps to trigger it.
 - [ ] anywhere: if a dialog close action would cause new/dirty data to be lost, show a prompt.  Example: type in changes to Edit Project then tap off the dialog area to dismiss (or tap cancel).  Same with answer dialog
 - [ ] anywhere: Clean up a lot of the hardcoded font size, color, etc options by using a proper theme with named styles
 - [ ] ProjectList: icons are too much repeated visual noise and take up a lot of space. Explore options for teaching the user naturally.
 - [ ] ProjectList: the swipe action shows fully before the delete confirmation dialog shows up. see if we can do a swipe into a confirm button so it feels more natural?
+- [ ] ProjectDetail: limit question text to two rows in question rows
 - [ ] ProjectDetail: drafts filter should not include ignored questions
 - [ ] ProjectDetail: if an ignored question has an answer the ignored indicator doesn't show
 - [ ] ProjectDetail: domain tests for moving answers between the filters.
