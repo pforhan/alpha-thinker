@@ -52,7 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +64,7 @@ fun ProjectListScreen(
 ) {
   var showCreateDialog by remember { mutableStateOf(false) }
   var projectToDelete by remember { mutableStateOf<Project?>(null) }
-  var pendingDeletionId by remember { mutableStateOf<String?>(null) }
+  var deletingId by remember { mutableStateOf<String?>(null) }
 
   val repository = remember {
     ThinkerRepository(appComponent.projectRepository, appComponent.sampleProjectGenerator)
@@ -112,12 +112,14 @@ fun ProjectListScreen(
         is ProjectListUiState.Success -> {
           ProjectListSuccess(
             projects = ui.projects,
-            pendingDeletionId = pendingDeletionId,
+            pendingDeletionId = projectToDelete?.id,
+            deletingId = deletingId,
             onProjectClick = onProjectClick,
             onCreateClick = { showCreateDialog = true },
-            onDeleteProject = {
-              projectToDelete = it
-              pendingDeletionId = it.id
+            onDeleteProject = { projectToDelete = it },
+            onDeleteConfirmed = { project ->
+              deletingId = null
+              viewModel.deleteProject(project.id)
             },
           )
         }
@@ -147,13 +149,12 @@ fun ProjectListScreen(
   projectToDelete?.let { project ->
     ConfirmDeleteProjectDialog(
       project = project,
-      onDismiss = {
-        projectToDelete = null
-        pendingDeletionId = null
-      },
+      onDismiss = { projectToDelete = null },
+      // Confirm: hand the id to its list item, which then decides whether to
+      // animate the swipe-out (trash-icon path) or delete immediately (swipe path).
       onConfirm = {
         projectToDelete = null
-        viewModel.deleteProject(project.id)
+        deletingId = project.id
       },
     )
   }
@@ -189,15 +190,44 @@ private fun ProjectListEmpty(onCreateClick: () -> Unit) {
 private fun ProjectListItem(
   project: Project,
   pendingDeletionId: String?,
+  deletingId: String?,
   onClick: () -> Unit,
   onDelete: () -> Unit,
+  onDeleteConfirmed: (Project) -> Unit,
 ) {
   val dismissState = rememberSwipeToDismissBoxState()
   val scope = rememberCoroutineScope()
 
-  LaunchedEffect(pendingDeletionId) {
-    if (pendingDeletionId == null && dismissState.settledValue != SwipeToDismissBoxValue.Settled) {
+  // Gesture-initiated deletes leave the card swiped out while the dialog is open.
+  // When the dialog closes without confirming, slide the card back into place.
+  LaunchedEffect(pendingDeletionId, deletingId) {
+    if (deletingId != project.id &&
+      pendingDeletionId == null &&
+      dismissState.settledValue != SwipeToDismissBoxValue.Settled
+    ) {
       dismissState.reset()
+    }
+  }
+
+  // Confirm-initiated: delete the card now that the dialog was accepted. If the
+  // card is still settled (delete was triggered by the trash icon, so nothing has
+  // swiped yet) animate it out first; if a swipe already dismissed it, the
+  // animation already happened, so delete immediately from the swiped-out position.
+  LaunchedEffect(deletingId) {
+    if (deletingId == project.id) {
+      if (dismissState.settledValue == SwipeToDismissBoxValue.Settled) {
+        dismissState.dismiss(SwipeToDismissBoxValue.EndToStart)
+      }
+      onDeleteConfirmed(project)
+    }
+  }
+
+  // Gesture path: a full swipe counts as the delete gesture itself, so just show
+  // the dialog and keep the card held out. Guarded so the programmatic dismiss
+  // used by the trash-icon path doesn't re-open the dialog on its way out.
+  val handleSwipeDismiss = {
+    if (deletingId != project.id) {
+      onDelete()
     }
   }
 
@@ -205,8 +235,8 @@ private fun ProjectListItem(
     state = dismissState,
     startAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete),
     endAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete),
-    onSwipeStart = onDelete,
-    onSwipeEnd = onDelete,
+    onSwipeStart = handleSwipeDismiss,
+    onSwipeEnd = handleSwipeDismiss,
     settleAfterDismiss = false,
     resetScope = scope,
   ) {
@@ -233,11 +263,9 @@ private fun ProjectListItem(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
           )
-          IconButton(
-            onClick = {
-              scope.launch { dismissState.dismiss(SwipeToDismissBoxValue.EndToStart) }
-            }
-          ) {
+          // Tap path: no swipe here — just open the confirmation; the card is
+          // animated out after the dialog is accepted (see the deletingId effect).
+          IconButton(onClick = onDelete) {
             Icon(Icons.Default.Delete, contentDescription = "Delete project")
           }
         }
@@ -250,9 +278,11 @@ private fun ProjectListItem(
 private fun ProjectListSuccess(
   projects: List<Project>,
   pendingDeletionId: String?,
+  deletingId: String?,
   onProjectClick: (Project) -> Unit,
   onCreateClick: () -> Unit,
   onDeleteProject: (Project) -> Unit,
+  onDeleteConfirmed: (Project) -> Unit,
 ) {
   if (projects.isEmpty()) {
     ProjectListEmpty(onCreateClick = onCreateClick)
@@ -265,8 +295,10 @@ private fun ProjectListSuccess(
         ProjectListItem(
           project = project,
           pendingDeletionId = pendingDeletionId,
+          deletingId = deletingId,
           onClick = { onProjectClick(project) },
           onDelete = { onDeleteProject(project) },
+          onDeleteConfirmed = onDeleteConfirmed,
         )
       }
     }
