@@ -3,7 +3,6 @@ package alphainterplanetary.thinker.ui.components
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.util.normalizeWhitespace
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,78 +52,103 @@ fun QuestionItem(
     Column(
       modifier = Modifier.padding(Dimens.CardPadding)
     ) {
-      Text(
-        text = question.text,
-        style = MaterialTheme.typography.bodyLarge
-      )
+      val hasSecondaryContent = question.currentAnswer != null || question.isDraft || question.isIgnored
+      if (hasSecondaryContent) {
+        Text(
+          text = question.text,
+          style = MaterialTheme.typography.bodyLarge
+        )
+      } else {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            text = question.text,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge,
+          )
+          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+        }
+      }
 
       if (question.currentAnswer != null) {
         Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        Text(
-          text = question.currentAnswer!!.text.normalizeWhitespace(),
-          maxLines = 2,
-          overflow = TextOverflow.Ellipsis,
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            text = question.currentAnswer!!.text.normalizeWhitespace(),
+            modifier = Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+        }
       } else if (question.isDraft) {
         Spacer(modifier = Modifier.height(Dimens.ContentGap))
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(
-            Icons.Default.Edit,
-            contentDescription = "Draft",
-            modifier = Modifier.height(Dimens.IconSizeSmall),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-          Spacer(modifier = Modifier.width(Dimens.TightGap))
-          Text(
-            text = "Draft:",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
-        Text(
-          text = question.draftText!!.normalizeWhitespace(),
-          maxLines = 2,
-          overflow = TextOverflow.Ellipsis,
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-      } else if (question.isIgnored) {
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        Text(
-          text = "Ignored",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.error
-        )
-      }
-
-      Spacer(modifier = Modifier.height(Dimens.ContentGap))
-
-      Row(
-        horizontalArrangement = Arrangement.End,
-        modifier = Modifier.fillMaxWidth()
-      ) {
-        if (view == QuestionViewMode.Unanswered && !question.isAnswered && !question.isIgnored) {
-          IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.StartToEnd) }) {
-            Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Ask later")
-          }
-          IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.EndToStart) }) {
-            Icon(Icons.Default.VisibilityOff, contentDescription = "Ignore")
-          }
-        } else if (
-          view == QuestionViewMode.Answered ||
-          view == QuestionViewMode.Draft ||
-          view == QuestionViewMode.Ignored
-        ) {
-          IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.StartToEnd) }) {
-            Icon(
-              if (question.isIgnored) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-              contentDescription = if (question.isIgnored) "Unignore" else "Ignore"
+          Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                Icons.Default.Edit,
+                contentDescription = "Draft",
+                modifier = Modifier.height(Dimens.IconSizeSmall),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+              Spacer(modifier = Modifier.width(Dimens.TightGap))
+              Text(
+                text = "Draft:",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
+            Text(
+              text = question.draftText!!.normalizeWhitespace(),
+              maxLines = 2,
+              overflow = TextOverflow.Ellipsis,
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
             )
           }
+          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+        }
+      } else if (question.isIgnored) {
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            text = "Ignored",
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+          )
+          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
         }
       }
+    }
+  }
+}
+
+@Composable
+private fun QuestionInlineActions(
+  question: Question,
+  view: QuestionViewMode,
+  swipeTo: (SwipeToDismissBoxValue) -> Unit,
+) {
+  if (view == QuestionViewMode.Unanswered && !question.isAnswered && !question.isIgnored) {
+    IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.StartToEnd) }) {
+      Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Ask later")
+    }
+    IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.EndToStart) }) {
+      Icon(Icons.Default.VisibilityOff, contentDescription = "Ignore")
+    }
+  } else if (
+    view == QuestionViewMode.Answered ||
+    view == QuestionViewMode.Draft ||
+    view == QuestionViewMode.Ignored
+  ) {
+    IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.StartToEnd) }) {
+      Icon(
+        if (question.isIgnored) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+        contentDescription = if (question.isIgnored) "Unignore" else "Ignore"
+      )
     }
   }
 }

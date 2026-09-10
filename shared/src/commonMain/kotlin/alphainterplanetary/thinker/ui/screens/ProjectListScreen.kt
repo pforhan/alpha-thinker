@@ -11,7 +11,6 @@ import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListViewModel
 import alphainterplanetary.thinker.util.normalizeWhitespace
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,8 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.Icons.AutoMirrored
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
@@ -37,7 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -214,42 +211,37 @@ private fun ProjectListItem(
     resetScope = scope,
   ) {
     Card(
+      onClick = onClick,
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = Dimens.ScreenPadding)
-        .clickable(onClick = onClick),
+        .padding(horizontal = Dimens.ScreenPadding),
     ) {
-      ListItem(
-        headlineContent = {
+      Column(modifier = Modifier.padding(Dimens.CardPadding)) {
+        Text(
+          text = project.editableTitle.normalizeWhitespace(),
+          style = MaterialTheme.typography.titleMedium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        Row(verticalAlignment = Alignment.CenterVertically) {
           Text(
-            project.editableTitle.normalizeWhitespace(),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
-        },
-        supportingContent = {
-          Text(
-            project.synopsis.normalizeWhitespace(),
+            text = project.synopsis.normalizeWhitespace(),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
           )
-        },
-        trailingContent = {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-              onClick = {
-                scope.launch { dismissState.dismiss(SwipeToDismissBoxValue.EndToStart) }
-              }
-            ) {
-              Icon(
-                Icons.Default.Delete,
-                contentDescription = "Delete project",
-              )
+          IconButton(
+            onClick = {
+              scope.launch { dismissState.dismiss(SwipeToDismissBoxValue.EndToStart) }
             }
-            Icon(AutoMirrored.Filled.ArrowForward, contentDescription = null)
+          ) {
+            Icon(Icons.Default.Delete, contentDescription = "Delete project")
           }
-        },
-      )
+        }
+      }
     }
   }
 }

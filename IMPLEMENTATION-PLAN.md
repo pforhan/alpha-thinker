@@ -131,6 +131,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] make Question primary constructor private; use factory methods that only accept one set of parameters or the other (further reinforces correct parameters we have in init)
 - [ ] is our new question/answer data structure tracking draft edits in history?
 - [ ] AnswerDialog: consider moving from completed toggle to a second submit button (Save vs Save Completed? or something better)
+- [ ] anywhere: for desktop build, add VerticalScrollbar component
 - [ ] **Undoable project deletion (snackbar):** extend the snackbar undo pattern to project deletion. Unlike question actions, Room cascade `DELETE` physically removes project/questions/answers — snapshot the full `Project` aggregate before deletion and re-insert on undo. Requires `ProjectListViewModel` to hold the snapshot and `ProjectListScreen` to gain its own `SnackbarHost`. Depends on the snackbar infrastructure from the question-undo item above.
 - [ ] (deferred) anywhere: icons on row items are too much repeated visual noise and take up a lot of space. Attempted a MoreVert (⋮) overflow menu but it was just weird and caused sizing and centering problems
 
