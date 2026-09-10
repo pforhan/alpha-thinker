@@ -316,8 +316,10 @@ private fun ProjectDetailContent(
                 QuestionItem(
                   question = question,
                   view = view,
-                  dismissState = dismissState,
                   onAnswerClick = { onAnswerClick(question) },
+                  onAskLater = onAskLater,
+                  onIgnore = onIgnore,
+                  onUnignore = onUnignore,
                 )
               }
             }
