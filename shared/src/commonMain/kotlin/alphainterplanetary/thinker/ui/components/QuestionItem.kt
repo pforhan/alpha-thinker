@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
@@ -52,10 +53,17 @@ fun QuestionItem(
     Column(
       modifier = Modifier.padding(Dimens.CardPadding)
     ) {
-      val hasSecondaryContent = question.currentAnswer != null || question.isDraft || question.isIgnored
+      val secondaryText = when {
+        question.currentAnswer != null -> question.currentAnswer!!.text.normalizeWhitespace()
+        question.isDraft -> question.draftText!!.normalizeWhitespace()
+        else -> null
+      }
+      val hasSecondaryContent = secondaryText != null || question.isIgnored
       if (hasSecondaryContent) {
         Text(
           text = question.text,
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
           style = MaterialTheme.typography.bodyLarge
         )
       } else {
@@ -63,17 +71,50 @@ fun QuestionItem(
           Text(
             text = question.text,
             modifier = Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyLarge,
           )
           QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
         }
       }
 
-      if (question.currentAnswer != null) {
+      if (question.isIgnored) {
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                Icons.Default.Visibility,
+                contentDescription = "Ignored",
+                modifier = Modifier.size(Dimens.IconSizeSmall),
+                tint = MaterialTheme.colorScheme.error,
+              )
+              Spacer(modifier = Modifier.width(Dimens.TightGap))
+              Text(
+                text = "Ignored",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+              )
+            }
+            if (secondaryText != null) {
+              Spacer(modifier = Modifier.height(Dimens.TightGap))
+              Text(
+                text = secondaryText,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+          }
+          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+        }
+      } else if (question.currentAnswer != null) {
         Spacer(modifier = Modifier.height(Dimens.ContentGap))
         Row(verticalAlignment = Alignment.CenterVertically) {
           Text(
-            text = question.currentAnswer!!.text.normalizeWhitespace(),
+            text = secondaryText!!,
             modifier = Modifier.weight(1f),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -101,24 +142,13 @@ fun QuestionItem(
               )
             }
             Text(
-              text = question.draftText!!.normalizeWhitespace(),
+              text = secondaryText!!,
               maxLines = 2,
               overflow = TextOverflow.Ellipsis,
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
           }
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
-        }
-      } else if (question.isIgnored) {
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(
-            text = "Ignored",
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error
-          )
           QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
         }
       }

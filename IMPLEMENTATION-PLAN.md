@@ -119,12 +119,12 @@ This document tracks the specific engineering tasks required to move from design
 - [x] **Undoable question actions (snackbar):** add a shared snackbar pattern for undoing drastic question-level actions with a 10-second timeout. Applies to: delete answer, ignore question, unignore question. Optimistic UI update + snapshot-before-mutation in `ProjectDetailViewModel`; on snackbar dismiss, commit persists; on "Undo" tap, re-save the pre-mutation `Project` snapshot via `storage.saveProject()`. Answer rows are never deleted (only `answerId` unlinked), so rollback is cheap re-linking. Add `SnackbarHost` to `ProjectDetailScreen` Scaffold (no root-level Scaffold exists).
 - [x] anywhere: if a dialog close action would cause new/dirty data to be lost, show a prompt.  Example: type in changes to Edit Project then tap off the dialog area to dismiss (or tap cancel).  We've mostly resovled this with answer dialog.
 - [x] anywhere: Clean up a lot of the hardcoded font size, color, etc options by using a proper theme with named styles. `AlphaThinkerTheme` (shared `ui/theme/`) now provides light/dark `ColorScheme`s generated from the app seed (the swipe "Ask later" blue `0xFF2962FF` via material-color-utilities), `Typography`, `Shapes`, a `Dimens` spacing/icon scale, and an `ExtendedColors` composition local for non-standard colors (swipe-action backgrounds/content). All hardcoded `Color(0x…)`/`Color.White` literals and `*.dp` sizes were removed from screens/components and now reference the theme (`MaterialTheme.colorScheme`/`typography`/`shapes`, `LocalExtendedColors`, `Dimens`); swipe action backgrounds resolve through a `SwipeActionStyle` semantic enum. AGENTS.md now requires theme-only access.
-- [ ] ProjectList: the swipe action shows fully before the delete confirmation dialog shows up. see if we can do a swipe into a confirm button so it feels more natural?
-- [ ] ProjectDetail: synopsis should be scrollable like we made question scrollable in AnswerDialog, with indicators. Share code where possible
-- [ ] ProjectDetail: limit question text to two lines in question rows
-- [ ] ProjectDetail: drafts filter should not include ignored questions
-- [ ] ProjectDetail: if an ignored question has an answer the ignored indicator doesn't show
-- [ ] ProjectDetail: domain tests for moving answers between the filters.
+- [x] ProjectList: the swipe action shows fully before the delete confirmation dialog shows up. see if we can do a swipe into a confirm button so it feels more natural?
+- [x] ProjectDetail: synopsis should be scrollable like we made question scrollable in AnswerDialog, with indicators. Share code where possible
+- [x] ProjectDetail: limit question text to two lines in question rows
+- [x] ProjectDetail: drafts filter should not include ignored questions
+- [x] ProjectDetail: if an ignored question has an answer the ignored indicator doesn't show
+- [x] ProjectDetail: domain tests for moving answers between the filters.
 - [ ] compose.uiTest for each screen.  Create / delete project, answer operations, etc.
 - [ ] clarify: ThinkerRepository vs ProjectRepository.  Is the distinction left over between the flutter with kmp app engine original architecture?  
 - [ ] clarify: Also, storage interface vs dao layers.  Most of our operations seem to call saveProject, rather than saving individual questions.
@@ -132,6 +132,7 @@ This document tracks the specific engineering tasks required to move from design
 - [ ] is our new question/answer data structure tracking draft edits in history?
 - [ ] AnswerDialog: consider moving from completed toggle to a second submit button (Save vs Save Completed? or something better)
 - [ ] anywhere: for desktop build, add VerticalScrollbar component
+- [ ] ProjectList: delete project confirm dialog should limit title to 30 characters and ellipsize if more
 - [ ] **Undoable project deletion (snackbar):** extend the snackbar undo pattern to project deletion. Unlike question actions, Room cascade `DELETE` physically removes project/questions/answers — snapshot the full `Project` aggregate before deletion and re-insert on undo. Requires `ProjectListViewModel` to hold the snapshot and `ProjectListScreen` to gain its own `SnackbarHost`. Depends on the snackbar infrastructure from the question-undo item above.
 - [ ] (deferred) anywhere: icons on row items are too much repeated visual noise and take up a lot of space. Attempted a MoreVert (⋮) overflow menu but it was just weird and caused sizing and centering problems
 

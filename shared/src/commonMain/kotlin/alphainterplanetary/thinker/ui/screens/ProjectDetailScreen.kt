@@ -11,6 +11,7 @@ import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
+import alphainterplanetary.thinker.ui.components.ScrollableOverflowText
 import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
@@ -419,10 +420,10 @@ private fun ProjectSynopsis(synopsis: String) {
       .padding(Dimens.SectionPadding),
   ) {
     Text("Synopsis:", style = MaterialTheme.typography.titleSmall)
-    Text(
+    ScrollableOverflowText(
       text = synopsis.normalizeWhitespace(),
-      maxLines = 5,
-      overflow = TextOverflow.Ellipsis,
+      collapsedMaxLines = 5,
+      style = MaterialTheme.typography.bodyMedium,
     )
   }
 }

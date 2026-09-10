@@ -60,7 +60,7 @@ enum class QuestionViewMode(
         .sortedWith(answerDateComparator)
 
       Draft -> questions
-        .filter { it.isDraft }
+        .filter { it.isDraft && !it.isIgnored }
         .sortedWith(answerDateComparator)
 
       Ignored -> questions
