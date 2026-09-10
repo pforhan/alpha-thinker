@@ -30,6 +30,28 @@ The Kotlin codebase follows these formatting conventions:
 
 When in doubt, match the surrounding code styles.
 
+## Design System (Material Theme)
+
+All UI is driven by a single shared Material 3 theme in
+`shared/src/commonMain/.../ui/theme/`. `AlphaThinkerTheme` wraps
+`MaterialTheme` with light + dark `ColorScheme`s (generated from the app
+seed color via material-color-utilities), `Typography`, `Shapes`, a
+`Dimens` object for the spacing/icon-size scale, and an `ExtendedColors`
+composition local for colors that don't map to a standard Material role
+(e.g. swipe-action backgrounds).
+
+Rules:
+
+- Never hardcode colors, text styles, font sizes, shapes, or spacing /
+  padding values in UI code. Pull them from `MaterialTheme.colorScheme`,
+  `MaterialTheme.typography`, `MaterialTheme.shapes`, `LocalExtendedColors`,
+  or `Dimens` instead.
+- If the UI needs a value the theme doesn't provide, add it to the theme —
+  as a named `ExtendedColors` role, a `Dimens` constant, or a `Typography` /
+  `Shapes` slot — and reference it. Don't inline literals.
+- Keep the theme's palette and scale cohesive: the rest of the app should
+  only ever read the theme, never redefine it.
+
 ## Deferred / Roadmap
 
 IMPLEMENTATION-PLAN.md contains the project roadmap.  Always confirm before acting on an item that's not next in the roadmap.

@@ -5,7 +5,9 @@ import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
 import alphainterplanetary.thinker.ui.components.SwipeAction
+import alphainterplanetary.thinker.ui.components.SwipeActionStyle
 import alphainterplanetary.thinker.ui.components.SwipeableCard
+import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListViewModel
 import alphainterplanetary.thinker.util.normalizeWhitespace
@@ -52,12 +54,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-
-private val DeleteBackgroundColor = Color(0xFFD32F2F)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,7 +180,7 @@ private fun ProjectListEmpty(onCreateClick: () -> Unit) {
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     Text("No projects yet.")
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(Dimens.MessageActionGap))
     Button(onClick = onCreateClick) {
       Text("Create your first project")
     }
@@ -208,8 +206,8 @@ private fun ProjectListItem(
 
   SwipeableCard(
     state = dismissState,
-    startAction = SwipeAction("Delete", Icons.Default.Delete, DeleteBackgroundColor),
-    endAction = SwipeAction("Delete", Icons.Default.Delete, DeleteBackgroundColor),
+    startAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete),
+    endAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete),
     onSwipeStart = onDelete,
     onSwipeEnd = onDelete,
     settleAfterDismiss = false,
@@ -218,7 +216,7 @@ private fun ProjectListItem(
     Card(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 16.dp)
+        .padding(horizontal = Dimens.ScreenPadding)
         .clickable(onClick = onClick),
     ) {
       ListItem(
@@ -269,7 +267,7 @@ private fun ProjectListSuccess(
   } else {
     LazyColumn(
       modifier = Modifier.fillMaxSize(),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
     ) {
       items(projects, key = { it.id }) { project ->
         ProjectListItem(
@@ -321,7 +319,7 @@ private fun ProjectListError(
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     Text(message)
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(Dimens.MessageActionGap))
     Button(onClick = onRetry) {
       Text("Retry")
     }

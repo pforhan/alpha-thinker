@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,7 +24,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 
 enum class ProjectDialogMode {
   Create,
@@ -104,6 +105,7 @@ private fun ProjectDialog(
   }
   AlertDialog(
     onDismissRequest = onDismiss,
+    properties = DialogProperties(dismissOnClickOutside = false),
     title = { Text(if (isEdit) "Edit Project" else "New Project") },
     text = {
       Column {
@@ -118,7 +120,7 @@ private fun ProjectDialog(
             label = { Text("Title") },
             modifier = Modifier.fillMaxWidth(),
           )
-          Spacer(modifier = Modifier.height(16.dp))
+          Spacer(modifier = Modifier.height(Dimens.FormGap))
         }
 
         OutlinedTextField(
@@ -132,7 +134,7 @@ private fun ProjectDialog(
         )
 
         if (isEdit) {
-          Spacer(modifier = Modifier.height(16.dp))
+          Spacer(modifier = Modifier.height(Dimens.FormGap))
           Text("Handling prior answers:")
           RadioButtonList(
             selectedMode = updateMode,

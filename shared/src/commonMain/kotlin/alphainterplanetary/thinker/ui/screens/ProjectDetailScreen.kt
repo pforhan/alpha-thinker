@@ -12,6 +12,7 @@ import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
 import alphainterplanetary.thinker.ui.components.SwipeableCard
+import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import alphainterplanetary.thinker.util.normalizeWhitespace
@@ -30,7 +31,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
@@ -72,7 +72,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -288,7 +287,7 @@ private fun ProjectDetailContent(
         } else {
           LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(Dimens.ListGap)
           ) {
             items(filteredQuestions, key = { it.id }) { question ->
               val dismissState = rememberSwipeToDismissBoxState()
@@ -343,7 +342,7 @@ private fun QuestionEmptyState(
   modifier: Modifier = Modifier,
 ) {
   Column(
-    modifier = modifier.padding(24.dp),
+    modifier = modifier.padding(Dimens.EmptyStatePadding),
     verticalArrangement = Arrangement.Center,
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
@@ -354,13 +353,13 @@ private fun QuestionEmptyState(
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     if (onGenerateMore != null) {
-      Spacer(modifier = Modifier.height(22.dp))
+      Spacer(modifier = Modifier.height(Dimens.EmptyStateActionGap))
       Button(onClick = onGenerateMore) {
         Text("Get more questions")
       }
     }
     if (recommendedViews.isNotEmpty()) {
-      Spacer(modifier = Modifier.height(12.dp))
+      Spacer(modifier = Modifier.height(Dimens.SectionGap))
       Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -380,7 +379,7 @@ private fun QuestionEmptyState(
           }
           TextButton(
             onClick = { onViewSelected(view) },
-            contentPadding = PaddingValues(horizontal = 8.dp),
+            contentPadding = PaddingValues(horizontal = Dimens.ButtonHorizontalPadding),
           ) {
             Text(
               text = view.displayName,
@@ -405,7 +404,7 @@ private fun ProjectDetailError(
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
     Text(message)
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(Dimens.MessageActionGap))
     Button(onClick = onRetry) {
       Text("Retry")
     }
@@ -417,7 +416,7 @@ private fun ProjectSynopsis(synopsis: String) {
   Column(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(16.dp),
+      .padding(Dimens.SectionPadding),
   ) {
     Text("Synopsis:", style = MaterialTheme.typography.titleSmall)
     Text(
@@ -433,23 +432,23 @@ private fun ShuffleRow(onClick: () -> Unit) {
   Box(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp)
-      .clip(ShuffleRowShape)
+      .padding(horizontal = Dimens.ScreenPadding)
+      .clip(MaterialTheme.shapes.medium)
       .clickable(onClick = onClick),
     contentAlignment = Alignment.Center,
   ) {
     Row(
-      modifier = Modifier.padding(vertical = 12.dp),
+      modifier = Modifier.padding(vertical = Dimens.ActionRowVerticalPadding),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.Center,
     ) {
       Icon(
         Icons.Default.Shuffle,
         contentDescription = null,
-        modifier = Modifier.size(20.dp),
+        modifier = Modifier.size(Dimens.IconSizeMedium),
         tint = MaterialTheme.colorScheme.primary,
       )
-      Spacer(modifier = Modifier.width(8.dp))
+      Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
       Text(
         "Shuffle questions",
         style = MaterialTheme.typography.bodyMedium,
@@ -458,5 +457,3 @@ private fun ShuffleRow(onClick: () -> Unit) {
     }
   }
 }
-
-private val ShuffleRowShape = RoundedCornerShape(12.dp)

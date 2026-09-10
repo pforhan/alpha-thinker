@@ -6,19 +6,20 @@ import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+
+enum class SwipeActionStyle {
+  AskLater,
+  Ignore,
+  Delete,
+  Unignore,
+}
 
 data class SwipeAction(
   val label: String,
   val icon: ImageVector,
-  val background: Color,
+  val style: SwipeActionStyle,
 )
-
-private val AskLaterColor = Color(0xFF2962FF)
-private val IgnoreColor = Color(0xFF757575)
-private val DeleteAnswerColor = Color(0xFFD32F2F)
-private val UnignoreColor = Color(0xFF2E7D32)
 
 enum class QuestionViewMode(
   val displayName: String,
@@ -29,26 +30,26 @@ enum class QuestionViewMode(
   Unanswered(
     "Unanswered",
     "No unanswered questions.",
-    startAction = SwipeAction("Ask later", Icons.AutoMirrored.Filled.RotateLeft, AskLaterColor),
-    endAction = SwipeAction("Ignore", Icons.Default.VisibilityOff, IgnoreColor),
+    startAction = SwipeAction("Ask later", Icons.AutoMirrored.Filled.RotateLeft, SwipeActionStyle.AskLater),
+    endAction = SwipeAction("Ignore", Icons.Default.VisibilityOff, SwipeActionStyle.Ignore),
   ),
   Answered(
     "Answered",
     "No answered questions.",
-    startAction = SwipeAction("Ignore", Icons.Default.VisibilityOff, IgnoreColor),
-    endAction = SwipeAction("Delete answer", Icons.Default.Delete, DeleteAnswerColor),
+    startAction = SwipeAction("Ignore", Icons.Default.VisibilityOff, SwipeActionStyle.Ignore),
+    endAction = SwipeAction("Delete answer", Icons.Default.Delete, SwipeActionStyle.Delete),
   ),
   Draft(
     "Drafts",
     "No drafts.",
-    startAction = SwipeAction("Ignore", Icons.Default.VisibilityOff, IgnoreColor),
-    endAction = SwipeAction("Delete answer", Icons.Default.Delete, DeleteAnswerColor),
+    startAction = SwipeAction("Ignore", Icons.Default.VisibilityOff, SwipeActionStyle.Ignore),
+    endAction = SwipeAction("Delete answer", Icons.Default.Delete, SwipeActionStyle.Delete),
   ),
   Ignored(
     "Ignored",
     "No ignored questions.",
-    startAction = SwipeAction("Unignore", Icons.Default.Visibility, UnignoreColor),
-    endAction = SwipeAction("Unignore", Icons.Default.Visibility, UnignoreColor),
+    startAction = SwipeAction("Unignore", Icons.Default.Visibility, SwipeActionStyle.Unignore),
+    endAction = SwipeAction("Unignore", Icons.Default.Visibility, SwipeActionStyle.Unignore),
   );
 
   fun apply(questions: List<Question>): List<Question> {

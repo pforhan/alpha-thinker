@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.SettingsUiState
 import alphainterplanetary.thinker.ui.viewmodel.SettingsViewModel
 import androidx.compose.foundation.layout.Arrangement
@@ -33,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,8 +64,8 @@ fun SettingsScreen(
         .padding(paddingValues)
         .fillMaxSize()
         .verticalScroll(rememberScrollState())
-        .padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
+        .padding(Dimens.ScreenPadding),
+      verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
     ) {
       Text(
         text = "Tools",
@@ -111,26 +111,26 @@ private fun ToolItem(
   onClick: () -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
-    Column(modifier = Modifier.padding(16.dp)) {
+    Column(modifier = Modifier.padding(Dimens.CardPadding)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
           imageVector = Icons.Filled.Build,
           contentDescription = null,
           tint = MaterialTheme.colorScheme.primary,
         )
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(Dimens.ToolIconLabelGap))
         Text(
           text = title,
           style = MaterialTheme.typography.titleSmall,
           modifier = Modifier.weight(1f),
         )
       }
-      Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(Dimens.ContentGap))
       Text(
         text = description,
         style = MaterialTheme.typography.bodyMedium,
       )
-      Spacer(modifier = Modifier.height(12.dp))
+      Spacer(modifier = Modifier.height(Dimens.SectionGap))
       Button(onClick = onClick, enabled = !isLoading) {
         Text(text = if (isLoading) "Generating..." else "Generate")
       }

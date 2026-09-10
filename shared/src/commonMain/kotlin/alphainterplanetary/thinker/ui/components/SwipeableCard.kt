@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.ui.components
 
+import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.theme.LocalExtendedColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -64,9 +65,9 @@ fun SwipeableCard(
         Box(
           modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = Dimens.ScreenPadding)
             .clip(CardDefaults.shape)
-            .background(action.background),
+            .background(action.background()),
           contentAlignment = alignment,
         ) {
           val iconAtEdge = state.dismissDirection == SwipeToDismissBoxValue.EndToStart
@@ -81,33 +82,45 @@ fun SwipeableCard(
 
 @Composable
 private fun SwipeActionRow(action: SwipeAction, iconAtEdge: Boolean) {
+  val contentColor = LocalExtendedColors.current.swipeActionContent
   Row(
-    modifier = Modifier.padding(horizontal = 20.dp),
+    modifier = Modifier.padding(horizontal = Dimens.SwipeActionPadding),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
+    horizontalArrangement = Arrangement.spacedBy(Dimens.IconLabelGap),
   ) {
     if (iconAtEdge) {
       Text(
         action.label,
         style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
+        color = contentColor,
       )
       Icon(
         action.icon,
         contentDescription = null,
-        tint = Color.White,
+        tint = contentColor,
       )
     } else {
       Icon(
         action.icon,
         contentDescription = null,
-        tint = Color.White,
+        tint = contentColor,
       )
       Text(
         action.label,
         style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
+        color = contentColor,
       )
     }
+  }
+}
+
+@Composable
+private fun SwipeAction.background(): Color {
+  val extendedColors = LocalExtendedColors.current
+  return when (style) {
+    SwipeActionStyle.AskLater -> extendedColors.swipeAskLater
+    SwipeActionStyle.Ignore -> extendedColors.swipeIgnore
+    SwipeActionStyle.Delete -> extendedColors.swipeDelete
+    SwipeActionStyle.Unignore -> extendedColors.swipeUnignore
   }
 }

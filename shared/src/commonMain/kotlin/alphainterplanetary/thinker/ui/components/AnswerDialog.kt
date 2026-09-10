@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
@@ -47,7 +48,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 enum class AnswerDialogResult {
@@ -144,12 +144,12 @@ fun AnswerDialog(
               verticalArrangement = Arrangement.SpaceBetween,
               modifier = Modifier
                 .fillMaxHeight()
-                .width(16.dp),
+                .width(Dimens.ScrollControlSize),
             ) {
               Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                  .size(16.dp)
+                  .size(Dimens.ScrollControlSize)
                   .align(Alignment.CenterHorizontally)
                   .clickable(enabled = hasContentAbove) {
                     scope.launch { scrollState.animateScrollBy(-pagePx) }
@@ -162,7 +162,7 @@ fun AnswerDialog(
               Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                  .size(16.dp)
+                  .size(Dimens.ScrollControlSize)
                   .align(Alignment.CenterHorizontally)
                   .clickable(enabled = hasContentBelow) {
                     scope.launch { scrollState.animateScrollBy(pagePx) }
@@ -195,7 +195,7 @@ fun AnswerDialog(
               Text("Unignore")
             }
           }
-          Spacer(modifier = Modifier.height(12.dp))
+          Spacer(modifier = Modifier.height(Dimens.SectionGap))
         }
 
         OutlinedTextField(
@@ -218,7 +218,7 @@ fun AnswerDialog(
         )
 
         if (!question.isIgnored) {
-          Spacer(modifier = Modifier.height(8.dp))
+          Spacer(modifier = Modifier.height(Dimens.ContentGap))
           Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
@@ -227,7 +227,7 @@ fun AnswerDialog(
               checked = completed,
               onCheckedChange = { completed = it },
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
             Text(
               text = "Marked as complete",
               style = MaterialTheme.typography.bodyMedium,
@@ -236,9 +236,9 @@ fun AnswerDialog(
         }
 
         if (question.isAnswered && !question.isIgnored) {
-          Spacer(modifier = Modifier.height(8.dp))
+          Spacer(modifier = Modifier.height(Dimens.ContentGap))
           HorizontalDivider()
-          Spacer(modifier = Modifier.height(4.dp))
+          Spacer(modifier = Modifier.height(Dimens.TightGap))
           TextButton(
             onClick = { onResult(AnswerDialogResult.DeletedAnswer, "") },
           ) {
@@ -271,7 +271,7 @@ private fun BoxScope.ScrollHintIcon(icon: ImageVector) {
   Icon(
     imageVector = icon,
     contentDescription = null,
-    modifier = Modifier.size(14.dp),
+    modifier = Modifier.size(Dimens.IconSizeSmall),
     tint = MaterialTheme.colorScheme.onSurfaceVariant,
   )
 }

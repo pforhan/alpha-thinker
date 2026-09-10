@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.util.normalizeWhitespace
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,7 +29,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,11 +47,11 @@ fun QuestionItem(
   Card(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp),
+      .padding(horizontal = Dimens.ScreenPadding),
     onClick = onAnswerClick
   ) {
     Column(
-      modifier = Modifier.padding(16.dp)
+      modifier = Modifier.padding(Dimens.CardPadding)
     ) {
       Text(
         text = question.text,
@@ -59,7 +59,7 @@ fun QuestionItem(
       )
 
       if (question.currentAnswer != null) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
         Text(
           text = question.currentAnswer!!.text.normalizeWhitespace(),
           maxLines = 2,
@@ -68,15 +68,15 @@ fun QuestionItem(
           color = MaterialTheme.colorScheme.onSurfaceVariant
         )
       } else if (question.isDraft) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
         Row(verticalAlignment = Alignment.CenterVertically) {
           Icon(
             Icons.Default.Edit,
             contentDescription = "Draft",
-            modifier = Modifier.height(14.dp),
+            modifier = Modifier.height(Dimens.IconSizeSmall),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
           )
-          Spacer(modifier = Modifier.width(4.dp))
+          Spacer(modifier = Modifier.width(Dimens.TightGap))
           Text(
             text = "Draft:",
             style = MaterialTheme.typography.labelSmall,
@@ -91,7 +91,7 @@ fun QuestionItem(
           color = MaterialTheme.colorScheme.onSurfaceVariant
         )
       } else if (question.isIgnored) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
         Text(
           text = "Ignored",
           style = MaterialTheme.typography.bodySmall,
@@ -99,7 +99,7 @@ fun QuestionItem(
         )
       }
 
-      Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(Dimens.ContentGap))
 
       Row(
         horizontalArrangement = Arrangement.End,

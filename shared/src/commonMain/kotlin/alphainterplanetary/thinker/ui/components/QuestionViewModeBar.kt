@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.ui.components
 
+import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -24,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +35,8 @@ fun QuestionViewModeBar(
   SubcomposeLayout(
     modifier = Modifier.fillMaxWidth(),
   ) { constraints ->
-    val meetingGap = 8.dp.roundToPx()
-    val horizontalPadding = 16.dp.roundToPx()
+    val meetingGap = Dimens.LabelChipGap.roundToPx()
+    val horizontalPadding = Dimens.ScreenPadding.roundToPx()
     val availableInnerWidth = (constraints.maxWidth - horizontalPadding * 2).coerceAtLeast(0)
 
     val labelWidth = subcompose("label") {
@@ -45,7 +45,7 @@ fun QuestionViewModeBar(
 
     val chipsWidth = subcompose("chips") {
       Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
         verticalAlignment = Alignment.CenterVertically,
       ) {
         QuestionViewMode.values().forEach { mode ->
@@ -91,14 +91,14 @@ private fun WideViewModeBar(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 8.dp),
+      .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.ModeBarVerticalPadding),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Text("Questions:", style = MaterialTheme.typography.titleMedium)
 
     Row(
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
       verticalAlignment = Alignment.CenterVertically,
     ) {
       QuestionViewMode.values().forEach { mode ->
@@ -124,7 +124,7 @@ private fun CompactViewModeBar(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 8.dp),
+      .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.ModeBarVerticalPadding),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
