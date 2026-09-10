@@ -119,9 +119,10 @@ This document tracks the specific engineering tasks required to move from design
 - [x] **Undoable question actions (snackbar):** add a shared snackbar pattern for undoing drastic question-level actions with a 10-second timeout. Applies to: delete answer, ignore question, unignore question. Optimistic UI update + snapshot-before-mutation in `ProjectDetailViewModel`; on snackbar dismiss, commit persists; on "Undo" tap, re-save the pre-mutation `Project` snapshot via `storage.saveProject()`. Answer rows are never deleted (only `answerId` unlinked), so rollback is cheap re-linking. Add `SnackbarHost` to `ProjectDetailScreen` Scaffold (no root-level Scaffold exists).
 - [x] anywhere: if a dialog close action would cause new/dirty data to be lost, show a prompt.  Example: type in changes to Edit Project then tap off the dialog area to dismiss (or tap cancel).  We've mostly resovled this with answer dialog.
 - [x] anywhere: Clean up a lot of the hardcoded font size, color, etc options by using a proper theme with named styles. `AlphaThinkerTheme` (shared `ui/theme/`) now provides light/dark `ColorScheme`s generated from the app seed (the swipe "Ask later" blue `0xFF2962FF` via material-color-utilities), `Typography`, `Shapes`, a `Dimens` spacing/icon scale, and an `ExtendedColors` composition local for non-standard colors (swipe-action backgrounds/content). All hardcoded `Color(0x…)`/`Color.White` literals and `*.dp` sizes were removed from screens/components and now reference the theme (`MaterialTheme.colorScheme`/`typography`/`shapes`, `LocalExtendedColors`, `Dimens`); swipe action backgrounds resolve through a `SwipeActionStyle` semantic enum. AGENTS.md now requires theme-only access.
-- [ ] ProjectList: icons are too much repeated visual noise and take up a lot of space. Explore options for teaching the user naturally.
+- [ ] anywhere: icons on row items are too much repeated visual noise and take up a lot of space. Explore options for teaching the user naturally.  We don't really have mouseover on mobile, so what options could we use to present actions?  We could do tap for current action, long-press to make actions visible (slide in from right, or show up below?).
 - [ ] ProjectList: the swipe action shows fully before the delete confirmation dialog shows up. see if we can do a swipe into a confirm button so it feels more natural?
-- [ ] ProjectDetail: limit question text to two rows in question rows
+- [ ] ProjectDetail: synopsis should be scrollable like we made question scrollable in AnswerDialog, with indicators. Share code where possible
+- [ ] ProjectDetail: limit question text to two lines in question rows
 - [ ] ProjectDetail: drafts filter should not include ignored questions
 - [ ] ProjectDetail: if an ignored question has an answer the ignored indicator doesn't show
 - [ ] ProjectDetail: domain tests for moving answers between the filters.
@@ -175,7 +176,7 @@ UI and domain work for the round/stage concept so the experience is ready before
 ## Phase 5: Refinement & UX
 - [ ] Prototype and refine "Iterative Question Card" interaction
 - [ ] Design and implement navigation strategy for multi-platform (mobile/desktop)
-- [ ] Move all strings to Compose MP standards for internationalization
+- [ ] Move all strings to Compose MP standards (moko-resources maybe?) for internationalization
 
 ## Phase 6: Testing & Verification
 - [ ] **KMP Unit Tests:** Verify business logic and fallback transitions.
