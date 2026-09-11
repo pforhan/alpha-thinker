@@ -29,7 +29,7 @@ Both Editions share the same general UI, but differ in source of question materi
     - **Active Round Focus**: Current unanswered questions are prioritized at the top of the workspace.
     - User is presented a list of questions on cards, roughly enough to fill the screen without scrolling (though scrolling is acceptable on small screens).
     - As the user answers or dismisses questions, the response is recorded, the card moves to an "answered" list, and unseen questions replace them.
-    - **Automated Transition (Edge)**: Once all questions in the current round are answered, the system automatically triggers the LLM to generate the next round.
+    - **Round Wrap-Up**: Once the questions in the current round are resolved (answered or ignored), the user intentionally wraps up the round to advance the planning stage and trigger the next round's generation. Round completion is always a manual, deliberate step — there is no automatic transition.
     - **Manual Expansion (Lite)**: The user manually adds new questions or works through the fixed seed list.
 4. **Documentation**: The final synthesized knowledge is exported as structured markdown.
 
@@ -46,7 +46,7 @@ Both Editions share the same general UI, but differ in source of question materi
 - **Question Archiving**: Users can manually deactivate or archive questions.
 - **Immediate Archiving**: Option to archive questions immediately upon being answered.
 - **Auto-Archive (Edge Only)**: Provide a user app-wide setting to determine behavior when the synopsis or preceding questions change: a) do nothing, b) clear all prior questions and answers, or c) ask the LLM if each question is still relevant.
-- **Automatic Generation (Edge Only)**: Automatically trigger the generation of more questions as needed.
+- **Next Round Generation (Edge Only)**: Generate the next round of questions when the user wraps up the current round. "Get more questions" may also extend the current round while pool questions remain.
 
 ### 4.3 LLM Integration (Alpha Thinker Edge Only)
 - Generate a set of tailored initial questions based on the project synopsis.

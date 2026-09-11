@@ -108,8 +108,10 @@ LLM review (Phase 3) has something concrete to anchor to.
   needed (the repository already stamps questions with a fresh `randomUUID()`
   per generation round).
 - Reconstructing rounds is just a `GROUP BY roundId` query; wrap-up sets
-  `completedAt`, and the planning stage (Phase 2.8) equals the count of
-  completed rounds.
+  `completedAt`, and the planning stage (Phase 2.8) is **derived** as the
+  count of completed rounds plus one — a fresh project with round 1 open is
+  at stage 1, and the stage never gets its own column (the only write path
+  is wrap-up setting `completedAt`).
 - Hardcoded/fallback questions historically carried an empty `contextId`; with
   a real Round on creation and per follow-up round, every question gets a
   valid `roundId`.
