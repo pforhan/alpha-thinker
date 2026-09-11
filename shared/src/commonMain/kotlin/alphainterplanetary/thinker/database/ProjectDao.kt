@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.database
 
 import androidx.room3.Dao
-import androidx.room3.Delete
 import androidx.room3.Query
 import androidx.room3.Transaction
 import androidx.room3.Upsert
@@ -24,6 +23,9 @@ interface ProjectDao {
 
   @Query("DELETE FROM projects")
   suspend fun deleteAllProjects()
+
+  @Query("UPDATE projects SET updatedAt = :updatedAt WHERE id = :projectId")
+  suspend fun updateProjectUpdatedAt(projectId: String, updatedAt: Long)
 }
 
 @Dao
@@ -34,18 +36,18 @@ interface QuestionDao {
   @Query("SELECT * FROM questions WHERE projectId = :projectId ORDER BY sortOrder ASC")
   suspend fun getQuestionsForProject(projectId: String): List<QuestionEntity>
 
-  @Query("UPDATE questions SET sortOrder = :sortOrder WHERE id = :questionId")
-  suspend fun updateSortOrder(questionId: String, sortOrder: Int)
+  @Query("UPDATE questions SET sortOrder = :sortOrder WHERE id = :questionId AND projectId = :projectId")
+  suspend fun updateSortOrder(questionId: String, projectId: String, sortOrder: Int)
 
   @Transaction
-  suspend fun updateSortOrderForProject(order: List<String>) {
+  suspend fun updateSortOrderForProject(projectId: String, order: List<String>) {
     order.forEachIndexed { index, questionId ->
-      updateSortOrder(questionId, index)
+      updateSortOrder(questionId, projectId, index)
     }
   }
 
-  @Delete
-  suspend fun deleteQuestion(question: QuestionEntity)
+  @Query("DELETE FROM questions WHERE id IN (:questionIds)")
+  suspend fun deleteQuestionsByIds(questionIds: List<String>)
 }
 
 @Dao
@@ -53,9 +55,9 @@ interface AnswerDao {
   @Upsert
   suspend fun upsertAnswer(answer: AnswerEntity): Long
 
-  @Query("SELECT * FROM answers WHERE questionId = :questionId ORDER BY createdAt ASC, id ASC")
-  suspend fun getAnswersForQuestion(questionId: String): List<AnswerEntity>
-
   @Query("SELECT * FROM answers WHERE questionId IN (:questionIds) ORDER BY createdAt ASC, id ASC")
   suspend fun getAnswersForQuestions(questionIds: List<String>): List<AnswerEntity>
+
+  @Query("DELETE FROM answers WHERE id IN (:answerIds)")
+  suspend fun deleteAnswersByIds(answerIds: List<String>)
 }

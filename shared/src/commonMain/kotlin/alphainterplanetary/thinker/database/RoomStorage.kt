@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.database
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.util.now
 import androidx.room3.withWriteTransaction
 import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
@@ -16,12 +17,46 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
         database.questionDao().upsertQuestion(q.toEntity(project.id, index))
       }
 
-      project.questions.flatMap { it.answers }.forEach { a ->
-        database.answerDao().upsertAnswer(a.toEntity())
-      }
+      reconcileChildren(project)
     }
 
     return project
+  }
+
+  /**
+   * Brings the questions and answers tables back in line with the saved
+   * aggregate: answers already stored (immutable history) are left untouched,
+   * only new versions are inserted, and any question/answer rows not present in
+   * the aggregate are deleted so a projected question can never orphan its rows.
+   */
+  private suspend fun reconcileChildren(project: Project) {
+    val savedQuestionIds = project.questions.map { it.id }
+    val savedAnswerIds = project.questions.flatMap { it.answers }.map { it.id }.toSet()
+
+    val existingAnswerIds = database.answerDao()
+      .getAnswersForQuestions(savedQuestionIds)
+      .map { it.id }
+      .toSet()
+
+    project.questions
+      .flatMap { it.answers }
+      .filterNot { it.id in existingAnswerIds }
+      .forEach { a ->
+        database.answerDao().upsertAnswer(a.toEntity())
+      }
+
+    val existingQuestionIds = database.questionDao()
+      .getQuestionsForProject(project.id)
+      .map { it.id }
+    val orphanedQuestionIds = existingQuestionIds.filterNot { it in savedQuestionIds.toSet() }
+    if (orphanedQuestionIds.isNotEmpty()) {
+      database.questionDao().deleteQuestionsByIds(orphanedQuestionIds)
+    }
+
+    val orphanedAnswerIds = existingAnswerIds.filterNot { it in savedAnswerIds }
+    if (orphanedAnswerIds.isNotEmpty()) {
+      database.answerDao().deleteAnswersByIds(orphanedAnswerIds)
+    }
   }
 
   override suspend fun getProject(id: String): Project? {
@@ -47,7 +82,10 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
   }
 
   override suspend fun saveQuestionOrder(projectId: String, order: List<String>) {
-    database.questionDao().updateSortOrderForProject(order)
+    database.withWriteTransaction {
+      database.questionDao().updateSortOrderForProject(projectId, order)
+      database.projectDao().updateProjectUpdatedAt(projectId, now().toEpochMilliseconds())
+    }
   }
 }
 
