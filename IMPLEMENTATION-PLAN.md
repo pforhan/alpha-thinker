@@ -133,14 +133,8 @@ This document tracks the specific engineering tasks required to move from design
 - [x] **Scope `saveQuestionOrder` by project:** `RoomStorage.saveQuestionOrder` never passed `projectId` and `QuestionDao.updateSortOrderForProject` renumbered by id globally, while `InMemoryStorage` scoped to the project — inconsistent. Now `updateSortOrder` scopes with `WHERE id = ? AND projectId = ?`, `updateSortOrderForProject` threads `projectId` through, and both `RoomStorage` and `FakeStorage` bump the project's `updatedAt` (`ProjectDao.updateProjectUpdatedAt`) so a reorder re-sorts the project list like any other mutation. Wrapped in the same `withWriteTransaction`.
 - [x] **Reconcile deleted children on whole-aggregate save:** `saveProject` upserts project/questions/answers but never deletes rows dropped from `project.questions`, so removed questions/answers would orphan forever (FK cascade only fires on project delete). `RoomStorage.saveProject` now calls a `reconcileChildren` step (same transaction): reads the existing question/answer rows for the project, inserts only answers missing from the aggregate, and deletes any question/answer rows not present in the saved aggregate (`deleteQuestionsByIds` / `deleteAnswersByIds`, keyed off the immutable id, not text). Answer rows of orphaned questions go via the questions FK cascade. The single-entity `QuestionDao.deleteQuestion` and `AnswerDao.getAnswersForQuestion` methods became dead and were removed.
 - [x] **Stop re-upserting the full answer history:** every `saveProject` rewrote all committed answer rows on each save, even untouched ones. `reconcileChildren` now computes the set of already-stored answer ids (from the same read used for reconciliation) and upserts only the new versions — since `Answer` rows are append-only immutable history, an existing row is never rewritten. *(Atomicity, done: `saveProject` is fully wrapped in `database.withWriteTransaction {}` so the project+questions+answers write is one IMMEDIATE transaction — a partial write would leave a questions row pointing at an `answerId` with no stored answer, tripping the `Question` `init` guard on the next read. `saveQuestionOrder`'s loop was already atomic via `@Transaction` on `updateSortOrderForProject`.)*
-- [ ] make Question primary constructor private; use factory methods that only accept one set of parameters or the other (further reinforces correct parameters we have in init)
-- [ ] is our new question/answer data structure tracking draft edits in history?
-- [ ] compose.uiTest for each screen.  Create / delete project, answer operations, etc.
-- [ ] AnswerDialog: consider moving from completed toggle to a second submit button (Save vs Save Completed? or something better)
-- [ ] anywhere: for desktop build, add VerticalScrollbar component
-- [ ] ProjectList: delete project confirm dialog should limit title to 30 characters and ellipsize if more
-- [ ] **Undoable project deletion (snackbar):** extend the snackbar undo pattern to project deletion. Unlike question actions, Room cascade `DELETE` physically removes project/questions/answers — snapshot the full `Project` aggregate before deletion and re-insert on undo. Requires `ProjectListViewModel` to hold the snapshot and `ProjectListScreen` to gain its own `SnackbarHost`. Depends on the snackbar infrastructure from the question-undo item above.
-- [ ] (deferred) anywhere: icons on row items are too much repeated visual noise and take up a lot of space. Attempted a MoreVert (⋮) overflow menu but it was just weird and caused sizing and centering problems
+- [x] changed approach to transition methods: make Question primary constructor private; use factory methods that only accept one set of parameters or the other (further reinforces correct parameters we have in init)
+- [x] ProjectList: delete project confirm dialog should limit title to 30 characters and ellipsize if more
 
 ## Phase 2.8: Rounds & Stages UI (pre-LLM)
 UI and domain work for the round/stage concept so the experience is ready before LLM integration. No themed stage names — stages are plain numeric values. Depends on the Phase 2.5 generator-merge/interface items for the wrap-up's next-round generation.
@@ -178,6 +172,7 @@ UI and domain work for the round/stage concept so the experience is ready before
 - [ ] Implement System/Debug Workspace (LLM Log, Console, and Task Manager); the LLM log should surface any tool calls made during an interaction (tool name, arguments, results, per-call latency)
 - [ ] **Export Pipeline:** Implement the Markdown synthesis and file system export.
 - [ ] Implement answer revision history UI (list with timestamps)
+- [ ] Track draft edits in revision history
 - [ ] SampleProjectGenerator should generate a history of answer revisions
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global question pool with Lite version seed questions and edge version generated questions
@@ -185,9 +180,14 @@ UI and domain work for the round/stage concept so the experience is ready before
 - [ ] Allow users to set up a connection to a cloud LLM (OpenAI-compatible API)
 
 ## Phase 5: Refinement & UX
+- [ ] compose.uiTest for each screen.  Create / delete project, answer operations, etc.
 - [ ] Prototype and refine "Iterative Question Card" interaction
 - [ ] Design and implement navigation strategy for multi-platform (mobile/desktop)
 - [ ] Move all strings to Compose MP standards (moko-resources maybe?) for internationalization
+- [ ] AnswerDialog: consider moving from completed toggle to a second submit button (Save vs Save Completed? or something better)
+- [ ] **Undoable project deletion (snackbar):** extend the snackbar undo pattern to project deletion. Unlike question actions, Room cascade `DELETE` physically removes project/questions/answers — snapshot the full `Project` aggregate before deletion and re-insert on undo. Requires `ProjectListViewModel` to hold the snapshot and `ProjectListScreen` to gain its own `SnackbarHost`. Depends on the snackbar infrastructure from the question-undo item above.
+- [ ] (deferred) anywhere: icons on row items are too much repeated visual noise and take up a lot of space. Attempted a MoreVert (⋮) overflow menu but it was just weird and caused sizing and centering problems
+- [ ] anywhere: for desktop build, add VerticalScrollbar component
 
 ## Phase 6: Testing & Verification
 - [ ] **KMP Unit Tests:** Verify business logic and fallback transitions.

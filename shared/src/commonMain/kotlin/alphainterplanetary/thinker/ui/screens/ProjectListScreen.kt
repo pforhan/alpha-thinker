@@ -52,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectListScreen(
@@ -313,9 +312,15 @@ private fun ConfirmDeleteProjectDialog(
     onDismissRequest = onDismiss,
     title = { Text("Delete project?") },
     text = {
-      Text(
-        "${project.editableTitle.normalizeWhitespace()}\n\nThis action cannot be undone."
-      )
+      Column {
+        Text(
+          text = project.editableTitle.normalizeWhitespace(),
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        Text("This action cannot be undone.")
+      }
     },
     confirmButton = {
       TextButton(onClick = onConfirm) {
