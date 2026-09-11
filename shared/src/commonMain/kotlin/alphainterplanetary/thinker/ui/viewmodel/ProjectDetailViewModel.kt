@@ -94,7 +94,7 @@ class ProjectDetailViewModel(
       val optimistic = current.copy(
         questions = current.questions.map { q ->
           if (q.id == questionId) {
-            q.copy(answerId = null, draftText = null, draftUpdatedAt = null)
+            q.withoutAnswer()
           } else {
             q
           }
@@ -133,7 +133,7 @@ class ProjectDetailViewModel(
     val snapshot = (_uiState.value as? ProjectDetailUiState.Success)?.project ?: return
     val optimistic = snapshot.copy(
       questions = snapshot.questions.map { q ->
-        if (q.id == questionId) q.copy(ignoredAt = now()) else q
+        if (q.id == questionId) q.withIgnored(now()) else q
       }
     )
 
@@ -157,7 +157,7 @@ class ProjectDetailViewModel(
     val snapshot = (_uiState.value as? ProjectDetailUiState.Success)?.project ?: return
     val optimistic = snapshot.copy(
       questions = snapshot.questions.map { q ->
-        if (q.id == questionId) q.copy(ignoredAt = null) else q
+        if (q.id == questionId) q.withoutIgnored() else q
       }
     )
 

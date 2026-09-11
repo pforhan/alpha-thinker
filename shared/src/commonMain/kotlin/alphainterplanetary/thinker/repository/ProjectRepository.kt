@@ -83,14 +83,7 @@ class ProjectRepository @Inject constructor(
     val now = now()
 
     val updatedQuestions = when (mode) {
-      ProjectUpdateMode.CLEAR -> project.questions.map { q ->
-        q.copy(
-          answerId = null,
-          draftText = null,
-          draftUpdatedAt = null,
-          ignoredAt = null,
-        )
-      }
+      ProjectUpdateMode.CLEAR -> project.questions.map { it.resetState() }
 
       ProjectUpdateMode.REVALIDATE -> {
         // TODO: AI revalidation logic
@@ -142,19 +135,14 @@ class ProjectRepository @Inject constructor(
           text = trimmed,
           createdAt = now,
         )
-        question.copy(
-          answerId = newAnswer.id,
-          draftText = null,
-          draftUpdatedAt = null,
-          answers = question.answers + newAnswer,
-        )
+        question.withAnswer(newAnswer)
       }
     } else {
-      question.copy(
-        answerId = null,
-        draftText = trimmed.takeIf { it.isNotBlank() },
-        draftUpdatedAt = if (trimmed.isNotBlank()) now else null,
-      )
+      if (trimmed.isNotBlank()) {
+        question.withDraft(trimmed, now)
+      } else {
+        question.withoutAnswer()
+      }
     }
 
     if (updatedQuestion == question) return project
@@ -213,7 +201,7 @@ class ProjectRepository @Inject constructor(
     val project = storage.getProject(projectId) ?: return null
     val now = now()
     val updatedQuestions = project.questions.map { q ->
-      if (q.id == questionId) q.copy(ignoredAt = now) else q
+      if (q.id == questionId) q.withIgnored(now) else q
     }
 
     val updatedProject = project.copy(
@@ -231,7 +219,7 @@ class ProjectRepository @Inject constructor(
     val project = storage.getProject(projectId) ?: return null
     val now = now()
     val updatedQuestions = project.questions.map { q ->
-      if (q.id == questionId) q.copy(ignoredAt = null) else q
+      if (q.id == questionId) q.withoutIgnored() else q
     }
 
     val updatedProject = project.copy(

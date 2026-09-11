@@ -9,6 +9,10 @@ import kotlin.time.Instant
  * [Answer] history rows): [answerId] points at the current committed version,
  * and [draftText] holds in-progress text. A question is either committed or a
  * draft — never both (see the [init] guards).
+ *
+ * State transitions go through the [withAnswer], [withDraft], [withoutAnswer],
+ * [withIgnored], and [withoutIgnored] mutators so the committed/draft
+ * invariants can't be broken by ad-hoc [copy] calls.
  */
 data class Question(
   val id: String,
@@ -48,4 +52,34 @@ data class Question(
 
   val isDraft: Boolean
     get() = !draftText.isNullOrBlank()
+
+  fun withAnswer(answer: Answer): Question = copy(
+    answerId = answer.id,
+    draftText = null,
+    draftUpdatedAt = null,
+    answers = answers + answer,
+  )
+
+  fun withDraft(text: String, updatedAt: Instant): Question = copy(
+    answerId = null,
+    draftText = text,
+    draftUpdatedAt = updatedAt,
+  )
+
+  fun withoutAnswer(): Question = copy(
+    answerId = null,
+    draftText = null,
+    draftUpdatedAt = null,
+  )
+
+  fun withIgnored(at: Instant): Question = copy(ignoredAt = at)
+
+  fun withoutIgnored(): Question = copy(ignoredAt = null)
+
+  fun resetState(): Question = copy(
+    answerId = null,
+    draftText = null,
+    draftUpdatedAt = null,
+    ignoredAt = null,
+  )
 }
