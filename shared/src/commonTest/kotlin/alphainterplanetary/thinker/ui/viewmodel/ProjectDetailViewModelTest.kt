@@ -1,14 +1,12 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.database.InMemoryStorage
-import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.testutil.FakeGenerator
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.defaultTestInstant
 import alphainterplanetary.thinker.testutil.question
-import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -27,12 +25,7 @@ class ProjectDetailViewModelTest {
     generator: FakeGenerator = FakeGenerator(),
   ): ProjectDetailViewModel {
     val repository = ProjectRepository(storage, generator)
-    val thinker = ThinkerRepository(
-      repository = repository,
-      sampleProjectGenerator = SampleProjectGenerator(storage),
-      scope = CoroutineScope(coroutineContext),
-    )
-    return ProjectDetailViewModel(thinker)
+    return ProjectDetailViewModel(repository, scope = CoroutineScope(coroutineContext))
   }
 
   private fun project(

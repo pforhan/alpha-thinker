@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.ui.screens
 
-import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
@@ -66,10 +65,9 @@ fun ProjectListScreen(
   var projectToDelete by remember { mutableStateOf<Project?>(null) }
   var deletingId by remember { mutableStateOf<String?>(null) }
 
-  val repository = remember {
-    ThinkerRepository(appComponent.projectRepository, appComponent.sampleProjectGenerator)
+  val viewModel = remember {
+    ProjectListViewModel(appComponent.projectRepository, appComponent.appScope)
   }
-  val viewModel = remember { ProjectListViewModel(repository) }
 
   LaunchedEffect(Unit) {
     viewModel.loadProjects()

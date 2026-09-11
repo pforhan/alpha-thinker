@@ -1,12 +1,14 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.ProjectUpdateMode
-import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.util.now
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class PendingUndo(
   val token: Long,
@@ -20,7 +22,10 @@ sealed interface ProjectDetailUiState {
   data class Error(val message: String) : ProjectDetailUiState
 }
 
-class ProjectDetailViewModel(private val repository: ThinkerRepository) {
+class ProjectDetailViewModel(
+  private val repository: ProjectRepository,
+  private val scope: CoroutineScope,
+) {
   private val _uiState = MutableStateFlow<ProjectDetailUiState>(ProjectDetailUiState.Loading)
   val uiState: StateFlow<ProjectDetailUiState> = _uiState.asStateFlow()
 
@@ -30,14 +35,15 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
 
   fun loadProject(id: String) {
     _uiState.value = ProjectDetailUiState.Loading
-    repository.getProject(id) { result ->
-      result.onSuccess { loaded ->
+    scope.launch {
+      try {
+        val loaded = repository.getProject(id)
         if (loaded == null) {
           _uiState.value = ProjectDetailUiState.Error("Failed to load project: project not found")
         } else {
           _uiState.value = ProjectDetailUiState.Success(loaded)
         }
-      }.onFailure { e ->
+      } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to load project: ${e.message ?: "Unknown error"}"
         )
@@ -60,10 +66,11 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
   }
 
   fun generateMoreQuestions(projectId: String) {
-    repository.generateMoreQuestions(projectId) { result ->
-      result.onSuccess {
+    scope.launch {
+      try {
+        repository.generateMoreQuestions(projectId)
         loadProject(projectId)
-      }.onFailure { e ->
+      } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to generate more questions: ${e.message ?: "Unknown error"}"
         )
@@ -73,7 +80,9 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
 
   private fun persistOrder(reordered: Project) {
     _uiState.value = ProjectDetailUiState.Success(reordered)
-    repository.saveQuestionOrder(reordered.id, reordered.questionOrderIds) { }
+    scope.launch {
+      repository.saveQuestionOrder(reordered.id, reordered.questionOrderIds)
+    }
   }
 
   fun saveAnswer(projectId: String, questionId: String, text: String, completed: Boolean) {
@@ -94,8 +103,10 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
       beginUndoable(current, "Answer deleted")
       _uiState.value = ProjectDetailUiState.Success(optimistic)
 
-      repository.saveAnswer(projectId, questionId, text, completed) { result ->
-        result.onFailure { e ->
+      scope.launch {
+        try {
+          repository.saveAnswer(projectId, questionId, text, completed)
+        } catch (e: Exception) {
           _uiState.value = ProjectDetailUiState.Success(current)
           clearUndoable()
           _uiState.value = ProjectDetailUiState.Error(
@@ -106,10 +117,11 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
       return
     }
 
-    repository.saveAnswer(projectId, questionId, text, completed) { result ->
-      result.onSuccess {
+    scope.launch {
+      try {
+        repository.saveAnswer(projectId, questionId, text, completed)
         loadProject(projectId)
-      }.onFailure { e ->
+      } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to save answer: ${e.message ?: "Unknown error"}"
         )
@@ -128,8 +140,10 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
     beginUndoable(snapshot, "Question ignored")
     _uiState.value = ProjectDetailUiState.Success(optimistic)
 
-    repository.ignoreQuestion(projectId, questionId) { result ->
-      result.onFailure { e ->
+    scope.launch {
+      try {
+        repository.ignoreQuestion(projectId, questionId)
+      } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Success(snapshot)
         clearUndoable()
         _uiState.value = ProjectDetailUiState.Error(
@@ -150,8 +164,10 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
     beginUndoable(snapshot, "Question restored")
     _uiState.value = ProjectDetailUiState.Success(optimistic)
 
-    repository.unignoreQuestion(projectId, questionId) { result ->
-      result.onFailure { e ->
+    scope.launch {
+      try {
+        repository.unignoreQuestion(projectId, questionId)
+      } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Success(snapshot)
         clearUndoable()
         _uiState.value = ProjectDetailUiState.Error(
@@ -164,10 +180,11 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
   fun undo(pending: PendingUndo) {
     if (_pendingUndo.value?.token != pending.token) return
     _pendingUndo.value = null
-    repository.restoreProject(pending.snapshot) { result ->
-      result.onSuccess {
+    scope.launch {
+      try {
+        repository.restoreProject(pending.snapshot)
         loadProject(pending.snapshot.id)
-      }.onFailure { e ->
+      } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to undo: ${e.message ?: "Unknown error"}"
         )
@@ -176,12 +193,13 @@ class ProjectDetailViewModel(private val repository: ThinkerRepository) {
   }
 
   fun updateProject(id: String, title: String, synopsis: String, mode: ProjectUpdateMode) {
-    repository.updateProject(id, title, synopsis, mode) { result ->
-      result.onSuccess { project ->
+    scope.launch {
+      try {
+        val project = repository.updateProject(id, title, synopsis, mode)
         if (project != null) {
           _uiState.value = ProjectDetailUiState.Success(project)
         }
-      }.onFailure { e ->
+      } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to update project: ${e.message ?: "Unknown error"}"
         )

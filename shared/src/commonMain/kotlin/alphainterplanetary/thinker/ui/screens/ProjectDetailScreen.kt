@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.ProjectUpdateMode
-import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
@@ -81,10 +80,9 @@ fun ProjectDetailScreen(
   projectId: String,
   onBack: () -> Unit,
 ) {
-  val repository = remember {
-    ThinkerRepository(appComponent.projectRepository, appComponent.sampleProjectGenerator)
+  val viewModel = remember {
+    ProjectDetailViewModel(appComponent.projectRepository, appComponent.appScope)
   }
-  val viewModel = remember { ProjectDetailViewModel(repository) }
 
   LaunchedEffect(projectId) {
     viewModel.loadProject(projectId)

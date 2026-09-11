@@ -1,10 +1,12 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.repository.ProjectRepository
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 sealed interface ProjectListUiState {
   data object Loading : ProjectListUiState
@@ -12,16 +14,20 @@ sealed interface ProjectListUiState {
   data class Error(val message: String) : ProjectListUiState
 }
 
-class ProjectListViewModel(private val repository: ThinkerRepository) {
+class ProjectListViewModel(
+  private val repository: ProjectRepository,
+  private val scope: CoroutineScope,
+) {
   private val _uiState = MutableStateFlow<ProjectListUiState>(ProjectListUiState.Loading)
   val uiState: StateFlow<ProjectListUiState> = _uiState.asStateFlow()
 
   fun loadProjects() {
     _uiState.value = ProjectListUiState.Loading
-    repository.getAllProjects { result ->
-      result.onSuccess { projects ->
+    scope.launch {
+      try {
+        val projects = repository.getAllProjects()
         _uiState.value = ProjectListUiState.Success(projects)
-      }.onFailure { e ->
+      } catch (e: Exception) {
         _uiState.value = ProjectListUiState.Error(
           "Failed to load projects: ${e.message ?: "Unknown error"}"
         )
@@ -33,11 +39,12 @@ class ProjectListViewModel(private val repository: ThinkerRepository) {
   val createdProject: StateFlow<Project?> = _createdProject.asStateFlow()
 
   fun createProject(synopsis: String, title: String?) {
-    repository.createProject(synopsis, title) { result ->
-      result.onSuccess { project ->
+    scope.launch {
+      try {
+        val project = repository.createProject(synopsis, title)
         _createdProject.value = project
         loadProjects()
-      }.onFailure { e ->
+      } catch (e: Exception) {
         _uiState.value = ProjectListUiState.Error(
           "Failed to create project: ${e.message ?: "Unknown error"}"
         )
@@ -50,10 +57,11 @@ class ProjectListViewModel(private val repository: ThinkerRepository) {
   }
 
   fun deleteProject(id: String) {
-    repository.deleteProject(id) { result ->
-      result.onSuccess {
+    scope.launch {
+      try {
+        repository.deleteProject(id)
         loadProjects()
-      }.onFailure { e ->
+      } catch (e: Exception) {
         _uiState.value = ProjectListUiState.Error(
           "Failed to delete project: ${e.message ?: "Unknown error"}"
         )

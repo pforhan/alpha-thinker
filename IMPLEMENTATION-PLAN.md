@@ -125,11 +125,11 @@ This document tracks the specific engineering tasks required to move from design
 - [x] ProjectDetail: drafts filter should not include ignored questions
 - [x] ProjectDetail: if an ignored question has an answer the ignored indicator doesn't show
 - [x] ProjectDetail: domain tests for moving answers between the filters.
-- [ ] compose.uiTest for each screen.  Create / delete project, answer operations, etc.
-- [ ] clarify: ThinkerRepository vs ProjectRepository.  Is the distinction left over between the flutter with kmp app engine original architecture?  
+- [x] clarify: ThinkerRepository vs ProjectRepository.  Resolved: the distinction was left over from the Flutter + KMP app engine era (the callback-firing `ThinkerRepository` was the FFI-facing adapter for the old Flutter frontend). Approach A adopted — `ThinkerRepository` deleted; ViewModels now call `ProjectRepository` suspend functions directly on an injected `CoroutineScope` (`AppComponent.appScope`), and `SettingsViewModel` injects `SampleProjectGenerator` directly.  
 - [ ] clarify: Also, storage interface vs dao layers.  Most of our operations seem to call saveProject, rather than saving individual questions.
 - [ ] make Question primary constructor private; use factory methods that only accept one set of parameters or the other (further reinforces correct parameters we have in init)
 - [ ] is our new question/answer data structure tracking draft edits in history?
+- [ ] compose.uiTest for each screen.  Create / delete project, answer operations, etc.
 - [ ] AnswerDialog: consider moving from completed toggle to a second submit button (Save vs Save Completed? or something better)
 - [ ] anywhere: for desktop build, add VerticalScrollbar component
 - [ ] ProjectList: delete project confirm dialog should limit title to 30 characters and ellipsize if more
@@ -143,6 +143,8 @@ UI and domain work for the round/stage concept so the experience is ready before
 - [ ] **Stage completion %:** display the current stage's completion as a percentage (resolved / total questions in the current round, where resolved = answered or ignored), alongside the stage number.
 - [ ] **Wrap-up step:** add a "Wrap up this round" action on the project detail screen, enabled when all active questions in the current round are resolved (answered or ignored). Tapping it sets `Round.completedAt`, advances the stage, triggers next-round generation via the hardcoded generator (slots into the async `TaskRunner` seam in Phase 3), and plays a small celebratory animation.
 - [ ] **Manual wrap trigger:** remove the automatic "all answered -> generate follow-ups" transition in `ProjectRepository.updateAnswer` so next-round generation happens only from the user-initiated wrap-up (auto-advance can return as an optional setting in Phase 3).
+- [ ] SampleProjectGenerator should generate more projects, each at different stages
+- [ ] SampleProjectGenerator should indicate to the caller whether it had to regenerate existing projects vs generate them the first time to make the UI a bit better
 
 ## Phase 3: Intelligence Integration (Edge Version)
 - [ ] **Generation Task framework:** add `GenerationTask` + in-memory app-scoped `TaskRunner` (`StateFlow`-observable, injected coroutine scope); `createProject` / `updateAnswer` persist immediately and enqueue generation rather than awaiting inline; UI reloads the affected project when its task completes. See ENG-DESIGN.md "Generation Task Framework". Note: this replaces the inline generation calls added to `ProjectRepository` in line 73 — the `TaskRunner` seam lands here (no intermediary helpers needed).
@@ -170,6 +172,7 @@ UI and domain work for the round/stage concept so the experience is ready before
 - [ ] Implement System/Debug Workspace (LLM Log, Console, and Task Manager); the LLM log should surface any tool calls made during an interaction (tool name, arguments, results, per-call latency)
 - [ ] **Export Pipeline:** Implement the Markdown synthesis and file system export.
 - [ ] Implement answer revision history UI (list with timestamps)
+- [ ] SampleProjectGenerator should generate a history of answer revisions
 - [ ] Implement global question pool management (create/edit questions usable across projects)
 - [ ] Integrate global question pool with Lite version seed questions and edge version generated questions
 - [ ] Allow users to change questions in the answer dialog

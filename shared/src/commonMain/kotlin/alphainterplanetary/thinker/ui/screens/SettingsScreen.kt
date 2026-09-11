@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.ui.screens
 
-import alphainterplanetary.thinker.data.ThinkerRepository
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.SettingsUiState
@@ -41,10 +40,9 @@ fun SettingsScreen(
   appComponent: AppComponent,
   onBack: () -> Unit,
 ) {
-  val repository = remember {
-    ThinkerRepository(appComponent.projectRepository, appComponent.sampleProjectGenerator)
+  val viewModel = remember {
+    SettingsViewModel(appComponent.sampleProjectGenerator, appComponent.appScope)
   }
-  val viewModel = remember { SettingsViewModel(repository) }
   val uiState by viewModel.uiState.collectAsState()
 
   Scaffold(
