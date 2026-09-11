@@ -1,28 +1,27 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
+import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.testutil.FakeGenerator
-import alphainterplanetary.thinker.database.InMemoryStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import kotlinx.coroutines.test.runTest
-import kotlin.time.Instant
 import kotlin.test.Test
-import kotlin.time.Clock
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.test.fail
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class ProjectRepositoryTest {
 
   private val now: Instant = Clock.System.now()
 
   private suspend fun repo(
-    storage: InMemoryStorage = InMemoryStorage(),
+    storage: FakeStorage = FakeStorage(),
     generator: FakeGenerator = FakeGenerator(),
   ): ProjectRepository = ProjectRepository(storage, generator)
 
@@ -84,7 +83,7 @@ class ProjectRepositoryTest {
       initialQuestions += question("q1")
       initialQuestions += question("q2")
     }
-    val storage = InMemoryStorage()
+    val storage = FakeStorage()
     val repository = repo(storage = storage, generator = generator)
 
     val project = repository.createProject("My synopsis")
@@ -112,7 +111,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.updateProject(
@@ -145,7 +144,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.updateProject(
@@ -215,7 +214,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.saveAnswer(
@@ -243,7 +242,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.saveAnswer(
@@ -270,7 +269,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.saveAnswer(
@@ -299,7 +298,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.saveAnswer(
@@ -331,7 +330,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val unchanged = repository.saveAnswer(
@@ -361,7 +360,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.saveAnswer(
@@ -389,7 +388,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.saveAnswer(
@@ -420,7 +419,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage, generator = generator)
 
     val updated = repository.saveAnswer(
@@ -449,7 +448,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage, generator = generator)
 
     val updated = repository.saveAnswer(
@@ -476,7 +475,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage, generator = generator)
 
     val updated = repository.saveAnswer(
@@ -503,7 +502,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val result = repository.saveAnswer("p1", "missing", "text", completed = true)
@@ -524,7 +523,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.ignoreQuestion("p1", "q1")
@@ -544,7 +543,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.unignoreQuestion("p1", "q1")
@@ -568,7 +567,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.saveAnswer("p1", "q1", "", completed = false)
@@ -592,7 +591,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     val updated = repository.saveAnswer("p1", "q1", "", completed = false)
@@ -617,7 +616,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     repository.ignoreQuestion("p1", "q1")
@@ -644,7 +643,7 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val storage = InMemoryStorage(mutableMapOf("p1" to original))
+    val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage)
 
     repository.saveAnswer("p1", "q1", "", completed = false)

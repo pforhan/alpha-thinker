@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.database.InMemoryStorage
+import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 class SettingsViewModelTest {
 
   private fun TestScope.viewModel(
-    storage: InMemoryStorage = InMemoryStorage(),
+    storage: FakeStorage = FakeStorage(),
   ): SettingsViewModel {
     return SettingsViewModel(
       sampleProjectGenerator = SampleProjectGenerator(storage),
@@ -22,7 +22,7 @@ class SettingsViewModelTest {
 
   @Test
   fun `generateSampleProjects reports success and persists the sample projects`() = runTest {
-    val storage = InMemoryStorage()
+    val storage = FakeStorage()
     val vm = viewModel(storage)
 
     vm.generateSampleProjects()

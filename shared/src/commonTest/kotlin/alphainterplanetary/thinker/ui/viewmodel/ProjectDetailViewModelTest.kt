@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.database.InMemoryStorage
+import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.testutil.FakeGenerator
@@ -10,18 +10,18 @@ import alphainterplanetary.thinker.testutil.question
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
-import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.time.Instant
 
 class ProjectDetailViewModelTest {
 
   private val testInstant: Instant = defaultTestInstant
 
   private fun TestScope.viewModel(
-    storage: InMemoryStorage = InMemoryStorage(),
+    storage: FakeStorage = FakeStorage(),
     generator: FakeGenerator = FakeGenerator(),
   ): ProjectDetailViewModel {
     val repository = ProjectRepository(storage, generator)
@@ -50,7 +50,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `deleting an answer applies the optimistic unlink immediately and records a snapshot`() = runTest {
-    val storage = InMemoryStorage(mutableMapOf("p1" to answeredProject()))
+    val storage = FakeStorage(mutableMapOf("p1" to answeredProject()))
     val vm = viewModel(storage)
     vm.loadProject("p1")
     testScheduler.advanceUntilIdle()
@@ -70,7 +70,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `undoing a deleted answer restores the pre-delete project in state and storage`() = runTest {
-    val storage = InMemoryStorage(mutableMapOf("p1" to answeredProject()))
+    val storage = FakeStorage(mutableMapOf("p1" to answeredProject()))
     val vm = viewModel(storage)
     vm.loadProject("p1")
     testScheduler.advanceUntilIdle()
@@ -96,7 +96,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `ignoring a question applies the optimistic state and undo restores it`() = runTest {
-    val storage = InMemoryStorage(mutableMapOf("p1" to project(questions = listOf(question("q1")))))
+    val storage = FakeStorage(mutableMapOf("p1" to project(questions = listOf(question("q1")))))
     val vm = viewModel(storage)
     vm.loadProject("p1")
     testScheduler.advanceUntilIdle()
@@ -120,7 +120,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `unignoring a question applies the optimistic state and undo restores it`() = runTest {
-    val storage = InMemoryStorage(
+    val storage = FakeStorage(
       mutableMapOf("p1" to project(questions = listOf(question("q1", ignoredAt = testInstant)))),
     )
     val vm = viewModel(storage)
@@ -148,7 +148,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `a newer undoable action supersedes the previously pending undo`() = runTest {
-    val storage = InMemoryStorage(
+    val storage = FakeStorage(
       mutableMapOf(
         "p1" to project(
           questions = listOf(
@@ -182,7 +182,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `undoing after an already-undone action is a no-op`() = runTest {
-    val storage = InMemoryStorage(mutableMapOf("p1" to project(questions = listOf(question("q1")))))
+    val storage = FakeStorage(mutableMapOf("p1" to project(questions = listOf(question("q1")))))
     val vm = viewModel(storage)
     vm.loadProject("p1")
     testScheduler.advanceUntilIdle()

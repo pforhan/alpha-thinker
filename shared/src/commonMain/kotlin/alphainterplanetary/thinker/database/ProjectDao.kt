@@ -5,21 +5,11 @@ import androidx.room3.Delete
 import androidx.room3.Query
 import androidx.room3.Transaction
 import androidx.room3.Upsert
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProjectDao {
   @Upsert
   suspend fun upsertProject(project: ProjectEntity): Long
-
-  @Query("SELECT * FROM projects")
-  fun getAllProjectsFlow(): Flow<List<ProjectEntity>>
-
-  @Query("SELECT * FROM projects")
-  suspend fun getAllProjects(): List<ProjectEntity>
-
-  @Query("SELECT * FROM projects WHERE id = :id")
-  suspend fun getProjectById(id: String): ProjectEntity?
 
   @Transaction
   @Query("SELECT * FROM projects WHERE id = :id")
@@ -29,8 +19,8 @@ interface ProjectDao {
   @Query("SELECT * FROM projects")
   suspend fun getAllProjectsWithQuestions(): List<ProjectWithQuestions>
 
-  @Delete
-  suspend fun deleteProject(project: ProjectEntity)
+  @Query("DELETE FROM projects WHERE id = :id")
+  suspend fun deleteProject(id: String)
 
   @Query("DELETE FROM projects")
   suspend fun deleteAllProjects()
@@ -65,4 +55,7 @@ interface AnswerDao {
 
   @Query("SELECT * FROM answers WHERE questionId = :questionId ORDER BY createdAt ASC, id ASC")
   suspend fun getAnswersForQuestion(questionId: String): List<AnswerEntity>
+
+  @Query("SELECT * FROM answers WHERE questionId IN (:questionIds) ORDER BY createdAt ASC, id ASC")
+  suspend fun getAnswersForQuestions(questionIds: List<String>): List<AnswerEntity>
 }

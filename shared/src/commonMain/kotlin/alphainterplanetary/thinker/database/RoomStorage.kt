@@ -23,33 +23,20 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
 
   override suspend fun getProject(id: String): Project? {
     val data = database.projectDao().getProjectWithQuestions(id) ?: return null
-    val questions = data.questions
-      .sortedBy { it.sortOrder }
-      .map { question ->
-        question.toDomainModel(database.answerDao().getAnswersForQuestion(question.id))
-      }
-    return data.project.toDomainModel(questions)
+    return data.toDomainModel(
+      database.answerDao().getAnswersForQuestions(data.questions.map { it.id })
+    )
   }
 
-  override suspend fun getAllProjects(): List<Project> {
-    return database.projectDao().getAllProjects().map { entity ->
-      Project(
-        id = entity.id,
-        synopsis = entity.synopsis,
-        editableTitle = entity.editableTitle,
-        status = entity.status,
-        questions = emptyList(),
-        createdAt = Instant.fromEpochMilliseconds(entity.createdAt),
-        updatedAt = Instant.fromEpochMilliseconds(entity.updatedAt)
-      )
+  override suspend fun getAllProjects(): List<Project> =
+    database.projectDao().getAllProjectsWithQuestions().let { rows ->
+      val answers = database.answerDao()
+        .getAnswersForQuestions(rows.flatMap { row -> row.questions.map { it.id } })
+      return rows.map { row -> row.toDomainModel(answers) }
     }
-  }
 
   override suspend fun deleteProject(id: String) {
-    val entity = database.projectDao().getProjectById(id)
-    if (entity != null) {
-      database.projectDao().deleteProject(entity)
-    }
+    database.projectDao().deleteProject(id)
   }
 
   override suspend fun deleteAllProjects() {
@@ -90,31 +77,32 @@ private fun Answer.toEntity() = AnswerEntity(
   createdAt = createdAt.toEpochMilliseconds(),
 )
 
-private fun ProjectEntity.toDomainModel(questions: List<Question>): Project {
-  return Project(
-    id = id,
-    synopsis = synopsis,
-    editableTitle = editableTitle,
-    status = status,
-    questions = questions,
-    createdAt = Instant.fromEpochMilliseconds(createdAt),
-    updatedAt = Instant.fromEpochMilliseconds(updatedAt)
-  )
-}
+private fun ProjectWithQuestions.toDomainModel(answers: List<AnswerEntity>): Project =
+  answers.groupBy { it.questionId }.let { answersByQuestionId ->
+    Project(
+      id = project.id,
+      synopsis = project.synopsis,
+      editableTitle = project.editableTitle,
+      status = project.status,
+      questions = questions
+        .sortedBy { it.sortOrder }
+        .map { question -> question.toDomainModel(answersByQuestionId[question.id].orEmpty()) },
+      createdAt = Instant.fromEpochMilliseconds(project.createdAt),
+      updatedAt = Instant.fromEpochMilliseconds(project.updatedAt)
+    )
+  }
 
-private fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question {
-  return Question(
-    id = id,
-    text = text,
-    timestamp = Instant.fromEpochMilliseconds(createdAt),
-    contextId = contextId,
-    ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
-    answerId = answerId,
-    draftText = draftText,
-    draftUpdatedAt = draftUpdatedAt?.let { Instant.fromEpochMilliseconds(it) },
-    answers = answers.map { it.toDomainModel() }
-  )
-}
+private fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question = Question(
+  id = id,
+  text = text,
+  timestamp = Instant.fromEpochMilliseconds(createdAt),
+  contextId = contextId,
+  ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
+  answerId = answerId,
+  draftText = draftText,
+  draftUpdatedAt = draftUpdatedAt?.let { Instant.fromEpochMilliseconds(it) },
+  answers = answers.map { it.toDomainModel() }
+)
 
 private fun AnswerEntity.toDomainModel() = Answer(
   id = id,

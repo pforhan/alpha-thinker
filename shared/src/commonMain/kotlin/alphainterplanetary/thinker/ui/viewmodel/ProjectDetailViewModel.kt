@@ -90,7 +90,7 @@ class ProjectDetailViewModel(
     val deletingAnswer = !completed && text.isBlank() &&
       current?.questions?.find { it.id == questionId }?.currentAnswer != null
 
-    if (deletingAnswer && current != null) {
+    if (deletingAnswer) {
       val optimistic = current.copy(
         questions = current.questions.map { q ->
           if (q.id == questionId) {

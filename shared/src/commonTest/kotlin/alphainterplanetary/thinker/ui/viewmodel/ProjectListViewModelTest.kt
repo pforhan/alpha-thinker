@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.database.InMemoryStorage
+import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 class ProjectListViewModelTest {
 
   private fun TestScope.viewModel(
-    storage: Storage = InMemoryStorage(),
+    storage: Storage = FakeStorage(),
   ): ProjectListViewModel {
     val repository = ProjectRepository(storage, FakeGenerator())
     return ProjectListViewModel(repository, scope = CoroutineScope(coroutineContext))
@@ -35,7 +35,7 @@ class ProjectListViewModelTest {
   @Test
   fun `loadProjects surfaces stored projects`() = runTest {
     val stored = project("p1")
-    val vm = viewModel(InMemoryStorage(mutableMapOf(stored.id to stored)))
+    val vm = viewModel(FakeStorage(mutableMapOf(stored.id to stored)))
 
     vm.loadProjects()
     testScheduler.advanceUntilIdle()
@@ -70,7 +70,7 @@ class ProjectListViewModelTest {
   @Test
   fun `deleteProject removes the project from the list`() = runTest {
     val stored = project("p1")
-    val vm = viewModel(InMemoryStorage(mutableMapOf(stored.id to stored)))
+    val vm = viewModel(FakeStorage(mutableMapOf(stored.id to stored)))
 
     vm.loadProjects()
     testScheduler.advanceUntilIdle()

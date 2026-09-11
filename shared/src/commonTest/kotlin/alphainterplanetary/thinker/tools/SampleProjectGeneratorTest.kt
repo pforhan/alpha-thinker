@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.tools
 
-import alphainterplanetary.thinker.database.InMemoryStorage
+import alphainterplanetary.thinker.testutil.FakeStorage
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -10,7 +10,7 @@ class SampleProjectGeneratorTest {
 
   @Test
   fun `generate creates three projects with the expected ids`() = runTest {
-    val storage = InMemoryStorage()
+    val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)
 
     generator.generate()
@@ -21,7 +21,7 @@ class SampleProjectGeneratorTest {
   @Test
   fun `sparse project has a short synopsis with a couple answered and five unanswered questions`() =
     runTest {
-      val storage = InMemoryStorage()
+      val storage = FakeStorage()
       val generator = SampleProjectGenerator(storage)
 
       generator.generate()
@@ -35,7 +35,7 @@ class SampleProjectGeneratorTest {
 
   @Test
   fun `complete project mixes answered - ignored - draft and unanswered questions`() = runTest {
-    val storage = InMemoryStorage()
+    val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)
 
     generator.generate()
@@ -54,7 +54,7 @@ class SampleProjectGeneratorTest {
 
   @Test
   fun `stress project uses very long text in every field`() = runTest {
-    val storage = InMemoryStorage()
+    val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)
 
     generator.generate()
@@ -74,7 +74,7 @@ class SampleProjectGeneratorTest {
 
   @Test
   fun `generating twice does not grow the project count`() = runTest {
-    val storage = InMemoryStorage()
+    val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)
 
     generator.generate()
@@ -85,7 +85,7 @@ class SampleProjectGeneratorTest {
 
   @Test
   fun `every answer id is unique across all projects`() = runTest {
-    val storage = InMemoryStorage()
+    val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)
 
     generator.generate()

@@ -1,15 +1,12 @@
-package alphainterplanetary.thinker.database
+package alphainterplanetary.thinker.testutil
 
+import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Project
 
 /**
- * In-memory [Storage] implementation (e.g. as a test double).
- *
- * The web targets (`js`/`wasmJs`) now back [Storage] with Room/SQLite via `sqlite-web` and
- * `WebWorkerSQLiteDriver`, persisting to OPFS so data survives page reloads (see
- * IMPLEMENTATION-PLAN.md line 89).
+ * In-memory [alphainterplanetary.thinker.database.Storage] fake for tests.
  */
-class InMemoryStorage(
+class FakeStorage(
   val projects: MutableMap<String, Project> = mutableMapOf(),
 ) : Storage {
   override suspend fun saveProject(project: Project): Project {
