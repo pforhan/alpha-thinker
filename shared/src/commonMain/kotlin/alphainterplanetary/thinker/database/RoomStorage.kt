@@ -3,19 +3,22 @@ package alphainterplanetary.thinker.database
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
+import androidx.room3.withWriteTransaction
 import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
 
 class RoomStorage @Inject constructor(private val database: AppDatabase) : Storage {
   override suspend fun saveProject(project: Project): Project {
-    database.projectDao().upsertProject(project.toEntity())
+    database.withWriteTransaction {
+      database.projectDao().upsertProject(project.toEntity())
 
-    project.questions.forEachIndexed { index, q ->
-      database.questionDao().upsertQuestion(q.toEntity(project.id, index))
-    }
+      project.questions.forEachIndexed { index, q ->
+        database.questionDao().upsertQuestion(q.toEntity(project.id, index))
+      }
 
-    project.questions.flatMap { it.answers }.forEach { a ->
-      database.answerDao().upsertAnswer(a.toEntity())
+      project.questions.flatMap { it.answers }.forEach { a ->
+        database.answerDao().upsertAnswer(a.toEntity())
+      }
     }
 
     return project
