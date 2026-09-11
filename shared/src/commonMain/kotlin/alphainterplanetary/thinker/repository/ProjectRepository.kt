@@ -246,30 +246,35 @@ class ProjectRepository @Inject constructor(
     storage.deleteAllProjects()
   }
 
-  suspend fun exportProject(project: Project): String {
-    val sb = StringBuilder()
-    sb.appendLine("# ${project.synopsis}")
-    sb.appendLine()
-    sb.appendLine("## Overview")
-    sb.appendLine(project.synopsis)
-    sb.appendLine()
+  fun exportProject(project: Project): String = buildString {
+    appendLine(
+      """
+        # ${project.synopsis}
 
-    project.questions.sortedBy { it.timestamp }.forEach { question ->
-      sb.appendLine("### Q: ${question.text}")
+        ## Overview
+        ${project.synopsis}
+        
+        """.trimIndent()
+    )
+
+    for (question in project.questions.sortedBy { it.timestamp }) {
       val answer = question.currentAnswer
-      if (answer != null) {
-        sb.appendLine()
-        sb.appendLine("| **Answer:** | ${answer.text} |")
-        sb.appendLine("|-------------|--------")
-        sb.appendLine("| **Answered:** | ${answer.createdAt} |")
+      val answerBlock = if (answer != null) {
+        """
+            | **Answer:** | ${answer.text} |
+            |-------------|--------
+            | **Answered:** | ${answer.createdAt} |
+            """.trimIndent()
       } else {
-        sb.appendLine()
-        sb.appendLine("|**Status:** | unanswered |")
-        sb.appendLine("|------------|----------")
+        """
+            |**Status:** | unanswered |
+            |------------|----------
+            """.trimIndent()
       }
-      sb.appendLine()
-    }
 
-    return sb.toString()
+      appendLine("### Q: ${question.text}\n")
+      appendLine(answerBlock)
+      appendLine()
+    }
   }
 }
