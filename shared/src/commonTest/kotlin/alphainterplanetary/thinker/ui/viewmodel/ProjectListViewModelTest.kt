@@ -83,8 +83,9 @@ class ProjectListViewModelTest {
   }
 
   private object FailingStorage : Storage {
-    override suspend fun saveProject(project: Project): Project =
+    override suspend fun saveProject(project: Project) {
       throw IllegalStateException("boom")
+    }
 
     override suspend fun getProject(id: String): Project? =
       throw IllegalStateException("boom")

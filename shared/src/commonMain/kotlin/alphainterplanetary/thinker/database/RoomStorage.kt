@@ -9,7 +9,7 @@ import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
 
 class RoomStorage @Inject constructor(private val database: AppDatabase) : Storage {
-  override suspend fun saveProject(project: Project): Project {
+  override suspend fun saveProject(project: Project) {
     database.withWriteTransaction {
       database.projectDao().upsertProject(project.toEntity())
 
@@ -19,8 +19,6 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
 
       reconcileChildren(project)
     }
-
-    return project
   }
 
   /**

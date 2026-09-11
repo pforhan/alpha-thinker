@@ -10,9 +10,8 @@ import alphainterplanetary.thinker.util.now
 class FakeStorage(
   val projects: MutableMap<String, Project> = mutableMapOf(),
 ) : Storage {
-  override suspend fun saveProject(project: Project): Project {
+  override suspend fun saveProject(project: Project) {
     projects[project.id] = project
-    return project
   }
 
   override suspend fun getProject(id: String): Project? = projects[id]

@@ -5,7 +5,6 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
-import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import me.tatarka.inject.annotations.Inject
@@ -34,21 +33,23 @@ class ProjectRepository @Inject constructor(
       createdAt = now,
       updatedAt = now
     )
-    val saved = storage.saveProject(project)
+    // Save the inital version of the project, in case generation fails.
+    storage.saveProject(project)
 
     val contextId = randomUUID()
     val questions = generator.generateInitialQuestions(
-      editableTitle = saved.editableTitle,
-      synopsis = saved.synopsis,
+      editableTitle = project.editableTitle,
+      synopsis = project.synopsis,
       contextId = contextId
-    )
-      .shuffled()
+    ).shuffled()
 
-    val updated = saved.copy(
+    val updated = project.copy(
       questions = questions,
       updatedAt = now()
     )
-    return storage.saveProject(updated)
+    // Save again but with the generated questions.
+    storage.saveProject(updated)
+    return updated
   }
 
   suspend fun deleteProject(id: String) {
@@ -68,7 +69,8 @@ class ProjectRepository @Inject constructor(
   }
 
   suspend fun restoreProject(project: Project): Project {
-    return storage.saveProject(project)
+    storage.saveProject(project)
+    return project
   }
 
   suspend fun updateProject(
@@ -104,11 +106,8 @@ class ProjectRepository @Inject constructor(
       questions = updatedQuestions,
       updatedAt = now
     )
-    return storage.saveProject(updatedProject)
-  }
-
-  suspend fun getUnansweredQuestions(project: Project): List<Question> {
-    return project.unansweredQuestions
+    storage.saveProject(updatedProject)
+    return updatedProject
   }
 
   /**
@@ -186,7 +185,8 @@ class ProjectRepository @Inject constructor(
       updatedProject
     }
 
-    return storage.saveProject(finalProject)
+    storage.saveProject(finalProject)
+    return finalProject
   }
 
   suspend fun generateMoreQuestions(projectId: String): Project? {
@@ -198,12 +198,12 @@ class ProjectRepository @Inject constructor(
       contextId = contextId
     )
     if (newQs.isEmpty()) return project
-    return storage.saveProject(
-      project.copy(
-        questions = project.questions + newQs,
-        updatedAt = now()
-      )
+    val updatedProject = project.copy(
+      questions = project.questions + newQs,
+      updatedAt = now()
     )
+    storage.saveProject(updatedProject)
+    return updatedProject
   }
 
   suspend fun ignoreQuestion(
@@ -220,7 +220,8 @@ class ProjectRepository @Inject constructor(
       questions = updatedQuestions,
       updatedAt = now
     )
-    return storage.saveProject(updatedProject)
+    storage.saveProject(updatedProject)
+    return updatedProject
   }
 
   suspend fun unignoreQuestion(
@@ -237,7 +238,8 @@ class ProjectRepository @Inject constructor(
       questions = updatedQuestions,
       updatedAt = now
     )
-    return storage.saveProject(updatedProject)
+    storage.saveProject(updatedProject)
+    return updatedProject
   }
 
   suspend fun deleteAllProjects() {
@@ -249,7 +251,7 @@ class ProjectRepository @Inject constructor(
     sb.appendLine("# ${project.synopsis}")
     sb.appendLine()
     sb.appendLine("## Overview")
-    sb.appendLine("${project.synopsis}")
+    sb.appendLine(project.synopsis)
     sb.appendLine()
 
     project.questions.sortedBy { it.timestamp }.forEach { question ->

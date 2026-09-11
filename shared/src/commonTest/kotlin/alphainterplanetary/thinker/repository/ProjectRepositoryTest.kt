@@ -196,7 +196,7 @@ class ProjectRepositoryTest {
     )
     val repository = repo()
 
-    val unanswered = repository.getUnansweredQuestions(project)
+    val unanswered = project.unansweredQuestions
 
     assertEquals(listOf("open", "draft"), unanswered.map { it.id })
   }
