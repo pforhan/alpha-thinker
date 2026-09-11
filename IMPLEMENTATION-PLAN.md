@@ -140,30 +140,8 @@ This document tracks the specific engineering tasks required to move from design
 UI and domain work for the round/stage concept so the experience is ready before LLM integration. No themed stage names — stages are plain numeric values. Depends on the Phase 2.5 generator-merge/interface items for the wrap-up's next-round generation.
 - [ ] **Round entity + schema migration:** add a `Round` entity (`roundId`, `projectId` FK, `roundNumber`, `startedAt`, `completedAt?`) and the Room changes as one unit — create the `rounds` table, backfill a round per distinct `(projectId, contextId)` from existing questions, and make `Question.contextId` a `roundId` foreign key to it (one UUID plays both roles). A round is the set of questions surfaced together in a generation batch; creating a project creates Round 1 around the initial questions, and each wrap-up closes the old round and opens the next. Grouping questions by `roundId` is then a real query instead of a reconstruction (see ENG-DESIGN.md "Rounds").
 - [ ] **Numeric planning stage (derived):** the stage is **derived, never stored** — `count of completed rounds + 1` (rounds with `completedAt` set), so with Round N in progress, stage = N (fresh project ⇒ stage 1). The only write path is wrap-up setting `Round.completedAt`; the stage falls out of the rounds table rather than living in a `planningStage` column. Surface it on the project detail header and the project list card.
-- [ ] **Research & define stage progression (design):** research and codify the stage progression projects are expected to move through — typical stage count, each stage's question focus, and the terminal conditions (a generator "done" signal vs. the user concluding early — see the Mermaid charts below). The defined progression drives per-stage question grouping in `HardcodedQuestionGenerator`, stage completion %, SampleProjectGenerator's varied-stage fixtures, and Phase 3's stage-aware prompting.
-  ```mermaid
-  flowchart TD
-    A["Project created<br/>Round 1 opens · stage = 1"] --> Q1["Work round 1 questions<br/>answer / draft / ignore"]
-    Q1 --> EXT{"Get more<br/>questions?"}
-    EXT -->|"yes — same stage/round, pool remains"| Q1
-    EXT -->|no| W1["Wrap up round 1<br/>completedAt set · stage → 2"]
-    W1 --> A2["Round 2 opens · stage = 2"]
-    A2 --> Q2["Work round 2 questions"] --> W2["Wrap up · stage → 3"]
-    W2 --> A3["Round 3 opens · stage = 3"] --> Q3["Work round 3 questions"] --> DONE{"Generator<br/>done?"}
-    DONE -->|no| W3["Wrap up · stage → 4"] --> A4["Round 4 opens · stage = 4"]
-    DONE -->|"pool exhausted / LLM says done"| END["Planning complete<br/>wrap-up & get-more disabled"]
-  ```
-  ```mermaid
-  flowchart TD
-    R["Current round in progress<br/>stage = N"] --> Q{"Continue or<br/>conclude?"}
-    Q -->|"Get more questions (same stage)"| R
-    Q -->|"Wrap up round"| C["completedAt set<br/>stage → N+1"]
-    C --> NG{"Next round<br/>generated?"}
-    NG -->|yes| NEXT["Round N+1 opens · stage = N+1"]
-    NG -->|"empty pool / LLM reports done"| END["Planning complete<br/>wrap-up unavailable"]
-    Q -->|"user stops early"| DORMANT["Project dormant<br/>round stays in progress<br/>stage unchanged"]
-  ```
-- [ ] **Group `HardcodedQuestionGenerator` generation by stage:** partition the `questionPool` in `shared/src/commonMain/kotlin/alphainterplanetary/thinker/llm/HardcodedQuestionGenerator.kt` by the stage progression defined above (the pre-LLM mirror of the Phase 3 stage-aware contract on line 177), so each stage's initial/follow-up batches draw from a deeper, stage-appropriate pool instead of one flat ordered list — stage 1 focuses on problems/goals/scope, later stages on constraints/milestones/done-signals. Expose a per-stage "pool exhausted" signal so wrap-up and "Get more questions" can report done when the current stage has nothing left.
+- [ ] **Research & define stage progression by project type (design):** research and codify which project *categories* have meaningfully different planning journeys, the stages each flow moves through, and how the app selects a flow. Research doc: `PROJECT-FLOWS.md`. Concretely: (1) identify the few categories/flows that matter — draft hypotheses already sketched for game, document/report, and home improvement; (2) decide how a project gets its flow — manual pick at creation, lightweight synopsis heuristics, LLM/embedding classification in Phase 3, or a suggest-with-override hybrid (see the "Choosing a flow" notes); (3) define each flow's stage list, per-stage question focus, and done conditions. Findings drive `HardcodedQuestionGenerator` per-stage/per-category pool grouping, stage completion %, SampleProjectGenerator's varied-stage fixtures, and Phase 3 stage-aware prompting.
+- [ ] **Group `HardcodedQuestionGenerator` generation by stage:** partition the `questionPool` in `shared/src/commonMain/kotlin/alphainterplanetary/thinker/llm/HardcodedQuestionGenerator.kt` by the stage progression defined in `PROJECT-FLOWS.md` (the pre-LLM mirror of the Phase 3 "Stage-aware prompting & an explicit done signal" contract), so each stage's initial/follow-up batches draw from a deeper, stage-appropriate pool instead of one flat ordered list — stage 1 focuses on problems/goals/scope, later stages on constraints/milestones/done-signals. Expose a per-stage "pool exhausted" signal so wrap-up and "Get more questions" can report done when the current stage has nothing left.
 - [ ] **Stage completion %:** display the current stage's completion as a percentage (resolved / total questions in the current round, where resolved = answered or ignored), alongside the stage number.
 - [ ] **Wrap-up step:** add a "Wrap up this round" action on the project detail screen, enabled when all active questions in the current round are resolved (answered or ignored). Tapping it sets `Round.completedAt`, advances the stage, triggers next-round generation via the hardcoded generator (slots into the async `TaskRunner` seam in Phase 3), and plays a small celebratory animation.
 - [ ] **Manual wrap trigger:** remove the automatic "all answered -> generate follow-ups" transition in `ProjectRepository.updateAnswer` so next-round generation happens only from the user-initiated wrap-up (auto-advance can return as an optional setting in Phase 3).
