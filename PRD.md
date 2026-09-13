@@ -26,10 +26,10 @@ Both Editions share the same general UI, but differ in source of question materi
     - **Edge**: The LLM generates an editable title and initial tailored questions.
     - **Lite**: The system applies the project title from the synopsis and loads the 20 Seed Questions.
 3. **Iterative Synthesis**:
-    - **Active Round Focus**: Current unanswered questions are prioritized at the top of the workspace.
+    - **Active Phase Focus**: Current unanswered questions are prioritized at the top of the workspace, within the context of the current planning phase.
     - User is presented a list of questions on cards, roughly enough to fill the screen without scrolling (though scrolling is acceptable on small screens).
     - As the user answers or dismisses questions, the response is recorded, the card moves to an "answered" list, and unseen questions replace them.
-    - **Round Wrap-Up**: Once the questions in the current round are resolved (answered or ignored), the user intentionally wraps up the round to advance the planning stage and trigger the next round's generation. Round completion is always a manual, deliberate step — there is no automatic transition.
+    - **Round Wrap-Up**: Once the questions in the current round are resolved (answered or ignored), the user intentionally wraps up the round to advance the planning phase and trigger the next round's generation. Round completion is always a manual, deliberate step — there is no automatic transition. At wrap-up the app presents a "what's next?" choice of 2–3 adjacent phases suggested from the current phase, the phases picked so far, and the project's status (detail in PROJECT-FLOWS.md).
     - **Manual Expansion (Lite)**: The user manually adds new questions or works through the fixed seed list.
 4. **Documentation**: The final synthesized knowledge is exported as structured markdown.
 
@@ -46,7 +46,7 @@ Both Editions share the same general UI, but differ in source of question materi
 - **Question Archiving**: Users can manually deactivate or archive questions.
 - **Immediate Archiving**: Option to archive questions immediately upon being answered.
 - **Auto-Archive (Edge Only)**: Provide a user app-wide setting to determine behavior when the synopsis or preceding questions change: a) do nothing, b) clear all prior questions and answers, or c) ask the LLM if each question is still relevant.
-- **Next Round Generation (Edge Only)**: Generate the next round of questions when the user wraps up the current round. "Get more questions" may also extend the current round while pool questions remain.
+- **Next Round Generation (Edge Only)**: When the user wraps up the current round, generate the first round's questions for the phase they chose in the wrap-up "what's next?" chooser. When the user taps "Get more questions", start a new `UserRequested` round in the current phase while pool questions remain.
 
 ### 4.3 LLM Integration (Alpha Thinker Edge Only)
 - Generate a set of tailored initial questions based on the project synopsis.

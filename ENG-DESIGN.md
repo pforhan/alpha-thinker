@@ -89,7 +89,19 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
    *   `roundId` (Unique ID — the value questions carry via `roundId`; one row per
        generation/generation round, whether initial, follow-up, or user-created.)
    *   `projectId` (Foreign Key: Links to the parent Project.)
+   *   `phase` (String: The planning phase this round belongs to — a labeled
+       planning deliverable from the phase library (see PROJECT-FLOWS.md).
+       Set to the library's first phase for round 1, picked from the
+       generator's suggestions at wrap-up, or carried over by "Get more
+       questions". The same phase can span multiple rounds — e.g. several
+       UserRequested rounds refining the execution plan.)
    *   `roundNumber` (Int: 1-based ordering within the project.)
+   *   `origin` (Enum: `Initial`, `FollowUp`, `UserRequested` — how the round came
+       to be; `Initial` = the opening round of a phase (project start or
+       wrap-up advancing to a new phase), `UserRequested` = the user tapped
+       "Get more questions" in the same phase, `FollowUp` = reserved for
+       future use (revisiting a completed phase; deferred). Feeds dedup and
+       the LLM interaction log.)
    *   `startedAt` (Timestamp: When the round's questions were first surfaced.)
    *   `completedAt` (Timestamp, Optional: Set when the user wraps up the round;
        `null` means the round is in progress.)
@@ -108,10 +120,17 @@ LLM review (Phase 3) has something concrete to anchor to.
   needed (the repository already stamps questions with a fresh `randomUUID()`
   per generation round).
 - Reconstructing rounds is just a `GROUP BY roundId` query; wrap-up sets
-  `completedAt`, and the planning stage (Phase 2.8) is **derived** as the
-  count of completed rounds plus one — a fresh project with round 1 open is
-  at stage 1, and the stage never gets its own column (the only write path
-  is wrap-up setting `completedAt`).
+  `completedAt`, and the planning phase (Phase 2.8) is **derived** as the
+  `phase` of the round currently in progress — fresh project with round 1
+  open is the library's first phase, and the phase never gets its own column
+  on the project. The only write paths are wrap-up and "Get more questions":
+  at wrap-up the user picks a "what's next?" phase from the generator's 2–3
+  adjacent suggestions (or "Finish the plan") and the first round of that
+  phase is created (`origin: Initial`), while "Get more questions" creates a
+  `UserRequested` round in the current phase — no flow/category is enforced
+  (PROJECT-FLOWS.md). A
+  numeric "Phase N of M" for display is a derived index into the phase
+  library's ordering, so no `planningStage` column exists.
 - Hardcoded/fallback questions historically carried an empty `contextId`; with
   a real Round on creation and per follow-up round, every question gets a
   valid `roundId`.
