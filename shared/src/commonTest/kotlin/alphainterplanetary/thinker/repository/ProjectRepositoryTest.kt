@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.testutil.FakeGenerator
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.testutil.round
+import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -552,7 +553,7 @@ class ProjectRepositoryTest {
       editableTitle = "t",
       status = "Draft",
       questions = listOf(question("q1")),
-      rounds = listOf(round(id = "r1", projectId = "p1", phase = Phase.Design)),
+      rounds = listOf(round(id = "r1", projectId = "p1", phase = BuiltInPhase.Design)),
       createdAt = now,
       updatedAt = now,
     )
@@ -565,7 +566,7 @@ class ProjectRepositoryTest {
     val round = updated.rounds.last()
     assertEquals(2, round.roundNumber)
     assertEquals(RoundOrigin.UserRequested, round.origin)
-    assertEquals(Phase.Design, round.phase)
+    assertEquals(BuiltInPhase.Design, round.phase)
     assertEquals("p1", round.projectId)
     assertEquals("f1", updated.questions.last().id)
     assertEquals(round.id, generator.followUpCalls.single().roundId)
@@ -580,7 +581,7 @@ class ProjectRepositoryTest {
       editableTitle = "t",
       status = "Draft",
       questions = listOf(question("q1")),
-      rounds = listOf(round(id = "r1", projectId = "p1", phase = Phase.ScopeGoals)),
+      rounds = listOf(round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals)),
       createdAt = now,
       updatedAt = now,
     )

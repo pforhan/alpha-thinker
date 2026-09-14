@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.time.Instant
 
@@ -33,7 +34,7 @@ fun question(
 fun round(
   id: String,
   projectId: String = "p1",
-  phase: Phase = Phase.ScopeGoals,
+  phase: Phase = BuiltInPhase.ScopeGoals,
   roundNumber: Int = 1,
   origin: RoundOrigin = RoundOrigin.Initial,
   startedAt: Instant = defaultTestInstant,

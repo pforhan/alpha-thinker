@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
@@ -93,7 +94,7 @@ class SampleProjectGenerator @Inject constructor(
         ),
       ),
       rounds = listOf(
-        sampleRound(SPARSE_PROJECT_ID, roundId, Phase.ScopeGoals, created),
+        sampleRound(SPARSE_PROJECT_ID, roundId, BuiltInPhase.ScopeGoals, created),
       ),
       createdAt = created,
       updatedAt = created,
@@ -269,7 +270,7 @@ class SampleProjectGenerator @Inject constructor(
         ),
       ),
       rounds = listOf(
-        sampleRound(COMPLETE_PROJECT_ID, roundId, Phase.ScopeGoals, created),
+        sampleRound(COMPLETE_PROJECT_ID, roundId, BuiltInPhase.ScopeGoals, created),
       ),
       createdAt = created,
       updatedAt = updated,
@@ -361,7 +362,7 @@ class SampleProjectGenerator @Inject constructor(
         ),
       ),
       rounds = listOf(
-        sampleRound(STRESS_PROJECT_ID, roundId, Phase.ScopeGoals, created),
+        sampleRound(STRESS_PROJECT_ID, roundId, BuiltInPhase.ScopeGoals, created),
       ),
       createdAt = created,
       updatedAt = updated,

@@ -18,19 +18,19 @@ class PhaseTest {
         "validation-plan",
         "definition-of-done",
       ),
-      Phase.entries.map { it.key },
+      BuiltInPhase.entries.map { it.key },
     )
   }
 
   @Test
   fun `phase keys are unique`() {
-    val keys = Phase.entries.map { it.key }
+    val keys = BuiltInPhase.entries.map { it.key }
     assertEquals(keys.size, keys.toSet().size)
   }
 
   @Test
   fun `order is the contiguous 1-based display index`() {
-    Phase.entries.sortedBy { it.order }.forEachIndexed { i, phase ->
+    BuiltInPhase.entries.sortedBy { it.order }.forEachIndexed { i, phase ->
       assertEquals(i + 1, phase.order)
     }
   }
@@ -46,13 +46,13 @@ class PhaseTest {
         "Validation Plan",
         "Definition of Done",
       ),
-      Phase.entries.sortedBy { it.order }.map { it.label },
+      BuiltInPhase.entries.sortedBy { it.order }.map { it.label },
     )
   }
 
   @Test
   fun `every phase has keywords for next-phase scoring`() {
-    Phase.entries.forEach { phase ->
+    BuiltInPhase.entries.forEach { phase ->
       assertTrue(
         phase.keywords.isNotEmpty(),
         "${phase.key} has an empty keyword profile",
@@ -89,7 +89,7 @@ class PhaseTest {
 
   @Test
   fun `indexOf matches order across the library`() {
-    Phase.entries.forEach { phase ->
+    BuiltInPhase.entries.forEach { phase ->
       assertEquals(phase.order, Phase.indexOf(phase.key))
     }
   }

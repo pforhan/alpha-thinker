@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.model
 
 import alphainterplanetary.thinker.database.toDomainModel
 import alphainterplanetary.thinker.database.toEntity
-import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.phases.BuiltInPhase
 import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,7 +19,7 @@ class RoundTest {
   ) = Round(
     id = "r",
     projectId = "p",
-    phase = Phase.ScopeGoals,
+    phase = BuiltInPhase.ScopeGoals,
     roundNumber = roundNumber,
     origin = origin,
     startedAt = Instant.fromEpochMilliseconds(0),
