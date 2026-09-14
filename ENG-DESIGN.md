@@ -120,20 +120,58 @@ LLM review (Phase 3) has something concrete to anchor to.
   needed (the repository already stamps questions with a fresh `randomUUID()`
   per generation round).
 - Reconstructing rounds is just a `GROUP BY roundId` query; wrap-up sets
-  `completedAt`, and the planning phase (Phase 2.8) is **derived** as the
-  `phase` of the round currently in progress — fresh project with round 1
-  open is the library's first phase, and the phase never gets its own column
-  on the project. The only write paths are wrap-up and "Get more questions":
+  `completedAt`, and the planning phase is read from the `phase` of the round
+  currently in progress — fresh project with round 1 open is the library's
+  first phase, and the current approach keeps the phase on the round rather
+  than a column on the project (the column option remains open if it reads
+  better later). The only write paths are wrap-up and "Get more questions":
   at wrap-up the user picks a "what's next?" phase from the generator's 2–3
   adjacent suggestions (or "Finish the plan") and the first round of that
   phase is created (`origin: Initial`), while "Get more questions" creates a
   `UserRequested` round in the current phase — no flow/category is enforced
   (PROJECT-FLOWS.md). A
-  numeric "Phase N of M" for display is a derived index into the phase
-  library's ordering, so no `planningStage` column exists.
+  numeric "Phase N of M" for display is computed as an index into the phase
+  library's ordering, not a stored field.
 - Hardcoded/fallback questions historically carried an empty `contextId`; with
   a real Round on creation and per follow-up round, every question gets a
   valid `roundId`.
+
+### Planning Phase Library
+
+The current planning phase is read from the `phase` of the round in progress
+(current approach; a project-level column is not ruled out — see the Rounds
+note). The set of phases the app can be in comes from a **code-defined
+`PhaseLibrary`** in `commonMain`:
+
+- Each entry is `(stableKey, displayLabel, orderingIndex, keywordProfile,
+  questionPool)`; `Round.phase` stores the stable **key**. A persisted `phases`
+  table is deferred until user-created/LLM-proposed labels arrive — a later
+  migration is trivial because the key already is the reference.
+- **Settled library: six domain-neutral phases** (Scope & Goals, Research,
+  Design, Execution Plan, Validation Plan, Definition of Done), with "Finish
+  the plan" as a terminal option rather than a seventh phase. We deliberately
+  avoid a genre taxonomy (game/document/home-improvement etc.): relevance is
+  expressed through each phase's question pool and keyword-scored
+  recommendation, not through extra phase labels. The wrap-up chooser (2-3
+  options + "Finish the plan") stays the only phase surface the user meets,
+  which bounds cognitive load. See PROJECT-FLOWS.md for the per-phase pool
+  partition.
+- **Pool serving:** each phase owns a slice of `HardcodedQuestionGenerator`
+  `questionPool`; the slice front holds the highest-value questions. The
+  phase's initial round serves the front (~7), each `UserRequested` round
+  continues from where the last stopped (~5). Pools are sized ~10-14 per phase
+  so exhaustion (everything in the phase's pool has been asked) lands naturally
+  after 1-2 "Get more questions" rounds.
+- **Exhaustion signal:** per-phase. On exhaustion, "Get more questions"
+  disables itself and "Finish the plan" surfaces first in the wrap-up chooser.
+  This is the hardcoded mirror of the Phase 3 explicit generator "done" signal
+  and must never be inferred from an empty generation result (`emptyList()` is
+  indistinguishable from "nothing surfaced yet").
+- **`recommendNextPhase(synopsis, answeredQuestions)`:** weighted keyword-hit
+  scoring across the synopsis + committed answers; returns the top 2-3
+  **adjacent** keys, never the current phase, deduped against already-visited
+  phases. The LLM (Phase 3) picks from the same library instead of text-
+  scoring.
 
 ### Generation Task Framework
 

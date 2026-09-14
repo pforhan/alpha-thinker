@@ -1,8 +1,9 @@
 # Project Flows (draft research doc) — evolved into "Guided Phases"
 
-Status: **draft / living** — owned by the Phase 2.8 "Research & define the phase
-library + wrap-up flow" item in IMPLEMENTATION-PLAN.md. Everything here is a
-working model to validate, not the final design.
+Status: **living** — owned by the Phase 2.8 "Research & define the phase
+library + wrap-up flow" item in IMPLEMENTATION-PLAN.md. The phase **library** is
+settled (six phases, per-phase pools); the pool **partition notes** below are
+working content to validate while rebalancing `HardcodedQuestionGenerator`.
 
 ## One-line change of direction
 
@@ -37,10 +38,13 @@ The actual building happens after the user closes the app.
 ## Mechanics (invariant, applies everywhere)
 
 - Rounds remain the on-disk units; wrap-up closes a round and opens the next.
-- A round records the **phase** it belongs to (`Round.phase`).
-- The planning "stage" is just the current round's phase. A numeric glance
-  ("Phase 3 of 7") is a *derived* index into the phase library's ordering —
-  never stored.
+- A round records the **phase** it belongs to (`Round.phase`). The current
+  planning "stage" is read from the round in progress (`Round.phase`), with a
+  fresh project starting at the library's first phase. Storing the phase on the
+  round is the current approach — it may later become a column on the project
+  if that reads better; that's an implementation detail, not a design
+  invariant. A numeric glance ("Phase 3 of 7") is a *derived* index into the
+  phase library's ordering rather than a stored field.
 - **No flow/category is enforced on a project.** Wrap-up **always advances to a
   new phase** — it shows 2–3 adjacent next-phase choices proposed by the
   generator + a "Finish the plan" option; the user picks. No automatic round
@@ -163,36 +167,156 @@ Phase names in the library are canonical fixtures the app reasons with
 presentation concern and can drift from the internal label (the hope is they
 mostly match, but nothing forbids friendlier copy).
 
-## Hardcoded phase recommendation (sketch)
+## The phase library (settled — Phase 2.8)
 
-Each phase is a **planning deliverable**, so each gets a small keyword profile
-and pool, e.g.:
+Decision record for the IMPLEMENTATION-PLAN.md:142-144 "settle the starting
+phase set" item. A code-defined `PhaseLibrary` in `commonMain` lists the phases
+(stable string key, display label, ordering index, keyword profile, per-phase
+question pool); `Round.phase` stores the **key**. A persisted `phases` table is
+**deferred** until user-created/LLM-proposed labels arrive — a later migration
+is trivial because the key already is the reference.
 
-- **Scope & Goals:** problem, user, goal, vision, why
-- **Research:** benchmark, competitor, reference, inspiration, similar
-- **Design:** feature, design, prototype, workflow, value proposition
-- **Execution Plan:** build, implement, backlog, milestone, technical, resource,
-  timeline
-- **Validation Plan:** trial, feedback, test, measure, risk
-- **Definition of Done:** finish, launch, ship, publish, review, deliverable,
-  done
+**Settled: six domain-neutral phases, no genre taxonomy.** Domain flavor lives
+in per-phase question-pool content and keyword-scored recommendation — never in
+extra phase labels. The wrap-up chooser (2-3 options + "Finish the plan") is the
+only phase surface a user ever meets; keeping the library small and stable is
+what keeps cognitive load low while the pools keep questions relevant.
 
-`recommendNextPhase(synopsis, answeredQuestions)` scores weighted keyword hits
-across the synopsis + committed answers, extends to top N candidates, and
-returns them for the wrap-up chooser. This is the `HardcodedQuestionGenerator`
-slice of Phase 2.8.
+| Key | Label | Keyword profile | v1 pool |
+|---|---|---|---|
+| `scope-goals` | Scope & Goals | problem, user, goal, vision, why | 12 (from 21, deduped) |
+| `research` | Research | benchmark, competitor, reference, inspiration, similar | ~10 (4 + ~6 new) |
+| `design` | Design | feature, design, prototype, workflow, value proposition | ~12 (8 + ~4 new) |
+| `execution-plan` | Execution Plan | build, implement, backlog, milestone, technical, resource, timeline | ~14 (from 20, deduped) |
+| `validation-plan` | Validation Plan | trial, feedback, test, measure, risk | ~10 (7 + ~3 new) |
+| `definition-of-done` | Definition of Done | finish, launch, ship, publish, review, deliverable, done | ~10 (6 + ~4 new) |
+
+"Finish the plan" is the terminal option, not a seventh phase.
+
+### Pool serving + exhaustion
+
+- Each phase owns a slice of the pool; the **front holds the highest-value
+  questions**. The phase's initial round serves the front (~7); each
+  `UserRequested` round continues where the last one stopped (~5). Target depth
+  of ~10-14 per phase supports an initial round plus 1-2 "Get more questions"
+  rounds before exhaustion lands.
+- **Exhaustion is per-phase**: once every question in the phase's pool has been
+  asked, "Get more questions" disables and **"Finish the plan" surfaces first**
+  in the wrap-up chooser. This is the phase-level stand-in for the Phase 3
+  explicit done signal — exhaustion is never inferred from an empty generation
+  result (an `emptyList()` today is indistinguishable from "nothing surfaced
+  yet").
+- `recommendNextPhase(synopsis, answeredQuestions)` scores weighted keyword
+  hits across the synopsis + committed answers and returns the **top 2-3
+  adjacent keys (never the current phase)**, deduped against visited phases.
+  Default-highlight the top-rated option.
+
+### Pool partition (existing `questionPool` → phase)
+
+Working notes for re-partitioning `HardcodedQuestionGenerator.questionPool`.
+Target total ≈ today's pool size (~66) — rebalancing, not growth. Questions are
+listed in the priority order to serve within their phase; "(dedupe)" marks
+candidates to retire or reword rather than carry forward; "(draft)" marks new
+genre-flavored questions to add (game / document / home-improvement shapes per
+the trajectories below).
+
+**scope-goals** (keep 12):
+- "What is the primary problem this project solves?"
+- "Who is the ideal user or beneficiary?"
+- "What is the single most important goal?"
+- "What is the \"Minimum Viable Product\" (MVP) version?"
+- "What's the core value proposition?"
+- "What is the biggest constraint?"
+- "What does success look like?"
+- "What is the long-term vision for this project?"
+- "Who are the primary stakeholders and decision-makers?"
+- "What assumptions are you making?"
+- "What's the scope you're comfortable with?"
+- "What's out of scope right now?"
+
+(dedupe — drop or reword): "What's the minimum viable product?" (dup of MVP);
+"What are the long-term goals?" (dup of long-term vision); "What's the simplest
+version that still works?" and "What's the simplest version of your answer?"
+(overlap with MVP / scope); "Who else cares about this project?" and "Who else
+benefits from this besides the main user?" (dup of stakeholders); "What's the
+learning goal for your users?" and "How would your first user describe what this
+does?" (design/pitch-leaning); "How would you explain this to a teammate?" (low
+value).
+
+**research** (4 existing + ~6 draft): "What similar projects or competitors have
+you looked at?"; "What makes your approach different?"; "Are there any existing
+solutions you're inspired by?"; "What's the most surprising thing about your
+users?"
+- (draft) "What have others already learned in this space that you can borrow?"
+- (draft) "What's the proven playbook or pattern that fits this kind of
+  project?" — game → comparable games; doc → similar docs; home → similar
+  renovations.
+- (draft) "What do existing solutions do badly that you could improve on?"
+- (draft) "Where would an expert tell you not to reinvent the wheel?"
+- (draft) "What's the fastest way to sanity-check this idea before building
+  anything?"
+- (draft) "Who is already solving this for a slightly different audience?"
+
+**design** (8 existing + ~4 draft): "What are the key features?"; "What are the
+non-negotiable features or qualities?"; "What's the one thing that must just
+work?"; "What's the core workflow?"; "What data flows through the system?";
+"What would the user do after using this?"; "What makes this stick in someone's
+mind?"; "What's one feature you're excited about?"
+- (draft) "What does the first version look like — the shape, not the polish?"
+- (draft) "What's the hook that makes a first-time user sit up?" — game → core
+  fantasy; doc → opening angle; home → design intent.
+- (draft) "What's the part you'll iterate on most?"
+- (draft) "What's the smallest demo that shows the core idea moving?"
+
+**execution-plan** (keep 14): "What is the very first step you need to take?";
+"What are three key milestones for the first month?"; "What is the target
+completion date?"; "What's the estimated timeline?"; "What's the quickest path
+to value?"; "What could you build in a week?"; "What resources (time, money,
+tools) are currently available?"; "What resources are still needed?"; "What is
+the estimated total budget?"; "What are the key technical constraints or
+requirements?"; "What technologies would you like to use?"; "What's the fallback
+if everything breaks?"; "Where will you cut corners to ship faster?"; "What can
+wait until later?"
+
+(dedupe/relocate): "What resources do you need?" (dup of "still needed"); "What
+needs to be done first?" (dup of "very first step"); "What skills or knowledge
+gaps exist?" (research-leaning); "What's the most boring but necessary part?"
+(low value); "What's the hardest part to build?" (design/estimation-leaning);
+"How will this project be maintained or supported later?" (candidate for
+definition-of-done).
+
+**validation-plan** (7 existing + ~3 draft): "What are the top three risks to
+success?"; "What could go wrong?"; "Are there any legal, ethical, or compliance
+factors?"; "How will you measure progress?"; "What feedback will you gather?";
+"Who's the first person you'll show this to?"; "What's your biggest technical
+risk?" (candidate dedupe against "top three risks").
+- (draft) "What would convince a skeptic this works?"
+- (draft) "What's the smallest test that proves the core idea?"
+- (draft) "What would you measure to know it's good, not just done?"
+
+**definition-of-done** (6 existing + ~4 draft): "How will you know if the
+project is successful?"; "How will you know you're done?"; "What milestones
+define completion?"; "What will you promote or distribute the final result?";
+"What's your go-to-market story?"; "What's the story you'll tell at the end?"
+- (draft) "What has to be true before you call it shipped?"
+- (draft) "What's the final deliverable a teammate could pick up and use?"
+- (draft) "What does \"done\" explicitly not include?"
+- (draft) "Who signs off on done?"
 
 ## Open questions
 
-- How many phases in the initial library? Start with ~6 above plus a
-  user-created fallback; grow on evidence.
+- ~~How many phases in the initial library?~~ **Settled:** the six above;
+  "Finish the plan" is terminal, not a phase. User-created/LLM-proposed labels
+  are deferred to when a persisted `phases` table lands (Phase 3 LLM).
 - Should the LLM propose brand-new phase labels, or only pick from the library?
   (Hybrid: pick from the library; allow new labels when confident.)
 - Fixed buttons vs. free-text next-phase prompting? Buttons for v1; free text
   only if "something else" proves worth it.
 - Where does the user's **global question pool** (Phase 4) attach — projects or
   phases? (Lean: phases — interleave the phase pool with globals.)
-- When does "Finish the plan" get auto-suggested first? (When the chosen phase's
-  pool is exhausted or the generator reports done.)
+- ~~When does "Finish the plan" get auto-suggested first?~~ **Partially
+  settled:** always listed in the wrap-up chooser; it surfaces first when the
+  current phase's pool is exhausted. The Phase 3 LLM done signal may surface it
+  earlier.
 - Numeric stage display: keep the derived library index ("Phase 3 of 7") or show
   labels only? (Lean: label + optional index.)

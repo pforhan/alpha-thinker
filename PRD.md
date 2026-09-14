@@ -26,6 +26,13 @@ Both Editions share the same general UI, but differ in source of question materi
     - **Edge**: The LLM generates an editable title and initial tailored questions.
     - **Lite**: The system applies the project title from the synopsis and loads the 20 Seed Questions.
 3. **Iterative Synthesis**:
+    - **Planning Phases**: Projects advance through a fixed library of six
+      planning phases — Scope & Goals, Research, Design, Execution Plan,
+      Validation Plan, Definition of Done. Phases are planning deliverables
+      (the plan for doing something), never acts and never forced flows: the
+      app recommends a next phase at each wrap-up and the user decides.
+      Relevance comes from each phase's question pool, not from per-domain
+      phase lists, so the library stays small and recognizable.
     - **Active Phase Focus**: Current unanswered questions are prioritized at the top of the workspace, within the context of the current planning phase.
     - User is presented a list of questions on cards, roughly enough to fill the screen without scrolling (though scrolling is acceptable on small screens).
     - As the user answers or dismisses questions, the response is recorded, the card moves to an "answered" list, and unseen questions replace them.
@@ -46,7 +53,7 @@ Both Editions share the same general UI, but differ in source of question materi
 - **Question Archiving**: Users can manually deactivate or archive questions.
 - **Immediate Archiving**: Option to archive questions immediately upon being answered.
 - **Auto-Archive (Edge Only)**: Provide a user app-wide setting to determine behavior when the synopsis or preceding questions change: a) do nothing, b) clear all prior questions and answers, or c) ask the LLM if each question is still relevant.
-- **Next Round Generation (Edge Only)**: When the user wraps up the current round, generate the first round's questions for the phase they chose in the wrap-up "what's next?" chooser. When the user taps "Get more questions", start a new `UserRequested` round in the current phase while pool questions remain.
+- **Next Round Generation**: When the user wraps up the current round, generate the first round's questions for the phase they chose in the wrap-up "what's next?" chooser. When the user taps "Get more questions", start a new `UserRequested` round in the current phase while pool questions remain. Works in both editions (hardcoded generator in Lite; LLM in Edge). "Get more questions" disables once the current phase's question pool is exhausted; "Finish the plan" then surfaces as the way out.
 
 ### 4.3 LLM Integration (Alpha Thinker Edge Only)
 - Generate a set of tailored initial questions based on the project synopsis.
@@ -94,6 +101,7 @@ The Lite version includes these 20 generic questions to guide the user:
 - Visual indicators for completed/answered questions.
 - Picker for "Auto-Archive" behavior (Edge Only).
 - Action to export the final project state.
+- **Phase progress**: The detail header and project list card show the current planning phase and a display-only phase timeline (traversed / current / upcoming), plus the current phase's completion % (resolved vs. total questions). In the Answered view, questions are grouped under per-phase section headers (e.g. "Research — 5 answered"). Rounds themselves stay invisible — they are metadata, not UI.
 
 ### 5.4 Global Question Management
 - **Global Question Repository**: A dedicated view to manage the pool of user-defined questions that can be applied to any project.
