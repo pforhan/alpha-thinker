@@ -61,3 +61,15 @@ interface AnswerDao {
   @Query("DELETE FROM answers WHERE id IN (:answerIds)")
   suspend fun deleteAnswersByIds(answerIds: List<String>)
 }
+
+@Dao
+interface RoundDao {
+  @Upsert
+  suspend fun upsertRound(round: RoundEntity): Long
+
+  @Query("SELECT * FROM rounds WHERE id = :id")
+  suspend fun getRound(id: String): RoundEntity?
+
+  @Query("SELECT * FROM rounds WHERE projectId = :projectId ORDER BY roundNumber ASC")
+  suspend fun getRoundsForProject(projectId: String): List<RoundEntity>
+}

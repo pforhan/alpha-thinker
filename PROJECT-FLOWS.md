@@ -170,9 +170,10 @@ mostly match, but nothing forbids friendlier copy).
 ## The phase library (settled — Phase 2.8)
 
 Decision record for the IMPLEMENTATION-PLAN.md:142-144 "settle the starting
-phase set" item. A code-defined `PhaseLibrary` in `commonMain` lists the phases
-(stable string key, display label, ordering index, keyword profile, per-phase
-question pool); `Round.phase` stores the **key**. A persisted `phases` table is
+phase set" item. A code-defined `Phase` enum in `commonMain` (the `phases`
+package) defines the phases (stable string key, display label, ordering index,
+keyword profile, per-phase question pool); `Round.phase` stores the enum,
+persisted as its stable **key** string. A persisted `phases` table is
 **deferred** until user-created/LLM-proposed labels arrive — a later migration
 is trivial because the key already is the reference.
 

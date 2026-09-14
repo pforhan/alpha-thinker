@@ -141,12 +141,13 @@ LLM review (Phase 3) has something concrete to anchor to.
 The current planning phase is read from the `phase` of the round in progress
 (current approach; a project-level column is not ruled out — see the Rounds
 note). The set of phases the app can be in comes from a **code-defined
-`PhaseLibrary`** in `commonMain`:
+`Phase` enum** in `commonMain` (the `phases` package):
 
-- Each entry is `(stableKey, displayLabel, orderingIndex, keywordProfile,
-  questionPool)`; `Round.phase` stores the stable **key**. A persisted `phases`
-  table is deferred until user-created/LLM-proposed labels arrive — a later
-  migration is trivial because the key already is the reference.
+- Each constant is `(stableKey, displayLabel, orderingIndex, keywordProfile,
+  questionPool)`; `Round.phase` holds the enum and persists through its stable
+  **key** string. A persisted `phases` table is deferred until user-created/
+  LLM-proposed labels arrive — a later migration is trivial because the key
+  already is the reference.
 - **Settled library: six domain-neutral phases** (Scope & Goals, Research,
   Design, Execution Plan, Validation Plan, Definition of Done), with "Finish
   the plan" as a terminal option rather than a seventh phase. We deliberately

@@ -41,6 +41,26 @@ data class QuestionEntity(
 )
 
 @Entity(
+  tableName = "rounds",
+  foreignKeys = [ForeignKey(
+    entity = ProjectEntity::class,
+    parentColumns = ["id"],
+    childColumns = ["projectId"],
+    onDelete = ForeignKey.CASCADE
+  )],
+  indices = [Index("projectId")]
+)
+data class RoundEntity(
+  @PrimaryKey val id: String,
+  val projectId: String,
+  val phase: String,
+  val roundNumber: Int,
+  val origin: String,
+  val startedAt: Long,
+  val completedAt: Long? = null,
+)
+
+@Entity(
   tableName = "answers",
   foreignKeys = [ForeignKey(
     entity = QuestionEntity::class,
