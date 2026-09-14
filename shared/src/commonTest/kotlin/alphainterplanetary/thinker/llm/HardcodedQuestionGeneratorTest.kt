@@ -97,7 +97,7 @@ class HardcodedQuestionGeneratorTest {
     val questions = generator.generateInitialQuestions("title", "synopsis", "ctx")
 
     assertEquals(5, questions.size)
-    assertEquals(setOf("ctx"), questions.map { it.contextId }.toSet())
+    assertEquals(setOf("ctx"), questions.map { it.roundId }.toSet())
   }
 
   @Test

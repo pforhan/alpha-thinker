@@ -11,14 +11,14 @@ interface QuestionGenerator {
   suspend fun generateInitialQuestions(
     editableTitle: String,
     synopsis: String,
-    contextId: String,
+    roundId: String,
   ): List<Question>
 
   @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun generateFollowUpQuestions(
     synopsis: String,
     previousQuestions: List<Question>,
-    contextId: String,
+    roundId: String,
   ): List<Question>
 
   class AnalysisFailure(override val message: String) : Exception(message)

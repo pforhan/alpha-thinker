@@ -15,30 +15,30 @@ class FakeGenerator : QuestionGenerator {
   override suspend fun generateInitialQuestions(
     editableTitle: String,
     synopsis: String,
-    contextId: String,
+    roundId: String,
   ): List<Question> {
-    initialCalls += InitialCall(editableTitle, synopsis, contextId)
+    initialCalls += InitialCall(editableTitle, synopsis, roundId)
     return initialQuestions
   }
 
   override suspend fun generateFollowUpQuestions(
     synopsis: String,
     previousQuestions: List<Question>,
-    contextId: String,
+    roundId: String,
   ): List<Question> {
-    followUpCalls += FollowUpCall(synopsis, previousQuestions, contextId)
+    followUpCalls += FollowUpCall(synopsis, previousQuestions, roundId)
     return followUpQuestions
   }
 
   data class InitialCall(
     val editableTitle: String,
     val synopsis: String,
-    val contextId: String,
+    val roundId: String,
   )
 
   data class FollowUpCall(
     val synopsis: String,
     val previousQuestions: List<Question>,
-    val contextId: String,
+    val roundId: String,
   )
 }

@@ -2,6 +2,9 @@ package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.model.Round
+import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.phases.Phase
 import kotlin.time.Instant
 
 val defaultTestInstant: Instant = Instant.fromEpochMilliseconds(0)
@@ -12,19 +15,37 @@ fun question(
   ignoredAt: Instant? = null,
   answers: List<Answer> = emptyList(),
   timestamp: Instant = defaultTestInstant,
-  contextId: String = "ctx",
+  roundId: String = "ctx",
   draftText: String? = null,
   draftUpdatedAt: Instant? = null,
 ): Question = Question(
   id = id,
   text = text,
   timestamp = timestamp,
-  contextId = contextId,
+  roundId = roundId,
   ignoredAt = ignoredAt,
   answerId = answers.lastOrNull()?.id,
   draftText = draftText,
   draftUpdatedAt = draftUpdatedAt,
   answers = answers,
+)
+
+fun round(
+  id: String,
+  projectId: String = "p1",
+  phase: Phase = Phase.ScopeGoals,
+  roundNumber: Int = 1,
+  origin: RoundOrigin = RoundOrigin.Initial,
+  startedAt: Instant = defaultTestInstant,
+  completedAt: Instant? = null,
+): Round = Round(
+  id = id,
+  projectId = projectId,
+  phase = phase,
+  roundNumber = roundNumber,
+  origin = origin,
+  startedAt = startedAt,
+  completedAt = completedAt,
 )
 
 fun answeredQuestion(id: String): Question =

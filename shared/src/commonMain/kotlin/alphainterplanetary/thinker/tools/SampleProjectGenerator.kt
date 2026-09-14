@@ -4,6 +4,9 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.model.Round
+import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import kotlin.time.Instant
@@ -24,7 +27,7 @@ class SampleProjectGenerator @Inject constructor(
 
   private fun sparseProject(): Project {
     val created = daysAgo(9)
-    val contextId = "sample-sparse-ctx"
+    val roundId = "sample-sparse-ctx"
     return Project(
       id = SPARSE_PROJECT_ID,
       synopsis = "A no-fuss method for making cold brew coffee concentrate at home.",
@@ -35,7 +38,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "sparse-q1",
           text = "What is the best ratio of coffee to water?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "sparse-q1",
@@ -49,7 +52,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "sparse-q2",
           text = "How long should it steep?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "sparse-q2",
@@ -62,32 +65,35 @@ class SampleProjectGenerator @Inject constructor(
           id = "sparse-q3",
           text = "What grind size works best for cold brew?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
         ),
         sampleQuestion(
           id = "sparse-q4",
           text = "How long can the concentrate stay fresh in the fridge?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
         ),
         sampleQuestion(
           id = "sparse-q5",
           text = "Do I need a filter bag or is a regular cheesecloth enough?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
         ),
         sampleQuestion(
           id = "sparse-q6",
           text = "What is a simple way to serve it without fancy equipment?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
         ),
         sampleQuestion(
           id = "sparse-q7",
           text = "How much concentrate does one batch yield?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
         ),
+      ),
+      rounds = listOf(
+        sampleRound(SPARSE_PROJECT_ID, roundId, Phase.ScopeGoals, created),
       ),
       createdAt = created,
       updatedAt = created,
@@ -97,7 +103,7 @@ class SampleProjectGenerator @Inject constructor(
   private fun completeProject(): Project {
     val created = daysAgo(6)
     val updated = daysAgo(2, 30)
-    val contextId = "sample-complete-ctx"
+    val roundId = "sample-complete-ctx"
     return Project(
       id = COMPLETE_PROJECT_ID,
       synopsis = "A small mobile puzzle game I have been designing in my head for months. " +
@@ -111,7 +117,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q1",
           text = "What is the primary problem this project solves?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "complete-q1",
@@ -127,7 +133,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q2",
           text = "Who is the ideal user or beneficiary?",
           timestamp = created,
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "complete-q2",
@@ -142,7 +148,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q3",
           text = "What is the single most important goal?",
           timestamp = daysAgo(5),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "complete-q3",
@@ -157,7 +163,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q4",
           text = "What are the key features?",
           timestamp = daysAgo(5),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "complete-q4",
@@ -173,7 +179,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q5",
           text = "What is the minimum viable product (MVP) version?",
           timestamp = daysAgo(5),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "complete-q5",
@@ -188,7 +194,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q6",
           text = "What are the top three risks to success?",
           timestamp = daysAgo(4),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "complete-q6",
@@ -204,7 +210,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q7",
           text = "What is the target completion date?",
           timestamp = daysAgo(4),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "complete-q7",
@@ -219,7 +225,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q8",
           text = "What resources (time, money, tools) are currently available?",
           timestamp = daysAgo(3),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "complete-q8",
@@ -235,32 +241,35 @@ class SampleProjectGenerator @Inject constructor(
           id = "complete-q9",
           text = "What is the very first step you need to take?",
           timestamp = daysAgo(3),
-          contextId = contextId,
+          roundId = roundId,
         ),
         sampleQuestion(
           id = "complete-q10",
           text = "How will you know if the project is successful?",
           timestamp = daysAgo(3),
-          contextId = contextId,
+          roundId = roundId,
           ignoredAt = daysAgo(3),
         ),
         sampleQuestion(
           id = "complete-q11",
           text = "What are the long-term goals?",
           timestamp = daysAgo(2),
-          contextId = contextId,
+          roundId = roundId,
           ignoredAt = daysAgo(2),
         ),
         sampleQuestion(
           id = "complete-q12",
           text = "What is your biggest technical risk?",
           timestamp = daysAgo(2),
-          contextId = contextId,
+          roundId = roundId,
           draftText = "Still unsure whether the custom swipe-to-move gesture will feel right on " +
             "a phone. I need to prototype it early with real touch input before building " +
             "the level editor around it.",
           draftUpdatedAt = daysAgo(3),
         ),
+      ),
+      rounds = listOf(
+        sampleRound(COMPLETE_PROJECT_ID, roundId, Phase.ScopeGoals, created),
       ),
       createdAt = created,
       updatedAt = updated,
@@ -270,7 +279,7 @@ class SampleProjectGenerator @Inject constructor(
   private fun stressProject(): Project {
     val created = daysAgo(3)
     val updated = daysAgo(0, 120)
-    val contextId = "sample-stress-ctx"
+    val roundId = "sample-stress-ctx"
     return Project(
       id = STRESS_PROJECT_ID,
       synopsis = lipsum(5),
@@ -281,13 +290,13 @@ class SampleProjectGenerator @Inject constructor(
           id = "stress-q1",
           text = lipsum(2),
           timestamp = daysAgo(3),
-          contextId = contextId,
+          roundId = roundId,
         ),
         sampleQuestion(
           id = "stress-q2",
           text = lipsum(2),
           timestamp = daysAgo(3),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "stress-q2",
@@ -300,14 +309,14 @@ class SampleProjectGenerator @Inject constructor(
           id = "stress-q3",
           text = lipsum(1),
           timestamp = daysAgo(2),
-          contextId = contextId,
+          roundId = roundId,
           ignoredAt = daysAgo(2),
         ),
         sampleQuestion(
           id = "stress-q4",
           text = lipsum(2),
           timestamp = daysAgo(2),
-          contextId = contextId,
+          roundId = roundId,
           draftText = lipsum(2),
           draftUpdatedAt = daysAgo(2),
         ),
@@ -315,7 +324,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "stress-q5",
           text = lipsum(2),
           timestamp = daysAgo(1),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "stress-q5",
@@ -328,7 +337,7 @@ class SampleProjectGenerator @Inject constructor(
           id = "stress-q6",
           text = lipsum(2),
           timestamp = daysAgo(1),
-          contextId = contextId,
+          roundId = roundId,
           answers = listOf(
             completeAnswer(
               questionId = "stress-q6",
@@ -341,15 +350,18 @@ class SampleProjectGenerator @Inject constructor(
           id = "stress-q7",
           text = lipsum(2),
           timestamp = daysAgo(2),
-          contextId = contextId,
+          roundId = roundId,
         ),
         sampleQuestion(
           id = "stress-q8",
           text = lipsum(1),
           timestamp = daysAgo(1),
-          contextId = contextId,
+          roundId = roundId,
           ignoredAt = daysAgo(0, 6),
         ),
+      ),
+      rounds = listOf(
+        sampleRound(STRESS_PROJECT_ID, roundId, Phase.ScopeGoals, created),
       ),
       createdAt = created,
       updatedAt = updated,
@@ -360,7 +372,7 @@ class SampleProjectGenerator @Inject constructor(
     id: String,
     text: String,
     timestamp: Instant,
-    contextId: String,
+    roundId: String,
     answers: List<Answer> = emptyList(),
     ignoredAt: Instant? = null,
     draftText: String? = null,
@@ -369,12 +381,26 @@ class SampleProjectGenerator @Inject constructor(
     id = id,
     text = text,
     timestamp = timestamp,
-    contextId = contextId,
+    roundId = roundId,
     ignoredAt = ignoredAt,
     answers = answers,
     answerId = answers.lastOrNull()?.id,
     draftText = draftText,
     draftUpdatedAt = draftUpdatedAt,
+  )
+
+  private fun sampleRound(
+    projectId: String,
+    roundId: String,
+    phase: Phase,
+    startedAt: Instant,
+  ): Round = Round(
+    id = roundId,
+    projectId = projectId,
+    phase = phase,
+    roundNumber = 1,
+    origin = RoundOrigin.Initial,
+    startedAt = startedAt,
   )
 
   private fun completeAnswer(

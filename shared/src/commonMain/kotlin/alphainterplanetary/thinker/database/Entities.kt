@@ -19,19 +19,27 @@ data class ProjectEntity(
 
 @Entity(
   tableName = "questions",
-  foreignKeys = [ForeignKey(
-    entity = ProjectEntity::class,
-    parentColumns = ["id"],
-    childColumns = ["projectId"],
-    onDelete = ForeignKey.CASCADE
-  )],
-  indices = [Index("projectId")]
+  foreignKeys = [
+    ForeignKey(
+      entity = ProjectEntity::class,
+      parentColumns = ["id"],
+      childColumns = ["projectId"],
+      onDelete = ForeignKey.CASCADE
+    ),
+    ForeignKey(
+      entity = RoundEntity::class,
+      parentColumns = ["id"],
+      childColumns = ["roundId"],
+      onDelete = ForeignKey.CASCADE
+    ),
+  ],
+  indices = [Index("projectId"), Index("roundId")]
 )
 data class QuestionEntity(
   @PrimaryKey val id: String,
   val projectId: String,
   val text: String,
-  val contextId: String = "",
+  val roundId: String,
   val createdAt: Long,
   val sortOrder: Int = 0,
   val ignoredAt: Long? = null,

@@ -25,7 +25,7 @@ class HardcodedQuestionGenerator @Inject constructor(
   override suspend fun generateInitialQuestions(
     @Suppress("UNUSED_PARAMETER") editableTitle: String,
     @Suppress("UNUSED_PARAMETER") synopsis: String,
-    contextId: String,
+    roundId: String,
   ): List<Question> {
     val now = now()
     return questionPool
@@ -35,7 +35,7 @@ class HardcodedQuestionGenerator @Inject constructor(
           id = randomUUID(),
           text = text,
           timestamp = now,
-          contextId = contextId
+          roundId = roundId,
         )
       }
   }
@@ -43,7 +43,7 @@ class HardcodedQuestionGenerator @Inject constructor(
   override suspend fun generateFollowUpQuestions(
     @Suppress("UNUSED_PARAMETER") synopsis: String,
     previousQuestions: List<Question>,
-    contextId: String,
+    roundId: String,
   ): List<Question> {
     val askedTexts = previousQuestions.map { it.text }.toSet()
     val remaining = questionPool.filter { it !in askedTexts }
@@ -57,7 +57,7 @@ class HardcodedQuestionGenerator @Inject constructor(
           id = randomUUID(),
           text = text,
           timestamp = now,
-          contextId = contextId
+          roundId = roundId,
         )
       }
   }

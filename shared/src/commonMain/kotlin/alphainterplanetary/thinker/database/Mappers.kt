@@ -21,7 +21,7 @@ fun Question.toEntity(projectId: String, index: Int) = QuestionEntity(
   id = id,
   projectId = projectId,
   text = text,
-  contextId = contextId,
+  roundId = roundId,
   createdAt = timestamp.toEpochMilliseconds(),
   sortOrder = index,
   ignoredAt = ignoredAt?.toEpochMilliseconds(),
@@ -37,7 +37,10 @@ fun Answer.toEntity() = AnswerEntity(
   createdAt = createdAt.toEpochMilliseconds(),
 )
 
-fun ProjectWithQuestions.toDomainModel(answers: List<AnswerEntity>): Project =
+fun ProjectWithQuestions.toDomainModel(
+  answers: List<AnswerEntity>,
+  rounds: List<RoundEntity>,
+): Project =
   answers.groupBy { it.questionId }.let { answersByQuestionId ->
     Project(
       id = project.id,
@@ -47,6 +50,7 @@ fun ProjectWithQuestions.toDomainModel(answers: List<AnswerEntity>): Project =
       questions = questions
         .sortedBy { it.sortOrder }
         .map { question -> question.toDomainModel(answersByQuestionId[question.id].orEmpty()) },
+      rounds = rounds.map { it.toDomainModel() },
       createdAt = Instant.fromEpochMilliseconds(project.createdAt),
       updatedAt = Instant.fromEpochMilliseconds(project.updatedAt)
     )
@@ -56,7 +60,7 @@ fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question = Questi
   id = id,
   text = text,
   timestamp = Instant.fromEpochMilliseconds(createdAt),
-  contextId = contextId,
+  roundId = roundId,
   ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
   answerId = answerId,
   draftText = draftText,

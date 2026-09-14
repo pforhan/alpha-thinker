@@ -8,9 +8,13 @@ data class Project(
   val editableTitle: String,
   val status: String,
   val questions: List<Question>,
+  val rounds: List<Round> = emptyList(),
   val createdAt: Instant,
   val updatedAt: Instant,
 ) {
+  /** The round currently in progress — the newest round that hasn't been wrapped up. */
+  val currentRound: Round?
+    get() = rounds.filterNot { it.isCompleted }.maxByOrNull { it.roundNumber }
   val unansweredQuestions: List<Question>
     get() = questions.filter { it.isUnanswered }
 

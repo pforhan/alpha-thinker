@@ -18,7 +18,7 @@ data class Question(
   val id: String,
   val text: String,
   val timestamp: Instant,
-  val contextId: String,
+  val roundId: String,
   val ignoredAt: Instant? = null,
   val answerId: String? = null,
   val draftText: String? = null,

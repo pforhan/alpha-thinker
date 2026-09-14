@@ -13,6 +13,10 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
     database.withWriteTransaction {
       database.projectDao().upsertProject(project.toEntity())
 
+      project.rounds.forEach { round ->
+        database.roundDao().upsertRound(round.toEntity())
+      }
+
       project.questions.forEachIndexed { index, q ->
         database.questionDao().upsertQuestion(q.toEntity(project.id, index))
       }
@@ -55,12 +59,22 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
     if (orphanedAnswerIds.isNotEmpty()) {
       database.answerDao().deleteAnswersByIds(orphanedAnswerIds)
     }
+
+    val savedRoundIds = project.rounds.map { it.id }
+    val orphanedRoundIds = database.roundDao()
+      .getRoundsForProject(project.id)
+      .map { it.id }
+      .filterNot { it in savedRoundIds.toSet() }
+    if (orphanedRoundIds.isNotEmpty()) {
+      database.roundDao().deleteRoundsByIds(orphanedRoundIds)
+    }
   }
 
   override suspend fun getProject(id: String): Project? {
     val data = database.projectDao().getProjectWithQuestions(id) ?: return null
     return data.toDomainModel(
-      database.answerDao().getAnswersForQuestions(data.questions.map { it.id })
+      database.answerDao().getAnswersForQuestions(data.questions.map { it.id }),
+      database.roundDao().getRoundsForProject(id)
     )
   }
 
@@ -68,7 +82,10 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
     database.projectDao().getAllProjectsWithQuestions().let { rows ->
       val answers = database.answerDao()
         .getAnswersForQuestions(rows.flatMap { row -> row.questions.map { it.id } })
-      return rows.map { row -> row.toDomainModel(answers) }
+      val roundsByProject = database.roundDao().getAllRounds().groupBy { it.projectId }
+      return rows.map { row ->
+        row.toDomainModel(answers, roundsByProject[row.project.id].orEmpty())
+      }
     }
 
   override suspend fun deleteProject(id: String) {

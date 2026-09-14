@@ -3,9 +3,12 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.testutil.FakeGenerator
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
+import alphainterplanetary.thinker.testutil.round
+import alphainterplanetary.thinker.phases.Phase
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -93,6 +96,26 @@ class ProjectRepositoryTest {
       setOf("q1", "q2"),
       storage.getProject(project.id)?.questions?.map { it.id }?.toSet()
     )
+  }
+
+  @Test
+  fun `createProject creates round 1 as an Initial round in the first phase`() = runTest {
+    val generator = FakeGenerator().apply {
+      initialQuestions += question("q1")
+      initialQuestions += question("q2")
+    }
+    val storage = FakeStorage()
+    val repository = repo(storage = storage, generator = generator)
+
+    val project = repository.createProject("My synopsis")
+
+    val round = project.rounds.single()
+    assertEquals(1, round.roundNumber)
+    assertEquals(RoundOrigin.Initial, round.origin)
+    assertEquals(Phase.first, round.phase)
+    assertEquals(project.id, round.projectId)
+    assertEquals(round.id, storage.getProject(project.id)?.rounds?.single()?.id)
+    assertEquals(round.id, generator.initialCalls.single().roundId)
   }
 
   // ---------- updateProject ----------
@@ -434,6 +457,12 @@ class ProjectRepositoryTest {
     assertEquals(listOf("q1", "f1", "f2"), updated.questions.map { it.id })
     assertEquals("s", generator.followUpCalls.single().synopsis)
     assertEquals(listOf("q1"), generator.followUpCalls.single().previousQuestions.map { it.id })
+
+    val round = updated.rounds.single()
+    assertEquals(RoundOrigin.FollowUp, round.origin)
+    assertEquals(1, round.roundNumber)
+    assertEquals(Phase.first, round.phase)
+    assertEquals(round.id, generator.followUpCalls.single().roundId)
   }
 
   @Test
@@ -508,6 +537,61 @@ class ProjectRepositoryTest {
     val result = repository.saveAnswer("p1", "missing", "text", completed = true)
 
     assertNull(result)
+  }
+
+  // ---------- generateMoreQuestions ----------
+
+  @Test
+  fun `generateMoreQuestions starts a new UserRequested round in the current phase`() = runTest {
+    val generator = FakeGenerator().apply {
+      followUpQuestions += question("f1")
+    }
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(question("q1")),
+      rounds = listOf(round(id = "r1", projectId = "p1", phase = Phase.Design)),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = FakeStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage, generator = generator)
+
+    val updated = repository.generateMoreQuestions("p1")
+
+    assertNotNull(updated)
+    val round = updated.rounds.last()
+    assertEquals(2, round.roundNumber)
+    assertEquals(RoundOrigin.UserRequested, round.origin)
+    assertEquals(Phase.Design, round.phase)
+    assertEquals("p1", round.projectId)
+    assertEquals("f1", updated.questions.last().id)
+    assertEquals(round.id, generator.followUpCalls.single().roundId)
+    assertEquals(2, storage.getProject("p1")?.rounds?.size)
+  }
+
+  @Test
+  fun `generateMoreQuestions does not start a round when the pool is exhausted`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(question("q1")),
+      rounds = listOf(round(id = "r1", projectId = "p1", phase = Phase.ScopeGoals)),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = FakeStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage, generator = FakeGenerator())
+
+    val result = repository.generateMoreQuestions("p1")
+
+    assertNotNull(result)
+    assertEquals(1, result.rounds.size)
+    assertEquals(listOf("q1"), result.questions.map { it.id })
   }
 
   // ---------- ignore / unignore ----------

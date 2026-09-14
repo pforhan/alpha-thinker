@@ -5,8 +5,12 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.model.Round
+import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
+import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
 
 class ProjectRepository @Inject constructor(
@@ -20,9 +24,19 @@ class ProjectRepository @Inject constructor(
 
     val trimmedTitle = title.orEmpty().trim()
 
-    val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
+val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
       ?.substring(0, trimmedTitle.length.coerceAtMost(30))
       ?: generator.recommendTitle(synopsis)
+
+    val roundId = randomUUID()
+    val round = Round(
+      id = roundId,
+      projectId = projectId,
+      phase = Phase.first,
+      roundNumber = 1,
+      origin = RoundOrigin.Initial,
+      startedAt = now,
+    )
 
     val project = Project(
       id = projectId,
@@ -30,17 +44,17 @@ class ProjectRepository @Inject constructor(
       editableTitle = resolvedTitle,
       status = "Draft",
       questions = emptyList(),
+      rounds = listOf(round),
       createdAt = now,
-      updatedAt = now
+      updatedAt = now,
     )
-    // Save the inital version of the project, in case generation fails.
+    // Save the initial version of the project, in case generation fails.
     storage.saveProject(project)
 
-    val contextId = randomUUID()
     val questions = generator.generateInitialQuestions(
       editableTitle = project.editableTitle,
       synopsis = project.synopsis,
-      contextId = contextId
+      roundId = roundId,
     ).shuffled()
 
     val updated = project.copy(
@@ -159,16 +173,21 @@ class ProjectRepository @Inject constructor(
     val answered = updatedProject.allActiveQuestionsAnswered
 
     val finalProject = if (answered) {
-      val contextId = randomUUID()
+      val round = nextRound(updatedProject, RoundOrigin.FollowUp, now)
       val newQs = generator.generateFollowUpQuestions(
         synopsis = project.synopsis,
         previousQuestions = project.questions,
-        contextId = contextId
+        roundId = round.id,
       )
 
-      updatedProject.copy(
-        questions = updatedProject.questions + newQs,
-      )
+      if (newQs.isEmpty()) {
+        updatedProject
+      } else {
+        updatedProject.copy(
+          questions = updatedProject.questions + newQs,
+          rounds = updatedProject.rounds + round,
+        )
+      }
     } else {
       updatedProject
     }
@@ -179,20 +198,32 @@ class ProjectRepository @Inject constructor(
 
   suspend fun generateMoreQuestions(projectId: String): Project? {
     val project = storage.getProject(projectId) ?: return null
-    val contextId = randomUUID()
+    val now = now()
+    val round = nextRound(project, RoundOrigin.UserRequested, now)
     val newQs = generator.generateFollowUpQuestions(
       synopsis = project.synopsis,
       previousQuestions = project.questions,
-      contextId = contextId
+      roundId = round.id,
     )
     if (newQs.isEmpty()) return project
     val updatedProject = project.copy(
       questions = project.questions + newQs,
-      updatedAt = now()
+      rounds = project.rounds + round,
+      updatedAt = now,
     )
     storage.saveProject(updatedProject)
     return updatedProject
   }
+
+  /** The next sequential round in the project's current phase, or [Phase.first] if none is in progress. */
+  private fun nextRound(project: Project, origin: RoundOrigin, startedAt: Instant): Round = Round(
+    id = randomUUID(),
+    projectId = project.id,
+    phase = project.currentRound?.phase ?: Phase.first,
+    roundNumber = (project.rounds.maxOfOrNull { it.roundNumber } ?: 0) + 1,
+    origin = origin,
+    startedAt = startedAt,
+  )
 
   suspend fun ignoreQuestion(
     projectId: String,

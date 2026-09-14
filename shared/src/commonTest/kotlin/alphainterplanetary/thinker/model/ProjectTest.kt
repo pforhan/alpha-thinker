@@ -4,11 +4,13 @@ import alphainterplanetary.thinker.testutil.answeredQuestion
 import alphainterplanetary.thinker.testutil.draftQuestion
 import alphainterplanetary.thinker.testutil.ignoredQuestion
 import alphainterplanetary.thinker.testutil.question
+import alphainterplanetary.thinker.testutil.round
 import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ProjectTest {
@@ -35,7 +37,7 @@ class ProjectTest {
         id = "q",
         text = "Q",
         timestamp = Instant.fromEpochMilliseconds(0),
-        contextId = "ctx",
+        roundId = "ctx",
         answerId = "1",
         draftText = "draft",
         draftUpdatedAt = Instant.fromEpochMilliseconds(0),
@@ -58,7 +60,7 @@ class ProjectTest {
         id = "q",
         text = "Q",
         timestamp = Instant.fromEpochMilliseconds(0),
-        contextId = "ctx",
+        roundId = "ctx",
         draftText = "draft",
         draftUpdatedAt = null,
       )
@@ -72,7 +74,7 @@ class ProjectTest {
         id = "q",
         text = "Q",
         timestamp = Instant.fromEpochMilliseconds(0),
-        contextId = "ctx",
+        roundId = "ctx",
         answerId = "99",
         answers = emptyList(),
       )
@@ -184,5 +186,53 @@ class ProjectTest {
     val p = project(ignoredQuestion("a"), ignoredQuestion("b"))
 
     assertFalse(p.allActiveQuestionsAnswered)
+  }
+
+  // ---------- rounds ----------
+
+  @Test
+  fun `currentRound is the newest in-progress round`() {
+    val p = Project(
+      id = "p",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = emptyList(),
+      rounds = listOf(
+        round(id = "r1", projectId = "p", roundNumber = 1),
+        round(id = "r2", projectId = "p", roundNumber = 2),
+        round(id = "r3", projectId = "p", roundNumber = 3),
+      ),
+      createdAt = Instant.fromEpochMilliseconds(0),
+      updatedAt = Instant.fromEpochMilliseconds(0),
+    )
+
+    assertEquals("r3", p.currentRound?.id)
+  }
+
+  @Test
+  fun `currentRound skips completed rounds`() {
+    val p = Project(
+      id = "p",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = emptyList(),
+      rounds = listOf(
+        round(id = "r1", projectId = "p", roundNumber = 1, completedAt = Instant.fromEpochMilliseconds(50)),
+        round(id = "r2", projectId = "p", roundNumber = 2),
+      ),
+      createdAt = Instant.fromEpochMilliseconds(0),
+      updatedAt = Instant.fromEpochMilliseconds(0),
+    )
+
+    assertEquals("r2", p.currentRound?.id)
+  }
+
+  @Test
+  fun `currentRound is null when there are no rounds`() {
+    val p = project(question("a"))
+
+    assertNull(p.currentRound)
   }
 }
