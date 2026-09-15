@@ -17,13 +17,16 @@ class SampleProjectGenerator @Inject constructor(
   private val storage: Storage,
 ) {
 
-  suspend fun generate() {
-    listOf(SPARSE_PROJECT_ID, COMPLETE_PROJECT_ID, STRESS_PROJECT_ID).forEach { id ->
+  private val allIds = listOf(SPARSE_PROJECT_ID, COMPLETE_PROJECT_ID, STRESS_PROJECT_ID)
+
+  suspend fun generate(): Int {
+    allIds.forEach { id ->
       storage.deleteProject(id)
     }
     storage.saveProject(sparseProject())
     storage.saveProject(completeProject())
     storage.saveProject(stressProject())
+    return allIds.size
   }
 
   private fun sparseProject(): Project {

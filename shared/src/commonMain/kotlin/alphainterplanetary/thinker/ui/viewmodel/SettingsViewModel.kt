@@ -25,8 +25,8 @@ class SettingsViewModel(
     _uiState.value = SettingsUiState.Generating
     scope.launch {
       try {
-        sampleProjectGenerator.generate()
-        _uiState.value = SettingsUiState.Success("Sample projects created.")
+        val count = sampleProjectGenerator.generate()
+        _uiState.value = SettingsUiState.Success("Populated $count sample projects.")
       } catch (e: Exception) {
         _uiState.value = SettingsUiState.Error(
           "Failed to create sample projects: ${e.message ?: "Unknown error"}"
