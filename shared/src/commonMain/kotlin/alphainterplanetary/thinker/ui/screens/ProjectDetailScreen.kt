@@ -331,7 +331,10 @@ private fun ProjectDetailContent(
             }
             if (showShuffle) {
               item {
-                ShuffleRow(onClick = onShuffle)
+                ShuffleRow(
+                  remainingCount = project.unansweredQuestions.size - filteredQuestions.size,
+                  onClick = onShuffle,
+                )
               }
             }
           }
@@ -436,7 +439,10 @@ private fun ProjectSynopsis(synopsis: String) {
 }
 
 @Composable
-private fun ShuffleRow(onClick: () -> Unit) {
+private fun ShuffleRow(
+  remainingCount: Int,
+  onClick: () -> Unit,
+) {
   Box(
     modifier = Modifier
       .fillMaxWidth()
@@ -462,6 +468,13 @@ private fun ShuffleRow(onClick: () -> Unit) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.primary,
       )
+      if (remainingCount > 0) {
+        Text(
+          " · $remainingCount more available",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
     }
   }
 }
