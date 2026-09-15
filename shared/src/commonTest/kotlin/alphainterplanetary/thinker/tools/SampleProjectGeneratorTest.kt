@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.tools
 
+import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.testutil.FakeStorage
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -9,47 +10,88 @@ import kotlin.test.assertTrue
 class SampleProjectGeneratorTest {
 
   @Test
-  fun `generate creates three projects with the expected ids`() = runTest {
+  fun `generate creates all eight sample projects with the expected ids`() = runTest {
     val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)
 
     generator.generate()
 
-    assertEquals(setOf("sample-sparse", "sample-complete", "sample-stress"), storage.projects.keys)
+    assertEquals(
+      setOf(
+        "sample-scope",
+        "sample-research",
+        "sample-design",
+        "sample-execution",
+        "sample-validation",
+        "sample-dod",
+        "sample-done",
+        "sample-stress",
+      ),
+      storage.projects.keys,
+    )
   }
 
   @Test
-  fun `sparse project has a short synopsis with a couple answered and five unanswered questions`() =
+  fun `scope project has a short synopsis with a couple answered and five unanswered questions`() =
     runTest {
       val storage = FakeStorage()
       val generator = SampleProjectGenerator(storage)
 
       generator.generate()
 
-      val sparse = storage.projects.getValue("sample-sparse")
-      assertTrue(sparse.synopsis.length < 200)
-      assertEquals(7, sparse.questions.size)
-      assertEquals(2, sparse.questions.count { it.isAnswered })
-      assertEquals(5, sparse.questions.count { it.isUnanswered })
+      val scope = storage.projects.getValue("sample-scope")
+      assertTrue(scope.synopsis.length < 200)
+      assertEquals(BuiltInPhase.ScopeGoals, scope.currentPhase)
+      assertEquals(7, scope.questions.size)
+      assertEquals(2, scope.questions.count { it.isAnswered })
+      assertEquals(5, scope.questions.count { it.isUnanswered })
     }
 
   @Test
-  fun `complete project mixes answered - ignored - draft and unanswered questions`() = runTest {
+  fun `phase sample projects each land on a distinct phase in library order`() = runTest {
     val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)
 
     generator.generate()
 
-    val complete = storage.projects.getValue("sample-complete")
-    assertTrue(complete.questions.any { it.isAnswered })
-    assertTrue(complete.questions.any { it.isIgnored })
-    assertTrue(complete.questions.any { it.isUnanswered })
-    assertTrue(
-      complete.questions.any { q ->
-        q.isDraft && !q.isAnswered
-      },
-      "complete project should contain a draft on an unanswered question",
-    )
+    val byId = listOf(
+      "sample-scope" to BuiltInPhase.ScopeGoals,
+      "sample-research" to BuiltInPhase.Research,
+      "sample-design" to BuiltInPhase.Design,
+      "sample-execution" to BuiltInPhase.ExecutionPlan,
+      "sample-validation" to BuiltInPhase.ValidationPlan,
+      "sample-dod" to BuiltInPhase.DefinitionOfDone,
+    ).associate { (id, _) -> id to storage.projects.getValue(id) }
+
+    BuiltInPhase.entries.forEach { phase ->
+      val project = byId.entries.first { it.value.currentPhase == phase }
+      assertEquals(phase, project.value.currentPhase)
+    }
+
+    byId.forEach { (id, project) ->
+      val completedRounds = project.rounds.count { it.isCompleted }
+      assertTrue(
+        completedRounds == project.rounds.size - 1,
+        "$id should have exactly one open round (the current phase)",
+      )
+    }
+  }
+
+  @Test
+  fun `done project has wrapped up every phase and resolved all of its questions`() = runTest {
+    val storage = FakeStorage()
+    val generator = SampleProjectGenerator(storage)
+
+    generator.generate()
+
+    val done = storage.projects.getValue("sample-done")
+    assertEquals(BuiltInPhase.DefinitionOfDone, done.currentPhase)
+    assertEquals(6, done.rounds.size)
+    assertEquals(5, done.rounds.count { it.isCompleted })
+    assertTrue(done.questions.isNotEmpty())
+    assertTrue(done.questions.all { it.isAnswered || it.isIgnored }, "done project should have no open questions")
+    assertTrue(done.questions.any { it.isAnswered })
+    assertTrue(done.questions.any { it.isIgnored })
   }
 
   @Test
@@ -80,7 +122,7 @@ class SampleProjectGeneratorTest {
     generator.generate()
     generator.generate()
 
-    assertEquals(3, storage.projects.size)
+    assertEquals(8, storage.projects.size)
   }
 
   @Test

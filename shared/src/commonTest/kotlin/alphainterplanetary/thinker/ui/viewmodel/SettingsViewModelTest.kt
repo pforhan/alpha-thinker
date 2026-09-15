@@ -10,27 +10,28 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SettingsViewModelTest {
+  val storage = FakeStorage()
+  val sampleProjectGenerator = SampleProjectGenerator(storage)
 
-  private fun TestScope.viewModel(
-    storage: FakeStorage = FakeStorage(),
-  ): SettingsViewModel {
+  private fun TestScope.viewModel(): SettingsViewModel {
     return SettingsViewModel(
-      sampleProjectGenerator = SampleProjectGenerator(storage),
+      sampleProjectGenerator = sampleProjectGenerator,
       scope = CoroutineScope(coroutineContext),
     )
   }
 
   @Test
   fun `generateSampleProjects reports success and persists the sample projects`() = runTest {
-    val storage = FakeStorage()
-    val vm = viewModel(storage)
+    val vm = viewModel()
 
     vm.generateSampleProjects()
     testScheduler.advanceUntilIdle()
 
-    assertEquals(SettingsUiState.Success("Sample projects created."), vm.uiState.value)
+    assertEquals(SettingsUiState.Success("Populated ${sampleProjectGenerator.count()} sample projects."), vm.uiState.value)
     assertTrue(
-      storage.projects.keys.containsAll(setOf("sample-sparse", "sample-complete", "sample-stress"))
+      storage.projects.keys.containsAll(
+        setOf("sample-scope", "sample-done", "sample-stress"),
+      ),
     )
   }
 
