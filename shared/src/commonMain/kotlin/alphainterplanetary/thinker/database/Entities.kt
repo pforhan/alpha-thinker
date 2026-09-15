@@ -17,23 +17,24 @@ data class ProjectEntity(
   val status: String,
 )
 
+/**
+ * Questions keep a denormalized [projectId] to serve the project-centric flat
+ * list/order queries directly, but ownership is strict Project -> Round ->
+ * Question: the composite key ([projectId], [roundId]) enforces that a
+ * question's round belongs to the same project the question claims to belong
+ * to, and that cascades Project -> Round -> Question on delete.
+ */
 @Entity(
   tableName = "questions",
   foreignKeys = [
     ForeignKey(
-      entity = ProjectEntity::class,
-      parentColumns = ["id"],
-      childColumns = ["projectId"],
-      onDelete = ForeignKey.CASCADE
-    ),
-    ForeignKey(
       entity = RoundEntity::class,
-      parentColumns = ["id"],
-      childColumns = ["roundId"],
+      parentColumns = ["projectId", "id"],
+      childColumns = ["projectId", "roundId"],
       onDelete = ForeignKey.CASCADE
     ),
   ],
-  indices = [Index("projectId"), Index("roundId")]
+  indices = [Index("projectId", "roundId")]
 )
 data class QuestionEntity(
   @PrimaryKey val id: String,
@@ -56,7 +57,7 @@ data class QuestionEntity(
     childColumns = ["projectId"],
     onDelete = ForeignKey.CASCADE
   )],
-  indices = [Index("projectId")]
+  indices = [Index("projectId"), Index(value = ["projectId", "id"], unique = true)]
 )
 data class RoundEntity(
   @PrimaryKey val id: String,
