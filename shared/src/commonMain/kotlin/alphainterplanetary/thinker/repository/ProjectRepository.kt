@@ -55,6 +55,7 @@ val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
       editableTitle = project.editableTitle,
       synopsis = project.synopsis,
       roundId = roundId,
+      phase = round.phase,
     ).shuffled()
 
     val updated = project.copy(
@@ -178,6 +179,7 @@ val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
         synopsis = project.synopsis,
         previousQuestions = project.questions,
         roundId = round.id,
+        phase = round.phase,
       )
 
       if (newQs.isEmpty()) {
@@ -204,6 +206,7 @@ val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
       synopsis = project.synopsis,
       previousQuestions = project.questions,
       roundId = round.id,
+      phase = round.phase,
     )
     if (newQs.isEmpty()) return project
     val updatedProject = project.copy(

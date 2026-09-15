@@ -117,6 +117,7 @@ class ProjectRepositoryTest {
     assertEquals(project.id, round.projectId)
     assertEquals(round.id, storage.getProject(project.id)?.rounds?.single()?.id)
     assertEquals(round.id, generator.initialCalls.single().roundId)
+    assertEquals(Phase.first, generator.initialCalls.single().phase)
   }
 
   // ---------- updateProject ----------
@@ -464,6 +465,7 @@ class ProjectRepositoryTest {
     assertEquals(1, round.roundNumber)
     assertEquals(Phase.first, round.phase)
     assertEquals(round.id, generator.followUpCalls.single().roundId)
+    assertEquals(Phase.first, generator.followUpCalls.single().phase)
   }
 
   @Test
@@ -570,6 +572,7 @@ class ProjectRepositoryTest {
     assertEquals("p1", round.projectId)
     assertEquals("f1", updated.questions.last().id)
     assertEquals(round.id, generator.followUpCalls.single().roundId)
+    assertEquals(BuiltInPhase.Design, generator.followUpCalls.single().phase)
     assertEquals(2, storage.getProject("p1")?.rounds?.size)
   }
 

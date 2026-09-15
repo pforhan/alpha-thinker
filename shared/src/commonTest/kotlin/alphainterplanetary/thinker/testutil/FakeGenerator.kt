@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.phases.Phase
 
 class FakeGenerator : QuestionGenerator {
   var recommendedTitle: String = "Recommended"
@@ -16,8 +17,9 @@ class FakeGenerator : QuestionGenerator {
     editableTitle: String,
     synopsis: String,
     roundId: String,
+    phase: Phase,
   ): List<Question> {
-    initialCalls += InitialCall(editableTitle, synopsis, roundId)
+    initialCalls += InitialCall(editableTitle, synopsis, roundId, phase)
     return initialQuestions
   }
 
@@ -25,8 +27,9 @@ class FakeGenerator : QuestionGenerator {
     synopsis: String,
     previousQuestions: List<Question>,
     roundId: String,
+    phase: Phase,
   ): List<Question> {
-    followUpCalls += FollowUpCall(synopsis, previousQuestions, roundId)
+    followUpCalls += FollowUpCall(synopsis, previousQuestions, roundId, phase)
     return followUpQuestions
   }
 
@@ -34,11 +37,13 @@ class FakeGenerator : QuestionGenerator {
     val editableTitle: String,
     val synopsis: String,
     val roundId: String,
+    val phase: Phase,
   )
 
   data class FollowUpCall(
     val synopsis: String,
     val previousQuestions: List<Question>,
     val roundId: String,
+    val phase: Phase,
   )
 }

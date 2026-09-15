@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.llm
 
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.phases.Phase
 import kotlin.coroutines.cancellation.CancellationException
 
 interface QuestionGenerator {
@@ -12,6 +13,7 @@ interface QuestionGenerator {
     editableTitle: String,
     synopsis: String,
     roundId: String,
+    phase: Phase,
   ): List<Question>
 
   @Throws(AnalysisFailure::class, CancellationException::class)
@@ -19,6 +21,7 @@ interface QuestionGenerator {
     synopsis: String,
     previousQuestions: List<Question>,
     roundId: String,
+    phase: Phase,
   ): List<Question>
 
   class AnalysisFailure(override val message: String) : Exception(message)
