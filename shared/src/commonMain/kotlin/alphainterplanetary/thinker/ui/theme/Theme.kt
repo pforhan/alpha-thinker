@@ -8,10 +8,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 @Composable
 fun AlphaThinkerTheme(
   darkTheme: Boolean = isSystemInDarkTheme(),
+  phaseTheme: PhaseTheme = PhaseTheme.Default,
   content: @Composable () -> Unit,
 ) {
   CompositionLocalProvider(
     LocalExtendedColors provides (if (darkTheme) DarkExtendedColors else LightExtendedColors),
+    LocalPhaseTheme provides phaseTheme,
+    LocalDarkTheme provides darkTheme,
   ) {
     MaterialTheme(
       colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,

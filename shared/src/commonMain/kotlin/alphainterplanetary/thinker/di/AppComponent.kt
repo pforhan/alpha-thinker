@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.database.provideStorage
 import alphainterplanetary.thinker.llm.HardcodedQuestionGenerator
 import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,8 @@ import me.tatarka.inject.annotations.Provides
 @Component
 abstract class AppComponent(@get:Provides val platformContext: PlatformContext) {
   abstract val projectRepository: ProjectRepository
+
+  abstract val settingsRepository: SettingsRepository
 
   abstract val sampleProjectGenerator: SampleProjectGenerator
 

@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.testutil.FakeStorage
+import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -102,6 +103,13 @@ class ProjectListViewModelTest {
     }
 
     override suspend fun saveQuestionOrder(projectId: String, order: List<String>) {
+      throw IllegalStateException("boom")
+    }
+
+    override suspend fun getSetting(key: SettingsKey, default: String): String =
+      throw IllegalStateException("boom")
+
+    override suspend fun saveSetting(key: SettingsKey, value: String) {
       throw IllegalStateException("boom")
     }
   }

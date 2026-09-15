@@ -79,3 +79,12 @@ interface RoundDao {
   @Query("DELETE FROM rounds WHERE id IN (:roundIds)")
   suspend fun deleteRoundsByIds(roundIds: List<String>)
 }
+
+@Dao
+interface SettingsDao {
+  @Query("SELECT value FROM settings WHERE `key` = :key")
+  suspend fun getValue(key: String): String?
+
+  @Upsert
+  suspend fun upsertValue(entry: SettingsEntity)
+}

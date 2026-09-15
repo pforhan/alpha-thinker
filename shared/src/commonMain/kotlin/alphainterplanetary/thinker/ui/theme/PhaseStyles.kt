@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.ui.theme
 
 import alphainterplanetary.thinker.phases.Phase
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /** Visual style for a planning phase: the container/content colors of its badge and pill. */
@@ -13,17 +13,19 @@ data class PhaseStyle(
   val content: Color,
 )
 
+/** The currently selected phase-color theme, provided by [AlphaThinkerTheme]. */
+val LocalPhaseTheme = staticCompositionLocalOf { PhaseTheme.Default }
+
+/** The app's current light/dark mode, provided by [AlphaThinkerTheme]. */
+val LocalDarkTheme = staticCompositionLocalOf { false }
+
 /**
- * Resolves the visual style for a phase from the app theme. All phases currently
- * share the theme's primary container; a per-phase color scheme lands here later.
+ * Resolves the visual style for a phase from the selectable phase theme
+ * (see [PhaseTheme]). Each phase gets its own container/content pair, chosen
+ * per the app's light/dark mode; the theme is set app-wide in Settings.
  */
 object PhaseStyles {
   @Composable
-  fun forPhase(phase: Phase): PhaseStyle {
-    val colorScheme = MaterialTheme.colorScheme
-    return PhaseStyle(
-      container = colorScheme.primaryContainer,
-      content = colorScheme.onPrimaryContainer,
-    )
-  }
+  fun forPhase(phase: Phase): PhaseStyle =
+    LocalPhaseTheme.current.style(phase, LocalDarkTheme.current)
 }

@@ -86,6 +86,13 @@ data class AnswerEntity(
   val createdAt: Long,
 )
 
+/** App-wide settings persisted as simple key/value rows. */
+@Entity(tableName = "settings")
+data class SettingsEntity(
+  @PrimaryKey val key: String,
+  val value: String,
+)
+
 data class ProjectWithQuestions(
   @Embedded val project: ProjectEntity,
   @Relation(

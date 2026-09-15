@@ -7,8 +7,8 @@ import androidx.room3.RoomDatabaseConstructor
 import kotlinx.coroutines.Dispatchers
 
 @Database(
-  entities = [ProjectEntity::class, QuestionEntity::class, AnswerEntity::class, RoundEntity::class],
-  version = 8,
+  entities = [ProjectEntity::class, QuestionEntity::class, AnswerEntity::class, RoundEntity::class, SettingsEntity::class],
+  version = 9,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -17,6 +17,7 @@ abstract class AppDatabase : RoomDatabase() {
   abstract fun questionDao(): QuestionDao
   abstract fun answerDao(): AnswerDao
   abstract fun roundDao(): RoundDao
+  abstract fun settingsDao(): SettingsDao
 }
 
 @Suppress("KotlinNoActualForExpect")

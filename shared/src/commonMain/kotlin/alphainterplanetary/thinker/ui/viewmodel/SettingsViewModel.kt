@@ -1,6 +1,8 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
+import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
+import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,9 +17,17 @@ sealed interface SettingsUiState {
 }
 
 class SettingsViewModel(
+  private val settingsRepository: SettingsRepository,
   private val sampleProjectGenerator: SampleProjectGenerator,
   private val scope: CoroutineScope,
 ) {
+  /** The selected phase-color theme; changes apply immediately and persist. */
+  val phaseTheme: StateFlow<PhaseTheme> = settingsRepository.phaseTheme
+
+  fun selectPhaseTheme(theme: PhaseTheme) {
+    settingsRepository.setPhaseTheme(theme)
+  }
+
   private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Idle)
   val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 

@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.testutil
 
+import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
@@ -9,6 +10,7 @@ import alphainterplanetary.thinker.util.now
  */
 class FakeStorage(
   val projects: MutableMap<String, Project> = mutableMapOf(),
+  val settings: MutableMap<String, String> = mutableMapOf(),
 ) : Storage {
   override suspend fun saveProject(project: Project) {
     projects[project.id] = project
@@ -33,5 +35,12 @@ class FakeStorage(
       questions = order.mapNotNull { byId[it] },
       updatedAt = now()
     )
+  }
+
+  override suspend fun getSetting(key: SettingsKey, default: String): String =
+    settings[key.storageKey] ?: default
+
+  override suspend fun saveSetting(key: SettingsKey, value: String) {
+    settings[key.storageKey] = value
   }
 }

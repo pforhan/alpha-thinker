@@ -7,17 +7,21 @@ import alphainterplanetary.thinker.ui.theme.AlphaThinkerTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 
 @Composable
 fun App(platformContext: PlatformContext) {
-  AlphaThinkerTheme {
+  val appComponent = remember { createAppComponent(platformContext) }
+  val phaseTheme by appComponent.settingsRepository.phaseTheme.collectAsState()
+
+  AlphaThinkerTheme(phaseTheme = phaseTheme) {
     Surface(
       modifier = Modifier,
       color = MaterialTheme.colorScheme.background
     ) {
-      val appComponent = remember { createAppComponent(platformContext) }
       NavApp(appComponent)
     }
   }

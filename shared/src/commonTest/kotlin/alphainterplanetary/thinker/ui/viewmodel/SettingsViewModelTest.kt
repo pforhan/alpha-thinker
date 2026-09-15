@@ -1,7 +1,9 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
+import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
+import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -15,6 +17,7 @@ class SettingsViewModelTest {
 
   private fun TestScope.viewModel(): SettingsViewModel {
     return SettingsViewModel(
+      settingsRepository = SettingsRepository(storage, CoroutineScope(coroutineContext)),
       sampleProjectGenerator = sampleProjectGenerator,
       scope = CoroutineScope(coroutineContext),
     )
@@ -43,5 +46,22 @@ class SettingsViewModelTest {
 
     assertEquals(SettingsUiState.Generating, vm.uiState.value)
     testScheduler.advanceUntilIdle()
+  }
+
+  @Test
+  fun `phaseTheme starts at the default`() = runTest {
+    val vm = viewModel()
+
+    assertEquals(PhaseTheme.Default, vm.phaseTheme.value)
+  }
+
+  @Test
+  fun `selectPhaseTheme updates the exposed theme`() = runTest {
+    val vm = viewModel()
+
+    vm.selectPhaseTheme(PhaseTheme.Ocean)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(PhaseTheme.Ocean, vm.phaseTheme.value)
   }
 }

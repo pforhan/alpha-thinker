@@ -1,10 +1,15 @@
 package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import alphainterplanetary.thinker.ui.viewmodel.SettingsUiState
 import alphainterplanetary.thinker.ui.viewmodel.SettingsViewModel
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,9 +48,14 @@ fun SettingsScreen(
   onBack: () -> Unit,
 ) {
   val viewModel = remember {
-    SettingsViewModel(appComponent.sampleProjectGenerator, appComponent.appScope)
+    SettingsViewModel(
+      settingsRepository = appComponent.settingsRepository,
+      sampleProjectGenerator = appComponent.sampleProjectGenerator,
+      scope = appComponent.appScope,
+    )
   }
   val uiState by viewModel.uiState.collectAsState()
+  val phaseTheme by viewModel.phaseTheme.collectAsState()
 
   Scaffold(
     topBar = {
@@ -65,6 +77,17 @@ fun SettingsScreen(
         .padding(Dimens.ScreenPadding),
       verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
     ) {
+      Text(
+        text = "Phase colors",
+        style = MaterialTheme.typography.titleMedium,
+      )
+      PhaseTheme.All.forEach { theme ->
+        ThemeOption(
+          theme = theme,
+          selected = phaseTheme == theme,
+          onClick = { viewModel.selectPhaseTheme(theme) },
+        )
+      }
       Text(
         text = "Tools",
         style = MaterialTheme.typography.titleMedium,
@@ -97,6 +120,56 @@ fun SettingsScreen(
           )
         }
       }
+    }
+  }
+}
+
+/**
+ * One selectable phase theme: names and describes the palette, previews each
+ * phase's container color, and marks the currently selected theme.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeOption(
+  theme: PhaseTheme,
+  selected: Boolean,
+  onClick: () -> Unit,
+) {
+  Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    Row(
+      modifier = Modifier.padding(Dimens.CardPadding),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Column(modifier = Modifier.weight(1f)) {
+        Text(
+          text = theme.label,
+          style = MaterialTheme.typography.titleSmall,
+        )
+        Spacer(modifier = Modifier.height(Dimens.TightGap))
+        Text(
+          text = theme.description,
+          style = MaterialTheme.typography.bodyMedium,
+        )
+      }
+      Spacer(modifier = Modifier.width(Dimens.ToolIconLabelGap))
+      BuiltInPhase.entries.forEach { phase ->
+        Box(
+          modifier = Modifier
+            .size(Dimens.ThemeSwatchSize)
+            .clip(BadgeShape)
+            .background(theme.style(phase, dark = false).container),
+        )
+      }
+      Spacer(modifier = Modifier.width(Dimens.ContentGap))
+      Box(
+        modifier = Modifier
+          .size(Dimens.ScrollControlSize)
+          .clip(BadgeShape)
+          .background(
+            if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant,
+          ),
+      )
     }
   }
 }
