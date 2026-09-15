@@ -14,6 +14,7 @@ import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.KmpComponentCreate
 import me.tatarka.inject.annotations.Provides
 
+@AppScope
 @Component
 abstract class AppComponent(@get:Provides val platformContext: PlatformContext) {
   abstract val projectRepository: ProjectRepository
@@ -26,11 +27,13 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   abstract val appScope: CoroutineScope
 
+  @AppScope
   @Provides
   fun providesStorage(): Storage = provideStorage(platformContext)
 
+  @AppScope
   @Provides
-  fun providesAppScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+  fun providesAppCoroutineScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
   @Provides
   fun providesQuestionGenerator(): QuestionGenerator = HardcodedQuestionGenerator()

@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.database.Storage
+import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
@@ -13,6 +14,7 @@ import alphainterplanetary.thinker.util.randomUUID
 import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
 
+@AppScope
 class ProjectRepository @Inject constructor(
   private val storage: Storage,
   private val generator: QuestionGenerator,

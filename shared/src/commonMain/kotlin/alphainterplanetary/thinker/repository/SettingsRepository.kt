@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
+import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,7 @@ import me.tatarka.inject.annotations.Inject
  * startup and applied from the app root, so a change here re-colors phase
  * badges and pills immediately and persists across launches.
  */
+@AppScope
 class SettingsRepository @Inject constructor(
   private val storage: Storage,
   private val scope: CoroutineScope,

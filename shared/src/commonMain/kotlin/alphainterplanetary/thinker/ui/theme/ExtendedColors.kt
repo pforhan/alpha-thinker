@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.ui.theme
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -34,4 +34,4 @@ internal val DarkExtendedColors = ExtendedColors(
   swipeUnignore = Color(0xFF66BB6A),
 )
 
-val LocalExtendedColors = staticCompositionLocalOf { LightExtendedColors }
+val LocalExtendedColors = compositionLocalOf { LightExtendedColors }
