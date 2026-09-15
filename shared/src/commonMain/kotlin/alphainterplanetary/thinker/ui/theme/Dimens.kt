@@ -32,6 +32,11 @@ object Dimens {
   val LabelChipGap = 8.dp
   val ModeBarVerticalPadding = 8.dp
 
+  // Phase badge / pill
+  val BadgeSize = 28.dp
+  val PillHorizontalPadding = 12.dp
+  val PillVerticalPadding = 4.dp
+
   // Icon / control adjacencies
   val IconLabelGap = 8.dp
   val ToolIconLabelGap = 12.dp

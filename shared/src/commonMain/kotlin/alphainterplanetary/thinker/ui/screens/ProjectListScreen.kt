@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.ui.screens
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
+import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.SwipeAction
 import alphainterplanetary.thinker.ui.components.SwipeActionStyle
 import alphainterplanetary.thinker.ui.components.SwipeableCard
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -244,12 +246,17 @@ private fun ProjectListItem(
         .padding(horizontal = Dimens.ScreenPadding),
     ) {
       Column(modifier = Modifier.padding(Dimens.CardPadding)) {
-        Text(
-          text = project.editableTitle.normalizeWhitespace(),
-          style = MaterialTheme.typography.titleMedium,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            text = project.editableTitle.normalizeWhitespace(),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+          Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
+          PhaseBadge(phase = project.currentPhase)
+        }
         Spacer(modifier = Modifier.height(Dimens.ContentGap))
         Row(verticalAlignment = Alignment.CenterVertically) {
           Text(

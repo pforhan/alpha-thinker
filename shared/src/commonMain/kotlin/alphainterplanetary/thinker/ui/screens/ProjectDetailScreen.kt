@@ -10,6 +10,7 @@ import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
+import alphainterplanetary.thinker.ui.components.PhasePill
 import alphainterplanetary.thinker.ui.components.ScrollableOverflowText
 import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.theme.Dimens
@@ -244,6 +245,14 @@ private fun ProjectDetailContent(
   modifier: Modifier = Modifier,
 ) {
   Column(modifier = modifier) {
+    PhasePill(
+      phase = project.currentPhase,
+      modifier = Modifier.padding(
+        start = Dimens.ScreenPadding,
+        end = Dimens.ScreenPadding,
+        top = Dimens.SectionGap,
+      ),
+    )
     ProjectSynopsis(synopsis = project.synopsis)
 
     HorizontalDivider()

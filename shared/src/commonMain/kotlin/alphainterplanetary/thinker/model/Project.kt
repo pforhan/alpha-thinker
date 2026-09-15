@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.model
 
+import alphainterplanetary.thinker.phases.Phase
 import kotlin.time.Instant
 
 data class Project(
@@ -15,6 +16,10 @@ data class Project(
   /** The round currently in progress — the newest round that hasn't been wrapped up. */
   val currentRound: Round?
     get() = rounds.filterNot { it.isCompleted }.maxByOrNull { it.roundNumber }
+
+  /** The planning phase of the round currently in progress; the library's first phase if no round exists. */
+  val currentPhase: Phase
+    get() = currentRound?.phase ?: Phase.first
   val unansweredQuestions: List<Question>
     get() = questions.filter { it.isUnanswered }
 
