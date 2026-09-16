@@ -88,19 +88,19 @@ data class PhaseTheme(
       ),
     )
 
-    /** Deep sea-blues and teals with sandy yellows and sunset corals. */
+    /** A deep-sea blue ramp from midnight navy to bright cyan surf. */
     val Ocean = PhaseTheme(
       key = "ocean",
-      label = "Tropical Sunset",
-      description = "Deep sea-blues and teals with sandy yellows and sunset " +
-        "corals.",
+      label = "Open Ocean",
+      description = "Deep offshore blues and bright shallows, from midnight " +
+        "navy to cyan surf.",
       colors = palette(
-        BuiltInPhase.ScopeGoals to PhaseColors(0xFF264653, 0xFFD1E9F5, 0xFFD5E8F2, 0xFF113441),
-        BuiltInPhase.Research to PhaseColors(0xFF2A9D8F, 0xFF182926, 0xFFD4EAE6, 0xFF1D544D),
-        BuiltInPhase.Design to PhaseColors(0xFF8AB17D, 0xFF20281E, 0xFFDEE8DA, 0xFF25651A),
-        BuiltInPhase.ExecutionPlan to PhaseColors(0xFFE9C46A, 0xFF2A251A, 0xFFEDE4D6, 0xFF725C1B),
-        BuiltInPhase.ValidationPlan to PhaseColors(0xFFF4A261, 0xFF2E241C, 0xFFF2E2D8, 0xFF8C4F19),
-        BuiltInPhase.DefinitionOfDone to PhaseColors(0xFFE76F51, 0xFF31221F, 0xFFF5E1DB, 0xFF912A15),
+        BuiltInPhase.ScopeGoals to PhaseColors(0xFF03045E, 0xFFF2F5FC, 0xFF02022F, 0xFFF2F5FC),
+        BuiltInPhase.Research to PhaseColors(0xFF023E8A, 0xFFF2F5FC, 0xFF011F45, 0xFFF2F5FC),
+        BuiltInPhase.Design to PhaseColors(0xFF0077B6, 0xFFFCFDFF, 0xFF003C5B, 0xFFFCFDFF),
+        BuiltInPhase.ExecutionPlan to PhaseColors(0xFF0096C7, 0xFF001B26, 0xFF004B64, 0xFFFCFDFF),
+        BuiltInPhase.ValidationPlan to PhaseColors(0xFF00B4D8, 0xFF001B26, 0xFF005A6C, 0xFFFCFDFF),
+        BuiltInPhase.DefinitionOfDone to PhaseColors(0xFF48CAE4, 0xFF001B26, 0xFF246572, 0xFFFCFDFF),
       ),
     )
 

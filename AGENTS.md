@@ -13,6 +13,11 @@ architecture details and the full design specification.
 
 Confirm code and test changes with `./gradlew :shared:allTests`.
 
+Phase-color palettes (in `PhaseTheme.kt`) can be validated without a build via
+`tools/palette.py`: `verify` checks every palette against the same WCAG AA and
+surface-distance rules as `PhaseThemeTest`, while `check` and `darken` help
+shape new colors before editing the source (run `tools/palette.py` for usage).
+
 ## Code Style (Kotlin / Compose)
 
 The Kotlin codebase follows these formatting conventions:
