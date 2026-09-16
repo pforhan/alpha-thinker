@@ -52,7 +52,7 @@ object Dimens {
   val IconSizeMedium = 20.dp
   val ScrollControlSize = 16.dp
 
-  // Theme picker swatches
-  val ThemeSwatchSize = 12.dp
+  // Theme picker preview
   val ThemeSwatchGap = 6.dp
+  val ThemePreviewPadding = 8.dp
 }

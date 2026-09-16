@@ -9,6 +9,10 @@ structured analysis of their project ideas.
 See [README.md](README.md) [PRD.md](PRD.md) and [ENG-DESIGN.md](ENG-DESIGN.md) for
 architecture details and the full design specification.
 
+## Validating changes
+
+Confirm code and test changes with `./gradlew :shared:allTests`.
+
 ## Code Style (Kotlin / Compose)
 
 The Kotlin codebase follows these formatting conventions:
