@@ -256,6 +256,12 @@ private fun ProjectListItem(
           )
           Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
           PhaseBadge(phase = project.currentPhase)
+          Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
+          Text(
+            text = "${project.currentPhaseCompletionPercent}%",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
         }
         Spacer(modifier = Modifier.height(Dimens.ContentGap))
         Row(verticalAlignment = Alignment.CenterVertically) {

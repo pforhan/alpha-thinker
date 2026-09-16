@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.model
 
 import alphainterplanetary.thinker.phases.Phase
+import kotlin.math.roundToInt
 import kotlin.time.Instant
 
 data class Project(
@@ -20,6 +21,31 @@ data class Project(
   /** The planning phase of the round currently in progress; the library's first phase if no round exists. */
   val currentPhase: Phase
     get() = currentRound?.phase ?: Phase.first
+
+  /** Rounds belonging to the current planning phase (a phase can span several rounds). */
+  val currentPhaseRounds: List<Round>
+    get() = rounds.filter { it.phase == currentPhase }
+
+  /** Questions asked while the current planning phase was in progress. */
+  val currentPhaseQuestions: List<Question>
+    get() {
+      val roundIds = currentPhaseRounds.map { it.id }.toSet()
+      return questions.filter { it.roundId in roundIds }
+    }
+
+  /** Questions resolved (answered or ignored) in the current planning phase. */
+  val currentPhaseResolvedCount: Int
+    get() = currentPhaseQuestions.count { it.isAnswered || it.isIgnored }
+
+  /** Total questions asked in the current planning phase. */
+  val currentPhaseQuestionCount: Int
+    get() = currentPhaseQuestions.size
+
+  /** The current phase's completion as a whole percent, rounded to the nearest percent (0 if no questions). */
+  val currentPhaseCompletionPercent: Int
+    get() = if (currentPhaseQuestionCount == 0) 0
+      else (currentPhaseResolvedCount * 100.0 / currentPhaseQuestionCount).roundToInt()
+
   val unansweredQuestions: List<Question>
     get() = questions.filter { it.isUnanswered }
 

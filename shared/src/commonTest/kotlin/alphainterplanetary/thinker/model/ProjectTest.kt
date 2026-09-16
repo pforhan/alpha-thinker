@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.model
 
+import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.testutil.answeredQuestion
 import alphainterplanetary.thinker.testutil.draftQuestion
 import alphainterplanetary.thinker.testutil.ignoredQuestion
@@ -234,5 +235,85 @@ class ProjectTest {
     val p = project(question("a"))
 
     assertNull(p.currentRound)
+  }
+
+  // ---------- phase completion ----------
+
+  private fun projectWithRounds(
+    phase: BuiltInPhase = BuiltInPhase.ScopeGoals,
+    roundPhases: List<BuiltInPhase> = emptyList(),
+    roundCount: Int = 1,
+    questions: List<Question> = emptyList(),
+  ): Project = Project(
+    id = "p",
+    synopsis = "s",
+    editableTitle = "t",
+    status = "Draft",
+    questions = questions,
+    rounds = List(roundCount) { i ->
+      round(
+        id = "r${i + 1}",
+        projectId = "p",
+        roundNumber = i + 1,
+        phase = roundPhases.getOrElse(i) { phase },
+      )
+    },
+    createdAt = Instant.fromEpochMilliseconds(0),
+    updatedAt = Instant.fromEpochMilliseconds(0),
+  )
+
+  @Test
+  fun `current phase completion counts resolved questions across all phase rounds`() {
+    val p = projectWithRounds(
+      roundCount = 2,
+      questions = listOf(
+        question("q1", roundId = "r1"),
+        answeredQuestion("q2").copy(roundId = "r1"),
+        ignoredQuestion("q3").copy(roundId = "r2"),
+        draftQuestion("q4").copy(roundId = "r2"),
+      ),
+    )
+
+    assertEquals(BuiltInPhase.ScopeGoals, p.currentPhase)
+    assertEquals(4, p.currentPhaseQuestionCount)
+    // answered + ignored are resolved; drafts and blanks are not
+    assertEquals(2, p.currentPhaseResolvedCount)
+  }
+
+  @Test
+  fun `phase completion counts only rounds of the current phase`() {
+    val p = projectWithRounds(
+      roundCount = 2,
+      roundPhases = listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research),
+      questions = listOf(
+        question("q1", roundId = "r1"),
+        answeredQuestion("q2").copy(roundId = "r2"),
+        ignoredQuestion("q3").copy(roundId = "r2"),
+      ),
+    )
+
+    assertEquals(BuiltInPhase.Research, p.currentPhase)
+    assertEquals(2, p.currentPhaseQuestionCount)
+    assertEquals(2, p.currentPhaseResolvedCount)
+  }
+
+  @Test
+  fun `currentPhaseCompletionPercent rounds resolved to the nearest percent`() {
+    fun projectWith(resolved: Int, total: Int): Project = projectWithRounds(
+      questions = List(total) { i ->
+        if (i < resolved) answeredQuestion("q$i").copy(roundId = "r1")
+        else question("q$i", roundId = "r1")
+      },
+    )
+
+    assertEquals(33, projectWith(resolved = 1, total = 3).currentPhaseCompletionPercent)
+    assertEquals(67, projectWith(resolved = 2, total = 3).currentPhaseCompletionPercent)
+    assertEquals(17, projectWith(resolved = 1, total = 6).currentPhaseCompletionPercent)
+    assertEquals(100, projectWith(resolved = 4, total = 4).currentPhaseCompletionPercent)
+  }
+
+  @Test
+  fun `currentPhaseCompletionPercent is zero when the phase has no questions`() {
+    assertEquals(0, projectWithRounds().currentPhaseCompletionPercent)
   }
 }

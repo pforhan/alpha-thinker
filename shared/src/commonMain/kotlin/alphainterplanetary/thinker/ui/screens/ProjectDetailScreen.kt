@@ -245,14 +245,23 @@ private fun ProjectDetailContent(
   modifier: Modifier = Modifier,
 ) {
   Column(modifier = modifier) {
-    PhasePill(
-      phase = project.currentPhase,
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
       modifier = Modifier.padding(
         start = Dimens.ScreenPadding,
         end = Dimens.ScreenPadding,
         top = Dimens.SectionGap,
       ),
-    )
+    ) {
+      PhasePill(phase = project.currentPhase)
+      Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
+      Text(
+        text = "${project.currentPhaseResolvedCount} of ${project.currentPhaseQuestionCount} completed",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    }
+
     ProjectSynopsis(synopsis = project.synopsis)
 
     HorizontalDivider()
