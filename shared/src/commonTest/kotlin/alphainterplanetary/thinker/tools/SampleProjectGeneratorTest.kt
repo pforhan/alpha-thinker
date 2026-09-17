@@ -78,6 +78,22 @@ class SampleProjectGeneratorTest {
   }
 
   @Test
+  fun `execution and validation projects are ready to advance`() = runTest {
+    val storage = FakeStorage()
+    val generator = SampleProjectGenerator(storage)
+
+    generator.generate()
+
+    listOf("sample-execution", "sample-validation").forEach { id ->
+      val project = storage.projects.getValue(id)
+      assertTrue(
+        project.currentPhaseQuestions.none { it.isUnanswered },
+        "$id should have no unanswered questions in the current phase",
+      )
+    }
+  }
+
+  @Test
   fun `done project has wrapped up every phase and resolved all of its questions`() = runTest {
     val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)

@@ -529,7 +529,7 @@ private fun QuestionEmptyState(
           Column(
             modifier = Modifier.padding(
               horizontal = Dimens.ScreenPadding,
-              vertical = Dimens.ModeBarVerticalPadding,
+              vertical = Dimens.ScreenPadding,
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap, Alignment.CenterVertically),

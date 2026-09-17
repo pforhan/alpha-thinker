@@ -477,17 +477,33 @@ class SampleProjectGenerator @Inject constructor(
             "let word of mouth run.",
           answeredAt = daysAgo(7),
         ),
-        draftQuestion(
+        answeredQuestion(
           id = "exec-r4-q16",
           roundId = "${EXECUTION_PROJECT_ID}-r4",
           text = "What technologies would you like to use?",
           timestamp = daysAgo(8),
-          draftText = "Leaning toward a FLIR compact camera, a scheduling tool like Calendly, " +
-            "and a template in Canva for the one-pager.",
-          draftUpdatedAt = daysAgo(3),
+          answerText = "A FLIR compact camera, a scheduling tool like Calendly, and a " +
+            "template in Canva for the one-pager.",
+          answeredAt = daysAgo(3),
         ),
-        sampleQuestion(id = "exec-r4-q17", text = "What are three key milestones for the first month?", timestamp = daysAgo(6), roundId = "${EXECUTION_PROJECT_ID}-r4"),
-        sampleQuestion(id = "exec-r4-q18", text = "What is the estimated total budget?", timestamp = daysAgo(5), roundId = "${EXECUTION_PROJECT_ID}-r4"),
+        answeredQuestion(
+          id = "exec-r4-q17",
+          roundId = "${EXECUTION_PROJECT_ID}-r4",
+          text = "What are three key milestones for the first month?",
+          timestamp = daysAgo(6),
+          answerText = "Finish the neighbor practice audit, order the thermal camera, and " +
+            "book two friends-and-family audits before April.",
+          answeredAt = daysAgo(4),
+        ),
+        answeredQuestion(
+          id = "exec-r4-q18",
+          roundId = "${EXECUTION_PROJECT_ID}-r4",
+          text = "What is the estimated total budget?",
+          timestamp = daysAgo(5),
+          answerText = "About $800 to start — roughly $600 for the thermal camera, $150 for " +
+            "insurance, and $50 for printed one-pagers and a simple booking page.",
+          answeredAt = daysAgo(3),
+        ),
         ignoredQuestion(
           id = "exec-r4-q19",
           roundId = "${EXECUTION_PROJECT_ID}-r4",
@@ -682,16 +698,32 @@ class SampleProjectGenerator @Inject constructor(
             "she'll say yes fast if it's workable.",
           answeredAt = daysAgo(10),
         ),
-        sampleQuestion(id = "val-r5-q19", text = "What would convince a skeptic this works?", timestamp = daysAgo(9), roundId = "${VALIDATION_PROJECT_ID}-r5"),
-        sampleQuestion(id = "val-r5-q20", text = "What would you measure to know it is good, not just done?", timestamp = daysAgo(8), roundId = "${VALIDATION_PROJECT_ID}-r5"),
-        draftQuestion(
+        answeredQuestion(
+          id = "val-r5-q19",
+          roundId = "${VALIDATION_PROJECT_ID}-r5",
+          text = "What would convince a skeptic this works?",
+          timestamp = daysAgo(9),
+          answerText = "Eight different households — not the same three — show up to a " +
+            "mid-July work day, and the harvest log shows real food coming out of the beds.",
+          answeredAt = daysAgo(6),
+        ),
+        answeredQuestion(
+          id = "val-r5-q20",
+          roundId = "${VALIDATION_PROJECT_ID}-r5",
+          text = "What would you measure to know it is good, not just done?",
+          timestamp = daysAgo(8),
+          answerText = "Actively tended plots stay above six through September rather than " +
+            "peaking at sign-up — plus at least one 'we grew this' story per household.",
+          answeredAt = daysAgo(5),
+        ),
+        answeredQuestion(
           id = "val-r5-q21",
           roundId = "${VALIDATION_PROJECT_ID}-r5",
           text = "What is the smallest test that proves the core idea?",
           timestamp = daysAgo(7),
-          draftText = "Three shared beds in a corner this spring — if casual neighbors tend " +
+          answerText = "Three shared beds in a corner this spring — if casual neighbors tend " +
             "them without anyone nagging, scale to ten next year.",
-          draftUpdatedAt = daysAgo(2),
+          answeredAt = daysAgo(4),
         ),
       ),
       rounds = roundsFor(
