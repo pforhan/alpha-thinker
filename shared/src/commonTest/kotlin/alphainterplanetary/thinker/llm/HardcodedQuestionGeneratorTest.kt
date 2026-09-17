@@ -218,6 +218,45 @@ class HardcodedQuestionGeneratorTest {
     assertEquals(first.map { it.text }, second.map { it.text })
   }
 
+  // ---------- remainingInPhase ----------
+
+  @Test
+  fun `remainingInPhase returns the full pool when nothing has been asked`() = runTest {
+    assertEquals(
+      poolOf(BuiltInPhase.ScopeGoals).size,
+      generator.remainingInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals),
+    )
+  }
+
+  @Test
+  fun `remainingInPhase counts only the phase's own pool texts not yet asked`() = runTest {
+    val initial = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+
+    val remaining = generator.remainingInPhase("synopsis", initial, BuiltInPhase.ScopeGoals)
+
+    assertEquals(poolOf(BuiltInPhase.ScopeGoals).size - initial.size, remaining)
+  }
+
+  @Test
+  fun `remainingInPhase ignores questions asked in other phases`() = runTest {
+    val research = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research)
+
+    val scopeRemaining = generator.remainingInPhase("synopsis", research, BuiltInPhase.ScopeGoals)
+
+    assertEquals(poolOf(BuiltInPhase.ScopeGoals).size, scopeRemaining)
+  }
+
+  @Test
+  fun `remainingInPhase returns zero once the phase pool is exhausted`() = runTest {
+    val asked = poolOf(BuiltInPhase.ValidationPlan)
+      .mapIndexed { index, text -> question(id = "q$index", text = text) }
+
+    assertEquals(
+      0,
+      generator.remainingInPhase("synopsis", asked, BuiltInPhase.ValidationPlan),
+    )
+  }
+
   // ---------- pool partition ----------
 
   @Test

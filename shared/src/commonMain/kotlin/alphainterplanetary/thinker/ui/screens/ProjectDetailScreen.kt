@@ -26,6 +26,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -60,6 +63,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -158,9 +162,12 @@ fun ProjectDetailScreen(
       }
 
       is ProjectDetailUiState.Success -> {
+        val nextPhases = remember(ui.project) { ui.project.nextPhaseSuggestions }
         ProjectDetailContent(
           project = ui.project,
           selectedView = selectedView,
+          canGenerateMore = ui.canGenerateMoreQuestions,
+          nextPhases = nextPhases,
           onViewSelected = { selectedView = it },
           onShuffle = { viewModel.shuffle() },
           onAskLater = { viewModel.askLater(it) },
@@ -169,6 +176,7 @@ fun ProjectDetailScreen(
           onAnswerClick = { selectedQuestion = it },
           onDeleteAnswer = { viewModel.saveAnswer(projectId, it.id, "", completed = false) },
           onGenerateMore = { viewModel.generateMoreQuestions(projectId) },
+          onAdvancePhase = { viewModel.advanceToPhase(projectId, it) },
           modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
@@ -243,6 +251,8 @@ fun ProjectDetailScreen(
 private fun ProjectDetailContent(
   project: Project,
   selectedView: QuestionViewMode,
+  canGenerateMore: Boolean,
+  nextPhases: List<Phase>,
   onViewSelected: (QuestionViewMode) -> Unit,
   onShuffle: () -> Unit,
   onAskLater: (String) -> Unit,
@@ -251,6 +261,7 @@ private fun ProjectDetailContent(
   onAnswerClick: (Question) -> Unit,
   onDeleteAnswer: (Question) -> Unit,
   onGenerateMore: () -> Unit,
+  onAdvancePhase: (Phase) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   var showPhaseOverview by remember { mutableStateOf(false) }
@@ -349,6 +360,9 @@ private fun ProjectDetailContent(
             recommendedViews = view.recommendedViews(project.questions),
             onViewSelected = onViewSelected,
             onGenerateMore = if (view == QuestionViewMode.Unanswered) onGenerateMore else null,
+            canGenerateMore = view == QuestionViewMode.Unanswered && canGenerateMore,
+            nextPhases = if (view == QuestionViewMode.Unanswered) nextPhases else emptyList(),
+            onAdvancePhase = onAdvancePhase,
             modifier = Modifier.fillMaxSize(),
           )
         } else {
@@ -467,52 +481,96 @@ private fun QuestionEmptyState(
   recommendedViews: List<QuestionViewMode>,
   onViewSelected: (QuestionViewMode) -> Unit,
   onGenerateMore: (() -> Unit)?,
+  canGenerateMore: Boolean,
+  nextPhases: List<Phase>,
+  onAdvancePhase: (Phase) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  Column(
-    modifier = modifier.padding(Dimens.EmptyStatePadding),
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally,
+  Box(
+    modifier = modifier,
+    contentAlignment = Alignment.Center,
   ) {
-    Text(
-      text = title,
-      textAlign = TextAlign.Center,
-      style = MaterialTheme.typography.bodyLarge,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    if (onGenerateMore != null) {
-      Spacer(modifier = Modifier.height(Dimens.EmptyStateActionGap))
-      Button(onClick = onGenerateMore) {
-        Text("Get more questions")
+    Column(
+      modifier = Modifier
+        .verticalScroll(rememberScrollState())
+        .padding(Dimens.EmptyStatePadding),
+      verticalArrangement = Arrangement.Center,
+      horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      Text(
+        text = title,
+        textAlign = TextAlign.Center,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      if (onGenerateMore != null && canGenerateMore) {
+        Spacer(modifier = Modifier.height(Dimens.EmptyStateActionGap))
+        Button(onClick = onGenerateMore) {
+          Text("Get more questions")
+        }
       }
-    }
-    if (recommendedViews.isNotEmpty()) {
-      Spacer(modifier = Modifier.height(Dimens.SectionGap))
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-      ) {
+      if (nextPhases.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(Dimens.SectionGap))
         Text(
-          text = "You have questions in:",
+          text = "What's next? If you're ready to begin the next phase select it below.",
+          textAlign = TextAlign.Center,
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        recommendedViews.forEachIndexed { index, view ->
-          if (index > 0) {
-            Text(
-              text = "•",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-          TextButton(
-            onClick = { onViewSelected(view) },
-            contentPadding = PaddingValues(horizontal = Dimens.ButtonHorizontalPadding),
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        Surface(
+          shape = MaterialTheme.shapes.medium,
+          color = MaterialTheme.colorScheme.surface,
+          border = BorderStroke(
+            Dimens.OutlineStroke,
+            MaterialTheme.colorScheme.primary,
+          ),
+        ) {
+          Column(
+            modifier = Modifier.padding(
+              horizontal = Dimens.ScreenPadding,
+              vertical = Dimens.ModeBarVerticalPadding,
+            ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap, Alignment.CenterVertically),
           ) {
-            Text(
-              text = view.displayName,
-              style = MaterialTheme.typography.bodySmall,
-            )
+            nextPhases.forEach { phase ->
+              PhasePill(
+                phase = phase,
+                modifier = Modifier.clickable { onAdvancePhase(phase) },
+              )
+            }
+          }
+        }
+      }
+      if (recommendedViews.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(Dimens.SectionGap))
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.Center,
+        ) {
+          Text(
+            text = "You have questions in:",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+          recommendedViews.forEachIndexed { index, view ->
+            if (index > 0) {
+              Text(
+                text = "•",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
+            TextButton(
+              onClick = { onViewSelected(view) },
+              contentPadding = PaddingValues(horizontal = Dimens.ButtonHorizontalPadding),
+            ) {
+              Text(
+                text = view.displayName,
+                style = MaterialTheme.typography.bodySmall,
+              )
+            }
           }
         }
       }

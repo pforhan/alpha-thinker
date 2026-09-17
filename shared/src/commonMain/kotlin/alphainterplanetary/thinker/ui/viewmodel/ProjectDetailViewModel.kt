@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +19,10 @@ data class PendingUndo(
 
 sealed interface ProjectDetailUiState {
   data object Loading : ProjectDetailUiState
-  data class Success(val project: Project) : ProjectDetailUiState
+  data class Success(
+    val project: Project,
+    val canGenerateMoreQuestions: Boolean,
+  ) : ProjectDetailUiState
   data class Error(val message: String) : ProjectDetailUiState
 }
 
@@ -41,7 +45,8 @@ class ProjectDetailViewModel(
         if (loaded == null) {
           _uiState.value = ProjectDetailUiState.Error("Failed to load project: project not found")
         } else {
-          _uiState.value = ProjectDetailUiState.Success(loaded)
+          val canGenerate = repository.canGenerateMoreQuestions(id)
+          _uiState.value = ProjectDetailUiState.Success(loaded, canGenerate)
         }
       } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
@@ -78,12 +83,33 @@ class ProjectDetailViewModel(
     }
   }
 
+  fun advanceToPhase(projectId: String, phase: Phase) {
+    scope.launch {
+      try {
+        repository.advanceToPhase(projectId, phase)
+        loadProject(projectId)
+      } catch (e: Exception) {
+        _uiState.value = ProjectDetailUiState.Error(
+          "Failed to advance phase: ${e.message ?: "Unknown error"}"
+        )
+      }
+    }
+  }
+
   private fun persistOrder(reordered: Project) {
-    _uiState.value = ProjectDetailUiState.Success(reordered)
+    _uiState.value = successPreservingAvailability(reordered)
     scope.launch {
       repository.saveQuestionOrder(reordered.id, reordered.questionOrderIds)
     }
   }
+
+  /** A [ProjectDetailUiState.Success] that keeps the previously-computed availability flag. */
+  private fun successPreservingAvailability(project: Project): ProjectDetailUiState.Success =
+    ProjectDetailUiState.Success(
+      project = project,
+      canGenerateMoreQuestions = (_uiState.value as? ProjectDetailUiState.Success)
+        ?.canGenerateMoreQuestions ?: false,
+    )
 
   fun saveAnswer(projectId: String, questionId: String, text: String, completed: Boolean) {
     val current = (_uiState.value as? ProjectDetailUiState.Success)?.project
@@ -101,13 +127,13 @@ class ProjectDetailViewModel(
         }
       )
       beginUndoable(current, "Answer deleted")
-      _uiState.value = ProjectDetailUiState.Success(optimistic)
+      _uiState.value = successPreservingAvailability(optimistic)
 
       scope.launch {
         try {
           repository.saveAnswer(projectId, questionId, text, completed)
         } catch (e: Exception) {
-          _uiState.value = ProjectDetailUiState.Success(current)
+          _uiState.value = successPreservingAvailability(current)
           clearUndoable()
           _uiState.value = ProjectDetailUiState.Error(
             "Failed to save answer: ${e.message ?: "Unknown error"}"
@@ -138,13 +164,13 @@ class ProjectDetailViewModel(
     )
 
     beginUndoable(snapshot, "Question ignored")
-    _uiState.value = ProjectDetailUiState.Success(optimistic)
+    _uiState.value = successPreservingAvailability(optimistic)
 
     scope.launch {
       try {
         repository.ignoreQuestion(projectId, questionId)
       } catch (e: Exception) {
-        _uiState.value = ProjectDetailUiState.Success(snapshot)
+        _uiState.value = successPreservingAvailability(snapshot)
         clearUndoable()
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to ignore question: ${e.message ?: "Unknown error"}"
@@ -162,13 +188,13 @@ class ProjectDetailViewModel(
     )
 
     beginUndoable(snapshot, "Question restored")
-    _uiState.value = ProjectDetailUiState.Success(optimistic)
+    _uiState.value = successPreservingAvailability(optimistic)
 
     scope.launch {
       try {
         repository.unignoreQuestion(projectId, questionId)
       } catch (e: Exception) {
-        _uiState.value = ProjectDetailUiState.Success(snapshot)
+        _uiState.value = successPreservingAvailability(snapshot)
         clearUndoable()
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to unignore question: ${e.message ?: "Unknown error"}"
@@ -197,7 +223,7 @@ class ProjectDetailViewModel(
       try {
         val project = repository.updateProject(id, title, synopsis, mode)
         if (project != null) {
-          _uiState.value = ProjectDetailUiState.Success(project)
+          _uiState.value = successPreservingAvailability(project)
         }
       } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(

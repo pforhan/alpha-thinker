@@ -48,14 +48,25 @@ class HardcodedQuestionGenerator @Inject constructor(
     roundId: String,
     phase: Phase,
   ): List<Question> {
-    val askedTexts = previousQuestions.map { it.text }.toSet()
-    val remaining = phase.pool.filter { it !in askedTexts }
+    val remaining = remainingPool(phase, previousQuestions)
     if (remaining.isEmpty()) return emptyList()
 
     val now = now()
     return remaining
       .take(followUpCount)
       .map { text -> newQuestion(text, roundId, now) }
+  }
+
+  override suspend fun remainingInPhase(
+    synopsis: String,
+    previousQuestions: List<Question>,
+    phase: Phase,
+  ): Int = remainingPool(phase, previousQuestions).size
+
+  /** The phase's pool texts not yet asked in the project, in pool priority order. */
+  private fun remainingPool(phase: Phase, previousQuestions: List<Question>): List<String> {
+    val askedTexts = previousQuestions.map { it.text }.toSet()
+    return phase.pool.filter { it !in askedTexts }
   }
 
   /** The phase's own pool; empty for phases the library doesn't ship questions for. */

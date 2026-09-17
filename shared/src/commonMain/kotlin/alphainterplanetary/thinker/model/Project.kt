@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.model
 
+import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.math.roundToInt
 import kotlin.time.Instant
@@ -14,6 +15,11 @@ data class Project(
   val createdAt: Instant,
   val updatedAt: Instant,
 ) {
+  companion object {
+    /** How many next-phase options the empty state surfaces at most. */
+    const val NextPhaseSuggestionLimit = 3
+  }
+
   /** The round currently in progress — the newest round that hasn't been wrapped up. */
   val currentRound: Round?
     get() = rounds.filterNot { it.isCompleted }.maxByOrNull { it.roundNumber }
@@ -25,6 +31,28 @@ data class Project(
   /** The phase a question was asked in, resolved through its round; falls back to the current phase. */
   fun phaseForQuestion(question: Question): Phase =
     rounds.find { it.id == question.roundId }?.phase ?: currentPhase
+
+  /**
+   * Candidate "what's next?" phases to nudge the project toward once its
+   * current round is wrapped up. The first suggestion is always the immediate
+   * successor in the library ordering ([currentPhase] + 1); the following
+   * slots fill with the phases the project hasn't visited yet, wherever they
+   * fall in the ordering — so a phase that was skipped stays reachable. If
+   * the current phase is the last one there is no successor, and the
+   * suggestions are just the unvisited phases. This is the placeholder rule
+   * while generator-proposed (text-scored) recommendations are pending — it
+   * follows the library's ordering rather than the project's content.
+   */
+  val nextPhaseSuggestions: List<Phase>
+    get() {
+      val visited = rounds.map { it.phase }.toSet()
+      val successor = BuiltInPhase.entries.firstOrNull { it.order == currentPhase.order + 1 }
+      val remainingLimit = NextPhaseSuggestionLimit - (if (successor == null) 0 else 1)
+      val remaining = BuiltInPhase.entries
+        .filter { it != currentPhase && it !in visited && it != successor }
+        .take(remainingLimit)
+      return if (successor == null) remaining else listOf(successor) + remaining
+    }
 
   /** Rounds belonging to the current planning phase (a phase can span several rounds). */
   val currentPhaseRounds: List<Round>

@@ -220,12 +220,67 @@ class ProjectRepository @Inject constructor(
     return updatedProject
   }
 
+  /** Whether the current phase's pool still has questions the generator could produce. */
+  suspend fun canGenerateMoreQuestions(projectId: String): Boolean {
+    val project = storage.getProject(projectId) ?: return false
+    return generator.remainingInPhase(
+      synopsis = project.synopsis,
+      previousQuestions = project.questions,
+      phase = project.currentPhase,
+    ) > 0
+  }
+
+  /**
+   * Wraps up the round(s) currently in progress and advances the project to
+   * [nextPhase], opening its first `Initial` round with a fresh batch of
+   * generated questions (deduped against everything already asked in the
+   * project).
+   */
+  suspend fun advanceToPhase(projectId: String, nextPhase: Phase): Project? {
+    val project = storage.getProject(projectId) ?: return null
+    val now = now()
+
+    val completedRounds = project.rounds.map { round ->
+      if (round.isCompleted) round else round.complete(now)
+    }
+
+    val round = Round(
+      id = randomUUID(),
+      projectId = project.id,
+      phase = nextPhase,
+      roundNumber = nextRoundNumber(project),
+      origin = RoundOrigin.Initial,
+      startedAt = now,
+    )
+
+    val newQs = generator.generateInitialQuestions(
+      editableTitle = project.editableTitle,
+      synopsis = project.synopsis,
+      roundId = round.id,
+      phase = round.phase,
+    )
+      .filterNot { question -> project.questions.any { it.text == question.text } }
+      .shuffled()
+
+    val updatedProject = project.copy(
+      questions = project.questions + newQs,
+      rounds = completedRounds + round,
+      updatedAt = now,
+    )
+    storage.saveProject(updatedProject)
+    return updatedProject
+  }
+
+  /** The next sequential round number in the project. */
+  private fun nextRoundNumber(project: Project): Int =
+    (project.rounds.maxOfOrNull { it.roundNumber } ?: 0) + 1
+
   /** The next sequential round in the project's current phase, or [Phase.first] if none is in progress. */
   private fun nextRound(project: Project, origin: RoundOrigin, startedAt: Instant): Round = Round(
     id = randomUUID(),
     projectId = project.id,
     phase = project.currentRound?.phase ?: Phase.first,
-    roundNumber = (project.rounds.maxOfOrNull { it.roundNumber } ?: 0) + 1,
+    roundNumber = nextRoundNumber(project),
     origin = origin,
     startedAt = startedAt,
   )

@@ -366,4 +366,164 @@ class ProjectTest {
   fun `currentPhaseCompletionPercent is zero when the phase has no questions`() {
     assertEquals(0, projectWithRounds().currentPhaseCompletionPercent)
   }
+
+  // ---------- revisiting a phase ----------
+
+  private fun projectWithVisitHistory(): Project = Project(
+    id = "p",
+    synopsis = "s",
+    editableTitle = "t",
+    status = "Draft",
+    questions = emptyList(),
+    rounds = listOf(
+      round(
+        id = "r1",
+        projectId = "p",
+        phase = BuiltInPhase.ScopeGoals,
+        roundNumber = 1,
+        completedAt = Instant.fromEpochMilliseconds(10),
+      ),
+      round(
+        id = "r2",
+        projectId = "p",
+        phase = BuiltInPhase.Research,
+        roundNumber = 2,
+        completedAt = Instant.fromEpochMilliseconds(20),
+      ),
+      round(
+        id = "r3",
+        projectId = "p",
+        phase = BuiltInPhase.ScopeGoals,
+        roundNumber = 3,
+      ),
+    ),
+    createdAt = Instant.fromEpochMilliseconds(0),
+    updatedAt = Instant.fromEpochMilliseconds(0),
+  )
+
+  @Test
+  fun `currentPhase points at the revisited phase of the newest in-progress round`() {
+    val p = projectWithVisitHistory()
+
+    assertEquals("r3", p.currentRound?.id)
+    assertEquals(BuiltInPhase.ScopeGoals, p.currentPhase)
+  }
+
+  @Test
+  fun `current phase questions span non-adjacent rounds of the revisited phase`() {
+    val p = projectWithVisitHistory().copy(
+      questions = listOf(
+        answeredQuestion("oldAnswered").copy(roundId = "r1"),
+        ignoredQuestion("oldIgnored").copy(roundId = "r1"),
+        answeredQuestion("researchAnswered").copy(roundId = "r2"),
+        question("newOpen", roundId = "r3"),
+        answeredQuestion("newAnswered").copy(roundId = "r3"),
+        ignoredQuestion("newIgnored").copy(roundId = "r3"),
+        draftQuestion("newDraft").copy(roundId = "r3"),
+      ),
+    )
+
+    assertEquals(BuiltInPhase.ScopeGoals, p.currentPhase)
+    assertEquals(6, p.currentPhaseQuestionCount)
+    assertEquals(4, p.currentPhaseResolvedCount)
+    assertEquals(67, p.currentPhaseCompletionPercent)
+    assertEquals(
+      BuiltInPhase.ScopeGoals,
+      p.phaseForQuestion(p.questions.first { it.id == "newOpen" }),
+    )
+    assertEquals(
+      BuiltInPhase.Research,
+      p.phaseForQuestion(p.questions.first { it.id == "researchAnswered" }),
+    )
+  }
+
+  // ---------- next phase suggestions ----------
+
+  @Test
+  fun `nextPhaseSuggestions returns the next built-in phases after the current one`() {
+    val p = projectWithRounds(phase = BuiltInPhase.ScopeGoals)
+
+    assertEquals(
+      listOf(BuiltInPhase.Research, BuiltInPhase.Design, BuiltInPhase.ExecutionPlan),
+      p.nextPhaseSuggestions,
+    )
+  }
+
+  @Test
+  fun `nextPhaseSuggestions caps at the suggestion limit`() {
+    val p = projectWithRounds(phase = BuiltInPhase.ScopeGoals)
+
+    assertEquals(Project.NextPhaseSuggestionLimit, p.nextPhaseSuggestions.size)
+  }
+
+  @Test
+  fun `nextPhaseSuggestions fills after the successor with unvisited phases regardless of order`() {
+    val p = projectWithRounds(
+      phase = BuiltInPhase.Design,
+      roundCount = 3,
+      roundPhases = listOf(
+        BuiltInPhase.ScopeGoals,
+        BuiltInPhase.DefinitionOfDone,
+        BuiltInPhase.Design,
+      ),
+    )
+
+    // immediate successor is ExecutionPlan; the skipped Research (order < Design) fills next
+    assertEquals(
+      listOf(BuiltInPhase.ExecutionPlan, BuiltInPhase.Research, BuiltInPhase.ValidationPlan),
+      p.nextPhaseSuggestions,
+    )
+  }
+
+  @Test
+  fun `nextPhaseSuggestions leads with the immediate successor even when it was visited`() {
+    val p = projectWithRounds(
+      phase = BuiltInPhase.ScopeGoals,
+      roundCount = 3,
+      roundPhases = listOf(
+        BuiltInPhase.ScopeGoals,
+        BuiltInPhase.Research,
+        BuiltInPhase.ScopeGoals,
+      ),
+    )
+
+    assertEquals(
+      listOf(BuiltInPhase.Research, BuiltInPhase.Design, BuiltInPhase.ExecutionPlan),
+      p.nextPhaseSuggestions,
+    )
+  }
+
+  @Test
+  fun `nextPhaseSuggestions in the final phase shares only the unvisited phases`() {
+    val p = projectWithRounds(
+      phase = BuiltInPhase.DefinitionOfDone,
+      roundCount = 4,
+      roundPhases = listOf(
+        BuiltInPhase.ScopeGoals,
+        BuiltInPhase.Research,
+        BuiltInPhase.Design,
+        BuiltInPhase.DefinitionOfDone,
+      ),
+    )
+
+    assertEquals(
+      listOf(BuiltInPhase.ExecutionPlan, BuiltInPhase.ValidationPlan),
+      p.nextPhaseSuggestions,
+    )
+  }
+
+  @Test
+  fun `nextPhaseSuggestions never includes the current phase`() {
+    val p = projectWithRounds(phase = BuiltInPhase.ExecutionPlan)
+
+    assertFalse(p.nextPhaseSuggestions.contains(BuiltInPhase.ExecutionPlan))
+    assertEquals(BuiltInPhase.ValidationPlan, p.nextPhaseSuggestions.first())
+  }
+
+  @Test
+  fun `nextPhaseSuggestions always leads with the immediate successor`() {
+    val p = projectWithRounds(phase = BuiltInPhase.ScopeGoals)
+
+    assertEquals(BuiltInPhase.Research, p.nextPhaseSuggestions.first())
+  }
 }

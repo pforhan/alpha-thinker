@@ -598,6 +598,269 @@ class ProjectRepositoryTest {
     assertEquals(listOf("q1"), result.questions.map { it.id })
   }
 
+  // ---------- canGenerateMoreQuestions ----------
+
+  private fun storageWith(project: Project): FakeStorage =
+    FakeStorage(mutableMapOf(project.id to project))
+
+  private fun phaseProject(phase: BuiltInPhase): Project = Project(
+    id = "p1",
+    synopsis = "s",
+    editableTitle = "t",
+    status = "Draft",
+    questions = listOf(question("q1")),
+    rounds = listOf(round(id = "r1", projectId = "p1", phase = phase)),
+    createdAt = now,
+    updatedAt = now,
+  )
+
+  @Test
+  fun `canGenerateMoreQuestions is true when the generator still has questions`() = runTest {
+    val generator = FakeGenerator().apply { remaining = 5 }
+    val repository = repo(storage = storageWith(phaseProject(BuiltInPhase.Design)), generator = generator)
+
+    assertTrue(repository.canGenerateMoreQuestions("p1"))
+  }
+
+  @Test
+  fun `canGenerateMoreQuestions is false when the generator is exhausted`() = runTest {
+    val repository = repo(storage = storageWith(phaseProject(BuiltInPhase.ScopeGoals)))
+
+    assertFalse(repository.canGenerateMoreQuestions("p1"))
+  }
+
+  @Test
+  fun `canGenerateMoreQuestions reads the current phase and the full asked history`() = runTest {
+    val generator = FakeGenerator().apply { remaining = 2 }
+    val repository = repo(storage = storageWith(phaseProject(BuiltInPhase.ExecutionPlan)), generator = generator)
+
+    repository.canGenerateMoreQuestions("p1")
+
+    val call = generator.remainingCalls.single()
+    assertEquals(BuiltInPhase.ExecutionPlan, call.phase)
+    assertEquals(listOf("q1"), call.previousQuestions.map { it.id })
+    assertEquals("s", call.synopsis)
+  }
+
+  @Test
+  fun `canGenerateMoreQuestions is false for a missing project`() = runTest {
+    val repository = repo()
+
+    assertFalse(repository.canGenerateMoreQuestions("missing"))
+  }
+
+  // ---------- advanceToPhase ----------
+
+  @Test
+  fun `advanceToPhase completes in-progress rounds and opens an Initial round in the target phase`() =
+    runTest {
+      val generator = FakeGenerator().apply {
+        initialQuestions += question("n1", "Next?")
+        initialQuestions += question("n2", "After?")
+      }
+      val storage = storageWith(
+        phaseProject(BuiltInPhase.ScopeGoals)
+          .copy(questions = listOf(question("q1")))
+      )
+      val repository = repo(storage = storage, generator = generator)
+
+      val updated = repository.advanceToPhase("p1", BuiltInPhase.Research)
+
+      assertNotNull(updated)
+      assertEquals(3, updated.questions.size)
+      assertEquals("q1", updated.questions.first().id)
+      assertEquals(setOf("q1", "n1", "n2"), updated.questions.map { it.id }.toSet())
+      assertEquals(2, updated.rounds.size)
+      assertTrue(updated.rounds[0].isCompleted, "the wrapped-up round is marked complete")
+      val newRound = updated.rounds.last()
+      assertEquals(BuiltInPhase.Research, newRound.phase)
+      assertEquals(RoundOrigin.Initial, newRound.origin)
+      assertEquals(2, newRound.roundNumber)
+      assertEquals("p1", newRound.projectId)
+      assertEquals(BuiltInPhase.Research, updated.currentPhase)
+
+      val persisted = storage.getProject("p1")
+      assertNotNull(persisted)
+      assertEquals(2, persisted.rounds.size)
+      assertTrue(persisted.rounds[0].isCompleted)
+      assertEquals(BuiltInPhase.Research, persisted.rounds.last().phase)
+      assertEquals(updated.questions.map { it.id }, persisted.questions.map { it.id })
+
+      val call = generator.initialCalls.single()
+      assertEquals(newRound.id, call.roundId)
+      assertEquals(BuiltInPhase.Research, call.phase)
+      assertEquals("t", call.editableTitle)
+      assertEquals("s", call.synopsis)
+    }
+
+  @Test
+  fun `advanceToPhase completes every in-progress round`() = runTest {
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = emptyList(),
+      rounds = listOf(
+        round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals, roundNumber = 1),
+        round(id = "r2", projectId = "p1", phase = BuiltInPhase.ScopeGoals, roundNumber = 2),
+      ),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val repository = repo(storage = storageWith(original))
+
+    val updated = repository.advanceToPhase("p1", BuiltInPhase.Design)
+
+    assertNotNull(updated)
+    assertTrue(updated.rounds.take(2).all { it.isCompleted })
+  }
+
+  @Test
+  fun `advanceToPhase dedupes new questions against the ones already asked`() = runTest {
+    val generator = FakeGenerator().apply {
+      initialQuestions += question("dup", "Already asked?")
+      initialQuestions += question("n1", "Fresh?")
+    }
+    val repository = repo(
+      storage = storageWith(
+        Project(
+          id = "p1",
+          synopsis = "s",
+          editableTitle = "t",
+          status = "Draft",
+          questions = listOf(question("q1", "Already asked?")),
+          rounds = listOf(
+            round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals),
+          ),
+          createdAt = now,
+          updatedAt = now,
+        )
+      ),
+      generator = generator,
+    )
+
+    val updated = repository.advanceToPhase("p1", BuiltInPhase.Research)
+
+    assertNotNull(updated)
+    assertEquals(setOf("q1", "n1"), updated.questions.map { it.id }.toSet())
+  }
+
+  @Test
+  fun `advanceToPhase returns null for a missing project`() = runTest {
+    val repository = repo()
+
+    assertNull(repository.advanceToPhase("missing", BuiltInPhase.Research))
+  }
+
+  // ---------- revisiting a phase ----------
+
+  private fun revisitedProject(): Project = Project(
+    id = "p1",
+    synopsis = "s",
+    editableTitle = "t",
+    status = "Draft",
+    questions = listOf(
+      question("oldOpen"),
+      question("oldAnswered", answers = listOf(answer("oldAnswered", "A", id = "a1"))),
+      question("oldIgnored", ignoredAt = now),
+    ),
+    rounds = listOf(
+      round(
+        id = "r1",
+        projectId = "p1",
+        phase = BuiltInPhase.ScopeGoals,
+        roundNumber = 1,
+        completedAt = now,
+      ),
+      round(
+        id = "r2",
+        projectId = "p1",
+        phase = BuiltInPhase.Research,
+        roundNumber = 2,
+        completedAt = now,
+      ),
+    ),
+    createdAt = now,
+    updatedAt = now,
+  )
+
+  @Test
+  fun `advanceToPhase back to a visited phase appends without disturbing existing order`() =
+    runTest {
+      val generator = FakeGenerator().apply {
+        initialQuestions += question("n1", "Fresh 1?")
+        initialQuestions += question("n2", "Fresh 2?")
+      }
+      val repository = repo(storage = storageWith(revisitedProject()), generator = generator)
+
+      val updated = repository.advanceToPhase("p1", BuiltInPhase.ScopeGoals)
+
+      assertNotNull(updated)
+      assertEquals(BuiltInPhase.ScopeGoals, updated.currentPhase)
+      // old questions keep their slots (answered/ignored included); new ones simply append
+      assertEquals(
+        listOf("oldOpen", "oldAnswered", "oldIgnored"),
+        updated.questions.take(3).map { it.id },
+      )
+      assertEquals(setOf("n1", "n2"), updated.questions.drop(3).map { it.id }.toSet())
+      assertEquals(5, updated.questions.size)
+      assertTrue(updated.questions[1].isAnswered)
+      assertTrue(updated.questions[2].isIgnored)
+      val newRound = updated.rounds.last()
+      assertEquals(3, newRound.roundNumber)
+      assertEquals(RoundOrigin.Initial, newRound.origin)
+      assertEquals(BuiltInPhase.ScopeGoals, newRound.phase)
+      assertFalse(newRound.isCompleted)
+    }
+
+  @Test
+  fun `advanceToPhase into a phase whose pool was exhausted by an earlier visit asks nothing new`() =
+    runTest {
+      val generator = FakeGenerator() // no initial questions -> nothing left to ask
+      val repository = repo(storage = storageWith(revisitedProject()), generator = generator)
+
+      val updated = repository.advanceToPhase("p1", BuiltInPhase.ScopeGoals)
+
+      assertNotNull(updated)
+      assertEquals(listOf("oldOpen", "oldAnswered", "oldIgnored"), updated.questions.map { it.id })
+      assertEquals(BuiltInPhase.ScopeGoals, updated.currentPhase)
+      assertEquals(3, updated.rounds.size)
+      assertTrue(updated.rounds.take(2).all { it.isCompleted })
+      assertEquals(RoundOrigin.Initial, updated.rounds.last().origin)
+      assertFalse(repository.canGenerateMoreQuestions("p1"))
+      // generation sees the whole project history, including the earlier visit
+      assertEquals(
+        listOf("oldOpen", "oldAnswered", "oldIgnored"),
+        generator.remainingCalls.single().previousQuestions.map { it.id },
+      )
+    }
+
+  @Test
+  fun `saveAnswer follow-up round stays in the revisited current phase`() = runTest {
+    val generator = FakeGenerator().apply {
+      followUpQuestions += question("f1")
+    }
+    val original = revisitedProject().copy(
+      questions = listOf(question("revisitedOpen", roundId = "r3")),
+      rounds = revisitedProject().rounds + round(
+        id = "r3",
+        projectId = "p1",
+        phase = BuiltInPhase.ScopeGoals,
+        roundNumber = 3,
+      ),
+    )
+    val repository = repo(storage = storageWith(original), generator = generator)
+
+    val updated = repository.saveAnswer("p1", "revisitedOpen", "Answer", completed = true)
+
+    assertNotNull(updated)
+    val round = updated.rounds.last()
+    assertEquals(RoundOrigin.FollowUp, round.origin)
+    assertEquals(BuiltInPhase.ScopeGoals, round.phase)
+    assertEquals(BuiltInPhase.ScopeGoals, generator.followUpCalls.single().phase)
+  }
+
   // ---------- ignore / unignore ----------
 
   @Test

@@ -225,6 +225,33 @@ class QuestionViewModeTest {
   }
 
   @Test
+  fun `answered sections merge revisit rounds of the same phase into one section`() {
+    val questions = listOf(
+      question(
+        "firstVisit",
+        roundId = "r-scope1",
+        answers = listOf(answer("firstVisit", "A", id = "a1", createdAt = earliest)),
+      ),
+      question(
+        "secondVisit",
+        roundId = "r-scope2",
+        answers = listOf(answer("secondVisit", "A", id = "a2", createdAt = latest)),
+      ),
+      question(
+        "research",
+        roundId = "r-research",
+        answers = listOf(answer("research", "A", id = "a3", createdAt = middle)),
+      ),
+    )
+
+    val sections = QuestionViewMode.Answered.sections(questions, scopeGoalsSections)
+    assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), sections.map { it.phase })
+    // both visits of Scope Goals collapse into one header, still sorted by answer date
+    assertEquals(listOf("secondVisit", "firstVisit"), sections[0].questions.map { it.id })
+    assertEquals(listOf("research"), sections[1].questions.map { it.id })
+  }
+
+  @Test
   fun `resolved count labels match their views`() {
     assertEquals("answered", QuestionViewMode.Answered.resolvedCountLabel)
     assertEquals("ignored", QuestionViewMode.Ignored.resolvedCountLabel)

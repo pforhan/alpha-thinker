@@ -6,10 +6,12 @@ import alphainterplanetary.thinker.phases.Phase
 
 class FakeGenerator : QuestionGenerator {
   var recommendedTitle: String = "Recommended"
+  var remaining: Int = 0
   val initialQuestions: MutableList<Question> = mutableListOf()
   val followUpQuestions: MutableList<Question> = mutableListOf()
   var initialCalls: MutableList<InitialCall> = mutableListOf()
   var followUpCalls: MutableList<FollowUpCall> = mutableListOf()
+  var remainingCalls: MutableList<RemainingCall> = mutableListOf()
 
   override suspend fun recommendTitle(synopsis: String): String = recommendedTitle
 
@@ -33,6 +35,15 @@ class FakeGenerator : QuestionGenerator {
     return followUpQuestions
   }
 
+  override suspend fun remainingInPhase(
+    synopsis: String,
+    previousQuestions: List<Question>,
+    phase: Phase,
+  ): Int {
+    remainingCalls += RemainingCall(synopsis, previousQuestions, phase)
+    return remaining
+  }
+
   data class InitialCall(
     val editableTitle: String,
     val synopsis: String,
@@ -44,6 +55,12 @@ class FakeGenerator : QuestionGenerator {
     val synopsis: String,
     val previousQuestions: List<Question>,
     val roundId: String,
+    val phase: Phase,
+  )
+
+  data class RemainingCall(
+    val synopsis: String,
+    val previousQuestions: List<Question>,
     val phase: Phase,
   )
 }

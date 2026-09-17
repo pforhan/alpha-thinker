@@ -1,12 +1,14 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.testutil.FakeGenerator
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.defaultTestInstant
 import alphainterplanetary.thinker.testutil.question
+import alphainterplanetary.thinker.testutil.round
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -14,6 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class ProjectDetailViewModelTest {
@@ -148,6 +151,54 @@ class ProjectDetailViewModelTest {
 
     val restored = (vm.uiState.value as ProjectDetailUiState.Success).project.questions.single()
     assertNotNull(restored.ignoredAt)
+  }
+
+  // ---------- can generate more / advance to phase ----------
+
+  @Test
+  fun `Success exposes whether the generator can produce more questions`() = runTest {
+    val generator = FakeGenerator().apply { remaining = 3 }
+    val vm = viewModel(FakeStorage(mutableMapOf("p1" to project())), generator)
+    vm.loadProject("p1")
+    testScheduler.advanceUntilIdle()
+
+    val state = vm.uiState.value as ProjectDetailUiState.Success
+    assertTrue(state.canGenerateMoreQuestions)
+
+    val exhausted = viewModel(FakeStorage(mutableMapOf("p1" to project())), FakeGenerator())
+    exhausted.loadProject("p1")
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(!(exhausted.uiState.value as ProjectDetailUiState.Success).canGenerateMoreQuestions)
+  }
+
+  @Test
+  fun `advanceToPhase moves the project into the chosen phase with a new round`() = runTest {
+    val generator = FakeGenerator().apply {
+      initialQuestions += question("n1", "Next?")
+    }
+    val storage = FakeStorage(
+      mutableMapOf(
+        "p1" to project(questions = listOf(question("q1"))).copy(
+          rounds = listOf(
+            round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals),
+          ),
+        ),
+      ),
+    )
+    val vm = viewModel(storage, generator)
+    vm.loadProject("p1")
+    testScheduler.advanceUntilIdle()
+
+    vm.advanceToPhase("p1", BuiltInPhase.Research)
+    testScheduler.advanceUntilIdle()
+
+    val state = vm.uiState.value as ProjectDetailUiState.Success
+    assertEquals(BuiltInPhase.Research, state.project.currentPhase)
+    assertEquals(listOf("q1", "n1"), state.project.questions.map { it.id })
+    assertTrue(state.project.rounds.first().isCompleted)
+    assertEquals(BuiltInPhase.Research, state.project.rounds.last().phase)
+    assertEquals(generator.initialCalls.single().phase, BuiltInPhase.Research)
   }
 
   // ---------- token semantics ----------
