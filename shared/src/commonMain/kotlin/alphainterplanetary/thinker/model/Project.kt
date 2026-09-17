@@ -22,6 +22,10 @@ data class Project(
   val currentPhase: Phase
     get() = currentRound?.phase ?: Phase.first
 
+  /** The phase a question was asked in, resolved through its round; falls back to the current phase. */
+  fun phaseForQuestion(question: Question): Phase =
+    rounds.find { it.id == question.roundId }?.phase ?: currentPhase
+
   /** Rounds belonging to the current planning phase (a phase can span several rounds). */
   val currentPhaseRounds: List<Round>
     get() = rounds.filter { it.phase == currentPhase }

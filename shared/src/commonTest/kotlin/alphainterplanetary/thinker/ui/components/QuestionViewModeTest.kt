@@ -1,5 +1,8 @@
 package alphainterplanetary.thinker.ui.components
 
+import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import kotlin.test.Test
@@ -158,5 +161,70 @@ class QuestionViewModeTest {
     val recommended = QuestionViewMode.Answered.recommendedViews(questions)
     assertEquals(QuestionViewMode.Unanswered, recommended.first())
     assertTrue(QuestionViewMode.Answered !in recommended)
+  }
+
+  // ---------- phase sections ----------
+
+  private val scopeGoalsSections: (Question) -> Phase = { q ->
+    when (q.roundId) {
+      "r-research" -> BuiltInPhase.Research
+      else -> BuiltInPhase.ScopeGoals
+    }
+  }
+
+  @Test
+  fun `answered sections group by phase - most recently active first`() {
+    val questions = listOf(
+      question(
+        "researchOld",
+        roundId = "r-research",
+        answers = listOf(answer("researchOld", "A", id = "a1", createdAt = earliest)),
+      ),
+      question(
+        "scopeRecent",
+        roundId = "r-scope",
+        answers = listOf(answer("scopeRecent", "A", id = "a2", createdAt = latest)),
+      ),
+      question(
+        "researchRecent",
+        roundId = "r-research",
+        answers = listOf(answer("researchRecent", "A", id = "a3", createdAt = middle)),
+      ),
+    )
+
+    val sections = QuestionViewMode.Answered.sections(questions, scopeGoalsSections)
+    assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), sections.map { it.phase })
+    // each section keeps the answered-by-date ordering
+    assertEquals(listOf("scopeRecent"), sections[0].questions.map { it.id })
+    assertEquals(listOf("researchRecent", "researchOld"), sections[1].questions.map { it.id })
+  }
+
+  @Test
+  fun `ignored sections group by phase - most recently ignored first`() {
+    val questions = listOf(
+      question("researchIgnored", roundId = "r-research", ignoredAt = earliest),
+      question("scopeIgnored", roundId = "r-scope", ignoredAt = latest),
+      question("scopeIgnored2", roundId = "r-scope", ignoredAt = middle),
+    )
+
+    val sections = QuestionViewMode.Ignored.sections(questions, scopeGoalsSections)
+    assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), sections.map { it.phase })
+    assertEquals(listOf("scopeIgnored", "scopeIgnored2"), sections[0].questions.map { it.id })
+    assertEquals(listOf("researchIgnored"), sections[1].questions.map { it.id })
+  }
+
+  @Test
+  fun `sections returns empty for views without phase headers`() {
+    val q = question("q1")
+    assertTrue(QuestionViewMode.Unanswered.sections(listOf(q), scopeGoalsSections).isEmpty())
+    assertTrue(QuestionViewMode.Draft.sections(listOf(q), scopeGoalsSections).isEmpty())
+  }
+
+  @Test
+  fun `resolved count labels match their views`() {
+    assertEquals("answered", QuestionViewMode.Answered.resolvedCountLabel)
+    assertEquals("ignored", QuestionViewMode.Ignored.resolvedCountLabel)
+    assertEquals("", QuestionViewMode.Unanswered.resolvedCountLabel)
+    assertEquals("", QuestionViewMode.Draft.resolvedCountLabel)
   }
 }

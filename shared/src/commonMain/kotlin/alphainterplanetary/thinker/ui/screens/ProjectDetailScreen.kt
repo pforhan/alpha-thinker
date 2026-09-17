@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
+import alphainterplanetary.thinker.ui.components.PhaseSectionHeader
 import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
@@ -73,6 +74,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.CoroutineScope
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,30 +204,34 @@ onAnswerClick = { selectedQuestion = it },
 
   val questionToShow = selectedQuestion
   if (questionToShow != null) {
-    AnswerDialog(
-      question = questionToShow,
-      onDismiss = { selectedQuestion = null },
-      onResult = { result, text ->
-        when (result) {
-          AnswerDialogResult.Submitted -> {
-            viewModel.saveAnswer(projectId, questionToShow.id, text, completed = true)
-          }
+    val project = (uiState as? ProjectDetailUiState.Success)?.project
+    if (project != null) {
+      AnswerDialog(
+        question = questionToShow,
+        phase = project.phaseForQuestion(questionToShow),
+        onDismiss = { selectedQuestion = null },
+        onResult = { result, text ->
+          when (result) {
+            AnswerDialogResult.Submitted -> {
+              viewModel.saveAnswer(projectId, questionToShow.id, text, completed = true)
+            }
 
-          AnswerDialogResult.SavedDraft -> {
-            viewModel.saveAnswer(projectId, questionToShow.id, text, completed = false)
-          }
+            AnswerDialogResult.SavedDraft -> {
+              viewModel.saveAnswer(projectId, questionToShow.id, text, completed = false)
+            }
 
-          AnswerDialogResult.DeletedAnswer -> {
-            viewModel.saveAnswer(projectId, questionToShow.id, "", completed = false)
-          }
+            AnswerDialogResult.DeletedAnswer -> {
+              viewModel.saveAnswer(projectId, questionToShow.id, "", completed = false)
+            }
 
-          AnswerDialogResult.Unignored -> {
-            viewModel.unignoreQuestion(projectId, questionToShow.id)
+            AnswerDialogResult.Unignored -> {
+              viewModel.unignoreQuestion(projectId, questionToShow.id)
+            }
           }
+          selectedQuestion = null
         }
-        selectedQuestion = null
-      }
-    )
+      )
+    }
   }
 }
 
@@ -287,6 +293,10 @@ private fun ProjectDetailContent(
         if (view == QuestionViewMode.Unanswered) all.take(3) else all
       }
 
+      val sections = remember(project, view) {
+        view.sections(project.questions, project::phaseForQuestion)
+      }
+
       val showShuffle = remember(project, view, filteredQuestions) {
         view == QuestionViewMode.Unanswered &&
           project.unansweredQuestions.size > 3
@@ -306,35 +316,41 @@ private fun ProjectDetailContent(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(Dimens.ListGap)
           ) {
-            items(filteredQuestions, key = { it.id }) { question ->
-              val dismissState = rememberSwipeToDismissBoxState()
-              SwipeableCard(
-                state = dismissState,
-                startAction = view.startAction,
-                endAction = view.endAction,
-                resetScope = dismissScope,
-                onSwipeStart = {
-                  when (view) {
-                    QuestionViewMode.Unanswered -> onAskLater(question.id)
-                    QuestionViewMode.Answered,
-                    QuestionViewMode.Draft -> onIgnore(question.id)
-                    QuestionViewMode.Ignored -> onUnignore(question.id)
-                  }
-                },
-                onSwipeEnd = {
-                  when (view) {
-                    QuestionViewMode.Unanswered -> onIgnore(question.id)
-                    QuestionViewMode.Answered,
-                    QuestionViewMode.Draft -> onDeleteAnswer(question)
-                    QuestionViewMode.Ignored -> onUnignore(question.id)
-                  }
-                },
-              ) {
-                QuestionItem(
+            if (sections.isNotEmpty()) {
+              sections.forEach { section ->
+                item(key = "phase-${section.phase.key}") {
+                  PhaseSectionHeader(
+                    phase = section.phase,
+                    count = section.questions.size,
+                    countLabel = view.resolvedCountLabel,
+                  )
+                }
+                items(section.questions, key = { it.id }) { question ->
+                  QuestionListRow(
+                    project = project,
+                    question = question,
+                    view = view,
+                    dismissScope = dismissScope,
+                    onAskLater = onAskLater,
+                    onIgnore = onIgnore,
+                    onUnignore = onUnignore,
+                    onDeleteAnswer = onDeleteAnswer,
+                    onAnswerClick = onAnswerClick,
+                  )
+                }
+              }
+            } else {
+              items(filteredQuestions, key = { it.id }) { question ->
+                QuestionListRow(
+                  project = project,
                   question = question,
                   view = view,
-                  dismissState = dismissState,
-                  onAnswerClick = { onAnswerClick(question) },
+                  dismissScope = dismissScope,
+                  onAskLater = onAskLater,
+                  onIgnore = onIgnore,
+                  onUnignore = onUnignore,
+                  onDeleteAnswer = onDeleteAnswer,
+                  onAnswerClick = onAnswerClick,
                 )
               }
             }
@@ -350,6 +366,54 @@ private fun ProjectDetailContent(
         }
       }
     }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuestionListRow(
+  project: Project,
+  question: Question,
+  view: QuestionViewMode,
+  dismissScope: CoroutineScope,
+  onAskLater: (String) -> Unit,
+  onIgnore: (String) -> Unit,
+  onUnignore: (String) -> Unit,
+  onDeleteAnswer: (Question) -> Unit,
+  onAnswerClick: (Question) -> Unit,
+) {
+  val dismissState = rememberSwipeToDismissBoxState()
+  val phase = project.phaseForQuestion(question)
+  SwipeableCard(
+    state = dismissState,
+    startAction = view.startAction,
+    endAction = view.endAction,
+    resetScope = dismissScope,
+    onSwipeStart = {
+      when (view) {
+        QuestionViewMode.Unanswered -> onAskLater(question.id)
+        QuestionViewMode.Answered,
+        QuestionViewMode.Draft -> onIgnore(question.id)
+        QuestionViewMode.Ignored -> onUnignore(question.id)
+      }
+    },
+    onSwipeEnd = {
+      when (view) {
+        QuestionViewMode.Unanswered -> onIgnore(question.id)
+        QuestionViewMode.Answered,
+        QuestionViewMode.Draft -> onDeleteAnswer(question)
+        QuestionViewMode.Ignored -> onUnignore(question.id)
+      }
+    },
+  ) {
+    QuestionItem(
+      question = question,
+      view = view,
+      dismissState = dismissState,
+      phase = phase,
+      showPhasePill = view == QuestionViewMode.Unanswered && project.currentPhase != phase,
+      onAnswerClick = { onAnswerClick(question) },
+    )
   }
 }
 

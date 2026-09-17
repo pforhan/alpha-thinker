@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,10 +48,13 @@ enum class AnswerDialogResult {
  *   draft or deletes the answer; text stores a draft (switch off) or a
  *   committed answer (switch on). Cancel discards any changes. Ignored
  *   questions are not editable and just dismiss.
+ * - The question's phase is always shown as a pill below the question text,
+ *   above the answer field.
  */
 @Composable
 fun AnswerDialog(
   question: Question,
+  phase: Phase,
   onDismiss: () -> Unit,
   onResult: (AnswerDialogResult, String) -> Unit,
 ) {
@@ -86,11 +90,15 @@ fun AnswerDialog(
   AlertDialog(
     onDismissRequest = { close() },
     title = {
-      ScrollableOverflowText(
-        text = question.text,
-        collapsedMaxLines = 4,
-        modifier = Modifier.fillMaxWidth(),
-      )
+      Column {
+        ScrollableOverflowText(
+          text = question.text,
+          collapsedMaxLines = 4,
+          modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        PhasePill(phase = phase)
+      }
     },
     text = {
       Column {

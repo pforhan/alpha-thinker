@@ -37,6 +37,9 @@ object Dimens {
   val PillHorizontalPadding = 12.dp
   val PillVerticalPadding = 4.dp
 
+  // Phase row coloring
+  val PhaseRowBarWidth = 4.dp
+
   // Icon / control adjacencies
   val IconLabelGap = 8.dp
   val ToolIconLabelGap = 12.dp

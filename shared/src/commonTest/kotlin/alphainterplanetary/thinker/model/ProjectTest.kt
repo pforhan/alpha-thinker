@@ -237,6 +237,51 @@ class ProjectTest {
     assertNull(p.currentRound)
   }
 
+  // ---------- phase per question ----------
+
+  @Test
+  fun `phaseForQuestion resolves the question's phase through its round`() {
+    val p = Project(
+      id = "p",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(question("q1", roundId = "r1")),
+      rounds = listOf(
+        round(id = "r1", projectId = "p", phase = BuiltInPhase.Research, roundNumber = 1),
+      ),
+      createdAt = Instant.fromEpochMilliseconds(0),
+      updatedAt = Instant.fromEpochMilliseconds(0),
+    )
+
+    assertEquals(BuiltInPhase.Research, p.phaseForQuestion(p.questions.first()))
+  }
+
+  @Test
+  fun `phaseForQuestion falls back to the current phase for an unknown round`() {
+    val p = Project(
+      id = "p",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(question("q1", roundId = "r-unknown")),
+      rounds = listOf(
+        round(id = "r1", projectId = "p", phase = BuiltInPhase.Design, roundNumber = 1),
+      ),
+      createdAt = Instant.fromEpochMilliseconds(0),
+      updatedAt = Instant.fromEpochMilliseconds(0),
+    )
+
+    assertEquals(BuiltInPhase.Design, p.phaseForQuestion(p.questions.first()))
+  }
+
+  @Test
+  fun `phaseForQuestion falls back to the first phase when there are no rounds`() {
+    val p = project(question("q1", roundId = "r-unknown"))
+
+    assertEquals(BuiltInPhase.ScopeGoals, p.phaseForQuestion(p.questions.first()))
+  }
+
   // ---------- phase completion ----------
 
   private fun projectWithRounds(

@@ -25,7 +25,15 @@ val LocalDarkTheme = compositionLocalOf { false }
  * per the app's light/dark mode; the theme is set app-wide in Settings.
  */
 object PhaseStyles {
+  /** How diluted a phase container gets when tinting a whole list row. */
+  const val RowTintAlpha = 0.12f
+
   @Composable
   fun forPhase(phase: Phase): PhaseStyle =
     LocalPhaseTheme.current.style(phase, LocalDarkTheme.current)
+
+  /** The phase's container at [RowTintAlpha] — a wash for list-row backgrounds. */
+  @Composable
+  fun rowTint(phase: Phase): Color =
+    forPhase(phase).container.copy(alpha = RowTintAlpha)
 }

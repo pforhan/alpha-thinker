@@ -1,8 +1,12 @@
 package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.theme.PhaseStyles
 import alphainterplanetary.thinker.util.normalizeWhitespace
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +21,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +33,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.launch
 
@@ -37,6 +46,8 @@ fun QuestionItem(
   question: Question,
   view: QuestionViewMode,
   dismissState: SwipeToDismissBoxState,
+  phase: Phase,
+  showPhasePill: Boolean,
   onAnswerClick: () -> Unit,
 ) {
   val scope = rememberCoroutineScope()
@@ -44,112 +55,130 @@ fun QuestionItem(
   fun swipeTo(target: SwipeToDismissBoxValue) {
     scope.launch { dismissState.dismiss(target) }
   }
+  val style = PhaseStyles.forPhase(phase)
   Card(
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = Dimens.ScreenPadding),
     onClick = onAnswerClick
   ) {
-    Column(
-      modifier = Modifier.padding(Dimens.CardPadding)
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(CardDefaults.shape)
+        .background(PhaseStyles.rowTint(phase))
+        .drawBehind {
+          drawRect(
+            color = style.container,
+            topLeft = Offset.Zero,
+            size = Size(Dimens.PhaseRowBarWidth.toPx(), size.height),
+          )
+        }
+        .padding(Dimens.CardPadding),
     ) {
-      val secondaryText = when {
-        question.currentAnswer != null -> question.currentAnswer!!.text.normalizeWhitespace()
-        question.isDraft -> question.draftText!!.normalizeWhitespace()
-        else -> null
-      }
-      val hasSecondaryContent = secondaryText != null || question.isIgnored
-      if (hasSecondaryContent) {
-        Text(
-          text = question.text,
-          maxLines = 2,
-          overflow = TextOverflow.Ellipsis,
-          style = MaterialTheme.typography.bodyLarge
-        )
-      } else {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+      Column {
+        if (showPhasePill) {
+          PhasePill(phase = phase)
+          Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        }
+        val secondaryText = when {
+          question.currentAnswer != null -> question.currentAnswer!!.text.normalizeWhitespace()
+          question.isDraft -> question.draftText!!.normalizeWhitespace()
+          else -> null
+        }
+        val hasSecondaryContent = secondaryText != null || question.isIgnored
+        if (hasSecondaryContent) {
           Text(
             text = question.text,
-            modifier = Modifier.weight(1f),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLarge
           )
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+        } else {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              text = question.text,
+              modifier = Modifier.weight(1f),
+              maxLines = 2,
+              overflow = TextOverflow.Ellipsis,
+              style = MaterialTheme.typography.bodyLarge,
+            )
+            QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+          }
         }
-      }
 
-      if (question.isIgnored) {
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                Icons.Default.Visibility,
-                contentDescription = "Ignored",
-                modifier = Modifier.size(Dimens.IconSizeSmall),
-                tint = MaterialTheme.colorScheme.error,
-              )
-              Spacer(modifier = Modifier.width(Dimens.TightGap))
-              Text(
-                text = "Ignored",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
-              )
+        if (question.isIgnored) {
+          Spacer(modifier = Modifier.height(Dimens.ContentGap))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  Icons.Default.Visibility,
+                  contentDescription = "Ignored",
+                  modifier = Modifier.size(Dimens.IconSizeSmall),
+                  tint = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.width(Dimens.TightGap))
+                Text(
+                  text = "Ignored",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.error,
+                )
+              }
+              if (secondaryText != null) {
+                Spacer(modifier = Modifier.height(Dimens.TightGap))
+                Text(
+                  text = secondaryText,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
             }
-            if (secondaryText != null) {
-              Spacer(modifier = Modifier.height(Dimens.TightGap))
+            QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+          }
+        } else if (question.currentAnswer != null) {
+          Spacer(modifier = Modifier.height(Dimens.ContentGap))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              text = secondaryText!!,
+              modifier = Modifier.weight(1f),
+              maxLines = 2,
+              overflow = TextOverflow.Ellipsis,
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+          }
+        } else if (question.isDraft) {
+          Spacer(modifier = Modifier.height(Dimens.ContentGap))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  Icons.Default.Edit,
+                  contentDescription = "Draft",
+                  modifier = Modifier.height(Dimens.IconSizeSmall),
+                  tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.width(Dimens.TightGap))
+                Text(
+                  text = "Draft:",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
               Text(
-                text = secondaryText,
+                text = secondaryText!!,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
             }
+            QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
           }
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
-        }
-      } else if (question.currentAnswer != null) {
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text(
-            text = secondaryText!!,
-            modifier = Modifier.weight(1f),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
-        }
-      } else if (question.isDraft) {
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                Icons.Default.Edit,
-                contentDescription = "Draft",
-                modifier = Modifier.height(Dimens.IconSizeSmall),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-              Spacer(modifier = Modifier.width(Dimens.TightGap))
-              Text(
-                text = "Draft:",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-            Text(
-              text = secondaryText!!,
-              maxLines = 2,
-              overflow = TextOverflow.Ellipsis,
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-          }
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
         }
       }
     }
