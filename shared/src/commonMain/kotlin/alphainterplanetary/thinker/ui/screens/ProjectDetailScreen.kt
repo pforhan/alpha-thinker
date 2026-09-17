@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
@@ -35,10 +36,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -250,22 +254,59 @@ private fun ProjectDetailContent(
   onGenerateMore: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  var showPhaseOverview by remember { mutableStateOf(false) }
+  val phaseSummaries = remember(project) { project.priorPhaseSummaries() }
+
   Column(modifier = modifier) {
-    Row(
-      verticalAlignment = Alignment.CenterVertically,
-      modifier = Modifier.padding(
-        start = Dimens.ScreenPadding,
-        end = Dimens.ScreenPadding,
-        top = Dimens.SectionGap,
-      ),
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clickable(enabled = phaseSummaries.isNotEmpty()) { showPhaseOverview = true },
     ) {
-      PhasePill(phase = project.currentPhase)
-      Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
-      Text(
-        text = "${project.currentPhaseResolvedCount} of ${project.currentPhaseQuestionCount} completed",
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(
+          start = Dimens.ScreenPadding,
+          end = Dimens.ScreenPadding,
+          top = Dimens.SectionGap,
+        ),
+      ) {
+        PhaseSummaryRow(
+          phase = project.currentPhase,
+          resolved = project.currentPhaseResolvedCount,
+          total = project.currentPhaseQuestionCount,
+        )
+        if (phaseSummaries.isNotEmpty()) {
+          Spacer(modifier = Modifier.width(Dimens.TightGap))
+          Icon(
+            Icons.Default.ArrowDropDown,
+            contentDescription = null,
+            modifier = Modifier.size(Dimens.IconSizeSmall),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
+      }
+      if (phaseSummaries.isNotEmpty()) {
+        DropdownMenu(
+          expanded = showPhaseOverview,
+          onDismissRequest = { showPhaseOverview = false },
+        ) {
+          phaseSummaries.forEach { summary ->
+            DropdownMenuItem(
+              text = {
+                PhaseSummaryRow(
+                  phase = summary.phase,
+                  resolved = summary.resolved,
+                  total = summary.total,
+                  modifier = Modifier.fillMaxWidth(),
+                  endAligned = true,
+                )
+              },
+              onClick = { showPhaseOverview = false },
+            )
+          }
+        }
+      }
     }
 
     ProjectSynopsis(synopsis = project.synopsis)
@@ -550,4 +591,67 @@ private fun ShuffleRow(
       }
     }
   }
+}
+
+private data class PhaseSummary(
+  val phase: Phase,
+  val resolved: Int,
+  val total: Int,
+)
+
+/**
+ * The "phase pill + N of M completed" summary line, shared by the project
+ * detail header (current phase) and the prior-phase overview popup so both
+ * render exactly the same widget.
+ */
+@Composable
+private fun PhaseSummaryRow(
+  phase: Phase,
+  resolved: Int,
+  total: Int,
+  modifier: Modifier = Modifier,
+  endAligned: Boolean = false,
+) {
+  Row(
+    modifier = modifier,
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    PhasePill(phase = phase)
+    if (endAligned) {
+      Spacer(modifier = Modifier.weight(1f))
+    } else {
+      Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
+    }
+    Text(
+      text = "$resolved of $total completed",
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+  }
+}
+
+/**
+ * Summaries for the phases the project has already entered, newest first, for
+ * the current phase's overview popup. Only visited phases (those with a round)
+ * and only phases before the current one are included — future phases never
+ * appear. Counts mirror the current-phase summary line (resolved = answered or
+ * ignored).
+ */
+private fun Project.priorPhaseSummaries(): List<PhaseSummary> {
+  val currentOrder = currentPhase.order
+  return rounds
+    .map { it.phase }
+    .distinct()
+    .filter { it.order < currentOrder }
+    .sortedByDescending { it.order }
+    .map { phase ->
+      val phaseQuestions = questions.filter { phaseForQuestion(it) == phase }
+      PhaseSummary(
+        phase = phase,
+        resolved = phaseQuestions.count { it.isAnswered || it.isIgnored },
+        total = phaseQuestions.size,
+      )
+    }
 }
