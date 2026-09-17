@@ -129,6 +129,9 @@ class ProjectRepository @Inject constructor(
    * [text] as a draft, clearing the draft entirely when the text is blank. A
    * question is always either committed or a draft, never both, so saving a
    * draft demotes any current answer out of "answered".
+   *
+   * Saving an answer never advances the project phase — rounds move on only through
+   * [advanceToPhase].
    */
   suspend fun saveAnswer(
     projectId: String,
@@ -173,31 +176,8 @@ class ProjectRepository @Inject constructor(
       updatedAt = now
     )
 
-    val answered = updatedProject.allActiveQuestionsAnswered
-
-    val finalProject = if (answered) {
-      val round = nextRound(updatedProject, RoundOrigin.FollowUp, now)
-      val newQs = generator.generateFollowUpQuestions(
-        synopsis = project.synopsis,
-        previousQuestions = project.questions,
-        roundId = round.id,
-        phase = round.phase,
-      )
-
-      if (newQs.isEmpty()) {
-        updatedProject
-      } else {
-        updatedProject.copy(
-          questions = updatedProject.questions + newQs,
-          rounds = updatedProject.rounds + round,
-        )
-      }
-    } else {
-      updatedProject
-    }
-
-    storage.saveProject(finalProject)
-    return finalProject
+    storage.saveProject(updatedProject)
+    return updatedProject
   }
 
   suspend fun generateMoreQuestions(projectId: String): Project? {

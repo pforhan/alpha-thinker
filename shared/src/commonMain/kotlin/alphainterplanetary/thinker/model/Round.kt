@@ -10,12 +10,7 @@ enum class RoundOrigin {
   /** The opening round of a phase: project start or a wrap-up advancing to a new phase. */
   Initial,
 
-  /**
-   * A batch generated automatically — currently used by the interim
-   * all-answered auto follow-up in the repository. Once the manual wrap-up
-   * replaces that (Phase 2.8), this origin is reserved for revisiting a
-   * completed phase.
-   */
+  /** Reserved for revisiting a completed phase. */
   FollowUp,
 
   /** The user tapped "Get more questions" in the current phase. */

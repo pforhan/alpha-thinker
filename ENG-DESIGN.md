@@ -207,7 +207,7 @@ observable background task.
 
 **Repository contract (LLM-ready):**
 
-- Mutating writes (`createProject`, `updateAnswer`, `updateProject`) persist
+- Mutating writes (`createProject`, `saveAnswer`, `updateProject`) persist
   the user-facing state immediately and return immediately.
 - Generation is enqueued as a task instead of awaited inline. On success the
   task body re-reads the project, performs the generation, and persists the

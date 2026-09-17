@@ -430,7 +430,7 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `saveAnswer generates follow-ups when all active questions are answered`() = runTest {
+  fun `saveAnswer does not generate follow-ups when all active questions are answered`() = runTest {
     val generator = FakeGenerator().apply {
       followUpQuestions += question("f1")
       followUpQuestions += question("f2")
@@ -455,17 +455,9 @@ class ProjectRepositoryTest {
     )
 
     assertNotNull(updated)
-    assertEquals(1, generator.followUpCalls.size)
-    assertEquals(listOf("q1", "f1", "f2"), updated.questions.map { it.id })
-    assertEquals("s", generator.followUpCalls.single().synopsis)
-    assertEquals(listOf("q1"), generator.followUpCalls.single().previousQuestions.map { it.id })
-
-    val round = updated.rounds.single()
-    assertEquals(RoundOrigin.FollowUp, round.origin)
-    assertEquals(1, round.roundNumber)
-    assertEquals(Phase.first, round.phase)
-    assertEquals(round.id, generator.followUpCalls.single().roundId)
-    assertEquals(Phase.first, generator.followUpCalls.single().phase)
+    assertTrue(generator.followUpCalls.isEmpty())
+    assertEquals(listOf("q1"), updated.questions.map { it.id })
+    assertTrue(updated.rounds.isEmpty())
   }
 
   @Test
@@ -837,7 +829,7 @@ class ProjectRepositoryTest {
     }
 
   @Test
-  fun `saveAnswer follow-up round stays in the revisited current phase`() = runTest {
+  fun `saveAnswer does not generate a follow-up round in the revisited current phase`() = runTest {
     val generator = FakeGenerator().apply {
       followUpQuestions += question("f1")
     }
@@ -855,10 +847,9 @@ class ProjectRepositoryTest {
     val updated = repository.saveAnswer("p1", "revisitedOpen", "Answer", completed = true)
 
     assertNotNull(updated)
-    val round = updated.rounds.last()
-    assertEquals(RoundOrigin.FollowUp, round.origin)
-    assertEquals(BuiltInPhase.ScopeGoals, round.phase)
-    assertEquals(BuiltInPhase.ScopeGoals, generator.followUpCalls.single().phase)
+    assertTrue(generator.followUpCalls.isEmpty())
+    assertEquals(3, updated.rounds.size)
+    assertEquals(listOf("revisitedOpen"), updated.questions.map { it.id })
   }
 
   // ---------- ignore / unignore ----------
