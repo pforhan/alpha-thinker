@@ -3,12 +3,12 @@ package alphainterplanetary.thinker.model
 import alphainterplanetary.thinker.database.toDomainModel
 import alphainterplanetary.thinker.database.toEntity
 import alphainterplanetary.thinker.phases.BuiltInPhase
-import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 class RoundTest {
 

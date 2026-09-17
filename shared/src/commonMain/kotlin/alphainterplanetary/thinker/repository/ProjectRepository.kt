@@ -11,8 +11,8 @@ import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
+import kotlin.time.Instant
 
 @AppScope
 class ProjectRepository @Inject constructor(
@@ -26,7 +26,7 @@ class ProjectRepository @Inject constructor(
 
     val trimmedTitle = title.orEmpty().trim()
 
-val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
+    val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
       ?.substring(0, trimmedTitle.length.coerceAtMost(30))
       ?: generator.recommendTitle(synopsis)
 

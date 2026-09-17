@@ -48,7 +48,7 @@ data class Project(
   /** The current phase's completion as a whole percent, rounded to the nearest percent (0 if no questions). */
   val currentPhaseCompletionPercent: Int
     get() = if (currentPhaseQuestionCount == 0) 0
-      else (currentPhaseResolvedCount * 100.0 / currentPhaseQuestionCount).roundToInt()
+    else (currentPhaseResolvedCount * 100.0 / currentPhaseQuestionCount).roundToInt()
 
   val unansweredQuestions: List<Question>
     get() = questions.filter { it.isUnanswered }

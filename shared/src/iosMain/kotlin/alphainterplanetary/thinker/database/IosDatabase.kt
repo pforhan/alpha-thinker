@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.database
 
-import alphainterplanetary.thinker.di.IosPlatformContext
 import alphainterplanetary.thinker.di.PlatformContext
 import androidx.room3.Room
 import androidx.room3.RoomDatabase

@@ -124,8 +124,10 @@ class HardcodedQuestionGeneratorTest {
 
   @Test
   fun `generateInitialQuestions draws from its own phase's pool`() = runTest {
-    val scope = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
-    val research = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research)
+    val scope =
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+    val research =
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research)
 
     assertTrue(scope.map { it.text }.all { it in poolOf(BuiltInPhase.ScopeGoals) })
     assertTrue(research.map { it.text }.all { it in poolOf(BuiltInPhase.Research) })
@@ -139,7 +141,8 @@ class HardcodedQuestionGeneratorTest {
 
   @Test
   fun `generateFollowUpQuestions returns questions not already asked`() = runTest {
-    val initial = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+    val initial =
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
     val followUp = generator.generateFollowUpQuestions(
       "synopsis",
       initial,
@@ -155,7 +158,8 @@ class HardcodedQuestionGeneratorTest {
 
   @Test
   fun `generateFollowUpQuestions dedupes across multiple rounds`() = runTest {
-    val initial = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+    val initial =
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
     val round1 = generator.generateFollowUpQuestions(
       "synopsis",
       initial,
@@ -192,7 +196,8 @@ class HardcodedQuestionGeneratorTest {
   fun `generateFollowUpQuestions respects followUpCount`() = runTest {
     val generator = HardcodedQuestionGenerator(initialCount = 3, followUpCount = 7)
 
-    val initial = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+    val initial =
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
     val followUp = generator.generateFollowUpQuestions(
       "synopsis",
       initial,
@@ -205,8 +210,10 @@ class HardcodedQuestionGeneratorTest {
 
   @Test
   fun `generation is stateless - same inputs yield same texts`() = runTest {
-    val first = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
-    val second = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+    val first =
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+    val second =
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
 
     assertEquals(first.map { it.text }, second.map { it.text })
   }
@@ -215,7 +222,11 @@ class HardcodedQuestionGeneratorTest {
 
   @Test
   fun `every built-in phase has a non-empty pool`() {
-    assertTrue(BuiltInPhase.entries.all { phase -> HardcodedQuestionGenerator.questionPoolByPhase.containsKey(phase) })
+    assertTrue(BuiltInPhase.entries.all { phase ->
+      HardcodedQuestionGenerator.questionPoolByPhase.containsKey(
+        phase
+      )
+    })
     assertTrue(
       BuiltInPhase.entries.all { phase -> !poolOf(phase).isEmpty() },
       "each phase needs enough questions to serve an initial round",

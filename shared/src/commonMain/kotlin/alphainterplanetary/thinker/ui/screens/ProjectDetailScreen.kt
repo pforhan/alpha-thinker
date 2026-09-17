@@ -8,17 +8,24 @@ import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
+import alphainterplanetary.thinker.ui.components.PhasePill
 import alphainterplanetary.thinker.ui.components.PhaseSectionHeader
 import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
-import alphainterplanetary.thinker.ui.components.PhasePill
 import alphainterplanetary.thinker.ui.components.ScrollableOverflowText
 import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import alphainterplanetary.thinker.util.normalizeWhitespace
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,7 +65,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,15 +74,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.CoroutineScope
 
@@ -167,8 +166,8 @@ fun ProjectDetailScreen(
           onAskLater = { viewModel.askLater(it) },
           onIgnore = { viewModel.ignoreQuestion(projectId, it) },
           onUnignore = { viewModel.unignoreQuestion(projectId, it) },
-onAnswerClick = { selectedQuestion = it },
-      onDeleteAnswer = { viewModel.saveAnswer(projectId, it.id, "", completed = false) },
+          onAnswerClick = { selectedQuestion = it },
+          onDeleteAnswer = { viewModel.saveAnswer(projectId, it.id, "", completed = false) },
           onGenerateMore = { viewModel.generateMoreQuestions(projectId) },
           modifier = Modifier
             .fillMaxSize()
@@ -434,7 +433,9 @@ private fun QuestionListRow(
       when (view) {
         QuestionViewMode.Unanswered -> onAskLater(question.id)
         QuestionViewMode.Answered,
-        QuestionViewMode.Draft -> onIgnore(question.id)
+        QuestionViewMode.Draft,
+          -> onIgnore(question.id)
+
         QuestionViewMode.Ignored -> onUnignore(question.id)
       }
     },
@@ -442,7 +443,9 @@ private fun QuestionListRow(
       when (view) {
         QuestionViewMode.Unanswered -> onIgnore(question.id)
         QuestionViewMode.Answered,
-        QuestionViewMode.Draft -> onDeleteAnswer(question)
+        QuestionViewMode.Draft,
+          -> onDeleteAnswer(question)
+
         QuestionViewMode.Ignored -> onUnignore(question.id)
       }
     },

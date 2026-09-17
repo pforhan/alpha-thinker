@@ -89,7 +89,10 @@ class SampleProjectGeneratorTest {
     assertEquals(6, done.rounds.size)
     assertEquals(5, done.rounds.count { it.isCompleted })
     assertTrue(done.questions.isNotEmpty())
-    assertTrue(done.questions.all { it.isAnswered || it.isIgnored }, "done project should have no open questions")
+    assertTrue(
+      done.questions.all { it.isAnswered || it.isIgnored },
+      "done project should have no open questions"
+    )
     assertTrue(done.questions.any { it.isAnswered })
     assertTrue(done.questions.any { it.isIgnored })
   }

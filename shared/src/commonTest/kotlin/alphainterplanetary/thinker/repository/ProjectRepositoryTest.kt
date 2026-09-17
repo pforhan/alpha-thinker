@@ -1,15 +1,15 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
-import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.testutil.FakeGenerator
+import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.testutil.round
-import alphainterplanetary.thinker.phases.BuiltInPhase
-import alphainterplanetary.thinker.phases.Phase
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

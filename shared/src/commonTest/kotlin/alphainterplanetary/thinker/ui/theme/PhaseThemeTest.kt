@@ -124,6 +124,7 @@ class PhaseThemeTest {
     val z = (0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.08883
     fun f(t: Double): Double =
       if (t > 0.008856) t.pow(1.0 / 3.0) else 7.787 * t + 16.0 / 116.0
+
     val fx = f(x)
     val fy = f(y)
     val fz = f(z)

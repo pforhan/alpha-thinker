@@ -6,13 +6,13 @@ import alphainterplanetary.thinker.testutil.draftQuestion
 import alphainterplanetary.thinker.testutil.ignoredQuestion
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.testutil.round
-import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 class ProjectTest {
 
@@ -220,7 +220,12 @@ class ProjectTest {
       status = "Draft",
       questions = emptyList(),
       rounds = listOf(
-        round(id = "r1", projectId = "p", roundNumber = 1, completedAt = Instant.fromEpochMilliseconds(50)),
+        round(
+          id = "r1",
+          projectId = "p",
+          roundNumber = 1,
+          completedAt = Instant.fromEpochMilliseconds(50)
+        ),
         round(id = "r2", projectId = "p", roundNumber = 2),
       ),
       createdAt = Instant.fromEpochMilliseconds(0),

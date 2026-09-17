@@ -12,7 +12,8 @@ actual fun provideDatabaseBuilder(context: PlatformContext): RoomDatabase.Builde
   return Room.databaseBuilder<AppDatabase>(
     name = DATABASE_NAME,
     factory = { AppDatabaseConstructor.initialize() }
-  ).setDriver(WebWorkerSQLiteDriver(Worker(js("""new URL("sqlite-wasm-worker/worker.js", import.meta.url)"""))))
+  )
+    .setDriver(WebWorkerSQLiteDriver(Worker(js("""new URL("sqlite-wasm-worker/worker.js", import.meta.url)"""))))
 }
 
 private var storageInstance: Storage? = null

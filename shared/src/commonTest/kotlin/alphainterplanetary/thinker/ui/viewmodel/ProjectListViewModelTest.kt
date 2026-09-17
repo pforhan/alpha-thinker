@@ -1,11 +1,11 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.testutil.FakeGenerator
+import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.defaultTestInstant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope

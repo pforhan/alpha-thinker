@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.testutil.FakeGenerator
+import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.defaultTestInstant
 import alphainterplanetary.thinker.testutil.question
@@ -43,30 +43,36 @@ class ProjectDetailViewModelTest {
 
   private fun answeredProject(questionId: String = "q1"): Project =
     project(
-      questions = listOf(question(questionId, answers = listOf(answer(questionId, "A", id = "a1")))),
+      questions = listOf(
+        question(
+          questionId,
+          answers = listOf(answer(questionId, "A", id = "a1"))
+        )
+      ),
     )
 
   // ---------- delete answer ----------
 
   @Test
-  fun `deleting an answer applies the optimistic unlink immediately and records a snapshot`() = runTest {
-    val storage = FakeStorage(mutableMapOf("p1" to answeredProject()))
-    val vm = viewModel(storage)
-    vm.loadProject("p1")
-    testScheduler.advanceUntilIdle()
+  fun `deleting an answer applies the optimistic unlink immediately and records a snapshot`() =
+    runTest {
+      val storage = FakeStorage(mutableMapOf("p1" to answeredProject()))
+      val vm = viewModel(storage)
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
 
-    vm.saveAnswer("p1", "q1", "", completed = false)
+      vm.saveAnswer("p1", "q1", "", completed = false)
 
-    val state = (vm.uiState.value as ProjectDetailUiState.Success)
-    assertNull(state.project.questions.single().currentAnswer)
-    val pending = vm.pendingUndo.value
-    assertNotNull(pending)
-    assertEquals("Answer deleted", pending.message)
-    assertNotNull(pending.snapshot.questions.single().currentAnswer)
+      val state = (vm.uiState.value as ProjectDetailUiState.Success)
+      assertNull(state.project.questions.single().currentAnswer)
+      val pending = vm.pendingUndo.value
+      assertNotNull(pending)
+      assertEquals("Answer deleted", pending.message)
+      assertNotNull(pending.snapshot.questions.single().currentAnswer)
 
-    testScheduler.advanceUntilIdle()
-    assertNull((vm.uiState.value as ProjectDetailUiState.Success).project.questions.single().currentAnswer)
-  }
+      testScheduler.advanceUntilIdle()
+      assertNull((vm.uiState.value as ProjectDetailUiState.Success).project.questions.single().currentAnswer)
+    }
 
   @Test
   fun `undoing a deleted answer restores the pre-delete project in state and storage`() = runTest {

@@ -55,6 +55,7 @@ fun QuestionItem(
   fun swipeTo(target: SwipeToDismissBoxValue) {
     scope.launch { dismissState.dismiss(target) }
   }
+
   val style = PhaseStyles.forPhase(phase)
   Card(
     modifier = Modifier

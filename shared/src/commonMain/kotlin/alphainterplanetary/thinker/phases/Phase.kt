@@ -60,7 +60,15 @@ enum class BuiltInPhase(
   ExecutionPlan(
     key = "execution-plan",
     label = "Execution Plan",
-    keywords = listOf("build", "implement", "backlog", "milestone", "technical", "resource", "timeline"),
+    keywords = listOf(
+      "build",
+      "implement",
+      "backlog",
+      "milestone",
+      "technical",
+      "resource",
+      "timeline"
+    ),
   ),
   ValidationPlan(
     key = "validation-plan",

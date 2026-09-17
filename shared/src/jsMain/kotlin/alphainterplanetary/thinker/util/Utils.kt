@@ -1,8 +1,8 @@
 package alphainterplanetary.thinker.util
 
-import kotlin.time.Instant
 import kotlin.random.Random
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 actual fun now(): Instant = Clock.System.now()
 

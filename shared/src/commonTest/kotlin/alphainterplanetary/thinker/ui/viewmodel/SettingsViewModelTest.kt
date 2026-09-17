@@ -30,7 +30,10 @@ class SettingsViewModelTest {
     vm.generateSampleProjects()
     testScheduler.advanceUntilIdle()
 
-    assertEquals(SettingsUiState.Success("Populated ${sampleProjectGenerator.count()} sample projects."), vm.uiState.value)
+    assertEquals(
+      SettingsUiState.Success("Populated ${sampleProjectGenerator.count()} sample projects."),
+      vm.uiState.value
+    )
     assertTrue(
       storage.projects.keys.containsAll(
         setOf("sample-scope", "sample-done", "sample-stress"),

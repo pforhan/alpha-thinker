@@ -33,7 +33,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   @AppScope
   @Provides
-  fun providesAppCoroutineScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+  fun providesAppCoroutineScope(): CoroutineScope =
+    CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
   @Provides
   fun providesQuestionGenerator(): QuestionGenerator = HardcodedQuestionGenerator()

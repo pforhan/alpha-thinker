@@ -1,8 +1,7 @@
 package alphainterplanetary.thinker.util
 
-import kotlin.experimental.ExperimentalNativeApi
-import kotlin.native.setUnhandledExceptionHook
 import platform.Foundation.NSLog
+import kotlin.experimental.ExperimentalNativeApi
 
 /**
  * Installs a Kotlin/Native uncaught-exception hook so that crashes surface a clear

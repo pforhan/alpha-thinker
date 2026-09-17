@@ -37,7 +37,11 @@ enum class QuestionViewMode(
   Unanswered(
     "Unanswered",
     "No unanswered questions.",
-    startAction = SwipeAction("Ask later", Icons.AutoMirrored.Filled.RotateLeft, SwipeActionStyle.AskLater),
+    startAction = SwipeAction(
+      "Ask later",
+      Icons.AutoMirrored.Filled.RotateLeft,
+      SwipeActionStyle.AskLater
+    ),
     endAction = SwipeAction("Ignore", Icons.Default.VisibilityOff, SwipeActionStyle.Ignore),
   ),
   Answered(

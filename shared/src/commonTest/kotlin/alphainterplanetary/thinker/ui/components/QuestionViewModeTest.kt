@@ -16,7 +16,10 @@ class QuestionViewModeTest {
   private val middle: Instant = Instant.fromEpochMilliseconds(2000)
   private val earliest: Instant = Instant.fromEpochMilliseconds(1000)
 
-  private fun ids(view: QuestionViewMode, questions: List<alphainterplanetary.thinker.model.Question>): List<String> =
+  private fun ids(
+    view: QuestionViewMode,
+    questions: List<alphainterplanetary.thinker.model.Question>,
+  ): List<String> =
     view.apply(questions).map { it.id }
 
   // ---------- filter membership ----------
@@ -78,7 +81,8 @@ class QuestionViewModeTest {
   @Test
   fun `committing a draft moves the question from drafts to answered`() {
     val draft = question("q1", draftText = "draft", draftUpdatedAt = earliest)
-    val completed = question("q1", answers = listOf(answer("q1", "draft", id = "a1", createdAt = latest)))
+    val completed =
+      question("q1", answers = listOf(answer("q1", "draft", id = "a1", createdAt = latest)))
     assertEquals(listOf("q1"), ids(QuestionViewMode.Draft, listOf(draft)))
     assertTrue(QuestionViewMode.Answered.apply(listOf(draft)).isEmpty())
     assertTrue(QuestionViewMode.Draft.apply(listOf(completed)).isEmpty())
