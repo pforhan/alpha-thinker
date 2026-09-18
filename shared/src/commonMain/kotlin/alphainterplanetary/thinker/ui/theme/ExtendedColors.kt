@@ -16,6 +16,7 @@ data class ExtendedColors(
   val swipeIgnore: Color,
   val swipeDelete: Color,
   val swipeUnignore: Color,
+  val celebrationAccent: Color,
 )
 
 internal val LightExtendedColors = ExtendedColors(
@@ -24,6 +25,7 @@ internal val LightExtendedColors = ExtendedColors(
   swipeIgnore = Color(0xFF757575),
   swipeDelete = Color(0xFFD32F2F),
   swipeUnignore = Color(0xFF2E7D32),
+  celebrationAccent = Color(0xFFF9A825),
 )
 
 internal val DarkExtendedColors = ExtendedColors(
@@ -32,6 +34,7 @@ internal val DarkExtendedColors = ExtendedColors(
   swipeIgnore = Color(0xFF9E9E9E),
   swipeDelete = Color(0xFFEF5350),
   swipeUnignore = Color(0xFF66BB6A),
+  celebrationAccent = Color(0xFFFFD54F),
 )
 
 val LocalExtendedColors = compositionLocalOf { LightExtendedColors }

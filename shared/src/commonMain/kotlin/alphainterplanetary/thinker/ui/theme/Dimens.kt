@@ -59,4 +59,9 @@ object Dimens {
   // Theme picker preview
   val ThemeSwatchGap = 6.dp
   val ThemePreviewPadding = 8.dp
+
+  // Celebration confetti
+  val ConfettiPieceSize = 3.dp
+  val ConfettiBurstWidth = 80.dp
+  val ConfettiBurstHeight = 56.dp
 }

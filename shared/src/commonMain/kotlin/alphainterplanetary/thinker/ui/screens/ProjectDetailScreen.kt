@@ -2,12 +2,17 @@ package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.model.PhaseStats
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.model.phaseStats
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
+import alphainterplanetary.thinker.ui.components.ConfettiBurst
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
+import alphainterplanetary.thinker.ui.components.PhaseAdvanceDialog
+import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.PhasePill
 import alphainterplanetary.thinker.ui.components.PhaseSectionHeader
 import alphainterplanetary.thinker.ui.components.QuestionItem
@@ -16,17 +21,23 @@ import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
 import alphainterplanetary.thinker.ui.components.ScrollableOverflowText
 import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.theme.LocalExtendedColors
+import alphainterplanetary.thinker.ui.theme.PhaseStyles
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
+import alphainterplanetary.thinker.util.formatDuration
 import alphainterplanetary.thinker.util.normalizeWhitespace
+import alphainterplanetary.thinker.util.now
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,9 +90,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.CoroutineScope
+
+private const val SubtleCheckIntensity = 10
+
+private const val SubtleCheckDurationMs = 1000
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +120,7 @@ fun ProjectDetailScreen(
 
   var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
+  var showPhaseAdvanceDialog by remember { mutableStateOf(false) }
   var selectedQuestion by remember { mutableStateOf<Question?>(null) }
 
   val snackbarHostState = remember { SnackbarHostState() }
@@ -177,6 +195,7 @@ fun ProjectDetailScreen(
           onDeleteAnswer = { viewModel.saveAnswer(projectId, it.id, "", completed = false) },
           onGenerateMore = { viewModel.generateMoreQuestions(projectId) },
           onAdvancePhase = { viewModel.advanceToPhase(projectId, it) },
+          onBeginWrapUp = { showPhaseAdvanceDialog = true },
           modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
@@ -209,6 +228,19 @@ fun ProjectDetailScreen(
             selectedView = QuestionViewMode.Unanswered
           }
         }
+      )
+    }
+  }
+
+  if (showPhaseAdvanceDialog) {
+    val project = (uiState as? ProjectDetailUiState.Success)?.project
+    if (project != null) {
+      PhaseAdvanceDialog(
+        phaseStats = remember(project) { project.phaseStats(now()) },
+        completedPhase = project.currentPhase,
+        suggestions = remember(project) { project.nextPhaseSuggestions },
+        onAdvance = { viewModel.advanceToPhase(projectId, it) },
+        onDismiss = { showPhaseAdvanceDialog = false },
       )
     }
   }
@@ -262,10 +294,11 @@ private fun ProjectDetailContent(
   onDeleteAnswer: (Question) -> Unit,
   onGenerateMore: () -> Unit,
   onAdvancePhase: (Phase) -> Unit,
+  onBeginWrapUp: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   var showPhaseOverview by remember { mutableStateOf(false) }
-  val phaseSummaries = remember(project) { project.priorPhaseSummaries() }
+  val phaseSummaries = remember(project) { project.priorPhaseStats() }
 
   Column(modifier = modifier) {
     Box(
@@ -353,6 +386,10 @@ private fun ProjectDetailContent(
           project.unansweredQuestions.size > 3
       }
 
+      val completedStats = remember(project) {
+        project.phaseStats(now()).firstOrNull { it.phase == project.currentPhase }
+      }
+
       Box(modifier = Modifier.fillMaxSize()) {
         if (filteredQuestions.isEmpty()) {
           QuestionEmptyState(
@@ -362,7 +399,8 @@ private fun ProjectDetailContent(
             onGenerateMore = if (view == QuestionViewMode.Unanswered) onGenerateMore else null,
             canGenerateMore = view == QuestionViewMode.Unanswered && canGenerateMore,
             nextPhases = if (view == QuestionViewMode.Unanswered) nextPhases else emptyList(),
-            onAdvancePhase = onAdvancePhase,
+            onBeginWrapUp = if (view == QuestionViewMode.Unanswered) onBeginWrapUp else null,
+            completedStats = completedStats,
             modifier = Modifier.fillMaxSize(),
           )
         } else {
@@ -483,7 +521,8 @@ private fun QuestionEmptyState(
   onGenerateMore: (() -> Unit)?,
   canGenerateMore: Boolean,
   nextPhases: List<Phase>,
-  onAdvancePhase: (Phase) -> Unit,
+  onBeginWrapUp: (() -> Unit)?,
+  completedStats: PhaseStats?,
   modifier: Modifier = Modifier,
 ) {
   Box(
@@ -509,22 +548,11 @@ private fun QuestionEmptyState(
           Text("Get more questions")
         }
       }
-      if (nextPhases.isNotEmpty()) {
+      if (onBeginWrapUp != null && nextPhases.isNotEmpty()) {
         Spacer(modifier = Modifier.height(Dimens.SectionGap))
-        Text(
-          text = "What's next? If you're ready to begin the next phase select it below.",
-          textAlign = TextAlign.Center,
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
         Surface(
-          shape = MaterialTheme.shapes.medium,
-          color = MaterialTheme.colorScheme.surface,
-          border = BorderStroke(
-            Dimens.OutlineStroke,
-            MaterialTheme.colorScheme.primary,
-          ),
+          shape = MaterialTheme.shapes.large,
+          color = MaterialTheme.colorScheme.secondaryContainer,
         ) {
           Column(
             modifier = Modifier.padding(
@@ -532,13 +560,19 @@ private fun QuestionEmptyState(
               vertical = Dimens.ScreenPadding,
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap, Alignment.CenterVertically),
           ) {
-            nextPhases.forEach { phase ->
-              PhasePill(
-                phase = phase,
-                modifier = Modifier.clickable { onAdvancePhase(phase) },
+            if (completedStats != null) {
+              CelebratedPhaseHeader(stats = completedStats)
+              Text(
+                text = "Answered ${completedStats.resolved} of ${completedStats.total} over ${formatDuration(completedStats.spent)}",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
+            }
+            Button(onClick = onBeginWrapUp) {
+              Text("Choose the next phase (${nextPhases.size} options)")
             }
           }
         }
@@ -575,6 +609,50 @@ private fun QuestionEmptyState(
         }
       }
     }
+  }
+}
+
+@Composable
+private fun CelebratedPhaseHeader(stats: PhaseStats) {
+  val style = PhaseStyles.forPhase(stats.phase)
+  val scale = remember { Animatable(0.82f) }
+  var showBurst by remember { mutableStateOf(false) }
+
+  LaunchedEffect(Unit) {
+    scale.animateTo(
+      targetValue = 1f,
+      animationSpec = spring(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMedium / 2f,
+      ),
+    )
+    showBurst = true
+  }
+
+  Column(
+    horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    Box(
+      modifier = Modifier.size(Dimens.ConfettiBurstWidth, Dimens.ConfettiBurstHeight),
+      contentAlignment = Alignment.Center,
+    ) {
+      PhaseBadge(phase = stats.phase)
+      if (showBurst) {
+        ConfettiBurst(
+          colors = listOf(style.container, style.content),
+          intensity = SubtleCheckIntensity,
+          durationMs = SubtleCheckDurationMs,
+          burstPoint = Offset(0.5f, 0.5f),
+          modifier = Modifier.size(Dimens.ConfettiBurstWidth, Dimens.ConfettiBurstHeight),
+        )
+      }
+    }
+    Text(
+      text = "${stats.phase.label} complete",
+      textAlign = TextAlign.Center,
+      style = MaterialTheme.typography.titleMedium,
+      color = MaterialTheme.colorScheme.onSurface,
+    )
   }
 }
 
@@ -654,12 +732,6 @@ private fun ShuffleRow(
   }
 }
 
-private data class PhaseSummary(
-  val phase: Phase,
-  val resolved: Int,
-  val total: Int,
-)
-
 /**
  * The "phase pill + N of M completed" summary line, shared by the project
  * detail header (current phase) and the prior-phase overview popup so both
@@ -694,25 +766,15 @@ private fun PhaseSummaryRow(
 }
 
 /**
- * Summaries for the phases the project has already entered, newest first, for
- * the current phase's overview popup. Only visited phases (those with a round)
- * and only phases before the current one are included — future phases never
+ * Stats for the phases the project has already entered, newest first, for the
+ * current phase's overview popup. Only visited phases (those with a round) and
+ * only phases before the current one are included — future phases never
  * appear. Counts mirror the current-phase summary line (resolved = answered or
  * ignored).
  */
-private fun Project.priorPhaseSummaries(): List<PhaseSummary> {
+private fun Project.priorPhaseStats(): List<PhaseStats> {
   val currentOrder = currentPhase.order
-  return rounds
-    .map { it.phase }
-    .distinct()
-    .filter { it.order < currentOrder }
-    .sortedByDescending { it.order }
-    .map { phase ->
-      val phaseQuestions = questions.filter { phaseForQuestion(it) == phase }
-      PhaseSummary(
-        phase = phase,
-        resolved = phaseQuestions.count { it.isAnswered || it.isIgnored },
-        total = phaseQuestions.size,
-      )
-    }
+  return phaseStats(now())
+    .filter { it.phase.order < currentOrder }
+    .sortedByDescending { it.phase.order }
 }
