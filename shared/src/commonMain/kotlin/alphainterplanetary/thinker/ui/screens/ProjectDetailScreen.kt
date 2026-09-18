@@ -271,6 +271,7 @@ private fun ProjectDetailContent(
     Box(
       modifier = Modifier
         .fillMaxWidth()
+        .padding(vertical = Dimens.SectionGap)
         .clickable(enabled = phaseSummaries.isNotEmpty()) { showPhaseOverview = true },
     ) {
       Row(
@@ -278,7 +279,6 @@ private fun ProjectDetailContent(
         modifier = Modifier.padding(
           start = Dimens.ScreenPadding,
           end = Dimens.ScreenPadding,
-          top = Dimens.SectionGap,
         ),
       ) {
         PhaseSummaryRow(
