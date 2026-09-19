@@ -170,9 +170,9 @@ Model and UI work for the round/phase concept — guided wrap-up "what's next?" 
   - [x] **Verification:** `./gradlew :shared:allTests` green; eyeball via `:desktopApp:run` using the `sample-*` fixtures (incl. `sample-dod` / `sample-done`).
 - [x] Add a couple of description fields to Phase.  One is a short sentence about the phase.  The other is a short sentence about the phase when it's completed. Show these on PhaseAdvanceDialog.
 - [x] PhaseAdvanceDialog: content should be scrollable. Should generally follow the animations down if they go below the fold.
-- [ ] PhaseAdvanceDialog: can we drop the extra padding around the completed phase badges?  Ideally they'd be left aligned like everything else, with a small margin to the phase title.
+- [x] PhaseAdvanceDialog: can we drop the extra padding around the completed phase badges?  Ideally they'd be left aligned like everything else, with a small margin to the phase title.
 - [ ] PhaseAdvanceDialog: see if we can further align completed and next phase sections visually 
-- [ ] PhaseAdvanceDialog: confetti can fire over the whole row but you don't see this much.  Maybe give it a bit more fire to the right? 
+- [x] PhaseAdvanceDialog: confetti can fire over the whole row but you don't see this much.  Maybe give it a bit more fire to the right? 
 - [ ] Update README.md with phases changes
 - [ ] **Text-search next-phase recommendation (`recommendNextPhase`):** add `recommendNextPhase(synopsis, answeredQuestions)` (scoring each phase's keyword profile from the `Phase` enum against the round's answers + synopsis, returning the top candidate adjacent-phase keys — never the current phase, deduped against visited/exhausted phases for the wrap-up chooser). This replaces the placeholder successor/unvisited rule in `Project.nextPhaseSuggestions` (used by the wrap-up chooser). The **pool-exhausted signal** half is **done** — `QuestionGenerator.remainingInPhase` + `ProjectRepository.canGenerateMoreQuestions` drive "Get more questions" disabling. Split out of the pool-partition item above (done) — scoring deferred.
 - [ ] Tool to evaluate scoring metrics around rounds and phases (to see if our keyword scoring is useful/accurate)

@@ -65,13 +65,16 @@ object Dimens {
   val ConfettiBurstWidth = 80.dp
   val ConfettiBurstHeight = 56.dp
 
+  // Confetti cell for a phase-timeline row: badge flush to the row's start,
+  // burst originating just right of the badge so particles fill the gap
+  // toward the row's label instead of padding the badge on both sides.
+  val PhaseTimelineBurstWidth = 44.dp
+  val PhaseTimelineBurstHeight = 56.dp
+
   // Next-phase choice callout
   val NextPhaseChoicesMinHeight = 92.dp
   val PhaseChoiceArrowWidth = 10.dp
   val PhaseChoiceCornerRadius = 12.dp
-
-  // Completed-phase callout
-  val CompletedPhaseCalloutMaxWidth = 280.dp
 
   // Callouts sit beside their target when the dialog text column is at least
   // this wide; below it they expand beneath instead (see PhaseAdvanceDialog).

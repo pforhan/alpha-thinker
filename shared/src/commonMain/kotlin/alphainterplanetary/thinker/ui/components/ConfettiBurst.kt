@@ -51,7 +51,10 @@ private data class ConfettiPiece(
  * A short-lived, self-clearing confetti burst drawn on a [Canvas]. Positions
  * are expressed as fractions of the canvas so the effect scales with its size;
  * colors come from the caller (phase theme containers, celebration accents).
- * The burst replays whenever [retriggerKey] changes and leaves nothing behind.
+ * [horizontalBias] (for [ConfettiOrigin.CenterBurst]) skews the pieces'
+ * horizontal velocity — in canvas-width fractions per second — so positive
+ * values drift the burst toward the right. The burst replays whenever
+ * [retriggerKey] changes and leaves nothing behind.
  */
 @Composable
 fun ConfettiBurst(
@@ -59,13 +62,14 @@ fun ConfettiBurst(
   modifier: Modifier = Modifier,
   origin: ConfettiOrigin = ConfettiOrigin.CenterBurst,
   burstPoint: Offset = Offset(0.5f, 0.5f),
+  horizontalBias: Float = 0f,
   intensity: Int = 36,
   durationMs: Int = 800,
   retriggerKey: Any = Unit,
 ) {
   require(colors.isNotEmpty()) { "ConfettiBurst needs at least one color" }
-  val pieces = remember(origin, burstPoint, intensity, retriggerKey) {
-    spawn(origin, burstPoint, intensity, colors.size)
+  val pieces = remember(origin, burstPoint, horizontalBias, intensity, retriggerKey) {
+    spawn(origin, burstPoint, horizontalBias, intensity, colors.size)
   }
   var progress by remember(retriggerKey) { mutableFloatStateOf(0f) }
 
@@ -115,6 +119,7 @@ fun ConfettiBurst(
 private fun spawn(
   origin: ConfettiOrigin,
   burstPoint: Offset,
+  horizontalBias: Float,
   intensity: Int,
   colorCount: Int,
 ): List<ConfettiPiece> {
@@ -134,7 +139,7 @@ private fun spawn(
       startY = burstPoint.y + (rnd.nextFloat() - 0.5f) * 0.03f
       val angle = rnd.nextFloat() * 2f * PI.toFloat()
       val speed = 0.25f + rnd.nextFloat() * 0.6f
-      vx = cos(angle) * speed
+      vx = cos(angle) * speed + horizontalBias
       vy = sin(angle) * speed * 0.7f - 0.1f
     }
     ConfettiPiece(
