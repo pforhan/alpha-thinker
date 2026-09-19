@@ -64,4 +64,16 @@ object Dimens {
   val ConfettiPieceSize = 3.dp
   val ConfettiBurstWidth = 80.dp
   val ConfettiBurstHeight = 56.dp
+
+  // Next-phase choice callout
+  val NextPhaseChoicesMinHeight = 92.dp
+  val PhaseChoiceArrowWidth = 10.dp
+  val PhaseChoiceCornerRadius = 12.dp
+
+  // Completed-phase callout
+  val CompletedPhaseCalloutMaxWidth = 280.dp
+
+  // Callouts sit beside their target when the dialog text column is at least
+  // this wide; below it they expand beneath instead (see PhaseAdvanceDialog).
+  val SideBySideCalloutMinWidth = 440.dp
 }

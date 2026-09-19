@@ -37,6 +37,9 @@ class ProjectDetailViewModel(
   private val _pendingUndo = MutableStateFlow<PendingUndo?>(null)
   val pendingUndo: StateFlow<PendingUndo?> = _pendingUndo.asStateFlow()
 
+  private val _nextPhaseSuggestions = MutableStateFlow<List<Phase>?>(null)
+  val nextPhaseSuggestions: StateFlow<List<Phase>?> = _nextPhaseSuggestions.asStateFlow()
+
   fun loadProject(id: String) {
     _uiState.value = ProjectDetailUiState.Loading
     scope.launch {
@@ -92,6 +95,20 @@ class ProjectDetailViewModel(
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to advance phase: ${e.message ?: "Unknown error"}"
         )
+      }
+    }
+  }
+
+  /** (Re)computes the next-phase suggestions, `null` in the flow while computing. */
+  fun loadNextPhaseSuggestions(projectId: String) {
+    _nextPhaseSuggestions.value = null
+    scope.launch {
+      try {
+        val project = repository.getProject(projectId)
+        _nextPhaseSuggestions.value = project?.nextPhaseSuggestions ?: emptyList()
+      } catch (e: Exception) {
+        // TODO(phase-3): surface a recommendation failure; degrade to none for now
+        _nextPhaseSuggestions.value = emptyList()
       }
     }
   }

@@ -10,8 +10,8 @@ import kotlin.time.Duration.Companion.seconds
 class DurationFormatTest {
 
   @Test
-  fun `formatDuration shows less than a minute as less-than-one`() {
-    assertEquals("<1m", formatDuration(45.seconds))
+  fun `formatDuration shows less than a minute as one`() {
+    assertEquals("1m", formatDuration(45.seconds))
   }
 
   @Test
@@ -20,18 +20,18 @@ class DurationFormatTest {
   }
 
   @Test
-  fun `formatDuration shows hours and minutes when under a day`() {
-    assertEquals("4h 20m", formatDuration((4 * 60 + 20).minutes))
+  fun `formatDuration shows hours when under a day`() {
+    assertEquals("4h", formatDuration((4 * 60 + 20).minutes))
   }
 
   @Test
-  fun `formatDuration shows hours only when no remainder minutes`() {
-    assertEquals("5h", formatDuration((5 * 60).minutes))
+  fun `formatDuration shows hours only even with remainder minutes`() {
+    assertEquals("5h", formatDuration((5 * 60 + 4).minutes))
   }
 
   @Test
-  fun `formatDuration shows days and hours when days present`() {
-    assertEquals("1d 3h", formatDuration((24 + 3).minutes * 60))
+  fun `formatDuration shows days only even with remainder hours`() {
+    assertEquals("1d", formatDuration((24 + 3).minutes * 60))
   }
 
   @Test
@@ -41,6 +41,6 @@ class DurationFormatTest {
 
   @Test
   fun `formatDuration floors to whole minutes`() {
-    assertEquals("<1m", formatDuration(59.seconds + 999.milliseconds))
+    assertEquals("1m", formatDuration(59.seconds + 999.milliseconds))
   }
 }

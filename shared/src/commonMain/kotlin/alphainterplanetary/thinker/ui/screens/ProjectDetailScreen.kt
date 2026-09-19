@@ -117,6 +117,7 @@ fun ProjectDetailScreen(
 
   val uiState by viewModel.uiState.collectAsState()
   val pendingUndo by viewModel.pendingUndo.collectAsState()
+  val phaseSuggestions by viewModel.nextPhaseSuggestions.collectAsState()
 
   var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
@@ -135,6 +136,14 @@ fun ProjectDetailScreen(
     when (result) {
       SnackbarResult.ActionPerformed -> viewModel.undo(undo)
       SnackbarResult.Dismissed -> Unit
+    }
+  }
+
+  LaunchedEffect(showPhaseAdvanceDialog) {
+    // Kick off the suggestion load as the level-up timeline plays so the
+    // chooser is ready when it finishes (slow to become a real LLM call).
+    if (showPhaseAdvanceDialog) {
+      viewModel.loadNextPhaseSuggestions(projectId)
     }
   }
 
@@ -238,7 +247,8 @@ fun ProjectDetailScreen(
       PhaseAdvanceDialog(
         phaseStats = remember(project) { project.phaseStats(now()) },
         completedPhase = project.currentPhase,
-        suggestions = remember(project) { project.nextPhaseSuggestions },
+        suggestions = phaseSuggestions.orEmpty(),
+        suggestionsLoading = phaseSuggestions == null,
         onAdvance = { viewModel.advanceToPhase(projectId, it) },
         onDismiss = { showPhaseAdvanceDialog = false },
       )
