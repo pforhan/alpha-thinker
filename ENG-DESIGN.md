@@ -143,8 +143,8 @@ The current planning phase is read from the `phase` of the round in progress
 note). The set of phases the app can be in comes from a **code-defined
 `Phase` enum** in `commonMain` (the `phases` package):
 
-- Each constant is `(stableKey, displayLabel, orderingIndex, keywordProfile,
-  questionPool)`; `Round.phase` holds the enum and persists through its stable
+- Each constant is `(stableKey, displayLabel, orderingIndex, questionPool)`;
+  `Round.phase` holds the enum and persists through its stable
   **key** string. A persisted `phases` table is deferred until user-created/
   LLM-proposed labels arrive — a later migration is trivial because the key
   already is the reference.
@@ -152,8 +152,8 @@ note). The set of phases the app can be in comes from a **code-defined
   Design, Execution Plan, Validation Plan, Definition of Done), with "Finish
   the plan" as a terminal option rather than a seventh phase. We deliberately
   avoid a genre taxonomy (game/document/home-improvement etc.): relevance is
-  expressed through each phase's question pool and keyword-scored
-  recommendation, not through extra phase labels. The wrap-up chooser (2-3
+  expressed through each phase's question pool, not through extra phase labels.
+  The wrap-up chooser (2-3
   options + "Finish the plan") stays the only phase surface the user meets,
   which bounds cognitive load. See PROJECT-FLOWS.md for the per-phase pool
   partition.
@@ -168,11 +168,14 @@ note). The set of phases the app can be in comes from a **code-defined
   This is the hardcoded mirror of the Phase 3 explicit generator "done" signal
   and must never be inferred from an empty generation result (`emptyList()` is
   indistinguishable from "nothing surfaced yet").
-- **`recommendNextPhase(synopsis, answeredQuestions)`:** weighted keyword-hit
-  scoring across the synopsis + committed answers; returns the top 2-3
-  **adjacent** keys, never the current phase, deduped against already-visited
-  phases. The LLM (Phase 3) picks from the same library instead of text-
-  scoring.
+- **Next-phase suggestions (hardcoded):** the **sequential rule** — the
+  immediate successor of the current phase always leads (even if previously
+  visited), then the remaining slots fill with the project's *unvisited*
+  phases, so a skipped phase stays reachable. (Weighted keyword scoring was
+  designed and retired before shipping: ~6 keywords per phase scored against a
+  few hundred words of synopsis + answers was mostly ties and phrasing noise,
+  and it would only ever run in Lite mode.) The LLM (Phase 3) picks from the
+  same library by reading the answers instead.
 
 ### Generation Task Framework
 

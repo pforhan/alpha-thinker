@@ -61,28 +61,8 @@ Both Editions share the same general UI, but differ in source of question materi
 - Optional lookup and web search capabilities, invoked by the LLM as needed (e.g., via agentic tools such as Koog) rather than always-on.
 - App-wide setting (Edge Only) to enable/disable lookup and web search, presented on the same settings screen as the LLM on/off toggle.
 
-### 4.4 Seed Questions (Alpha Thinker Lite Only)
-The Lite version includes these 20 generic questions to guide the user:
-1. What is the primary problem this project solves?
-2. Who is the ideal user or beneficiary?
-3. What is the single most important goal?
-4. What are three key milestones for the first month?
-5. What resources (time, money, tools) are currently available?
-6. What resources are still needed?
-7. What is the target completion date?
-8. What are the top three risks to success?
-9. How will you know if the project is successful?
-10. What is the "Minimum Viable Product" (MVP) version?
-11. What are the key technical constraints or requirements?
-12. Who are the primary stakeholders and decision-makers?
-13. What similar projects or competitors have you looked at?
-14. What is the long-term vision for this project?
-15. What are the non-negotiable features or qualities?
-16. How will this project be maintained or supported later?
-17. What is the estimated total budget?
-18. Are there any legal, ethical, or compliance factors?
-19. How will you promote or distribute the final result?
-20. What is the very first step you need to take?
+### 4.4 Seed Questions 
+The app ships with a large body of default questions; see [HardcodedQuestions.kt](shared/src/commonMain/kotlin/alphainterplanetary/thinker/llm/HardcodedQuestionGenerator.kt)
 
 ### 5.1 Projects List
 - Display summary of all projects, including synopsis.

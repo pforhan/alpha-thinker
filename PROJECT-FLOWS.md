@@ -67,9 +67,11 @@ At wrap-up, the generator reads the round's completed answers and proposes the
 **next phase** as a few adjacent options (never the current phase — staying in
 the current phase is done via "Get more questions"):
 
-- **Hardcoded generator:** **text-search** — score each phase's keyword profile
-  against the round's answers + the synopsis; offer the top 2–3 matches
-  (deduped against already-visited phases).
+- **Hardcoded generator:** **sequential order** — the immediate successor of
+  the current phase leads, then the project's unvisited phases fill the rest
+  (see "Choosing the next phase" below). Keyword text-scoring was tried and
+  retired (the signal is too weak on a short Q&A corpus); the deterministic
+  rule matches where these phase library's trajectories tend to go.
 - **LLM (Phase 3):** **pick from the list** — read the accumulated Q&A and
   select the best next phase(s) from the library (optionally naming a new one
   when confident).
@@ -138,8 +140,9 @@ of phases — exactly why the mechanism doesn't need a forced flow.
 
 Two layers:
 
-1. **The generator proposes.** Hardcoded = keyword scoring (below); LLM = pick
-   from the library / free-form label. Default-highlight the top-rated option.
+1. **The generator proposes.** Hardcoded = the library's sequential order;
+   LLM = pick from the library / free-form label. Default-highlight the
+   top-rated option.
 2. **The user decides.** Tap the proposed phase, re-roll the suggestions, or
    "Finish the plan". (With the LLM on, "ask for something else" may justify a
    free-text field later.)
@@ -172,25 +175,25 @@ mostly match, but nothing forbids friendlier copy).
 Decision record for the IMPLEMENTATION-PLAN.md:142-144 "settle the starting
 phase set" item. A code-defined `Phase` enum in `commonMain` (the `phases`
 package) defines the phases (stable string key, display label, ordering index,
-keyword profile, per-phase question pool); `Round.phase` stores the enum,
+per-phase question pool); `Round.phase` stores the enum,
 persisted as its stable **key** string. A persisted `phases` table is
 **deferred** until user-created/LLM-proposed labels arrive — a later migration
 is trivial because the key already is the reference.
 
 **Settled: six domain-neutral phases, no genre taxonomy.** Domain flavor lives
-in per-phase question-pool content and keyword-scored recommendation — never in
-extra phase labels. The wrap-up chooser (2-3 options + "Finish the plan") is the
-only phase surface a user ever meets; keeping the library small and stable is
-what keeps cognitive load low while the pools keep questions relevant.
+in per-phase question-pool content — never in extra phase labels. The wrap-up
+chooser (2-3 options + "Finish the plan") is the only phase surface a user ever
+meets; keeping the library small and stable is what keeps cognitive load low
+while the pools keep questions relevant.
 
-| Key | Label | Keyword profile | v1 pool |
-|---|---|---|---|
-| `scope-goals` | Scope & Goals | problem, user, goal, vision, why | 12 (from 21, deduped) |
-| `research` | Research | benchmark, competitor, reference, inspiration, similar | ~10 (4 + ~6 new) |
-| `design` | Design | feature, design, prototype, workflow, value proposition | ~12 (8 + ~4 new) |
-| `execution-plan` | Execution Plan | build, implement, backlog, milestone, technical, resource, timeline | ~14 (from 20, deduped) |
-| `validation-plan` | Validation Plan | trial, feedback, test, measure, risk | ~10 (7 + ~3 new) |
-| `definition-of-done` | Definition of Done | finish, launch, ship, publish, review, deliverable, done | ~10 (6 + ~4 new) |
+| Key | Label | v1 pool |
+|---|---|---|
+| `scope-goals` | Scope & Goals | 12 (from 21, deduped) |
+| `research` | Research | ~10 (4 + ~6 new) |
+| `design` | Design | ~12 (8 + ~4 new) |
+| `execution-plan` | Execution Plan | ~14 (from 20, deduped) |
+| `validation-plan` | Validation Plan | ~10 (7 + ~3 new) |
+| `definition-of-done` | Definition of Done | ~10 (6 + ~4 new) |
 
 "Finish the plan" is the terminal option, not a seventh phase.
 
@@ -207,10 +210,15 @@ what keeps cognitive load low while the pools keep questions relevant.
   explicit done signal — exhaustion is never inferred from an empty generation
   result (an `emptyList()` today is indistinguishable from "nothing surfaced
   yet").
-- `recommendNextPhase(synopsis, answeredQuestions)` scores weighted keyword
-  hits across the synopsis + committed answers and returns the **top 2-3
-  adjacent keys (never the current phase)**, deduped against visited phases.
-  Default-highlight the top-rated option.
+- Next-phase suggestions follow the **sequential rule**: the immediate
+  successor of the current phase in the library ordering always leads (even if
+  previously visited), then the remaining slots fill with the project's
+  *unvisited* phases — so a skipped phase stays reachable. This replaces an
+  earlier plan of weighted keyword scoring across the synopsis + committed
+  answers (`recommendNextPhase`): with ~6 keywords per phase and only a few
+  hundred words of input, the hits were mostly ties and phrasing noise, and
+  Phase 3's LLM (which reads the answers) supersedes it. Default-highlight the
+  first suggestion.
 
 ### Pool partition (existing `questionPool` → phase)
 

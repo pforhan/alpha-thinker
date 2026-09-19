@@ -3,7 +3,6 @@ package alphainterplanetary.thinker.phases
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class PhaseTest {
 
@@ -48,16 +47,6 @@ class PhaseTest {
       ),
       BuiltInPhase.entries.sortedBy { it.order }.map { it.label },
     )
-  }
-
-  @Test
-  fun `every phase has keywords for next-phase scoring`() {
-    BuiltInPhase.entries.forEach { phase ->
-      assertTrue(
-        phase.keywords.isNotEmpty(),
-        "${phase.key} has an empty keyword profile",
-      )
-    }
   }
 
   @Test
