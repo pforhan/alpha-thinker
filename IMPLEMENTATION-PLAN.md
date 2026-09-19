@@ -168,7 +168,9 @@ Model and UI work for the round/phase concept — guided wrap-up "what's next?" 
   - [x] **`PhaseAdvanceDialog`:** level-up timeline (visited phases in library order; each row pops in with a small per-phase confetti burst, the just-completed one larger), then staggered pop-in of suggested `PhasePill`s; "Skip ahead → choose now" after the level-up finishes; picking a pill closes and fires `onAdvancePhase`.
   - [x] **Theme tokens:** `celebrationAccent` (light/dark) in `ExtendedColors`; `Dimens` additions as the dialog needs.
   - [x] **Verification:** `./gradlew :shared:allTests` green; eyeball via `:desktopApp:run` using the `sample-*` fixtures (incl. `sample-dod` / `sample-done`).
-- [ ] Add a description to Phase that is a sentence's worth of detail about the phase that we can use for picking new phases. Use in PhaseAdvanceDialog.
+- [ ] Add a couple of description fields to Phase.  One is a short sentence about the phase.  The other is a short sentence about the phase when it's completed.  No UI impact yet.
+- [ ] PhaseAdvanceDialog: make two columns to help draw the upper and lower parts together.  For previous phases: Column 1 has badge and statistics, column 2 has completed description. For next phase section, column 1 contains a clickable phase pill, and column 2 has the before-completion description. 
+- [ ] PhaseAdvanceDialog: completed phases list should be scrollable so that the next phase section is always visible.  Should generally follow the animations down if they go below the fold.
 - [ ] PhaseAdvanceDialog: odd mix of centering and left justification. 
 - [ ] PhaseAdvanceDialog: confetti can fire over the whole row but you don't see this much.  Maybe give it a bit more fire to the right? 
 - [ ] Update README.md with phases changes
