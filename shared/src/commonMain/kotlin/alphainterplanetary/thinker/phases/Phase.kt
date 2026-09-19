@@ -12,7 +12,7 @@ sealed interface Phase {
   /** Durable string identifier persisted as `Round.phase`; stable across label or ordering changes. */
   val key: String
 
-  /** Human-readable display name shown to the user (e.g. in UI). */
+  /** Human-readable short name shown to the user (e.g. in UI). */
   val label: String
 
   /** 1-based display index into the phase ordering ("Phase 3 of N"); built-ins derive it from enum order. */

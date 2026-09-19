@@ -14,6 +14,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -187,21 +189,21 @@ fun PhaseAdvanceDialog(
   AlertDialog(
     onDismissRequest = onDismiss,
     title = {
-      Column {
-        Text(
-          text = "${completedPhase.label} complete!",
-          style = MaterialTheme.typography.titleMedium,
-        )
-        Spacer(modifier = Modifier.height(Dimens.TightGap))
+      Text(
+        text = "${completedPhase.label} complete!",
+        style = MaterialTheme.typography.titleMedium,
+      )
+    },
+    text = {
+      Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+      ) {
         Text(
           text = "Here's your planning stats so far",
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-      }
-    },
-    text = {
-      Column {
+        Spacer(modifier = Modifier.height(Dimens.SectionGap))
         phaseStats.forEachIndexed { index, stats ->
           PhaseTimelineRow(
             stats = stats,

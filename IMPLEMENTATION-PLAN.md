@@ -169,7 +169,7 @@ Model and UI work for the round/phase concept — guided wrap-up "what's next?" 
   - [x] **Theme tokens:** `celebrationAccent` (light/dark) in `ExtendedColors`; `Dimens` additions as the dialog needs.
   - [x] **Verification:** `./gradlew :shared:allTests` green; eyeball via `:desktopApp:run` using the `sample-*` fixtures (incl. `sample-dod` / `sample-done`).
 - [x] Add a couple of description fields to Phase.  One is a short sentence about the phase.  The other is a short sentence about the phase when it's completed. Show these on PhaseAdvanceDialog.
-- [ ] PhaseAdvanceDialog: content should be scrollable. Should generally follow the animations down if they go below the fold.
+- [x] PhaseAdvanceDialog: content should be scrollable. Should generally follow the animations down if they go below the fold.
 - [ ] PhaseAdvanceDialog: can we drop the extra padding around the completed phase badges?  Ideally they'd be left aligned like everything else, with a small margin to the phase title.
 - [ ] PhaseAdvanceDialog: see if we can further align completed and next phase sections visually 
 - [ ] PhaseAdvanceDialog: confetti can fire over the whole row but you don't see this much.  Maybe give it a bit more fire to the right? 
@@ -205,6 +205,7 @@ Model and UI work for the round/phase concept — guided wrap-up "what's next?" 
 - [ ] **Export reflects the planning trail (phase structure):** the Markdown export groups answered Q&A under the phase it came from (e.g. `## Scope & Goals`, `## Execution Plan`), plus an opening "phase trail" summary (phases traversed, question counts, completion %). Rounds stay internal metadata — they don't appear in the export. This makes the export a faithful plan document rather than a flat Q&A dump. Extends the two Markdown/export pipeline items above.
 - [ ] Implement System/Debug Workspace (LLM Log, Console, and Task Manager); the LLM log should surface any tool calls made during an interaction (tool name, arguments, results, per-call latency)
 - [ ] **Export Pipeline:** Implement the Markdown synthesis and file system export.
+- [ ] ProjectDetailScreen: dedicated landscape layout with project info on left and scrolling question area on right
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Track draft edits in revision history
 - [ ] SampleProjectGenerator should generate a history of answer revisions
