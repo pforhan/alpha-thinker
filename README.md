@@ -17,12 +17,12 @@ The app is a Kotlin Multiplatform / Compose Multiplatform project. Shared UI and
 
 ### Android
 
-Android is the currently active platform. The shared module (`shared/build.gradle.kts`) compiles for the Android target via the Android-KMP library plugin; the `androidApp/` module (Activity, Application, manifest) compiles with AGP's built-in Kotlin and depends on `:shared`.
+The shared module (`shared/build.gradle.kts`) compiles for the Android target via the Android-KMP library plugin; the `androidApp/` module (Activity, Application, manifest) compiles with AGP's built-in Kotlin and depends on `:shared`.
 
 ```bash
 ./gradlew :androidApp:assembleDebug   # build the debug APK
 ./gradlew :androidApp:installDebug    # install the debug APK on a connected device or running emulator
-./gradlew :shared:allTests  # run tests for all targets (Android host, JS, and wasmJS)
+./gradlew :shared:allTests  # run tests for all targets (Android host, desktop, JS, wasmJS, and iOS)
 ./gradlew :androidApp:lint            # run the Android linter
 ```
 
@@ -38,12 +38,27 @@ The web target is enabled: `shared/` exposes the `wasmJs` (and legacy `js(IR)`) 
 
 The production bundle lands in `webApp/build/dist/wasmJs/productionExecutable/` — serve that directory with any static server. Browser tests run via `./gradlew :shared:wasmJsBrowserTest`; like the JS browser test, they require a Chromium binary, wired from the `CHROME_EXECUTABLE`/`CHROME_BIN` environment variable (the test disables itself when absent).
 
-### iOS and Desktop
+### Desktop
 
-Not yet enabled. When iOS is enabled, the shared module gains the Kotlin/Native target and a dedicated app entry-point module (analogous to `androidApp`) is added for the platform:
+The desktop target is enabled: `shared/` exposes a `desktop` (JVM) target, and the `desktopApp/` module is the desktop entry point.
 
-- **iOS**: Build and run through Xcode; Gradle provides the Kotlin/Native tasks, e.g. `./gradlew :shared:iosSimulatorArm64Test` for tests.
-- **Desktop** (JVM): build and run through the corresponding app entry-point module's JVM target.
+```bash
+./gradlew :desktopApp:run            # run the desktop app
+./gradlew :desktopApp:build          # build the desktop app
+# create a distributable app/installer:
+./gradlew :desktopApp:createDistributable
+```
+
+### iOS
+
+The iOS target is enabled: `shared/` compiles for `iosArm64` (device) and `iosSimulatorArm64` (simulator), packaged as a static `Shared` XCFramework. The `iosApp/` directory holds the Xcode project entry point.
+
+Build and run through Xcode (`iosApp/iosApp.xcodeproj`); Gradle provides the Kotlin/Native tasks, e.g.:
+
+```bash
+./gradlew :shared:iosSimulatorArm64Test   # run iOS simulator tests
+./gradlew :shared:embedAndSignAppleFrameworkForXcode   # invoked by the Xcode build to embed the framework
+```
 
 ### All Targets
 
