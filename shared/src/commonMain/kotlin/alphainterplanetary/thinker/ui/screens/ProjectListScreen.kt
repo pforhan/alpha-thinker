@@ -68,13 +68,22 @@ fun ProjectListScreen(
   onProjectClick: (Project) -> Unit,
   onProjectCreated: (Project) -> Unit,
   onSettingsClick: () -> Unit,
+  onTaskManagerClick: () -> Unit,
 ) {
   var showCreateDialog by remember { mutableStateOf(false) }
   var projectToDelete by remember { mutableStateOf<Project?>(null) }
   var deletingId by remember { mutableStateOf<String?>(null) }
 
   val viewModel = remember {
-    ProjectListViewModel(appComponent.projectRepository, appComponent.appScope)
+    ProjectListViewModel(
+      appComponent.projectRepository,
+      appComponent.taskRunner,
+      appComponent.appScope,
+    )
+  }
+
+  DisposableEffect(Unit) {
+    onDispose { viewModel.close() }
   }
 
   LaunchedEffect(Unit) {
@@ -83,6 +92,8 @@ fun ProjectListScreen(
 
   val uiState by viewModel.uiState.collectAsState()
   val createdProject by viewModel.createdProject.collectAsState()
+  val activeTasks by viewModel.activeTasks.collectAsState()
+  val activeTasksByProject = remember(activeTasks) { activeTasks.groupBy { it.projectId } }
 
   LaunchedEffect(createdProject) {
     val project = createdProject
@@ -104,8 +115,18 @@ fun ProjectListScreen(
       )
     },
     floatingActionButton = {
-      FloatingActionButton(onClick = { showCreateDialog = true }) {
-        Icon(Icons.Default.Add, contentDescription = "Add Project")
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        if (activeTasks.isNotEmpty()) {
+          FloatingActionButton(onClick = onTaskManagerClick) {
+            Icon(Icons.Filled.Sync, contentDescription = "Task Manager")
+          }
+        }
+        FloatingActionButton(onClick = { showCreateDialog = true }) {
+          Icon(Icons.Default.Add, contentDescription = "Add Project")
+        }
       }
     }
   ) { paddingValues ->
@@ -118,6 +139,7 @@ fun ProjectListScreen(
         is ProjectListUiState.Success -> {
           ProjectListSuccess(
             projects = ui.projects,
+            activeTasksByProject = activeTasksByProject,
             pendingDeletionId = projectToDelete?.id,
             deletingId = deletingId,
             onProjectClick = onProjectClick,
@@ -195,6 +217,7 @@ private fun ProjectListEmpty(onCreateClick: () -> Unit) {
 @Composable
 private fun ProjectListItem(
   project: Project,
+  activeTaskKinds: List<alphainterplanetary.thinker.tasks.TaskKind>,
   pendingDeletionId: String?,
   deletingId: String?,
   onClick: () -> Unit,
@@ -286,6 +309,10 @@ private fun ProjectListItem(
             )
           }
           Spacer(modifier = Modifier.height(Dimens.ContentGap))
+          if (activeTaskKinds.isNotEmpty()) {
+            ActiveTaskChip(kinds = activeTaskKinds)
+            Spacer(modifier = Modifier.height(Dimens.ContentGap))
+          }
           Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
               text = project.synopsis.normalizeWhitespace(),
@@ -310,6 +337,7 @@ private fun ProjectListItem(
 @Composable
 private fun ProjectListSuccess(
   projects: List<Project>,
+  activeTasksByProject: Map<String, List<alphainterplanetary.thinker.tasks.GenerationTask>>,
   pendingDeletionId: String?,
   deletingId: String?,
   onProjectClick: (Project) -> Unit,
@@ -327,6 +355,7 @@ private fun ProjectListSuccess(
       items(projects, key = { it.id }) { project ->
         ProjectListItem(
           project = project,
+          activeTaskKinds = activeTasksByProject[project.id].orEmpty().map { it.kind },
           pendingDeletionId = pendingDeletionId,
           deletingId = deletingId,
           onClick = { onProjectClick(project) },
@@ -335,6 +364,31 @@ private fun ProjectListSuccess(
         )
       }
     }
+  }
+}
+
+@Composable
+private fun ActiveTaskChip(kinds: List<TaskKind>) {
+  val firstKind = kinds.first()
+  val label = if (kinds.size == 1) {
+    "${firstKind.progressLabel}…"
+  } else {
+    "${firstKind.progressLabel} +${kinds.size - 1}…"
+  }
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    CircularProgressIndicator(
+      modifier = Modifier
+        .width(Dimens.ProgressIndicatorSize)
+        .height(Dimens.ProgressIndicatorSize),
+      strokeWidth = Dimens.ProgressStroke,
+      color = MaterialTheme.colorScheme.primary,
+    )
+    Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
+    Text(
+      text = label,
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.primary,
+    )
   }
 }
 

@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.llm.HardcodedQuestionGenerator
 import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.SettingsRepository
+import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +26,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   abstract val questionGenerator: QuestionGenerator
 
+  abstract val taskRunner: TaskRunner
+
   abstract val appScope: CoroutineScope
 
   @AppScope
@@ -35,6 +38,10 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   @Provides
   fun providesAppCoroutineScope(): CoroutineScope =
     CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+  @AppScope
+  @Provides
+  fun providesTaskRunner(scope: CoroutineScope): TaskRunner = TaskRunner(scope)
 
   @Provides
   fun providesQuestionGenerator(): QuestionGenerator = HardcodedQuestionGenerator()

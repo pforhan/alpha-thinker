@@ -1,15 +1,20 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
+import alphainterplanetary.thinker.llm.QuestionGenerator
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakeGenerator
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.testutil.round
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,10 +29,13 @@ class ProjectRepositoryTest {
 
   private val now: Instant = Clock.System.now()
 
-  private suspend fun repo(
+  private fun TestScope.repo(
     storage: FakeStorage = FakeStorage(),
-    generator: FakeGenerator = FakeGenerator(),
-  ): ProjectRepository = ProjectRepository(storage, generator)
+    generator: QuestionGenerator = FakeGenerator(),
+  ): ProjectRepository {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    return ProjectRepository(storage, generator, runner)
+  }
 
   // ---------- createProject ----------
 
@@ -38,6 +46,7 @@ class ProjectRepositoryTest {
     val longTitle = "x".repeat(50)
 
     val project = repository.createProject("My synopsis", title = longTitle)
+    testScheduler.advanceUntilIdle()
 
     assertEquals(longTitle.take(30), project.editableTitle)
     assertEquals("My synopsis", project.synopsis)
@@ -50,6 +59,7 @@ class ProjectRepositoryTest {
     val repository = repo(generator = generator)
 
     val project = repository.createProject("My synopsis")
+    testScheduler.advanceUntilIdle()
 
     assertEquals("From Generator", project.editableTitle)
   }
@@ -59,6 +69,7 @@ class ProjectRepositoryTest {
     val repository = repo(generator = FakeGenerator().apply { recommendedTitle = "Fallback" })
 
     val project = repository.createProject("  leading and trailing  ", title = "  My Title  ")
+    testScheduler.advanceUntilIdle()
 
     assertEquals("leading and trailing", project.synopsis)
     assertEquals("My Title", project.editableTitle)
@@ -74,6 +85,7 @@ class ProjectRepositoryTest {
     val repository = repo(generator = generator)
 
     repository.createProject("My synopsis")
+    testScheduler.advanceUntilIdle()
 
     assertEquals(1, generator.initialCalls.size)
     val call = generator.initialCalls.single()
@@ -82,7 +94,7 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `createProject saves generated questions onto the project`() = runTest {
+  fun `createProject saves generated questions onto the project via the task`() = runTest {
     val generator = FakeGenerator().apply {
       initialQuestions += question("q1")
       initialQuestions += question("q2")
@@ -91,12 +103,16 @@ class ProjectRepositoryTest {
     val repository = repo(storage = storage, generator = generator)
 
     val project = repository.createProject("My synopsis")
-
-    assertEquals(setOf("q1", "q2"), project.questions.map { it.id }.toSet())
-    assertEquals(
-      setOf("q1", "q2"),
-      storage.getProject(project.id)?.questions?.map { it.id }?.toSet()
+    assertTrue(
+      project.questions.isEmpty(),
+      "creation persists the shell and returns; generation runs on the task runner",
     )
+
+    testScheduler.advanceUntilIdle()
+
+    val persisted = storage.getProject(project.id)
+    assertNotNull(persisted)
+    assertEquals(setOf("q1", "q2"), persisted.questions.map { it.id }.toSet())
   }
 
   @Test
@@ -109,6 +125,7 @@ class ProjectRepositoryTest {
     val repository = repo(storage = storage, generator = generator)
 
     val project = repository.createProject("My synopsis")
+    testScheduler.advanceUntilIdle()
 
     val round = project.rounds.single()
     assertEquals(1, round.roundNumber)
@@ -118,6 +135,45 @@ class ProjectRepositoryTest {
     assertEquals(round.id, storage.getProject(project.id)?.rounds?.single()?.id)
     assertEquals(round.id, generator.initialCalls.single().roundId)
     assertEquals(Phase.first, generator.initialCalls.single().phase)
+  }
+
+  @Test
+  fun `createProject keeps the shell when initial generation fails`() = runTest {
+    val failing = object : QuestionGenerator {
+      override suspend fun recommendTitle(synopsis: String): String = "Title"
+
+      override suspend fun generateInitialQuestions(
+        editableTitle: String,
+        synopsis: String,
+        roundId: String,
+        phase: Phase,
+      ): List<Question> {
+        throw QuestionGenerator.AnalysisFailure("no model")
+      }
+
+      override suspend fun generateFollowUpQuestions(
+        synopsis: String,
+        previousQuestions: List<Question>,
+        roundId: String,
+        phase: Phase,
+      ): List<Question> = emptyList()
+
+      override suspend fun remainingInPhase(
+        synopsis: String,
+        previousQuestions: List<Question>,
+        phase: Phase,
+      ): Int = 0
+    }
+    val storage = FakeStorage()
+    val repository = repo(storage = storage, generator = failing)
+
+    val project = repository.createProject("My synopsis")
+    testScheduler.advanceUntilIdle()
+
+    val persisted = storage.getProject(project.id)
+    assertNotNull(persisted)
+    assertTrue(persisted.questions.isEmpty(), "the shell persists even when generation fails")
+    assertEquals(listOf(project.id), storage.getAllProjects().map { it.id })
   }
 
   // ---------- updateProject ----------

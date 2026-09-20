@@ -4,11 +4,18 @@ import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.tasks.GenerationTask
+import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 data class PendingUndo(
@@ -26,10 +33,16 @@ sealed interface ProjectDetailUiState {
   data class Error(val message: String) : ProjectDetailUiState
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProjectDetailViewModel(
   private val repository: ProjectRepository,
-  private val scope: CoroutineScope,
+  private val taskRunner: TaskRunner,
+  scope: CoroutineScope,
 ) {
+  /** Cancelled by [close] so UI teardown stops the per-VM work (e.g. the task collector). */
+  private val vmJob = SupervisorJob(scope.coroutineContext[Job])
+  private val vmScope = CoroutineScope(scope.coroutineContext + vmJob)
+
   private val _uiState = MutableStateFlow<ProjectDetailUiState>(ProjectDetailUiState.Loading)
   val uiState: StateFlow<ProjectDetailUiState> = _uiState.asStateFlow()
 
@@ -40,9 +53,41 @@ class ProjectDetailViewModel(
   private val _nextPhaseSuggestions = MutableStateFlow<List<Phase>?>(null)
   val nextPhaseSuggestions: StateFlow<List<Phase>?> = _nextPhaseSuggestions.asStateFlow()
 
+  private val _projectId = MutableStateFlow<String?>(null)
+
+  private val _tasks = MutableStateFlow<List<GenerationTask>>(emptyList())
+  val tasks: StateFlow<List<GenerationTask>> = _tasks.asStateFlow()
+
+  /** Terminal task ids already reloaded for, so each completion reloads exactly once. */
+  private val handledTerminalTaskIds = mutableSetOf<String>()
+
+  init {
+    vmScope.launch {
+      _projectId
+        .flatMapLatest { id ->
+          if (id == null) flowOf(emptyList()) else taskRunner.tasksFor(id)
+        }
+        .collect { active ->
+          _tasks.value = active
+          for (task in active) {
+            if (task.isFinished && handledTerminalTaskIds.add(task.id)) {
+              refresh()
+            }
+          }
+        }
+    }
+  }
+
   fun loadProject(id: String) {
+    _projectId.value = id
     _uiState.value = ProjectDetailUiState.Loading
-    scope.launch {
+    refresh()
+  }
+
+  /** Reloads the loaded project without toggling Loading, so generation results swap in. */
+  private fun refresh() {
+    val id = _projectId.value ?: return
+    vmScope.launch {
       try {
         val loaded = repository.getProject(id)
         if (loaded == null) {
@@ -74,7 +119,7 @@ class ProjectDetailViewModel(
   }
 
   fun generateMoreQuestions(projectId: String) {
-    scope.launch {
+    vmScope.launch {
       try {
         repository.generateMoreQuestions(projectId)
         loadProject(projectId)
@@ -87,7 +132,7 @@ class ProjectDetailViewModel(
   }
 
   fun advanceToPhase(projectId: String, phase: Phase) {
-    scope.launch {
+    vmScope.launch {
       try {
         repository.advanceToPhase(projectId, phase)
         loadProject(projectId)
@@ -102,7 +147,7 @@ class ProjectDetailViewModel(
   /** (Re)computes the next-phase suggestions, `null` in the flow while computing. */
   fun loadNextPhaseSuggestions(projectId: String) {
     _nextPhaseSuggestions.value = null
-    scope.launch {
+    vmScope.launch {
       try {
         val project = repository.getProject(projectId)
         _nextPhaseSuggestions.value = project?.nextPhaseSuggestions ?: emptyList()
@@ -115,7 +160,7 @@ class ProjectDetailViewModel(
 
   private fun persistOrder(reordered: Project) {
     _uiState.value = successPreservingAvailability(reordered)
-    scope.launch {
+    vmScope.launch {
       repository.saveQuestionOrder(reordered.id, reordered.questionOrderIds)
     }
   }
@@ -146,7 +191,7 @@ class ProjectDetailViewModel(
       beginUndoable(current, "Answer deleted")
       _uiState.value = successPreservingAvailability(optimistic)
 
-      scope.launch {
+      vmScope.launch {
         try {
           repository.saveAnswer(projectId, questionId, text, completed)
         } catch (e: Exception) {
@@ -160,7 +205,7 @@ class ProjectDetailViewModel(
       return
     }
 
-    scope.launch {
+    vmScope.launch {
       try {
         repository.saveAnswer(projectId, questionId, text, completed)
         loadProject(projectId)
@@ -183,7 +228,7 @@ class ProjectDetailViewModel(
     beginUndoable(snapshot, "Question ignored")
     _uiState.value = successPreservingAvailability(optimistic)
 
-    scope.launch {
+    vmScope.launch {
       try {
         repository.ignoreQuestion(projectId, questionId)
       } catch (e: Exception) {
@@ -207,7 +252,7 @@ class ProjectDetailViewModel(
     beginUndoable(snapshot, "Question restored")
     _uiState.value = successPreservingAvailability(optimistic)
 
-    scope.launch {
+    vmScope.launch {
       try {
         repository.unignoreQuestion(projectId, questionId)
       } catch (e: Exception) {
@@ -223,7 +268,7 @@ class ProjectDetailViewModel(
   fun undo(pending: PendingUndo) {
     if (_pendingUndo.value?.token != pending.token) return
     _pendingUndo.value = null
-    scope.launch {
+    vmScope.launch {
       try {
         repository.restoreProject(pending.snapshot)
         loadProject(pending.snapshot.id)
@@ -236,7 +281,7 @@ class ProjectDetailViewModel(
   }
 
   fun updateProject(id: String, title: String, synopsis: String, mode: ProjectUpdateMode) {
-    scope.launch {
+    vmScope.launch {
       try {
         val project = repository.updateProject(id, title, synopsis, mode)
         if (project != null) {
@@ -257,5 +302,10 @@ class ProjectDetailViewModel(
 
   private fun clearUndoable() {
     _pendingUndo.value = null
+  }
+
+  /** Cancels pending VM work; the caller owns the view model's lifecycle. */
+  fun close() {
+    vmJob.cancel()
   }
 }

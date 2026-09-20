@@ -187,7 +187,7 @@ observable background task.
 
 **GenerationTask model:**
 
-- `taskId` (Unique ID)
+- `id` (Unique ID)
 - `projectId` (Foreign Key: Links to the parent Project.)
 - `kind` (Enum/type: `InitialQuestions`, `FollowUpQuestions`,
   `SynopsisRewrite`, `AutoArchive`, ...)
@@ -196,17 +196,23 @@ observable background task.
   rounds; denser values when an LLM streams a rewrite/synthesis)
 - `error` (String?, set when `Failed`)
 - `createdAt` / `startedAt` / `finishedAt` (Timestamps)
+- Helpers `isActive` / `isFinished` and `asStarted` / `asSucceeded` /
+  `asFailed` keep state transitions in one place.
 
 **TaskRunner:**
 
 - One app-scoped instance owning a `CoroutineScope` (injected, app-lifetime).
-- `enqueue(projectId, kind, onProgress?, body: suspend () -> T): GenerationTask`
-  wraps a suspend body, transitions the task through
+- `enqueue(projectId, kind, body: suspend () -> Unit): GenerationTask` wraps a
+  suspend body, transitions the task through
   `Queued -> Running -> Succeeded | Failed`, and exposes live tasks via an
   observable flow (`StateFlow<List<GenerationTask>>`, filterable by
-  `projectId`).
-- Body suspensions must be cooperative/cancellable; cancellation policy is
-  decided when background notification lands (IMPLEMENTATION-PLAN.md Phase 3).
+  `projectId` via `tasksFor`). Progress is reported separately with
+  `setProgress(taskId, progress)` and folded into the terminal publish, so a
+  body reporting progress mid-run keeps it after completion.
+- Cancellation is intentionally coarse for now: `CancellationException` marks
+  the task `Failed` with "Task cancelled" (policy refines when background
+  notification lands, IMPLEMENTATION-PLAN.md Phase 3). Writes are always
+  persisted *before* a task runs, so a cancelled task never loses user data.
 
 **Repository contract (LLM-ready):**
 

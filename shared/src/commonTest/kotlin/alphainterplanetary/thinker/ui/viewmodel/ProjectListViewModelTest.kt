@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakeGenerator
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.defaultTestInstant
@@ -19,7 +20,8 @@ class ProjectListViewModelTest {
   private fun TestScope.viewModel(
     storage: Storage = FakeStorage(),
   ): ProjectListViewModel {
-    val repository = ProjectRepository(storage, FakeGenerator())
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val repository = ProjectRepository(storage, FakeGenerator(), runner)
     return ProjectListViewModel(repository, scope = CoroutineScope(coroutineContext))
   }
 

@@ -9,6 +9,8 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.tasks.TaskKind
+import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import me.tatarka.inject.annotations.Inject
@@ -18,8 +20,15 @@ import kotlin.time.Instant
 class ProjectRepository @Inject constructor(
   private val storage: Storage,
   private val generator: QuestionGenerator,
+  private val taskRunner: TaskRunner,
 ) {
 
+  /**
+   * Persists the project shell immediately and returns it; the initial batch is
+   * generated on the [taskRunner] (an [TaskKind.InitialQuestions] task) so the
+   * caller and the UI are never blocked on inference — the detail screen
+   * reloads when that task completes (see ProjectDetailViewModel).
+   */
   suspend fun createProject(synopsis: String, title: String? = null): Project {
     val now = now()
     val projectId = randomUUID()
@@ -52,21 +61,24 @@ class ProjectRepository @Inject constructor(
     )
     // Save the initial version of the project, in case generation fails.
     storage.saveProject(project)
+    enqueueInitialGeneration(project.id)
+    return project
+  }
 
-    val questions = generator.generateInitialQuestions(
-      editableTitle = project.editableTitle,
-      synopsis = project.synopsis,
-      roundId = roundId,
-      phase = round.phase,
-    ).shuffled()
-
-    val updated = project.copy(
-      questions = questions,
-      updatedAt = now()
-    )
-    // Save again but with the generated questions.
-    storage.saveProject(updated)
-    return updated
+  /** Generates and persists the opening question batch for the project's current round. */
+  private fun enqueueInitialGeneration(projectId: String) {
+    taskRunner.enqueue(projectId = projectId, kind = TaskKind.InitialQuestions) {
+      val reloaded = storage.getProject(projectId) ?: return@enqueue
+      val round = reloaded.currentRound ?: return@enqueue
+      val questions = generator.generateInitialQuestions(
+        editableTitle = reloaded.editableTitle,
+        synopsis = reloaded.synopsis,
+        roundId = round.id,
+        phase = round.phase,
+      ).shuffled()
+      val updated = reloaded.copy(questions = questions, updatedAt = now())
+      storage.saveProject(updated)
+    }
   }
 
   suspend fun deleteProject(id: String) {

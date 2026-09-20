@@ -80,6 +80,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -108,11 +109,19 @@ fun ProjectDetailScreen(
   onBack: () -> Unit,
 ) {
   val viewModel = remember {
-    ProjectDetailViewModel(appComponent.projectRepository, appComponent.appScope)
+    ProjectDetailViewModel(
+      appComponent.projectRepository,
+      appComponent.taskRunner,
+      appComponent.appScope,
+    )
   }
 
   LaunchedEffect(projectId) {
     viewModel.loadProject(projectId)
+  }
+
+  DisposableEffect(Unit) {
+    onDispose { viewModel.close() }
   }
 
   val uiState by viewModel.uiState.collectAsState()

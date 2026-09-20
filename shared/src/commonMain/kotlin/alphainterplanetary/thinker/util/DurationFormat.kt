@@ -22,3 +22,27 @@ fun formatDuration(duration: Duration): String {
     else -> "${minutes}m"
   }
 }
+
+/**
+ * Formats a task duration with sub-minute precision for the Task Manager
+ * ("42s", "3m 05s", "1h 20m") so short generation work reads as live.
+ */
+fun formatTaskDuration(duration: Duration): String {
+  val seconds = duration.inWholeSeconds.coerceAtLeast(0)
+  if (seconds < 60) return "${seconds}s"
+  val minutes = seconds / 60
+  if (minutes < 60) {
+    val remainderSeconds = seconds % 60
+    return if (remainderSeconds > 0) {
+      "${minutes}m ${remainderSeconds}s"
+    } else {
+      "${minutes}m"
+    }
+  }
+  val remainingMinutes = minutes % 60
+  return if (remainingMinutes > 0) {
+    "${minutes / 60}h ${remainingMinutes}m"
+  } else {
+    "${minutes / 60}h"
+  }
+}

@@ -2,7 +2,11 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.tasks.GenerationTask
+import alphainterplanetary.thinker.tasks.TaskRunner
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,14 +20,30 @@ sealed interface ProjectListUiState {
 
 class ProjectListViewModel(
   private val repository: ProjectRepository,
+  private val taskRunner: TaskRunner,
   private val scope: CoroutineScope,
 ) {
+  private val vmJob = SupervisorJob(scope.coroutineContext[Job])
+  private val vmScope = CoroutineScope(scope.coroutineContext + vmJob)
+
   private val _uiState = MutableStateFlow<ProjectListUiState>(ProjectListUiState.Loading)
   val uiState: StateFlow<ProjectListUiState> = _uiState.asStateFlow()
 
+  /** Live non-terminal tasks, so the list can show "generating…" chips and a Task Manager FAB. */
+  private val _activeTasks = MutableStateFlow<List<GenerationTask>>(emptyList())
+  val activeTasks: StateFlow<List<GenerationTask>> = _activeTasks.asStateFlow()
+
+  init {
+    vmScope.launch {
+      taskRunner.tasks.collect { current ->
+        _activeTasks.value = current.filter { it.isActive }
+      }
+    }
+  }
+
   fun loadProjects() {
     _uiState.value = ProjectListUiState.Loading
-    scope.launch {
+    vmScope.launch {
       try {
         val projects = repository.getAllProjects()
         _uiState.value = ProjectListUiState.Success(projects)
@@ -39,7 +59,7 @@ class ProjectListViewModel(
   val createdProject: StateFlow<Project?> = _createdProject.asStateFlow()
 
   fun createProject(synopsis: String, title: String?) {
-    scope.launch {
+    vmScope.launch {
       try {
         val project = repository.createProject(synopsis, title)
         _createdProject.value = project
@@ -57,7 +77,7 @@ class ProjectListViewModel(
   }
 
   fun deleteProject(id: String) {
-    scope.launch {
+    vmScope.launch {
       try {
         repository.deleteProject(id)
         loadProjects()
@@ -67,5 +87,9 @@ class ProjectListViewModel(
         )
       }
     }
+  }
+
+  fun close() {
+    vmJob.cancel()
   }
 }

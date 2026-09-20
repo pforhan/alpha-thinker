@@ -56,6 +56,10 @@ object Dimens {
   val IconSizeMedium = 20.dp
   val ScrollControlSize = 16.dp
 
+  // Inline progress spinners (task chips / Task Manager rows)
+  val ProgressIndicatorSize = 14.dp
+  val ProgressStroke = 2.dp
+
   // Theme picker preview
   val ThemeSwatchGap = 6.dp
   val ThemePreviewPadding = 8.dp
