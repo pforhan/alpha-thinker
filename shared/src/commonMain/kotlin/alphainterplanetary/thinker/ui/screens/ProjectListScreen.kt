@@ -2,11 +2,14 @@ package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.tasks.GenerationTask
+import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.SwipeAction
 import alphainterplanetary.thinker.ui.components.SwipeActionStyle
 import alphainterplanetary.thinker.ui.components.SwipeableCard
+import alphainterplanetary.thinker.ui.format.progressLabel
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.PhaseStyles
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListUiState
@@ -29,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -46,6 +50,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -217,7 +222,7 @@ private fun ProjectListEmpty(onCreateClick: () -> Unit) {
 @Composable
 private fun ProjectListItem(
   project: Project,
-  activeTaskKinds: List<alphainterplanetary.thinker.tasks.TaskKind>,
+  activeTaskKinds: List<TaskKind>,
   pendingDeletionId: String?,
   deletingId: String?,
   onClick: () -> Unit,
@@ -337,7 +342,7 @@ private fun ProjectListItem(
 @Composable
 private fun ProjectListSuccess(
   projects: List<Project>,
-  activeTasksByProject: Map<String, List<alphainterplanetary.thinker.tasks.GenerationTask>>,
+  activeTasksByProject: Map<String, List<GenerationTask>>,
   pendingDeletionId: String?,
   deletingId: String?,
   onProjectClick: (Project) -> Unit,

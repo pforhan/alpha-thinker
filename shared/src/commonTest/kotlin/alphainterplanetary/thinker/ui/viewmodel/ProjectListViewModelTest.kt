@@ -17,12 +17,19 @@ import kotlin.test.assertTrue
 
 class ProjectListViewModelTest {
 
-  private fun TestScope.viewModel(
+  /** Builds a VM on the test scheduler and guarantees [ProjectListViewModel.close]. */
+  private fun TestScope.withViewModel(
     storage: Storage = FakeStorage(),
-  ): ProjectListViewModel {
+    block: (ProjectListViewModel) -> Unit,
+  ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     val repository = ProjectRepository(storage, FakeGenerator(), runner)
-    return ProjectListViewModel(repository, scope = CoroutineScope(coroutineContext))
+    val vm = ProjectListViewModel(repository, runner, CoroutineScope(coroutineContext))
+    try {
+      block(vm)
+    } finally {
+      vm.close()
+    }
   }
 
   private fun project(id: String = "p1"): Project = Project(
@@ -38,51 +45,51 @@ class ProjectListViewModelTest {
   @Test
   fun `loadProjects surfaces stored projects`() = runTest {
     val stored = project("p1")
-    val vm = viewModel(FakeStorage(mutableMapOf(stored.id to stored)))
+    withViewModel(FakeStorage(mutableMapOf(stored.id to stored))) { vm ->
+      vm.loadProjects()
+      testScheduler.advanceUntilIdle()
 
-    vm.loadProjects()
-    testScheduler.advanceUntilIdle()
-
-    assertEquals(listOf(stored), (vm.uiState.value as ProjectListUiState.Success).projects)
+      assertEquals(listOf(stored), (vm.uiState.value as ProjectListUiState.Success).projects)
+    }
   }
 
   @Test
   fun `createProject surfaces the created project and reloads the list`() = runTest {
-    val vm = viewModel()
+    withViewModel { vm ->
+      vm.createProject("My synopsis", title = null)
+      testScheduler.advanceUntilIdle()
 
-    vm.createProject("My synopsis", title = null)
-    testScheduler.advanceUntilIdle()
-
-    val created = vm.createdProject.value
-    assertEquals("My synopsis", created?.synopsis)
-    val list = (vm.uiState.value as ProjectListUiState.Success).projects
-    assertEquals(listOf(created?.id), list.map { it.id })
+      val created = vm.createdProject.value
+      assertEquals("My synopsis", created?.synopsis)
+      val list = (vm.uiState.value as ProjectListUiState.Success).projects
+      assertEquals(listOf(created?.id), list.map { it.id })
+    }
   }
 
   @Test
   fun `createProject failure surfaces an error state`() = runTest {
-    val vm = viewModel(FailingStorage)
+    withViewModel(FailingStorage) { vm ->
+      vm.createProject("My synopsis", title = null)
+      testScheduler.advanceUntilIdle()
 
-    vm.createProject("My synopsis", title = null)
-    testScheduler.advanceUntilIdle()
-
-    val state = vm.uiState.value as ProjectListUiState.Error
-    assertTrue(state.message.contains("Failed to create project"))
+      val state = vm.uiState.value as ProjectListUiState.Error
+      assertTrue(state.message.contains("Failed to create project"))
+    }
   }
 
   @Test
   fun `deleteProject removes the project from the list`() = runTest {
     val stored = project("p1")
-    val vm = viewModel(FakeStorage(mutableMapOf(stored.id to stored)))
+    withViewModel(FakeStorage(mutableMapOf(stored.id to stored))) { vm ->
+      vm.loadProjects()
+      testScheduler.advanceUntilIdle()
+      assertEquals(1, (vm.uiState.value as ProjectListUiState.Success).projects.size)
 
-    vm.loadProjects()
-    testScheduler.advanceUntilIdle()
-    assertEquals(1, (vm.uiState.value as ProjectListUiState.Success).projects.size)
+      vm.deleteProject(stored.id)
+      testScheduler.advanceUntilIdle()
 
-    vm.deleteProject(stored.id)
-    testScheduler.advanceUntilIdle()
-
-    assertEquals(0, (vm.uiState.value as ProjectListUiState.Success).projects.size)
+      assertEquals(0, (vm.uiState.value as ProjectListUiState.Success).projects.size)
+    }
   }
 
   private object FailingStorage : Storage {
