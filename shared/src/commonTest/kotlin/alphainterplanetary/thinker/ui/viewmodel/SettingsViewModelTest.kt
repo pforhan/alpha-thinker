@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
+import alphainterplanetary.thinker.llm.GeneratorDelayConfig
+import alphainterplanetary.thinker.llm.GeneratorInteraction
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
@@ -66,5 +68,25 @@ class SettingsViewModelTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals(PhaseTheme.Ocean, vm.phaseTheme.value)
+  }
+
+  @Test
+  fun `generatorDelay starts disabled with default delays`() = runTest {
+    val vm = viewModel()
+
+    assertEquals(GeneratorDelayConfig.Default, vm.generatorDelay.value)
+  }
+
+  @Test
+  fun `generatorDelay setters update the exposed config`() = runTest {
+    val vm = viewModel()
+
+    vm.setGeneratorDelayEnabled(true)
+    vm.setGeneratorDelay(GeneratorInteraction.FollowUpQuestions, 30)
+    testScheduler.advanceUntilIdle()
+
+    val config = vm.generatorDelay.value
+    assertEquals(true, config.enabled)
+    assertEquals(30, config.secondsByInteraction[GeneratorInteraction.FollowUpQuestions])
   }
 }

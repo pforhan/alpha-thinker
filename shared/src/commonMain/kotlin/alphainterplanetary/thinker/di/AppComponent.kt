@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.provideStorage
 import alphainterplanetary.thinker.llm.HardcodedQuestionGenerator
 import alphainterplanetary.thinker.llm.QuestionGenerator
+import alphainterplanetary.thinker.llm.SlowDownQuestionGenerator
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
@@ -44,7 +45,12 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   fun providesTaskRunner(scope: CoroutineScope): TaskRunner = TaskRunner(scope)
 
   @Provides
-  fun providesQuestionGenerator(): QuestionGenerator = HardcodedQuestionGenerator()
+  fun providesQuestionGenerator(
+    settingsRepository: SettingsRepository,
+  ): QuestionGenerator = SlowDownQuestionGenerator(
+    delegate = HardcodedQuestionGenerator(),
+    config = settingsRepository.generatorDelay,
+  )
 }
 
 @KmpComponentCreate

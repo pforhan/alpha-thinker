@@ -1,6 +1,8 @@
 package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.llm.GeneratorDelayConfig
+import alphainterplanetary.thinker.llm.GeneratorInteraction
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.theme.BadgeShape
@@ -32,10 +34,13 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -63,6 +68,7 @@ fun SettingsScreen(
   }
   val uiState by viewModel.uiState.collectAsState()
   val phaseTheme by viewModel.phaseTheme.collectAsState()
+  val generatorDelay by viewModel.generatorDelay.collectAsState()
 
   Scaffold(
     topBar = {
@@ -127,6 +133,17 @@ fun SettingsScreen(
           )
         }
       }
+      Text(
+        text = "Testing",
+        style = MaterialTheme.typography.titleMedium,
+      )
+      DelayControlItem(
+        config = generatorDelay,
+        onEnabledChange = { viewModel.setGeneratorDelayEnabled(it) },
+        onDelayChange = { interaction, seconds ->
+          viewModel.setGeneratorDelay(interaction, seconds)
+        },
+      )
     }
   }
 }
@@ -218,6 +235,86 @@ private fun ThemePreviewRow(
           Spacer(modifier = Modifier.width(Dimens.ThemeSwatchGap))
         }
         PhaseBadge(phase = phase)
+      }
+    }
+  }
+}
+
+/**
+ * The Task-Manager testing controls: a master switch that, while enabled,
+ * expands into a per-interaction picker choosing each QuestionGenerator
+ * delay from 2s / 5s / 30s.
+ */
+@Composable
+private fun DelayControlItem(
+  config: GeneratorDelayConfig,
+  onEnabledChange: (Boolean) -> Unit,
+  onDelayChange: (GeneratorInteraction, Int) -> Unit,
+) {
+  Card(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.padding(Dimens.CardPadding)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = "Slow down question generation",
+            style = MaterialTheme.typography.titleSmall,
+          )
+          Spacer(modifier = Modifier.height(Dimens.TightGap))
+          Text(
+            text = "Adds an artificial delay to each QuestionGenerator interaction so " +
+              "Task Manager tasks stay visible long enough to observe them.",
+            style = MaterialTheme.typography.bodyMedium,
+          )
+        }
+        Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
+        Switch(
+          checked = config.enabled,
+          onCheckedChange = onEnabledChange,
+        )
+      }
+      if (config.enabled) {
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        GeneratorInteraction.entries.forEachIndexed { index, interaction ->
+          if (index > 0) {
+            Spacer(modifier = Modifier.height(Dimens.ContentGap))
+          }
+          DelayChoiceRow(
+            interaction = interaction,
+            secondsByInteraction = config.secondsByInteraction,
+            onDelayChange = onDelayChange,
+          )
+        }
+      }
+    }
+  }
+}
+
+/** One QuestionGenerator interaction: its label plus a 2s / 5s / 30s choice. */
+@Composable
+private fun DelayChoiceRow(
+  interaction: GeneratorInteraction,
+  secondsByInteraction: Map<GeneratorInteraction, Int>,
+  onDelayChange: (GeneratorInteraction, Int) -> Unit,
+) {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    Text(
+      text = interaction.label,
+      style = MaterialTheme.typography.bodyMedium,
+      modifier = Modifier.weight(1f),
+    )
+    Row(
+      modifier = Modifier,
+      horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
+    ) {
+      GeneratorDelayConfig.DelayOptionsSeconds.forEach { seconds ->
+        FilterChip(
+          selected = secondsByInteraction[interaction] == seconds,
+          onClick = { onDelayChange(interaction, seconds) },
+          label = { Text("${seconds}s") },
+          elevation = null,
+        )
       }
     }
   }

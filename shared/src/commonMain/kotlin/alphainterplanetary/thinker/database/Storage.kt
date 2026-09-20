@@ -9,6 +9,11 @@ import alphainterplanetary.thinker.model.Project
  */
 enum class SettingsKey(val storageKey: String) {
   PhaseTheme("phase-theme"),
+  SlowDownQuestionGenerator("slow-down-question-generator"),
+  GeneratorRecommendTitleDelay("generator-delay-recommend-title"),
+  GeneratorInitialQuestionsDelay("generator-delay-initial-questions"),
+  GeneratorFollowUpQuestionsDelay("generator-delay-follow-up-questions"),
+  GeneratorRemainingInPhaseDelay("generator-delay-remaining-in-phase"),
 }
 
 interface Storage {
