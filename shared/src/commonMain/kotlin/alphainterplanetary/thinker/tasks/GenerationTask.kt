@@ -12,6 +12,12 @@ enum class TaskKind {
   /** Follow-up questions in a later round ("Get more questions" / wrap-up). */
   FollowUpQuestions,
 
+  /** Recommending an editable title from the synopsis when the user didn't type one. */
+  TitleRecommendation,
+
+  /** Asking the generator whether the current phase's pool can still produce questions. */
+  RemainingInPhase,
+
   /** Rewriting the project synopsis / title from the accumulated answers. */
   SynopsisRewrite,
 
@@ -40,6 +46,8 @@ data class GenerationTask(
   val progress: Float? = null,
   /** Set when [status] is [TaskStatus.Failed]. */
   val error: String? = null,
+  /** Result of a boolean-answering task, e.g. [TaskKind.RemainingInPhase] availability. */
+  val result: Boolean? = null,
   val createdAt: Instant,
   val startedAt: Instant? = null,
   val finishedAt: Instant? = null,

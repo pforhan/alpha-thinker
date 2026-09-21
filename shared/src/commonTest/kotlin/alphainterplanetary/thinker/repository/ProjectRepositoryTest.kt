@@ -54,15 +54,23 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `createProject without title uses recommended title`() = runTest {
-    val generator = FakeGenerator().apply { recommendedTitle = "From Generator" }
-    val repository = repo(generator = generator)
+  fun `createProject without title shells an empty title and fills it from the recommender`() =
+    runTest {
+      val generator = FakeGenerator().apply { recommendedTitle = "From Generator" }
+      val storage = FakeStorage()
+      val repository = repo(storage = storage, generator = generator)
 
-    val project = repository.createProject("My synopsis")
-    testScheduler.advanceUntilIdle()
+      val project = repository.createProject("My synopsis")
+      assertEquals("", project.editableTitle, "the shell returns before the title lands")
 
-    assertEquals("From Generator", project.editableTitle)
-  }
+      testScheduler.advanceUntilIdle()
+
+      val persisted = storage.getProject(project.id)
+      assertNotNull(persisted)
+      assertEquals("From Generator", persisted.editableTitle)
+      assertEquals("My synopsis", persisted.synopsis)
+      assertEquals("Draft", persisted.status)
+    }
 
   @Test
   fun `createProject trims synopsis and title`() = runTest {
@@ -612,6 +620,11 @@ class ProjectRepositoryTest {
       val storage = FakeStorage(mutableMapOf("p1" to original))
       val repository = repo(storage = storage, generator = generator)
 
+      // Availability gates the affordance; a check task caches it before use.
+      repository.ensureFreshAvailability("p1")
+      testScheduler.advanceUntilIdle()
+      assertTrue(repository.canGenerateMoreQuestions("p1"))
+
       val updated = repository.generateMoreQuestions("p1")
 
       assertNotNull(updated)
@@ -649,6 +662,10 @@ class ProjectRepositoryTest {
     val storage = FakeStorage(mutableMapOf("p1" to original))
     val repository = repo(storage = storage, generator = FakeGenerator())
 
+    repository.ensureFreshAvailability("p1")
+    testScheduler.advanceUntilIdle()
+    assertFalse(repository.canGenerateMoreQuestions("p1"))
+
     val result = repository.generateMoreQuestions("p1")
 
     assertNotNull(result)
@@ -675,7 +692,13 @@ class ProjectRepositoryTest {
   @Test
   fun `canGenerateMoreQuestions is true when the generator still has questions`() = runTest {
     val generator = FakeGenerator().apply { remaining = 5 }
-    val repository = repo(storage = storageWith(phaseProject(BuiltInPhase.Design)), generator = generator)
+    val repository = repo(
+      storage = storageWith(phaseProject(BuiltInPhase.Design)),
+      generator = generator,
+    )
+
+    repository.ensureFreshAvailability("p1")
+    testScheduler.advanceUntilIdle()
 
     assertTrue(repository.canGenerateMoreQuestions("p1"))
   }
@@ -684,20 +707,104 @@ class ProjectRepositoryTest {
   fun `canGenerateMoreQuestions is false when the generator is exhausted`() = runTest {
     val repository = repo(storage = storageWith(phaseProject(BuiltInPhase.ScopeGoals)))
 
+    repository.ensureFreshAvailability("p1")
+    testScheduler.advanceUntilIdle()
+
     assertFalse(repository.canGenerateMoreQuestions("p1"))
   }
 
   @Test
   fun `canGenerateMoreQuestions reads the current phase and the full asked history`() = runTest {
     val generator = FakeGenerator().apply { remaining = 2 }
-    val repository = repo(storage = storageWith(phaseProject(BuiltInPhase.ExecutionPlan)), generator = generator)
+    val repository = repo(
+      storage = storageWith(phaseProject(BuiltInPhase.ExecutionPlan)),
+      generator = generator,
+    )
 
-    repository.canGenerateMoreQuestions("p1")
+    repository.ensureFreshAvailability("p1")
+    testScheduler.advanceUntilIdle()
 
+    assertTrue(repository.canGenerateMoreQuestions("p1"))
     val call = generator.remainingCalls.single()
     assertEquals(BuiltInPhase.ExecutionPlan, call.phase)
     assertEquals(listOf("q1"), call.previousQuestions.map { it.id })
     assertEquals("s", call.synopsis)
+  }
+
+  // ---------- availability caching ----------
+
+  @Test
+  fun `ensureFreshAvailability runs one check and caches the answer`() = runTest {
+    val generator = FakeGenerator().apply { remaining = 3 }
+    val repository = repo(
+      storage = storageWith(phaseProject(BuiltInPhase.Design)),
+      generator = generator,
+    )
+
+    assertFalse(repository.canGenerateMoreQuestions("p1"), "unknown projects answer false")
+
+    val task = repository.ensureFreshAvailability("p1")
+    assertNotNull(task)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(1, generator.remainingCalls.size)
+    assertTrue(repository.canGenerateMoreQuestions("p1"))
+    assertEquals(true, repository.availability.value["p1"])
+  }
+
+  @Test
+  fun `ensureFreshAvailability reuses a fresh check instead of re-asking`() = runTest {
+    val generator = FakeGenerator().apply { remaining = 3 }
+    val repository = repo(
+      storage = storageWith(phaseProject(BuiltInPhase.Design)),
+      generator = generator,
+    )
+
+    repository.ensureFreshAvailability("p1")
+    testScheduler.advanceUntilIdle()
+
+    val again = repository.ensureFreshAvailability("p1")
+    testScheduler.advanceUntilIdle()
+
+    assertNull(again)
+    assertEquals(1, generator.remainingCalls.size)
+    assertTrue(repository.canGenerateMoreQuestions("p1"))
+  }
+
+  @Test
+  fun `ensureFreshAvailability skips while a check is already active`() = runTest {
+    val generator = FakeGenerator().apply { remaining = 3 }
+    val repository = repo(
+      storage = storageWith(phaseProject(BuiltInPhase.Design)),
+      generator = generator,
+    )
+
+    repository.enqueueAvailabilityCheck("p1")
+    val again = repository.ensureFreshAvailability("p1")
+    testScheduler.advanceUntilIdle()
+
+    assertNull(again)
+    assertEquals(1, generator.remainingCalls.size)
+  }
+
+  @Test
+  fun `question-generating tasks make the cached availability stale`() = runTest {
+    val generator = FakeGenerator().apply { remaining = 3 }
+    val repository = repo(
+      storage = storageWith(phaseProject(BuiltInPhase.Design)),
+      generator = generator,
+    )
+
+    repository.ensureFreshAvailability("p1")
+    testScheduler.advanceUntilIdle()
+    assertEquals(1, generator.remainingCalls.size)
+
+    repository.advanceToPhase("p1", BuiltInPhase.Research)
+    testScheduler.advanceUntilIdle()
+
+    assertNotNull(repository.ensureFreshAvailability("p1"))
+    testScheduler.advanceUntilIdle()
+    assertEquals(2, generator.remainingCalls.size, "a new round forces a re-check")
   }
 
   @Test
@@ -900,6 +1007,9 @@ class ProjectRepositoryTest {
       assertEquals(3, updated.rounds.size)
       assertTrue(updated.rounds.take(2).all { it.isCompleted })
       assertEquals(RoundOrigin.Initial, updated.rounds.last().origin)
+
+      repository.ensureFreshAvailability("p1")
+      testScheduler.advanceUntilIdle()
       assertFalse(repository.canGenerateMoreQuestions("p1"))
       // generation sees the whole project history, including the earlier visit
       assertEquals(

@@ -9,10 +9,15 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import me.tatarka.inject.annotations.Inject
 import kotlin.time.Instant
 
@@ -24,20 +29,19 @@ class ProjectRepository @Inject constructor(
 ) {
 
   /**
-   * Persists the project shell immediately and returns it; the initial batch is
-   * generated on the [taskRunner] (an [TaskKind.InitialQuestions] task) so the
-   * caller and the UI are never blocked on inference — the detail screen
-   * reloads when that task completes (see ProjectDetailViewModel).
+   * Persists the project shell immediately and returns it. When no [title] is
+   * supplied, the shell ships with an empty title and a [TaskKind.TitleRecommendation]
+   * task fills it in from the synopsis — tasks run serially, so the title lands
+   * before the [TaskKind.InitialQuestions] batch reads the project.
    */
   suspend fun createProject(synopsis: String, title: String? = null): Project {
     val now = now()
     val projectId = randomUUID()
 
     val trimmedTitle = title.orEmpty().trim()
-
     val resolvedTitle = trimmedTitle.takeIf { it.isNotEmpty() }
       ?.substring(0, trimmedTitle.length.coerceAtMost(30))
-      ?: generator.recommendTitle(synopsis)
+      .orEmpty()
 
     val roundId = randomUUID()
     val round = Round(
@@ -61,8 +65,27 @@ class ProjectRepository @Inject constructor(
     )
     // Save the initial version of the project, in case generation fails.
     storage.saveProject(project)
+    if (resolvedTitle.isEmpty()) {
+      enqueueTitleRecommendation(projectId)
+    }
     enqueueQuestionGeneration(project.id, roundId, TaskKind.InitialQuestions)
     return project
+  }
+
+  /** Fills in the project's recommended title on the task runner, re-reading first. */
+  private fun enqueueTitleRecommendation(projectId: String) {
+    taskRunner.enqueue(projectId, TaskKind.TitleRecommendation) {
+      val reloaded = storage.getProject(projectId) ?: return@enqueue
+      val recommended = generator.recommendTitle(reloaded.synopsis)
+      if (recommended.isNotBlank()) {
+        storage.saveProject(
+          reloaded.copy(
+            editableTitle = recommended.take(30),
+            updatedAt = now(),
+          )
+        )
+      }
+    }
   }
 
   /**
@@ -229,7 +252,7 @@ class ProjectRepository @Inject constructor(
    */
   suspend fun generateMoreQuestions(projectId: String): Project? {
     val project = storage.getProject(projectId) ?: return null
-    if (!hasRemainingQuestions(project)) return project
+    if (_availability.value[projectId] != true) return project
     val now = now()
     val round = nextRound(project, RoundOrigin.UserRequested, now)
     val updated = project.copy(
@@ -242,18 +265,78 @@ class ProjectRepository @Inject constructor(
     return updated
   }
 
-  /** Whether the current phase's pool still has questions the generator could produce. */
+  /**
+   * Availability ("can the current phase's pool still produce questions?") per
+   * project, recorded by [enqueueAvailabilityCheck] and read by
+   * [canGenerateMoreQuestions]. Kept on the repository so the answer is shared
+   * by every consumer and never triggers a generator call of its own.
+   */
+  private val _availability = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+
+  val availability: StateFlow<Map<String, Boolean>> = _availability.asStateFlow()
+
+  /**
+   * Whether the current phase's pool still has questions the generator could
+   * produce, from the last [enqueueAvailabilityCheck] — never blocks on the
+   * generator itself. Unknown projects answer "no", gating the generate-more
+   * affordances until a check lands.
+   */
   suspend fun canGenerateMoreQuestions(projectId: String): Boolean {
     val project = storage.getProject(projectId) ?: return false
-    return hasRemainingQuestions(project)
+    return _availability.value[projectId] ?: false
   }
 
-  private suspend fun hasRemainingQuestions(project: Project): Boolean =
-    generator.remainingInPhase(
-      synopsis = project.synopsis,
-      previousQuestions = project.questions,
-      phase = project.currentPhase,
-    ) > 0
+  /**
+   * Runs one [TaskKind.RemainingInPhase] check as a task: asks the generator
+   * how many questions the current phase could still produce and records
+   * whether any remain on [availability]. Returns the queued task; the result
+   * also rides on the terminal task's [GenerationTask.result].
+   */
+  fun enqueueAvailabilityCheck(projectId: String): GenerationTask =
+    taskRunner.enqueueResult(projectId, TaskKind.RemainingInPhase) {
+      val project = storage.getProject(projectId)
+      val remaining = if (project == null) {
+        0
+      } else {
+        generator.remainingInPhase(
+          synopsis = project.synopsis,
+          previousQuestions = project.questions,
+          phase = project.currentPhase,
+        )
+      }
+      val can = remaining > 0
+      _availability.update { it + (projectId to can) }
+      can
+    }
+
+  /**
+   * Schedules an availability check only when the cached answer is stale.
+   * Skipped while a check is already active for the project and when the last
+   * completed check was enqueued after every question-generating task (only
+   * generated questions change the remaining count), so opening a project or
+   * answering questions never re-asks the generator. Tasks run serially, so the
+   * enqueue order in [TaskRunner.tasks] is also the completion order and the
+   * comparison is stable across clock granularities. Returns the task when one
+   * was enqueued, null when the cached result is fresh.
+   */
+  fun ensureFreshAvailability(projectId: String): GenerationTask? {
+    val projectTasks = taskRunner.tasks.value.filter { it.projectId == projectId }
+    if (projectTasks.any { it.kind == TaskKind.RemainingInPhase && it.isActive }) return null
+
+    val lastCheckIndex = projectTasks.indexOfLast {
+      it.isFinished && it.kind == TaskKind.RemainingInPhase
+    }
+    if (lastCheckIndex == -1) return enqueueAvailabilityCheck(projectId)
+
+    val lastMutationIndex = projectTasks.indexOfLast {
+      it.isFinished && (it.kind == TaskKind.InitialQuestions || it.kind == TaskKind.FollowUpQuestions)
+    }
+    return if (lastMutationIndex > lastCheckIndex) {
+      enqueueAvailabilityCheck(projectId)
+    } else {
+      null
+    }
+  }
 
   /**
    * Wraps up the round(s) currently in progress and advances the project to

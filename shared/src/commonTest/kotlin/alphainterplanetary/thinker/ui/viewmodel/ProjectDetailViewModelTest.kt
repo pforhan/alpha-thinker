@@ -343,9 +343,18 @@ class ProjectDetailViewModelTest {
       testScheduler.advanceUntilIdle()
 
       val active = vm.tasks.value
-      assertEquals(1, active.size)
-      assertEquals(TaskKind.InitialQuestions, active.single().kind)
-      assertEquals(TaskStatus.Succeeded, active.single().status)
+      assertEquals(
+        listOf(
+          TaskKind.TitleRecommendation,
+          TaskKind.InitialQuestions,
+          TaskKind.RemainingInPhase,
+        ),
+        active.map { it.kind },
+      )
+      assertTrue(
+        active.all { it.status == TaskStatus.Succeeded },
+        "the title, the batch, and the availability check all complete",
+      )
     }
   }
 
@@ -394,6 +403,9 @@ class ProjectDetailViewModelTest {
         generator = slowFollowUpGenerator(fake, holdSeconds = 5),
       ) { context ->
         val vm = context.vm
+        // Availability gates the affordance; establish it before generating.
+        context.repository.ensureFreshAvailability("p1")
+        testScheduler.advanceUntilIdle()
         // A generation task is already in flight before the screen enters.
         context.repository.generateMoreQuestions("p1")
         testScheduler.runCurrent()

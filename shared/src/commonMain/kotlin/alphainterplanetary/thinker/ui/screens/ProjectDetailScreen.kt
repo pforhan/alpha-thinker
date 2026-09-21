@@ -7,6 +7,8 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.phaseStats
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.tasks.TaskKind
+import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.ConfettiBurst
@@ -131,7 +133,9 @@ fun ProjectDetailScreen(
   // Reconnects to tasks that are already in flight (or finished) when the
   // screen (re)enters composition — the VM's collector replays the current
   // list, so an extant task shows here even if it outlived a previous visit.
-  val generationActive = tasks.any { it.isActive }
+  val activeTasksLabel = activeTaskSummary(tasks)
+  val generationActive = activeTasksLabel != null
+  val titleGenerating = tasks.any { it.isActive && it.kind == TaskKind.TitleRecommendation }
 
   var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
@@ -166,7 +170,13 @@ fun ProjectDetailScreen(
     topBar = {
       val title = when (val ui = uiState) {
         ProjectDetailUiState.Loading -> "Loading..."
-        is ProjectDetailUiState.Success -> ui.project.editableTitle
+        is ProjectDetailUiState.Success -> {
+          if (titleGenerating && ui.project.editableTitle.isBlank()) {
+            "Generating title…"
+          } else {
+            ui.project.editableTitle
+          }
+        }
         is ProjectDetailUiState.Error -> "Error"
       }
       TopAppBar(
@@ -208,7 +218,7 @@ fun ProjectDetailScreen(
           project = ui.project,
           selectedView = selectedView,
           canGenerateMore = ui.canGenerateMoreQuestions,
-          generationActive = generationActive,
+          activeTaskLabel = activeTasksLabel,
           nextPhases = nextPhases,
           onViewSelected = { selectedView = it },
           onShuffle = { viewModel.shuffle() },
@@ -309,7 +319,8 @@ private fun ProjectDetailContent(
   project: Project,
   selectedView: QuestionViewMode,
   canGenerateMore: Boolean,
-  generationActive: Boolean,
+  /** Short label of the active generation task(s), e.g. "Generating title…"; null when idle. */
+  activeTaskLabel: String?,
   nextPhases: List<Phase>,
   onViewSelected: (QuestionViewMode) -> Unit,
   onShuffle: () -> Unit,
@@ -325,6 +336,7 @@ private fun ProjectDetailContent(
 ) {
   var showPhaseOverview by remember { mutableStateOf(false) }
   val phaseSummaries = remember(project) { project.priorPhaseStats() }
+  val generationActive = activeTaskLabel != null
 
   Column(modifier = modifier) {
     Box(
@@ -433,6 +445,7 @@ private fun ProjectDetailContent(
             onGenerateMore = if (view == QuestionViewMode.Unanswered) onGenerateMore else null,
             canGenerateMore = view == QuestionViewMode.Unanswered && canGenerateMore,
             generationActive = view == QuestionViewMode.Unanswered && generationActive,
+            generationLabel = activeTaskLabel,
             nextPhases = if (view == QuestionViewMode.Unanswered) nextPhases else emptyList(),
             onBeginWrapUp = if (view == QuestionViewMode.Unanswered) onBeginWrapUp else null,
             completedStats = completedStats,
@@ -488,6 +501,7 @@ private fun ProjectDetailContent(
                 ShuffleRow(
                   remainingCount = if (shuffleGenerates) null else unansweredCount - filteredQuestions.size,
                   generating = generationActive,
+                  generationLabel = activeTaskLabel,
                   generateFresh = shuffleGenerates,
                   onClick = if (shuffleGenerates) onGenerateMore else onShuffle,
                 )
@@ -560,6 +574,7 @@ private fun QuestionEmptyState(
   onGenerateMore: (() -> Unit)?,
   canGenerateMore: Boolean,
   generationActive: Boolean,
+  generationLabel: String?,
   nextPhases: List<Phase>,
   onBeginWrapUp: (() -> Unit)?,
   completedStats: PhaseStats?,
@@ -585,7 +600,9 @@ private fun QuestionEmptyState(
       if (onGenerateMore != null) {
         Spacer(modifier = Modifier.height(Dimens.EmptyStateActionGap))
         if (generationActive) {
-          GeneratingQuestionsRow()
+          GeneratingQuestionsRow(
+            label = generationLabel ?: "Preparing questions…",
+          )
         } else if (canGenerateMore) {
           Button(onClick = onGenerateMore) {
             Text("Get more questions")
@@ -736,7 +753,7 @@ private fun ProjectSynopsis(synopsis: String) {
 }
 
 @Composable
-private fun GeneratingQuestionsRow() {
+private fun GeneratingQuestionsRow(label: String) {
   Row(verticalAlignment = Alignment.CenterVertically) {
     CircularProgressIndicator(
       modifier = Modifier
@@ -747,7 +764,7 @@ private fun GeneratingQuestionsRow() {
     )
     Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
     Text(
-      text = "Preparing questions…",
+      text = label,
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -758,6 +775,7 @@ private fun GeneratingQuestionsRow() {
 private fun ShuffleRow(
   remainingCount: Int?,
   generating: Boolean,
+  generationLabel: String?,
   generateFresh: Boolean,
   onClick: () -> Unit,
 ) {
@@ -784,7 +802,7 @@ private fun ShuffleRow(
         )
         Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
         Text(
-          text = "Preparing questions…",
+          text = generationLabel ?: "Preparing questions…",
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

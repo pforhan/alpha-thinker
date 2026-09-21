@@ -1,11 +1,13 @@
 package alphainterplanetary.thinker.tasks
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class TaskRunnerTest {
@@ -31,7 +33,47 @@ class TaskRunnerTest {
     assertNotNull(done.startedAt)
     assertNotNull(done.finishedAt)
     assertTrue(done.isFinished)
+    assertNull(done.result, "plain enqueue carries no boolean answer")
     assertTrue(bodyRan)
+  }
+
+  @Test
+  fun `bodies run serially so a later task stays queued behind a slow peer`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val slow = runner.enqueue("p1", TaskKind.InitialQuestions) {
+      delay(1_000)
+    }
+    val fast = runner.enqueue("p1", TaskKind.FollowUpQuestions) {}
+
+    testScheduler.runCurrent()
+
+    assertEquals(TaskStatus.Running, runner.tasks.value.single { it.id == slow.id }.status)
+    assertEquals(TaskStatus.Queued, runner.tasks.value.single { it.id == fast.id }.status)
+
+    testScheduler.advanceUntilIdle()
+
+    val done = runner.tasks.value
+    assertEquals(
+      listOf(slow.id, fast.id),
+      done.map { it.id },
+      "insertion order is preserved",
+    )
+    assertTrue(done.all { it.isFinished })
+  }
+
+  @Test
+  fun `enqueueResult folds the boolean answer into the terminal task`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+
+    runner.enqueueResult("p1", TaskKind.RemainingInPhase) { true }
+
+    testScheduler.advanceUntilIdle()
+
+    val done = runner.tasks.value.single()
+    assertEquals(TaskStatus.Succeeded, done.status)
+    assertNotNull(done.startedAt)
+    assertNotNull(done.finishedAt)
+    assertEquals(true, done.result)
   }
 
   @Test

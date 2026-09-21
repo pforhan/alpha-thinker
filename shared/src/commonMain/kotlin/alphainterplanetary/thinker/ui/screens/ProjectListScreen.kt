@@ -286,8 +286,10 @@ private fun ProjectListItem(
       ) {
         Column {
           Row(verticalAlignment = Alignment.CenterVertically) {
+            val titleGenerating = project.editableTitle.isBlank() &&
+              activeTaskKinds.contains(TaskKind.TitleRecommendation)
             Text(
-              text = project.editableTitle.normalizeWhitespace(),
+              text = if (titleGenerating) "Generating title…" else project.editableTitle.normalizeWhitespace(),
               modifier = Modifier.weight(1f),
               style = MaterialTheme.typography.titleMedium,
               maxLines = 1,

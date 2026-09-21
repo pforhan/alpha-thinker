@@ -29,6 +29,14 @@ class GenerationTaskBarTest {
       "Generating questions…",
       activeTaskSummary(listOf(task(kind = TaskKind.FollowUpQuestions, status = TaskStatus.Queued))),
     )
+    assertEquals(
+      "Generating title…",
+      activeTaskSummary(listOf(task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Running))),
+    )
+    assertEquals(
+      "Checking for more questions…",
+      activeTaskSummary(listOf(task(kind = TaskKind.RemainingInPhase, status = TaskStatus.Queued))),
+    )
   }
 
   @Test
