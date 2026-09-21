@@ -62,7 +62,7 @@ Both Editions share the same general UI, but differ in source of question materi
 - App-wide setting (Edge Only) to enable/disable lookup and web search, presented on the same settings screen as the LLM on/off toggle.
 
 ### 4.4 Seed Questions 
-The app ships with a large body of default questions; see [HardcodedQuestions.kt](shared/src/commonMain/kotlin/alphainterplanetary/thinker/llm/HardcodedQuestionGenerator.kt)
+The app ships with a large body of default questions; see [HardcodedQuestions.kt](shared/src/commonMain/kotlin/alphainterplanetary/thinker/engine/HardcodedPlanningEngine.kt)
 
 ### 5.1 Projects List
 - Display summary of all projects, including synopsis.

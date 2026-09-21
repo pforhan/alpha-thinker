@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.llm
+package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
@@ -6,20 +6,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Decorates a [QuestionGenerator] with an optional artificial delay applied
+ * Decorates a [PlanningEngine] with an optional artificial delay applied
  * before each interaction, driven by [config] (the Testing setting). While the
- * config's [GeneratorDelayConfig.enabled] is on, each interaction is held for
- * its own chosen [GeneratorDelayConfig.durationFor] so generation tasks linger
+ * config's [EngineDelayConfig.enabled] is on, each interaction is held for
+ * its own chosen [EngineDelayConfig.durationFor] so generation tasks linger
  * on the Task Manager long enough to exercise and inspect its UI and code paths.
  */
-class SlowDownQuestionGenerator(
-  private val delegate: QuestionGenerator,
-  private val config: StateFlow<GeneratorDelayConfig>,
-) : QuestionGenerator {
+class SlowDownPlanningEngine(
+  private val delegate: PlanningEngine,
+  private val config: StateFlow<EngineDelayConfig>,
+) : PlanningEngine {
 
   override suspend fun recommendTitle(synopsis: String): String {
-    println("SlowDownQuestionGenerator.recommendTitle()")
-    maybeDelay(GeneratorInteraction.RecommendTitle)
+    println("SlowDownPlanningEngine.recommendTitle()")
+    maybeDelay(EngineInteraction.RecommendTitle)
     return delegate.recommendTitle(synopsis)
   }
 
@@ -29,8 +29,8 @@ class SlowDownQuestionGenerator(
     roundId: String,
     phase: Phase,
   ): List<Question> {
-    println("SlowDownQuestionGenerator.generateInitialQuestions()")
-    maybeDelay(GeneratorInteraction.InitialQuestions)
+    println("SlowDownPlanningEngine.generateInitialQuestions()")
+    maybeDelay(EngineInteraction.InitialQuestions)
     return delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase)
   }
 
@@ -40,8 +40,8 @@ class SlowDownQuestionGenerator(
     roundId: String,
     phase: Phase,
   ): List<Question> {
-    println("SlowDownQuestionGenerator.generateFollowUpQuestions()")
-    maybeDelay(GeneratorInteraction.FollowUpQuestions)
+    println("SlowDownPlanningEngine.generateFollowUpQuestions()")
+    maybeDelay(EngineInteraction.FollowUpQuestions)
     return delegate.generateFollowUpQuestions(synopsis, previousQuestions, roundId, phase)
   }
 
@@ -50,12 +50,12 @@ class SlowDownQuestionGenerator(
     previousQuestions: List<Question>,
     phase: Phase,
   ): Int {
-    println("SlowDownQuestionGenerator.remainingInPhase()")
-    maybeDelay(GeneratorInteraction.RemainingInPhase)
+    println("SlowDownPlanningEngine.remainingInPhase()")
+    maybeDelay(EngineInteraction.RemainingInPhase)
     return delegate.remainingInPhase(synopsis, previousQuestions, phase)
   }
 
-  private suspend fun maybeDelay(interaction: GeneratorInteraction) {
+  private suspend fun maybeDelay(interaction: EngineInteraction) {
     config.value.durationFor(interaction)?.let { duration ->
       delay(duration)
     }

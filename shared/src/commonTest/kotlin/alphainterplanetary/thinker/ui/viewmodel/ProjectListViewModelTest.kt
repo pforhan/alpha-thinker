@@ -5,7 +5,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
-import alphainterplanetary.thinker.testutil.FakeGenerator
+import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.defaultTestInstant
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +23,7 @@ class ProjectListViewModelTest {
     block: (ProjectListViewModel) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val repository = ProjectRepository(storage, FakeGenerator(), runner)
+    val repository = ProjectRepository(storage, FakePlanningEngine(), runner)
     val vm = ProjectListViewModel(repository, runner, CoroutineScope(coroutineContext))
     try {
       block(vm)

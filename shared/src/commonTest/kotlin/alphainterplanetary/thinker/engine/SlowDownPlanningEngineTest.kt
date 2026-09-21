@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.llm
+package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
@@ -11,19 +11,19 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SlowDownQuestionGeneratorTest {
+class SlowDownPlanningEngineTest {
 
-  private val defaultSecondsByInteraction: Map<GeneratorInteraction, Int> =
-    GeneratorInteraction.entries.associateWith {
-      GeneratorDelayConfig.DelayOptionsSeconds.first()
+  private val defaultSecondsByInteraction: Map<EngineInteraction, Int> =
+    EngineInteraction.entries.associateWith {
+      EngineDelayConfig.DelayOptionsSeconds.first()
     }
 
   @Test
   fun `does not delay when the slow-down flag is off`() = runTest {
-    val delegate = TrackingGenerator()
-    val generator = SlowDownQuestionGenerator(
+    val delegate = TrackingPlanningEngine()
+    val generator = SlowDownPlanningEngine(
       delegate = delegate,
-      config = MutableStateFlow(GeneratorDelayConfig(enabled = false)),
+      config = MutableStateFlow(EngineDelayConfig(enabled = false)),
     )
 
     generator.recommendTitle("synopsis")
@@ -33,11 +33,11 @@ class SlowDownQuestionGeneratorTest {
 
   @Test
   fun `delays before delegating when enabled`() = runTest {
-    val delegate = TrackingGenerator()
-    val generator = SlowDownQuestionGenerator(
+    val delegate = TrackingPlanningEngine()
+    val generator = SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(
-        GeneratorDelayConfig(enabled = true, secondsByInteraction = defaultSecondsByInteraction),
+        EngineDelayConfig(enabled = true, secondsByInteraction = defaultSecondsByInteraction),
       ),
     )
 
@@ -54,16 +54,16 @@ class SlowDownQuestionGeneratorTest {
 
   @Test
   fun `every interaction is slowed with its own delay`() = runTest {
-    val delegate = TrackingGenerator()
-    val generator = SlowDownQuestionGenerator(
+    val delegate = TrackingPlanningEngine()
+    val generator = SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(
-        GeneratorDelayConfig(
+        EngineDelayConfig(
           enabled = true,
           secondsByInteraction = mapOf(
-            GeneratorInteraction.InitialQuestions to 2,
-            GeneratorInteraction.FollowUpQuestions to 5,
-            GeneratorInteraction.RemainingInPhase to 30,
+            EngineInteraction.InitialQuestions to 2,
+            EngineInteraction.FollowUpQuestions to 5,
+            EngineInteraction.RemainingInPhase to 30,
           ),
         ),
       ),
@@ -97,15 +97,15 @@ class SlowDownQuestionGeneratorTest {
 
   @Test
   fun `a zero delay for an interaction means no delay`() = runTest {
-    val delegate = TrackingGenerator()
-    val generator = SlowDownQuestionGenerator(
+    val delegate = TrackingPlanningEngine()
+    val generator = SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(
-        GeneratorDelayConfig(
+        EngineDelayConfig(
           enabled = true,
           secondsByInteraction = mapOf(
-            GeneratorInteraction.RecommendTitle to 0,
-            GeneratorInteraction.InitialQuestions to 2,
+            EngineInteraction.RecommendTitle to 0,
+            EngineInteraction.InitialQuestions to 2,
           ),
         ),
       ),
@@ -129,10 +129,10 @@ class SlowDownQuestionGeneratorTest {
   @Test
   fun `turning the flag off removes the delay for later calls`() = runTest {
     val config = MutableStateFlow(
-      GeneratorDelayConfig(enabled = true, secondsByInteraction = defaultSecondsByInteraction),
+      EngineDelayConfig(enabled = true, secondsByInteraction = defaultSecondsByInteraction),
     )
-    val delegate = TrackingGenerator()
-    val generator = SlowDownQuestionGenerator(delegate = delegate, config = config)
+    val delegate = TrackingPlanningEngine()
+    val generator = SlowDownPlanningEngine(delegate = delegate, config = config)
 
     val first = launch { generator.recommendTitle("a") }
     testScheduler.runCurrent()
@@ -150,8 +150,8 @@ class SlowDownQuestionGeneratorTest {
   }
 }
 
-/** Counts calls into each [QuestionGenerator] interaction. */
-private class TrackingGenerator : QuestionGenerator {
+/** Counts calls into each [PlanningEngine] interaction. */
+private class TrackingPlanningEngine : PlanningEngine {
   var titleCalls: Int = 0
   var initialCalls: Int = 0
   var followUpCalls: Int = 0

@@ -23,10 +23,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * launched coroutine.
  *
  * Bodies run strictly **serially** in enqueue order: generation is a single
- * shared resource (an LLM), so a recommendation that another task's output
- * depends on (e.g. the title before the initial question batch) is guaranteed
- * to land before the dependent task reads the project. A task behind a slow
- * peer stays [TaskStatus.Queued] until the peer finishes.
+ * shared resource (the planning engine), so a recommendation that another
+ * task's output depends on (e.g. the title before the initial question batch)
+ * is guaranteed to land before the dependent task reads the project. A task
+ * behind a slow peer stays [TaskStatus.Queued] until the peer finishes.
  */
 class TaskRunner(
   private val scope: CoroutineScope,
@@ -61,7 +61,7 @@ class TaskRunner(
   }
 
   /**
-   * Like [enqueue], but the body answers a question (e.g. "can the generator
+   * Like [enqueue], but the body answers a question (e.g. "can the engine
    * still produce questions?") and its result is folded into the terminal
    * task's [GenerationTask.result].
    */

@@ -1,8 +1,8 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.database.SettingsKey
-import alphainterplanetary.thinker.llm.GeneratorDelayConfig
-import alphainterplanetary.thinker.llm.GeneratorInteraction
+import alphainterplanetary.thinker.engine.EngineDelayConfig
+import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
@@ -68,130 +68,130 @@ class SettingsRepositoryTest {
     assertEquals(PhaseTheme.Default, repo.phaseTheme.value)
   }
 
-  // ---------- generator slow-down delays ----------
+  // ---------- engine slow-down delays ----------
 
   @Test
-  fun `generatorDelay starts disabled with default delays`() = runTest {
+  fun `engineDelay starts disabled with default delays`() = runTest {
     val repo = repository()
 
-    assertEquals(GeneratorDelayConfig.Default, repo.generatorDelay.value)
+    assertEquals(EngineDelayConfig.Default, repo.engineDelay.value)
   }
 
   @Test
-  fun `generatorDelay loads the persisted enable flag and delays at startup`() = runTest {
+  fun `engineDelay loads the persisted enable flag and delays at startup`() = runTest {
     val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.SlowDownQuestionGenerator, "true")
-    storage.saveSetting(SettingsKey.GeneratorRecommendTitleDelay, "5")
-    storage.saveSetting(SettingsKey.GeneratorInitialQuestionsDelay, "30")
+    storage.saveSetting(SettingsKey.SlowDownPlanningEngine, "true")
+    storage.saveSetting(SettingsKey.EngineRecommendTitleDelay, "5")
+    storage.saveSetting(SettingsKey.EngineInitialQuestionsDelay, "30")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
 
-    val config = repo.generatorDelay.value
+    val config = repo.engineDelay.value
     assertEquals(true, config.enabled)
-    assertEquals(5, config.secondsByInteraction[GeneratorInteraction.RecommendTitle])
-    assertEquals(30, config.secondsByInteraction[GeneratorInteraction.InitialQuestions])
-    assertEquals(2, config.secondsByInteraction[GeneratorInteraction.FollowUpQuestions])
-    assertEquals(2, config.secondsByInteraction[GeneratorInteraction.RemainingInPhase])
+    assertEquals(5, config.secondsByInteraction[EngineInteraction.RecommendTitle])
+    assertEquals(30, config.secondsByInteraction[EngineInteraction.InitialQuestions])
+    assertEquals(2, config.secondsByInteraction[EngineInteraction.FollowUpQuestions])
+    assertEquals(2, config.secondsByInteraction[EngineInteraction.RemainingInPhase])
   }
 
   @Test
-  fun `setGeneratorDelayEnabled updates state and persists the choice`() = runTest {
+  fun `setEngineDelayEnabled updates state and persists the choice`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setGeneratorDelayEnabled(true)
+    repo.setEngineDelayEnabled(true)
     testScheduler.advanceUntilIdle()
 
-    assertEquals(true, repo.generatorDelay.value.enabled)
-    assertEquals("true", storage.settings[SettingsKey.SlowDownQuestionGenerator.storageKey])
+    assertEquals(true, repo.engineDelay.value.enabled)
+    assertEquals("true", storage.settings[SettingsKey.SlowDownPlanningEngine.storageKey])
   }
 
   @Test
-  fun `setGeneratorDelayEnabled ignores the already-set value`() = runTest {
+  fun `setEngineDelayEnabled ignores the already-set value`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setGeneratorDelayEnabled(false)
+    repo.setEngineDelayEnabled(false)
 
-    assertEquals(false, repo.generatorDelay.value.enabled)
-    assertEquals(null, storage.settings[SettingsKey.SlowDownQuestionGenerator.storageKey])
+    assertEquals(false, repo.engineDelay.value.enabled)
+    assertEquals(null, storage.settings[SettingsKey.SlowDownPlanningEngine.storageKey])
   }
 
   @Test
-  fun `generatorDelay loads a persisted zero delay at startup`() = runTest {
+  fun `engineDelay loads a persisted zero delay at startup`() = runTest {
     val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.GeneratorRecommendTitleDelay, "0")
+    storage.saveSetting(SettingsKey.EngineRecommendTitleDelay, "0")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
 
     assertEquals(
       0,
-      repo.generatorDelay.value.secondsByInteraction[GeneratorInteraction.RecommendTitle],
+      repo.engineDelay.value.secondsByInteraction[EngineInteraction.RecommendTitle],
     )
   }
 
   @Test
-  fun `setGeneratorDelay accepts zero to disable one interaction`() = runTest {
+  fun `setEngineDelay accepts zero to disable one interaction`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setGeneratorDelay(GeneratorInteraction.FollowUpQuestions, 0)
+    repo.setEngineDelay(EngineInteraction.FollowUpQuestions, 0)
     testScheduler.advanceUntilIdle()
 
     assertEquals(
       0,
-      repo.generatorDelay.value.secondsByInteraction[GeneratorInteraction.FollowUpQuestions],
+      repo.engineDelay.value.secondsByInteraction[EngineInteraction.FollowUpQuestions],
     )
     assertEquals(
       "0",
-      storage.settings[SettingsKey.GeneratorFollowUpQuestionsDelay.storageKey],
+      storage.settings[SettingsKey.EngineFollowUpQuestionsDelay.storageKey],
     )
   }
 
   @Test
-  fun `setGeneratorDelay updates state and persists the seconds`() = runTest {
+  fun `setEngineDelay updates state and persists the seconds`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setGeneratorDelay(GeneratorInteraction.FollowUpQuestions, 30)
+    repo.setEngineDelay(EngineInteraction.FollowUpQuestions, 30)
     testScheduler.advanceUntilIdle()
 
     assertEquals(
       30,
-      repo.generatorDelay.value.secondsByInteraction[GeneratorInteraction.FollowUpQuestions],
+      repo.engineDelay.value.secondsByInteraction[EngineInteraction.FollowUpQuestions],
     )
     assertEquals(
       "30",
-      storage.settings[SettingsKey.GeneratorFollowUpQuestionsDelay.storageKey],
+      storage.settings[SettingsKey.EngineFollowUpQuestionsDelay.storageKey],
     )
   }
 
   @Test
-  fun `setGeneratorDelay ignores the already-set delay`() = runTest {
+  fun `setEngineDelay ignores the already-set delay`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setGeneratorDelay(GeneratorInteraction.RecommendTitle, 2)
+    repo.setEngineDelay(EngineInteraction.RecommendTitle, 2)
 
     assertEquals(
       null,
-      storage.settings[SettingsKey.GeneratorRecommendTitleDelay.storageKey],
+      storage.settings[SettingsKey.EngineRecommendTitleDelay.storageKey],
     )
   }
 
   @Test
   fun `an unknown persisted delay falls back to the default seconds`() = runTest {
     val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.GeneratorRecommendTitleDelay, "nope")
+    storage.saveSetting(SettingsKey.EngineRecommendTitleDelay, "nope")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
 
     assertEquals(
       2,
-      repo.generatorDelay.value.secondsByInteraction[GeneratorInteraction.RecommendTitle],
+      repo.engineDelay.value.secondsByInteraction[EngineInteraction.RecommendTitle],
     )
   }
 }

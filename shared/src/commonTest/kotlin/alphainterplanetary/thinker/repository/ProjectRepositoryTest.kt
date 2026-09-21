@@ -1,14 +1,14 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
-import alphainterplanetary.thinker.llm.QuestionGenerator
+import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.tasks.TaskRunner
-import alphainterplanetary.thinker.testutil.FakeGenerator
+import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
@@ -31,7 +31,7 @@ class ProjectRepositoryTest {
 
   private fun TestScope.repo(
     storage: FakeStorage = FakeStorage(),
-    generator: QuestionGenerator = FakeGenerator(),
+    generator: PlanningEngine = FakePlanningEngine(),
   ): ProjectRepository {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     return ProjectRepository(storage, generator, runner)
@@ -41,7 +41,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `createProject with explicit title truncates to 30 chars`() = runTest {
-    val generator = FakeGenerator()
+    val generator = FakePlanningEngine()
     val repository = repo(generator = generator)
     val longTitle = "x".repeat(50)
 
@@ -56,7 +56,7 @@ class ProjectRepositoryTest {
   @Test
   fun `createProject without title shells an empty title and fills it from the recommender`() =
     runTest {
-      val generator = FakeGenerator().apply { recommendedTitle = "From Generator" }
+      val generator = FakePlanningEngine().apply { recommendedTitle = "From Generator" }
       val storage = FakeStorage()
       val repository = repo(storage = storage, generator = generator)
 
@@ -74,7 +74,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `createProject trims synopsis and title`() = runTest {
-    val repository = repo(generator = FakeGenerator().apply { recommendedTitle = "Fallback" })
+    val repository = repo(generator = FakePlanningEngine().apply { recommendedTitle = "Fallback" })
 
     val project = repository.createProject("  leading and trailing  ", title = "  My Title  ")
     testScheduler.advanceUntilIdle()
@@ -85,7 +85,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `createProject passes editable title and synopsis to initial generation`() = runTest {
-    val generator = FakeGenerator().apply {
+    val generator = FakePlanningEngine().apply {
       recommendedTitle = "Recommended Title"
       initialQuestions += question("q1", "First?")
       initialQuestions += question("q2", "Second?")
@@ -103,7 +103,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `createProject saves generated questions onto the project via the task`() = runTest {
-    val generator = FakeGenerator().apply {
+    val generator = FakePlanningEngine().apply {
       initialQuestions += question("q1")
       initialQuestions += question("q2")
     }
@@ -125,7 +125,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `createProject creates round 1 as an Initial round in the first phase`() = runTest {
-    val generator = FakeGenerator().apply {
+    val generator = FakePlanningEngine().apply {
       initialQuestions += question("q1")
       initialQuestions += question("q2")
     }
@@ -147,7 +147,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `createProject keeps the shell when initial generation fails`() = runTest {
-    val failing = object : QuestionGenerator {
+    val failing = object : PlanningEngine {
       override suspend fun recommendTitle(synopsis: String): String = "Title"
 
       override suspend fun generateInitialQuestions(
@@ -156,7 +156,7 @@ class ProjectRepositoryTest {
         roundId: String,
         phase: Phase,
       ): List<Question> {
-        throw QuestionGenerator.AnalysisFailure("no model")
+        throw PlanningEngine.AnalysisFailure("no model")
       }
 
       override suspend fun generateFollowUpQuestions(
@@ -495,7 +495,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `saveAnswer does not generate follow-ups when all active questions are answered`() = runTest {
-    val generator = FakeGenerator().apply {
+    val generator = FakePlanningEngine().apply {
       followUpQuestions += question("f1")
       followUpQuestions += question("f2")
     }
@@ -526,7 +526,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `saveAnswer does not generate follow-ups when not all answered`() = runTest {
-    val generator = FakeGenerator()
+    val generator = FakePlanningEngine()
     val original = Project(
       id = "p1",
       synopsis = "s",
@@ -553,7 +553,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `saveAnswer does not generate follow-ups when only ignored questions remain`() = runTest {
-    val generator = FakeGenerator()
+    val generator = FakePlanningEngine()
     val original = Project(
       id = "p1",
       synopsis = "s",
@@ -603,7 +603,7 @@ class ProjectRepositoryTest {
   @Test
   fun `generateMoreQuestions starts a UserRequested round and enqueues follow-up generation`() =
     runTest {
-      val generator = FakeGenerator().apply {
+      val generator = FakePlanningEngine().apply {
         remaining = 1
         followUpQuestions += question("f1")
       }
@@ -660,7 +660,7 @@ class ProjectRepositoryTest {
       updatedAt = now,
     )
     val storage = FakeStorage(mutableMapOf("p1" to original))
-    val repository = repo(storage = storage, generator = FakeGenerator())
+    val repository = repo(storage = storage, generator = FakePlanningEngine())
 
     repository.ensureFreshAvailability("p1")
     testScheduler.advanceUntilIdle()
@@ -691,7 +691,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `canGenerateMoreQuestions is true when the generator still has questions`() = runTest {
-    val generator = FakeGenerator().apply { remaining = 5 }
+    val generator = FakePlanningEngine().apply { remaining = 5 }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -715,7 +715,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `canGenerateMoreQuestions reads the current phase and the full asked history`() = runTest {
-    val generator = FakeGenerator().apply { remaining = 2 }
+    val generator = FakePlanningEngine().apply { remaining = 2 }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.ExecutionPlan)),
       generator = generator,
@@ -735,7 +735,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `ensureFreshAvailability runs one check and caches the answer`() = runTest {
-    val generator = FakeGenerator().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { remaining = 3 }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -754,7 +754,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `ensureFreshAvailability reuses a fresh check instead of re-asking`() = runTest {
-    val generator = FakeGenerator().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { remaining = 3 }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -773,7 +773,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `ensureFreshAvailability skips while a check is already active`() = runTest {
-    val generator = FakeGenerator().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { remaining = 3 }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -789,7 +789,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `question-generating tasks make the cached availability stale`() = runTest {
-    val generator = FakeGenerator().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { remaining = 3 }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -819,7 +819,7 @@ class ProjectRepositoryTest {
   @Test
   fun `advanceToPhase completes in-progress rounds and opens an Initial round in the target phase`() =
     runTest {
-      val generator = FakeGenerator().apply {
+      val generator = FakePlanningEngine().apply {
         initialQuestions += question("n1", "Next?")
         initialQuestions += question("n2", "After?")
       }
@@ -885,7 +885,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `advanceToPhase dedupes new questions against the ones already asked`() = runTest {
-    val generator = FakeGenerator().apply {
+    val generator = FakePlanningEngine().apply {
       initialQuestions += question("dup", "Already asked?")
       initialQuestions += question("n1", "Fresh?")
     }
@@ -955,7 +955,7 @@ class ProjectRepositoryTest {
   @Test
   fun `advanceToPhase back to a visited phase appends without disturbing existing order`() =
     runTest {
-      val generator = FakeGenerator().apply {
+      val generator = FakePlanningEngine().apply {
         initialQuestions += question("n1", "Fresh 1?")
         initialQuestions += question("n2", "Fresh 2?")
       }
@@ -996,7 +996,7 @@ class ProjectRepositoryTest {
   @Test
   fun `advanceToPhase into a phase whose pool was exhausted by an earlier visit asks nothing new`() =
     runTest {
-      val generator = FakeGenerator() // no initial questions -> nothing left to ask
+      val generator = FakePlanningEngine() // no initial questions -> nothing left to ask
       val repository = repo(storage = storageWith(revisitedProject()), generator = generator)
 
       val updated = repository.advanceToPhase("p1", BuiltInPhase.ScopeGoals)
@@ -1020,7 +1020,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `saveAnswer does not generate a follow-up round in the revisited current phase`() = runTest {
-    val generator = FakeGenerator().apply {
+    val generator = FakePlanningEngine().apply {
       followUpQuestions += question("f1")
     }
     val original = revisitedProject().copy(

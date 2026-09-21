@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.llm
+package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.testutil.question
@@ -9,10 +9,10 @@ import kotlin.test.assertTrue
 
 private const val FOLLOW_UP_COUNT = 3
 
-class HardcodedQuestionGeneratorTest {
+class HardcodedPlanningEngineTest {
 
   private val generator =
-    HardcodedQuestionGenerator(initialCount = 3, followUpCount = FOLLOW_UP_COUNT)
+    HardcodedPlanningEngine(initialCount = 3, followUpCount = FOLLOW_UP_COUNT)
 
   // ---------- recommendTitle ----------
 
@@ -93,7 +93,7 @@ class HardcodedQuestionGeneratorTest {
 
   @Test
   fun `generateInitialQuestions returns the configured number of questions`() = runTest {
-    val generator = HardcodedQuestionGenerator(initialCount = 5, followUpCount = FOLLOW_UP_COUNT)
+    val generator = HardcodedPlanningEngine(initialCount = 5, followUpCount = FOLLOW_UP_COUNT)
 
     val questions = generator.generateInitialQuestions(
       "title",
@@ -194,7 +194,7 @@ class HardcodedQuestionGeneratorTest {
 
   @Test
   fun `generateFollowUpQuestions respects followUpCount`() = runTest {
-    val generator = HardcodedQuestionGenerator(initialCount = 3, followUpCount = 7)
+    val generator = HardcodedPlanningEngine(initialCount = 3, followUpCount = 7)
 
     val initial =
       generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
@@ -262,7 +262,7 @@ class HardcodedQuestionGeneratorTest {
   @Test
   fun `every built-in phase has a non-empty pool`() {
     assertTrue(BuiltInPhase.entries.all { phase ->
-      HardcodedQuestionGenerator.questionPoolByPhase.containsKey(
+      HardcodedPlanningEngine.questionPoolByPhase.containsKey(
         phase
       )
     })
@@ -274,13 +274,13 @@ class HardcodedQuestionGeneratorTest {
 
   @Test
   fun `pool texts are unique across phases`() {
-    val flattened = HardcodedQuestionGenerator.questionPoolByPhase.values.flatten()
+    val flattened = HardcodedPlanningEngine.questionPoolByPhase.values.flatten()
 
     assertEquals(flattened.size, flattened.toSet().size)
   }
 
   private fun poolOf(phase: BuiltInPhase): List<String> =
-    requireNotNull(HardcodedQuestionGenerator.questionPoolByPhase[phase]) {
+    requireNotNull(HardcodedPlanningEngine.questionPoolByPhase[phase]) {
       "no pool for $phase"
     }
 }

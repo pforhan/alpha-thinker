@@ -3,8 +3,8 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
-import alphainterplanetary.thinker.llm.GeneratorDelayConfig
-import alphainterplanetary.thinker.llm.GeneratorInteraction
+import alphainterplanetary.thinker.engine.EngineDelayConfig
+import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +18,7 @@ import me.tatarka.inject.annotations.Inject
  * Owns the app-wide settings. The selected [PhaseTheme] is loaded once at
  * startup and applied from the app root, so a change here re-colors phase
  * badges and pills immediately and persists across launches. The testing
- * [generatorDelay] controls the artificial slow-down applied to QuestionGenerator
+ * [engineDelay] controls the artificial slow-down applied to PlanningEngine
  * interactions so the Task Manager stays exercisable.
  */
 @AppScope
@@ -29,8 +29,8 @@ class SettingsRepository @Inject constructor(
   private val _phaseTheme = MutableStateFlow(PhaseTheme.Default)
   val phaseTheme: StateFlow<PhaseTheme> = _phaseTheme.asStateFlow()
 
-  private val _generatorDelay = MutableStateFlow(GeneratorDelayConfig.Default)
-  val generatorDelay: StateFlow<GeneratorDelayConfig> = _generatorDelay.asStateFlow()
+  private val _engineDelay = MutableStateFlow(EngineDelayConfig.Default)
+  val engineDelay: StateFlow<EngineDelayConfig> = _engineDelay.asStateFlow()
 
   init {
     scope.launch {
@@ -44,18 +44,18 @@ class SettingsRepository @Inject constructor(
       }
     }
     scope.launch {
-      val enabled = storage.getSetting(SettingsKey.SlowDownQuestionGenerator, "false").toBoolean()
-      val loadedSeconds = GeneratorInteraction.entries.associateWith { interaction ->
+      val enabled = storage.getSetting(SettingsKey.SlowDownPlanningEngine, "false").toBoolean()
+      val loadedSeconds = EngineInteraction.entries.associateWith { interaction ->
         loadDelaySeconds(interaction)
       }
       // Only apply the persisted values while the user hasn't already changed a
       // field, so a startup load never clobbers their choices.
-      _generatorDelay.update { current ->
-        GeneratorDelayConfig(
+      _engineDelay.update { current ->
+        EngineDelayConfig(
           enabled = current.enabled || enabled,
           secondsByInteraction = current.secondsByInteraction.mapValues { (interaction, already) ->
             // A delay still on the first option hasn't been customized this session.
-            if (already == GeneratorDelayConfig.DelayOptionsSeconds.first()) {
+            if (already == EngineDelayConfig.DelayOptionsSeconds.first()) {
               loadedSeconds.getValue(interaction)
             } else {
               already
@@ -74,22 +74,22 @@ class SettingsRepository @Inject constructor(
     }
   }
 
-  /** Turns the artificial QuestionGenerator slow-down on or off for Task Manager testing. */
-  fun setGeneratorDelayEnabled(enabled: Boolean) {
-    if (enabled == _generatorDelay.value.enabled) return
-    _generatorDelay.update { it.copy(enabled = enabled) }
+  /** Turns the artificial PlanningEngine slow-down on or off for Task Manager testing. */
+  fun setEngineDelayEnabled(enabled: Boolean) {
+    if (enabled == _engineDelay.value.enabled) return
+    _engineDelay.update { it.copy(enabled = enabled) }
     scope.launch {
-      storage.saveSetting(SettingsKey.SlowDownQuestionGenerator, enabled.toString())
+      storage.saveSetting(SettingsKey.SlowDownPlanningEngine, enabled.toString())
     }
   }
 
-  /** Sets the artificial slow-down hold time for one [GeneratorInteraction]. */
-  fun setGeneratorDelay(interaction: GeneratorInteraction, seconds: Int) {
-    require(seconds in GeneratorDelayConfig.DelayOptionsSeconds) {
+  /** Sets the artificial slow-down hold time for one [EngineInteraction]. */
+  fun setEngineDelay(interaction: EngineInteraction, seconds: Int) {
+    require(seconds in EngineDelayConfig.DelayOptionsSeconds) {
       "unsupported slow-down delay: $seconds"
     }
-    if (_generatorDelay.value.secondsByInteraction[interaction] == seconds) return
-    _generatorDelay.update { config ->
+    if (_engineDelay.value.secondsByInteraction[interaction] == seconds) return
+    _engineDelay.update { config ->
       config.copy(secondsByInteraction = config.secondsByInteraction + (interaction to seconds))
     }
     scope.launch {
@@ -98,17 +98,17 @@ class SettingsRepository @Inject constructor(
   }
 
   /** Reads a persisted delay, falling back to the default when absent or unknown. */
-  private suspend fun loadDelaySeconds(interaction: GeneratorInteraction): Int {
+  private suspend fun loadDelaySeconds(interaction: EngineInteraction): Int {
     val stored = storage.getSetting(interaction.settingsKey, "").toIntOrNull()
-    return stored.takeIf { it in GeneratorDelayConfig.DelayOptionsSeconds }
-      ?: GeneratorDelayConfig.DelayOptionsSeconds.first()
+    return stored.takeIf { it in EngineDelayConfig.DelayOptionsSeconds }
+      ?: EngineDelayConfig.DelayOptionsSeconds.first()
   }
 
-  private val GeneratorInteraction.settingsKey: SettingsKey
+  private val EngineInteraction.settingsKey: SettingsKey
     get() = when (this) {
-      GeneratorInteraction.RecommendTitle -> SettingsKey.GeneratorRecommendTitleDelay
-      GeneratorInteraction.InitialQuestions -> SettingsKey.GeneratorInitialQuestionsDelay
-      GeneratorInteraction.FollowUpQuestions -> SettingsKey.GeneratorFollowUpQuestionsDelay
-      GeneratorInteraction.RemainingInPhase -> SettingsKey.GeneratorRemainingInPhaseDelay
+      EngineInteraction.RecommendTitle -> SettingsKey.EngineRecommendTitleDelay
+      EngineInteraction.InitialQuestions -> SettingsKey.EngineInitialQuestionsDelay
+      EngineInteraction.FollowUpQuestions -> SettingsKey.EngineFollowUpQuestionsDelay
+      EngineInteraction.RemainingInPhase -> SettingsKey.EngineRemainingInPhaseDelay
     }
 }

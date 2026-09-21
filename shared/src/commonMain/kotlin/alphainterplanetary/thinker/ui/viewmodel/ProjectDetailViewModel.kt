@@ -93,7 +93,7 @@ class ProjectDetailViewModel(
         if (loaded == null) {
           _uiState.value = ProjectDetailUiState.Error("Failed to load project: project not found")
         } else {
-          // Availability is cached (no generator call here); a stale check is
+          // Availability is cached (no engine call here); a stale check is
           // enqueued as a task and this reloads once it lands.
           val canGenerate = repository.canGenerateMoreQuestions(id)
           _uiState.value = ProjectDetailUiState.Success(loaded, canGenerate)

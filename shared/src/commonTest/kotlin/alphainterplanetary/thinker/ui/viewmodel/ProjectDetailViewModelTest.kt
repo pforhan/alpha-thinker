@@ -1,16 +1,16 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.llm.GeneratorDelayConfig
-import alphainterplanetary.thinker.llm.GeneratorInteraction
-import alphainterplanetary.thinker.llm.QuestionGenerator
-import alphainterplanetary.thinker.llm.SlowDownQuestionGenerator
+import alphainterplanetary.thinker.engine.EngineDelayConfig
+import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.PlanningEngine
+import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
-import alphainterplanetary.thinker.testutil.FakeGenerator
+import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.defaultTestInstant
@@ -39,7 +39,7 @@ class ProjectDetailViewModelTest {
   /** Builds a VM on the test scheduler and guarantees [ProjectDetailViewModel.close]. */
   private suspend fun TestScope.withViewModel(
     storage: FakeStorage = FakeStorage(),
-    generator: QuestionGenerator = FakeGenerator(),
+    generator: PlanningEngine = FakePlanningEngine(),
     block: suspend (VmContext) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
@@ -56,14 +56,14 @@ class ProjectDetailViewModelTest {
     }
   }
 
-  /** A [QuestionGenerator] that holds its follow-up generation for [holdSeconds]. */
-  private fun slowFollowUpGenerator(delegate: FakeGenerator, holdSeconds: Int): QuestionGenerator =
-    SlowDownQuestionGenerator(
+  /** A [PlanningEngine] that holds its follow-up generation for [holdSeconds]. */
+  private fun slowFollowUpGenerator(delegate: FakePlanningEngine, holdSeconds: Int): PlanningEngine =
+    SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(
-        GeneratorDelayConfig(
+        EngineDelayConfig(
           enabled = true,
-          secondsByInteraction = mapOf(GeneratorInteraction.FollowUpQuestions to holdSeconds),
+          secondsByInteraction = mapOf(EngineInteraction.FollowUpQuestions to holdSeconds),
         )
       ),
     )
@@ -202,7 +202,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `Success exposes whether the generator can produce more questions`() = runTest {
-    val generator = FakeGenerator().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { remaining = 3 }
     withViewModel(FakeStorage(mutableMapOf("p1" to project())), generator) { context ->
       val vm = context.vm
       vm.loadProject("p1")
@@ -212,7 +212,7 @@ class ProjectDetailViewModelTest {
       assertTrue(state.canGenerateMoreQuestions)
     }
 
-    withViewModel(FakeStorage(mutableMapOf("p1" to project())), FakeGenerator()) { context ->
+    withViewModel(FakeStorage(mutableMapOf("p1" to project())), FakePlanningEngine()) { context ->
       val vm = context.vm
       vm.loadProject("p1")
       testScheduler.advanceUntilIdle()
@@ -223,7 +223,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `advanceToPhase moves the project into the chosen phase with a new round`() = runTest {
-    val generator = FakeGenerator().apply {
+    val generator = FakePlanningEngine().apply {
       initialQuestions += question("n1", "Next?")
     }
     val storage = FakeStorage(
@@ -319,7 +319,7 @@ class ProjectDetailViewModelTest {
   @Test
   fun `a completed initial-generation task reloads the loaded project with its questions`() =
     runTest {
-      val generator = FakeGenerator().apply {
+      val generator = FakePlanningEngine().apply {
         initialQuestions += question("g1", "Generated?")
       }
       withViewModel(generator = generator) { context ->
@@ -335,7 +335,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `tasks exposes the current project's generation tasks`() = runTest {
-    val generator = FakeGenerator()
+    val generator = FakePlanningEngine()
     withViewModel(generator = generator) { context ->
       val vm = context.vm
       val created = context.repository.createProject("My synopsis")
@@ -362,7 +362,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `generateMoreQuestions runs on the task runner and reloads when it completes`() = runTest {
-    val fake = FakeGenerator().apply {
+    val fake = FakePlanningEngine().apply {
       remaining = 1
       followUpQuestions += question("n1", "Fresh?")
     }
@@ -394,7 +394,7 @@ class ProjectDetailViewModelTest {
   @Test
   fun `entering a project with an extant running task reconnects and reloads on completion`() =
     runTest {
-      val fake = FakeGenerator().apply {
+      val fake = FakePlanningEngine().apply {
         remaining = 1
         followUpQuestions += question("n1", "Fresh?")
       }

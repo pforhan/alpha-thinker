@@ -1,8 +1,8 @@
 package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.di.AppComponent
-import alphainterplanetary.thinker.llm.GeneratorDelayConfig
-import alphainterplanetary.thinker.llm.GeneratorInteraction
+import alphainterplanetary.thinker.engine.EngineDelayConfig
+import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.theme.BadgeShape
@@ -76,21 +76,21 @@ fun SettingsScreen(
   }
   val uiState by viewModel.uiState.collectAsState()
   val phaseTheme by viewModel.phaseTheme.collectAsState()
-  val generatorDelay by viewModel.generatorDelay.collectAsState()
+  val engineDelay by viewModel.engineDelay.collectAsState()
   val scrollState = rememberScrollState()
   var delayExpandedHeight by remember { mutableIntStateOf(0) }
-  var previousDelayEnabled by remember { mutableStateOf(generatorDelay.enabled) }
+  var previousDelayEnabled by remember { mutableStateOf(engineDelay.enabled) }
 
   // Turning the slow-down on adds the per-interaction controls below the
   // toggle; scroll just enough to bring the newly revealed rows into view.
-  LaunchedEffect(generatorDelay.enabled) {
-    if (generatorDelay.enabled && !previousDelayEnabled) {
+  LaunchedEffect(engineDelay.enabled) {
+    if (engineDelay.enabled && !previousDelayEnabled) {
       // Wait for the expanded controls to be measured: their onSizeChanged
       // fires during the layout pass right after the toggle turns them on.
       while (delayExpandedHeight == 0) withFrameNanos {}
       scrollState.animateScrollTo(scrollState.value + delayExpandedHeight)
     }
-    previousDelayEnabled = generatorDelay.enabled
+    previousDelayEnabled = engineDelay.enabled
   }
 
   Scaffold(
@@ -161,10 +161,10 @@ fun SettingsScreen(
         style = MaterialTheme.typography.titleMedium,
       )
       DelayControlItem(
-        config = generatorDelay,
-        onEnabledChange = { viewModel.setGeneratorDelayEnabled(it) },
+        config = engineDelay,
+        onEnabledChange = { viewModel.setEngineDelayEnabled(it) },
         onDelayChange = { interaction, seconds ->
-          viewModel.setGeneratorDelay(interaction, seconds)
+          viewModel.setEngineDelay(interaction, seconds)
         },
         onExpandedHeightChange = { delayExpandedHeight = it },
       )
@@ -266,14 +266,14 @@ private fun ThemePreviewRow(
 
 /**
  * The Task-Manager testing controls: a master switch that, while enabled,
- * expands into a per-interaction picker choosing each QuestionGenerator
+ * expands into a per-interaction picker choosing each PlanningEngine
  * delay from the 0s (off) / 2s / 5s / 30s options.
  */
 @Composable
 private fun DelayControlItem(
-  config: GeneratorDelayConfig,
+  config: EngineDelayConfig,
   onEnabledChange: (Boolean) -> Unit,
-  onDelayChange: (GeneratorInteraction, Int) -> Unit,
+  onDelayChange: (EngineInteraction, Int) -> Unit,
   onExpandedHeightChange: (Int) -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
@@ -281,12 +281,12 @@ private fun DelayControlItem(
       Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
           Text(
-            text = "Slow down question generation",
+            text = "Slow down the planning engine",
             style = MaterialTheme.typography.titleSmall,
           )
           Spacer(modifier = Modifier.height(Dimens.TightGap))
           Text(
-            text = "Adds an artificial delay to each QuestionGenerator interaction so " +
+            text = "Adds an artificial delay to each PlanningEngine interaction so " +
               "Task Manager tasks stay visible long enough to observe them.",
             style = MaterialTheme.typography.bodyMedium,
           )
@@ -307,7 +307,7 @@ private fun DelayControlItem(
             Spacer(modifier = Modifier.height(Dimens.ContentGap))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(Dimens.ContentGap))
-            GeneratorInteraction.entries.forEachIndexed { index, interaction ->
+            EngineInteraction.entries.forEachIndexed { index, interaction ->
               if (index > 0) {
                 Spacer(modifier = Modifier.height(Dimens.ContentGap))
               }
@@ -324,13 +324,13 @@ private fun DelayControlItem(
   }
 }
 
-/** One QuestionGenerator interaction: its label plus a 0s / 2s / 5s / 30s choice. */
+/** One PlanningEngine interaction: its label plus a 0s / 2s / 5s / 30s choice. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DelayChoiceRow(
-  interaction: GeneratorInteraction,
-  secondsByInteraction: Map<GeneratorInteraction, Int>,
-  onDelayChange: (GeneratorInteraction, Int) -> Unit,
+  interaction: EngineInteraction,
+  secondsByInteraction: Map<EngineInteraction, Int>,
+  onDelayChange: (EngineInteraction, Int) -> Unit,
 ) {
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
@@ -342,7 +342,7 @@ private fun DelayChoiceRow(
       horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
       verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
     ) {
-      GeneratorDelayConfig.DelayOptionsSeconds.forEach { seconds ->
+      EngineDelayConfig.DelayOptionsSeconds.forEach { seconds ->
         FilterChip(
           selected = secondsByInteraction[interaction] == seconds,
           onClick = { onDelayChange(interaction, seconds) },

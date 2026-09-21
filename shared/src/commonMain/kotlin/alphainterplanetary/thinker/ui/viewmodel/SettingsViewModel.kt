@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.llm.GeneratorDelayConfig
-import alphainterplanetary.thinker.llm.GeneratorInteraction
+import alphainterplanetary.thinker.engine.EngineDelayConfig
+import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
@@ -30,15 +30,15 @@ class SettingsViewModel(
     settingsRepository.setPhaseTheme(theme)
   }
 
-  /** Whether QuestionGenerator interactions carry the artificial testing delay. */
-  val generatorDelay: StateFlow<GeneratorDelayConfig> = settingsRepository.generatorDelay
+  /** Whether PlanningEngine interactions carry the artificial testing delay. */
+  val engineDelay: StateFlow<EngineDelayConfig> = settingsRepository.engineDelay
 
-  fun setGeneratorDelayEnabled(enabled: Boolean) {
-    settingsRepository.setGeneratorDelayEnabled(enabled)
+  fun setEngineDelayEnabled(enabled: Boolean) {
+    settingsRepository.setEngineDelayEnabled(enabled)
   }
 
-  fun setGeneratorDelay(interaction: GeneratorInteraction, seconds: Int) {
-    settingsRepository.setGeneratorDelay(interaction, seconds)
+  fun setEngineDelay(interaction: EngineInteraction, seconds: Int) {
+    settingsRepository.setEngineDelay(interaction, seconds)
   }
 
   private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Idle)

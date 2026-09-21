@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
-import alphainterplanetary.thinker.llm.QuestionGenerator
+import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round
@@ -24,7 +24,7 @@ import kotlin.time.Instant
 @AppScope
 class ProjectRepository @Inject constructor(
   private val storage: Storage,
-  private val generator: QuestionGenerator,
+  private val engine: PlanningEngine,
   private val taskRunner: TaskRunner,
 ) {
 
@@ -76,7 +76,7 @@ class ProjectRepository @Inject constructor(
   private fun enqueueTitleRecommendation(projectId: String) {
     taskRunner.enqueue(projectId, TaskKind.TitleRecommendation) {
       val reloaded = storage.getProject(projectId) ?: return@enqueue
-      val recommended = generator.recommendTitle(reloaded.synopsis)
+      val recommended = engine.recommendTitle(reloaded.synopsis)
       if (recommended.isNotBlank()) {
         storage.saveProject(
           reloaded.copy(
@@ -104,14 +104,14 @@ class ProjectRepository @Inject constructor(
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
       val generated = when (kind) {
-        TaskKind.InitialQuestions -> generator.generateInitialQuestions(
+        TaskKind.InitialQuestions -> engine.generateInitialQuestions(
           editableTitle = reloaded.editableTitle,
           synopsis = reloaded.synopsis,
           roundId = round.id,
           phase = round.phase,
         )
 
-        TaskKind.FollowUpQuestions -> generator.generateFollowUpQuestions(
+        TaskKind.FollowUpQuestions -> engine.generateFollowUpQuestions(
           synopsis = reloaded.synopsis,
           previousQuestions = reloaded.questions,
           roundId = round.id,
@@ -269,16 +269,16 @@ class ProjectRepository @Inject constructor(
    * Availability ("can the current phase's pool still produce questions?") per
    * project, recorded by [enqueueAvailabilityCheck] and read by
    * [canGenerateMoreQuestions]. Kept on the repository so the answer is shared
-   * by every consumer and never triggers a generator call of its own.
+   * by every consumer and never triggers an engine call of its own.
    */
   private val _availability = MutableStateFlow<Map<String, Boolean>>(emptyMap())
 
   val availability: StateFlow<Map<String, Boolean>> = _availability.asStateFlow()
 
   /**
-   * Whether the current phase's pool still has questions the generator could
+   * Whether the current phase's pool still has questions the engine could
    * produce, from the last [enqueueAvailabilityCheck] — never blocks on the
-   * generator itself. Unknown projects answer "no", gating the generate-more
+   * engine itself. Unknown projects answer "no", gating the generate-more
    * affordances until a check lands.
    */
   suspend fun canGenerateMoreQuestions(projectId: String): Boolean {
@@ -287,7 +287,7 @@ class ProjectRepository @Inject constructor(
   }
 
   /**
-   * Runs one [TaskKind.RemainingInPhase] check as a task: asks the generator
+   * Runs one [TaskKind.RemainingInPhase] check as a task: asks the engine
    * how many questions the current phase could still produce and records
    * whether any remain on [availability]. Returns the queued task; the result
    * also rides on the terminal task's [GenerationTask.result].
@@ -298,7 +298,7 @@ class ProjectRepository @Inject constructor(
       val remaining = if (project == null) {
         0
       } else {
-        generator.remainingInPhase(
+        engine.remainingInPhase(
           synopsis = project.synopsis,
           previousQuestions = project.questions,
           phase = project.currentPhase,
@@ -314,7 +314,7 @@ class ProjectRepository @Inject constructor(
    * Skipped while a check is already active for the project and when the last
    * completed check was enqueued after every question-generating task (only
    * generated questions change the remaining count), so opening a project or
-   * answering questions never re-asks the generator. Tasks run serially, so the
+   * answering questions never re-asks the engine. Tasks run serially, so the
    * enqueue order in [TaskRunner.tasks] is also the completion order and the
    * comparison is stable across clock granularities. Returns the task when one
    * was enqueued, null when the cached result is fresh.

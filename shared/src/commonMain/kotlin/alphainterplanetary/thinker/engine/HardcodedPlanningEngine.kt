@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.llm
+package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase.DefinitionOfDone
@@ -13,10 +13,10 @@ import alphainterplanetary.thinker.util.randomUUID
 import me.tatarka.inject.annotations.Inject
 import kotlin.time.Instant
 
-class HardcodedQuestionGenerator @Inject constructor(
+class HardcodedPlanningEngine @Inject constructor(
   private val initialCount: Int = 5,
   private val followUpCount: Int = 5,
-) : QuestionGenerator {
+) : PlanningEngine {
 
   override suspend fun recommendTitle(synopsis: String): String =
     generateTitleFromSynopsis(synopsis)

@@ -1,10 +1,10 @@
 package alphainterplanetary.thinker.testutil
 
-import alphainterplanetary.thinker.llm.QuestionGenerator
+import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 
-class FakeGenerator : QuestionGenerator {
+class FakePlanningEngine : PlanningEngine {
   var recommendedTitle: String = "Recommended"
   var remaining: Int = 0
   val initialQuestions: MutableList<Question> = mutableListOf()

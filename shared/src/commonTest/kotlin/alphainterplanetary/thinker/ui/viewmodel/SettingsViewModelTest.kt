@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.llm.GeneratorDelayConfig
-import alphainterplanetary.thinker.llm.GeneratorInteraction
+import alphainterplanetary.thinker.engine.EngineDelayConfig
+import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
@@ -71,22 +71,22 @@ class SettingsViewModelTest {
   }
 
   @Test
-  fun `generatorDelay starts disabled with default delays`() = runTest {
+  fun `engineDelay starts disabled with default delays`() = runTest {
     val vm = viewModel()
 
-    assertEquals(GeneratorDelayConfig.Default, vm.generatorDelay.value)
+    assertEquals(EngineDelayConfig.Default, vm.engineDelay.value)
   }
 
   @Test
-  fun `generatorDelay setters update the exposed config`() = runTest {
+  fun `engineDelay setters update the exposed config`() = runTest {
     val vm = viewModel()
 
-    vm.setGeneratorDelayEnabled(true)
-    vm.setGeneratorDelay(GeneratorInteraction.FollowUpQuestions, 30)
+    vm.setEngineDelayEnabled(true)
+    vm.setEngineDelay(EngineInteraction.FollowUpQuestions, 30)
     testScheduler.advanceUntilIdle()
 
-    val config = vm.generatorDelay.value
+    val config = vm.engineDelay.value
     assertEquals(true, config.enabled)
-    assertEquals(30, config.secondsByInteraction[GeneratorInteraction.FollowUpQuestions])
+    assertEquals(30, config.secondsByInteraction[EngineInteraction.FollowUpQuestions])
   }
 }

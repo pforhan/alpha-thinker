@@ -3,7 +3,7 @@
 Status: **living** — owned by the Phase 2.8 "Research & define the phase
 library + wrap-up flow" item in IMPLEMENTATION-PLAN.md. The phase **library** is
 settled (six phases, per-phase pools); the pool **partition notes** below are
-working content to validate while rebalancing `HardcodedQuestionGenerator`.
+working content to validate while rebalancing `HardcodedPlanningEngine`.
 
 ## One-line change of direction
 
@@ -11,7 +11,7 @@ A project is **not assigned a flow**. Instead, planning advances through
 **phases** — labeled planning foci — one wrap-up at a time. At each wrap-up the
 app offers a couple of **"what's next?" phase buttons** (plus "Finish the plan")
 and the user nudges themselves into the next phase they think is appropriate.
-The **QuestionGenerator proposes** those next phases: the hardcoded generator
+The **PlanningEngine proposes** those next phases: the hardcoded engine
 text-searches the round's answers and synopsis; the LLM (Phase 3) picks from a
 list based on what it reads.
 
@@ -222,7 +222,7 @@ while the pools keep questions relevant.
 
 ### Pool partition (existing `questionPool` → phase)
 
-Working notes for re-partitioning `HardcodedQuestionGenerator.questionPool`.
+Working notes for re-partitioning `HardcodedPlanningEngine.questionPool`.
 Target total ≈ today's pool size (~66) — rebalancing, not growth. Questions are
 listed in the priority order to serve within their phase; "(dedupe)" marks
 candidates to retire or reword rather than carry forward; "(draft)" marks new

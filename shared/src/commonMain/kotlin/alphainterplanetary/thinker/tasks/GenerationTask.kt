@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.tasks
 import kotlin.time.Instant
 
 /**
- * The kind of long-running LLM work a task performs.
+ * The kind of long-running planning-engine work a task performs.
  */
 enum class TaskKind {
   /** The opening question batch for a brand-new project ([createProject]). */
@@ -15,7 +15,7 @@ enum class TaskKind {
   /** Recommending an editable title from the synopsis when the user didn't type one. */
   TitleRecommendation,
 
-  /** Asking the generator whether the current phase's pool can still produce questions. */
+  /** Asking the engine whether the current phase's pool can still produce questions. */
   RemainingInPhase,
 
   /** Rewriting the project synopsis / title from the accumulated answers. */
@@ -35,7 +35,7 @@ enum class TaskStatus {
 /**
  * An observable unit of long-running generation work (see ENG-DESIGN.md
  * "Generation Task Framework"). In-memory for now; persistence and the
- * [LLMInteraction] audit log are deferred until the System/Debug workspace.
+ * [EngineActivity] audit log are deferred until the System/Debug workspace.
  */
 data class GenerationTask(
   val id: String,

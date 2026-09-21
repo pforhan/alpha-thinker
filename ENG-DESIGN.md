@@ -69,15 +69,90 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
         in history) so old versions can be viewed/restored by making a new
         version.)
 
-4. **LLMInteraction:**
-    *   `llmInteractionId` (Unique ID)
-    *   `projectId` (Foreign Key: Links to the parent Project.)
-    *   `promptUsed` (String: The full input prompt sent to the LLM.)
-    *   `generationPayload` (JSON/Text: The LLM's raw output or a synthesized structured prompt.)
-    *   `suggestedQuestions` (JSON/Text: Any structured list of new questions derived by the LLM.)
-    *   `toolCalls` (JSON/Text: Any tool invocations made during the interaction — tool name, arguments, results, and per-call timing. Populated when the LLM performs lookup / web search.)
-    *   `durationMs` (Long: Time taken for the LLM to generate the response.)
-    *   `timestamp` (Timestamp: When the interaction occurred.)
+4. **EngineActivity** (renamed and broadened from `LLMInteraction`) — an
+    **append-only event log**, one table in its own `ActivityDatabase` (a
+    separate Room database file: independent growth, pruning, and migration,
+    and a wholesale "Clear log" wipe can never touch projects/questions/
+    settings). A logical interaction/task is the group of event rows sharing
+    `activityId`; nothing is ever updated — every engine action appends.
+    Global order is the autoincrement `eventId`.
+
+    Columns:
+    *   `eventId` (PK, autoincrement — global event order)
+    *   `activityId` (indexed — one logical activity; the group of rows whose
+        *latest* event is that activity's current state)
+    *   `parentActivityId` (indexed, Optional — **nesting**: a lookup / web
+        search requested by the LLM is a *child activity* of the inference
+        that requested it, so the log is a tree, not a flat list)
+    *   `projectId` (Foreign Key, Optional)
+    *   `roundId` (Foreign Key, Optional)
+    *   `kind` (Enum: `TitleRecommendation`, `InitialQuestions`,
+        `FollowUpQuestions`, `AvailabilityCheck`, `SynopsisRewrite`,
+        `AutoArchive`, `Lookup`, ... — same vocabulary as the `TaskKind` enum)
+    *   `engine` (Enum: `LocalInference` (edge LLM), `RemoteInference`
+        (HTTP / cloud / OpenAI-compatible), `Hardcoded` (Lite fallback —
+        `HardcodedPlanningEngine`), `Lookup` (web/lookup tool call)) — which
+        backend actually executed. `LLMInteraction` only ever assumed the
+        local LLM; the log records whichever engine ran.)
+    *   `eventType` (Enum: `Created | Progress | Succeeded | Failed |
+        Cancelled` — each row is one immutable transition; the payload fields
+        fill per type)
+    *   `progress` (Float, Optional — `Progress` events, 0..1)
+    *   `error` (String, Optional — `Failed` / `Cancelled` events)
+    *   `result` (Boolean, Optional — boolean-answering task outcomes, e.g.
+        `AvailabilityCheck`)
+    *   `promptUsed` / `parameters` (String / JSON, Optional — the input
+        prompt or remote request body and its config, on the `Created` event)
+    *   `generationPayload` / `suggestedQuestions` (JSON/Text, Optional — the
+        engine's raw output and any structured question list, on terminal
+        events)
+    *   `durationMs` (Long, Optional — on the terminal event: the call's
+        timing, or per-call timing for a `Lookup` child)
+    *   `timestamp` (Timestamp)
+
+    **Tool calls are child events, not a blob:** there is no `toolCalls`
+    column. Each tool invocation (e.g. an LLM-requested web lookup) is its own
+    child row (`engine = Lookup`, `parentActivityId` = the requesting
+    inference) carrying name, arguments, results, and per-call timing in its
+    event payload — one normalized source of truth for both tree display and
+    per-call latency.
+
+    **Read models are derived, never stored.** Live task state (Task Manager,
+    project screens) = the *latest event per `activityId`* — a Room
+    `@DatabaseView` window-function query, or a repository fold over the
+    `TaskRunner`'s existing transition flow. The LLM Interaction Log reads the
+    full history as a tree via `parentActivityId`. On startup the fold is
+    replayed and any activity whose latest event is non-terminal gets a
+    terminal `Failed("interrupted")` event (or is re-enqueued), so in-flight
+    work recovers after process death.
+
+    **Write path — two writers, one channel.** `TaskRunner` appends the
+    lifecycle events (`Created` / `Progress` / `Succeeded` / `Failed` /
+    `Cancelled`, with `activityId = taskId`). A **`LoggingPlanningEngine`
+    decorator** — wrapping whichever engine is active, exactly as
+    `SlowDownPlanningEngine` wraps `HardcodedPlanningEngine` — appends the
+    interaction detail (`promptUsed` / `parameters`,
+    `generationPayload` / `suggestedQuestions`, `durationMs`, and child
+    `Lookup` tool-call events). The task body passes its `taskId` into the
+    engine call as `activityId` (the `PlanningEngine` methods carry an optional
+    `activityId`/context param), so the decorator's detail groups under the
+    same activity as the lifecycle rows. `ProjectRepository` and the engines
+    are pure producers — neither writes the log.
+
+    **Retention:** a settable TTL (new app setting, default 7 days) prunes
+    *whole activities* whose terminal event is older than the window — live
+    (non-terminal) activities are never pruned; a manual **"Clear log"**
+    action wipes the separate database wholesale. Deleting a project does not
+    cascade into the log; per-project visibility is a `projectId` filter.
+
+    The rename from `LLMInteraction` reflects that the app tracks more than
+    LLM traffic: **remote HTTP calls** (cloud / OpenAI-compatible backends,
+    PRD 6), the **hardcoded Lite fallback**, and **nested tool calls** (e.g.
+    an LLM-requested web lookup) all land here. The log is the *persisted*
+    form of the current in-memory `GenerationTask`, so the System/Debug
+    workspace (PRD 5.5: LLM Interaction Log + Task Manager) reads one
+    append-only table. Tasks stay in-memory today; persistence lands in
+    Phase 3.
 
 5. **GlobalQuestion:**
    *   `globalQuestionId` (Unique ID)
@@ -99,9 +174,9 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
    *   `origin` (Enum: `Initial`, `FollowUp`, `UserRequested` — how the round came
        to be; `Initial` = the opening round of a phase (project start or
        wrap-up advancing to a new phase), `UserRequested` = the user tapped
-       "Get more questions" in the same phase, `FollowUp` = reserved for
-       future use (revisiting a completed phase; deferred). Feeds dedup and
-       the LLM interaction log.)
+"Get more questions" in the same phase, `FollowUp` = reserved for
+        future use (revisiting a completed phase; deferred). Feeds dedup and
+        the engine activity log.)
    *   `startedAt` (Timestamp: When the round's questions were first surfaced.)
    *   `completedAt` (Timestamp, Optional: Set when the user wraps up the round;
        `null` means the round is in progress.)
@@ -157,7 +232,7 @@ note). The set of phases the app can be in comes from a **code-defined
   options + "Finish the plan") stays the only phase surface the user meets,
   which bounds cognitive load. See PROJECT-FLOWS.md for the per-phase pool
   partition.
-- **Pool serving:** each phase owns a slice of `HardcodedQuestionGenerator`
+- **Pool serving:** each phase owns a slice of `HardcodedPlanningEngine`
   `questionPool`; the slice front holds the highest-value questions. The
   phase's initial round serves the front (~7), each `UserRequested` round
   continues from where the last stopped (~5). Pools are sized ~10-14 per phase
@@ -214,7 +289,7 @@ observable background task.
   notification lands, IMPLEMENTATION-PLAN.md Phase 3). Writes are always
   persisted *before* a task runs, so a cancelled task never loses user data.
 
-**Repository contract (LLM-ready):**
+**Repository contract (engine-ready):**
 
 - Mutating writes (`createProject`, `saveAnswer`, `updateProject`) persist
   the user-facing state immediately and return immediately.
@@ -222,18 +297,23 @@ observable background task.
   task body re-reads the project, performs the generation, and persists the
   result (e.g., new questions appended). The UI observes task completion and
   reloads the affected project.
-- `QuestionGenerator` is invoked statelessly with the project context it
+- `PlanningEngine` is invoked statelessly with the project context it
   needs: initial generation gets `synopsis` + the generated `editableTitle`;
   follow-up generation gets the project's questions (completed answers via
   `Question.currentAnswer`, skipped ones via `Question.isIgnored`). The same
   call shape works for the hardcoded stand-in and a real LLM alike.
+  (Implementors of the `PlanningEngine` interface: `HardcodedPlanningEngine`
+  today; a local-inference engine and a remote HTTP engine in Phase 3.)
 
 **Roadmap / deferred:**
 
-- Tasks are in-memory for now. Persistence (plus the `LLMInteraction` log via
-  the schema above) will let task status and history survive process death and
-  feed the System/Debug workspace (PRD 5.5: LLM Interaction Log + Task Manager).
-- See IMPLEMENTATION-PLAN.md Phase 3 for the build order.
+- Tasks are in-memory for now. Persistence implements the append-only
+  `EngineActivity` event log (separate `ActivityDatabase`; schema item 4
+  above), whose *latest-event-per-activity* read model lets task status and
+  history survive process death and feed the System/Debug workspace
+  (PRD 5.5: LLM Interaction Log + Task Manager) — the log is the durable
+  `GenerationTask` record. See IMPLEMENTATION-PLAN.md Phase 3 (persistence +
+  retention items) for the build order.
 
 ### Research: Koog for Lookup & Web Search Tools
 
@@ -264,7 +344,7 @@ capabilities on an as-needed (agentic) basis rather than always-on.
       opt-in setting surfaced in the settings UI alongside the LLM on/off toggle.
 - [ ] **Failure behavior.** Define graceful degradation (no results, offline,
       provider unreachable) and whether tool/search calls are captured in the
-      LLM interaction log.
+      engine activity log.
 
 ### TODO: LLM Inference Strategy
 - [ ] Define fallback behavior for low-resource devices.
