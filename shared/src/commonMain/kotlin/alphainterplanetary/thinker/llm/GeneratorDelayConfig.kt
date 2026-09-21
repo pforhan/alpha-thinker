@@ -22,13 +22,16 @@ data class GeneratorDelayConfig(
   val secondsByInteraction: Map<GeneratorInteraction, Int> = emptyMap(),
 ) {
 
-  /** The hold time for [interaction], or null when slowing is off or the delay is unset. */
-  fun durationFor(interaction: GeneratorInteraction): Duration? =
-    if (enabled) secondsByInteraction[interaction]?.seconds else null
+  /** The hold time for [interaction], or null when slowing is off, the delay is
+   *  unset, or the interaction has been set to the 0s (off) option. */
+  fun durationFor(interaction: GeneratorInteraction): Duration? {
+    val seconds = if (enabled) secondsByInteraction[interaction] else null
+    return if (seconds == null || seconds == 0) null else seconds.seconds
+  }
 
   companion object {
-    /** The selectable slow-down durations, in seconds (2s, 5s, or 30s). */
-    val DelayOptionsSeconds: List<Int> = listOf(2, 5, 30)
+    /** The selectable slow-down durations, in seconds; 0 turns an interaction's delay off. */
+    val DelayOptionsSeconds: List<Int> = listOf(2, 5, 30, 0)
 
     /** A fresh install: slowing off, every interaction set to the first option. */
     val Default: GeneratorDelayConfig = GeneratorDelayConfig(

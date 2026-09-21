@@ -119,6 +119,38 @@ class SettingsRepositoryTest {
   }
 
   @Test
+  fun `generatorDelay loads a persisted zero delay at startup`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.GeneratorRecommendTitleDelay, "0")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(
+      0,
+      repo.generatorDelay.value.secondsByInteraction[GeneratorInteraction.RecommendTitle],
+    )
+  }
+
+  @Test
+  fun `setGeneratorDelay accepts zero to disable one interaction`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setGeneratorDelay(GeneratorInteraction.FollowUpQuestions, 0)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(
+      0,
+      repo.generatorDelay.value.secondsByInteraction[GeneratorInteraction.FollowUpQuestions],
+    )
+    assertEquals(
+      "0",
+      storage.settings[SettingsKey.GeneratorFollowUpQuestionsDelay.storageKey],
+    )
+  }
+
+  @Test
   fun `setGeneratorDelay updates state and persists the seconds`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)

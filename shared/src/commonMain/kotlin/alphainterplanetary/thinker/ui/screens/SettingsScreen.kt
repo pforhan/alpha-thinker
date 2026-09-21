@@ -18,6 +18,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,13 +47,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +77,21 @@ fun SettingsScreen(
   val uiState by viewModel.uiState.collectAsState()
   val phaseTheme by viewModel.phaseTheme.collectAsState()
   val generatorDelay by viewModel.generatorDelay.collectAsState()
+  val scrollState = rememberScrollState()
+  var delayExpandedHeight by remember { mutableIntStateOf(0) }
+  var previousDelayEnabled by remember { mutableStateOf(generatorDelay.enabled) }
+
+  // Turning the slow-down on adds the per-interaction controls below the
+  // toggle; scroll just enough to bring the newly revealed rows into view.
+  LaunchedEffect(generatorDelay.enabled) {
+    if (generatorDelay.enabled && !previousDelayEnabled) {
+      // Wait for the expanded controls to be measured: their onSizeChanged
+      // fires during the layout pass right after the toggle turns them on.
+      while (delayExpandedHeight == 0) withFrameNanos {}
+      scrollState.animateScrollTo(scrollState.value + delayExpandedHeight)
+    }
+    previousDelayEnabled = generatorDelay.enabled
+  }
 
   Scaffold(
     topBar = {
@@ -86,7 +109,7 @@ fun SettingsScreen(
       modifier = Modifier
         .padding(paddingValues)
         .fillMaxSize()
-        .verticalScroll(rememberScrollState())
+        .verticalScroll(scrollState)
         .padding(Dimens.ScreenPadding),
       verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
     ) {
@@ -143,6 +166,7 @@ fun SettingsScreen(
         onDelayChange = { interaction, seconds ->
           viewModel.setGeneratorDelay(interaction, seconds)
         },
+        onExpandedHeightChange = { delayExpandedHeight = it },
       )
     }
   }
@@ -243,13 +267,14 @@ private fun ThemePreviewRow(
 /**
  * The Task-Manager testing controls: a master switch that, while enabled,
  * expands into a per-interaction picker choosing each QuestionGenerator
- * delay from 2s / 5s / 30s.
+ * delay from the 0s (off) / 2s / 5s / 30s options.
  */
 @Composable
 private fun DelayControlItem(
   config: GeneratorDelayConfig,
   onEnabledChange: (Boolean) -> Unit,
   onDelayChange: (GeneratorInteraction, Int) -> Unit,
+  onExpandedHeightChange: (Int) -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(modifier = Modifier.padding(Dimens.CardPadding)) {
@@ -273,40 +298,49 @@ private fun DelayControlItem(
         )
       }
       if (config.enabled) {
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        GeneratorInteraction.entries.forEachIndexed { index, interaction ->
-          if (index > 0) {
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .onSizeChanged { onExpandedHeightChange(it.height) },
+        ) {
+          Column(modifier = Modifier.fillMaxWidth()) {
             Spacer(modifier = Modifier.height(Dimens.ContentGap))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(Dimens.ContentGap))
+            GeneratorInteraction.entries.forEachIndexed { index, interaction ->
+              if (index > 0) {
+                Spacer(modifier = Modifier.height(Dimens.ContentGap))
+              }
+              DelayChoiceRow(
+                interaction = interaction,
+                secondsByInteraction = config.secondsByInteraction,
+                onDelayChange = onDelayChange,
+              )
+            }
           }
-          DelayChoiceRow(
-            interaction = interaction,
-            secondsByInteraction = config.secondsByInteraction,
-            onDelayChange = onDelayChange,
-          )
         }
       }
     }
   }
 }
 
-/** One QuestionGenerator interaction: its label plus a 2s / 5s / 30s choice. */
+/** One QuestionGenerator interaction: its label plus a 0s / 2s / 5s / 30s choice. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DelayChoiceRow(
   interaction: GeneratorInteraction,
   secondsByInteraction: Map<GeneratorInteraction, Int>,
   onDelayChange: (GeneratorInteraction, Int) -> Unit,
 ) {
-  Row(verticalAlignment = Alignment.CenterVertically) {
+  Column(modifier = Modifier.fillMaxWidth()) {
     Text(
       text = interaction.label,
       style = MaterialTheme.typography.bodyMedium,
-      modifier = Modifier.weight(1f),
     )
-    Row(
-      modifier = Modifier,
+    Spacer(modifier = Modifier.height(Dimens.TightGap))
+    FlowRow(
       horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
+      verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
     ) {
       GeneratorDelayConfig.DelayOptionsSeconds.forEach { seconds ->
         FilterChip(

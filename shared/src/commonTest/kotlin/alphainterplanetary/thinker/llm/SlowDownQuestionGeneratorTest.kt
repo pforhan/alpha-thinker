@@ -96,6 +96,37 @@ class SlowDownQuestionGeneratorTest {
   }
 
   @Test
+  fun `a zero delay for an interaction means no delay`() = runTest {
+    val delegate = TrackingGenerator()
+    val generator = SlowDownQuestionGenerator(
+      delegate = delegate,
+      config = MutableStateFlow(
+        GeneratorDelayConfig(
+          enabled = true,
+          secondsByInteraction = mapOf(
+            GeneratorInteraction.RecommendTitle to 0,
+            GeneratorInteraction.InitialQuestions to 2,
+          ),
+        ),
+      ),
+    )
+
+    val job = launch {
+      generator.recommendTitle("synopsis")
+      generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals)
+    }
+    testScheduler.runCurrent()
+    assertEquals(1, delegate.titleCalls)
+    assertEquals(0, delegate.initialCalls)
+
+    testScheduler.advanceTimeBy(2_000)
+    testScheduler.runCurrent()
+    assertEquals(1, delegate.initialCalls)
+
+    job.join()
+  }
+
+  @Test
   fun `turning the flag off removes the delay for later calls`() = runTest {
     val config = MutableStateFlow(
       GeneratorDelayConfig(enabled = true, secondsByInteraction = defaultSecondsByInteraction),
