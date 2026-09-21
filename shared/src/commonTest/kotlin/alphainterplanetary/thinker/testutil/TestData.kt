@@ -6,9 +6,34 @@ import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.tasks.GenerationTask
+import alphainterplanetary.thinker.tasks.TaskKind
+import alphainterplanetary.thinker.tasks.TaskStatus
 import kotlin.time.Instant
 
 val defaultTestInstant: Instant = Instant.fromEpochMilliseconds(0)
+
+fun task(
+  id: String = "t1",
+  projectId: String = "p1",
+  kind: TaskKind = TaskKind.InitialQuestions,
+  status: TaskStatus = TaskStatus.Running,
+  progress: Float? = null,
+  error: String? = null,
+  createdAt: Instant = defaultTestInstant,
+  startedAt: Instant? = defaultTestInstant,
+  finishedAt: Instant? = null,
+): GenerationTask = GenerationTask(
+  id = id,
+  projectId = projectId,
+  kind = kind,
+  status = status,
+  progress = progress,
+  error = error,
+  createdAt = createdAt,
+  startedAt = startedAt,
+  finishedAt = finishedAt,
+)
 
 fun question(
   id: String,

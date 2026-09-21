@@ -60,6 +60,9 @@ object Dimens {
   val ProgressIndicatorSize = 14.dp
   val ProgressStroke = 2.dp
 
+  // Global generation-task bar (floating over every screen's bottom edge)
+  val TaskBarShadow = 6.dp
+
   // Theme picker preview
   val ThemeSwatchGap = 6.dp
   val ThemePreviewPadding = 8.dp

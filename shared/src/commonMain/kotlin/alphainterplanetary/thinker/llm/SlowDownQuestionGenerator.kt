@@ -18,6 +18,7 @@ class SlowDownQuestionGenerator(
 ) : QuestionGenerator {
 
   override suspend fun recommendTitle(synopsis: String): String {
+    println("SlowDownQuestionGenerator.recommendTitle()")
     maybeDelay(GeneratorInteraction.RecommendTitle)
     return delegate.recommendTitle(synopsis)
   }
@@ -28,6 +29,7 @@ class SlowDownQuestionGenerator(
     roundId: String,
     phase: Phase,
   ): List<Question> {
+    println("SlowDownQuestionGenerator.generateInitialQuestions()")
     maybeDelay(GeneratorInteraction.InitialQuestions)
     return delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase)
   }
@@ -38,6 +40,7 @@ class SlowDownQuestionGenerator(
     roundId: String,
     phase: Phase,
   ): List<Question> {
+    println("SlowDownQuestionGenerator.generateFollowUpQuestions()")
     maybeDelay(GeneratorInteraction.FollowUpQuestions)
     return delegate.generateFollowUpQuestions(synopsis, previousQuestions, roundId, phase)
   }
@@ -47,6 +50,7 @@ class SlowDownQuestionGenerator(
     previousQuestions: List<Question>,
     phase: Phase,
   ): Int {
+    println("SlowDownQuestionGenerator.remainingInPhase()")
     maybeDelay(GeneratorInteraction.RemainingInPhase)
     return delegate.remainingInPhase(synopsis, previousQuestions, phase)
   }

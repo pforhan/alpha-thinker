@@ -127,6 +127,11 @@ fun ProjectDetailScreen(
   val uiState by viewModel.uiState.collectAsState()
   val pendingUndo by viewModel.pendingUndo.collectAsState()
   val phaseSuggestions by viewModel.nextPhaseSuggestions.collectAsState()
+  val tasks by viewModel.tasks.collectAsState()
+  // Reconnects to tasks that are already in flight (or finished) when the
+  // screen (re)enters composition — the VM's collector replays the current
+  // list, so an extant task shows here even if it outlived a previous visit.
+  val generationActive = tasks.any { it.isActive }
 
   var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
@@ -203,6 +208,7 @@ fun ProjectDetailScreen(
           project = ui.project,
           selectedView = selectedView,
           canGenerateMore = ui.canGenerateMoreQuestions,
+          generationActive = generationActive,
           nextPhases = nextPhases,
           onViewSelected = { selectedView = it },
           onShuffle = { viewModel.shuffle() },
@@ -303,6 +309,7 @@ private fun ProjectDetailContent(
   project: Project,
   selectedView: QuestionViewMode,
   canGenerateMore: Boolean,
+  generationActive: Boolean,
   nextPhases: List<Phase>,
   onViewSelected: (QuestionViewMode) -> Unit,
   onShuffle: () -> Unit,
@@ -400,9 +407,17 @@ private fun ProjectDetailContent(
         view.sections(project.questions, project::phaseForQuestion)
       }
 
-      val showShuffle = remember(project, view, filteredQuestions) {
-        view == QuestionViewMode.Unanswered &&
-          project.unansweredQuestions.size > 3
+      val showShuffle = remember(project, view, canGenerateMore) {
+        if (view != QuestionViewMode.Unanswered) {
+          false
+        } else {
+          val unansweredCount = project.unansweredQuestions.size
+          // With a full batch (more than 3 unanswered) shuffle rotates the
+          // visible cards; when the batch is exhausted (<= 3 unanswered) the
+          // same affordance becomes "synthesize a fresh batch" via the
+          // follow-up generation task when the pool still has questions.
+          unansweredCount > 3 || (unansweredCount <= 3 && canGenerateMore)
+        }
       }
 
       val completedStats = remember(project) {
@@ -417,6 +432,7 @@ private fun ProjectDetailContent(
             onViewSelected = onViewSelected,
             onGenerateMore = if (view == QuestionViewMode.Unanswered) onGenerateMore else null,
             canGenerateMore = view == QuestionViewMode.Unanswered && canGenerateMore,
+            generationActive = view == QuestionViewMode.Unanswered && generationActive,
             nextPhases = if (view == QuestionViewMode.Unanswered) nextPhases else emptyList(),
             onBeginWrapUp = if (view == QuestionViewMode.Unanswered) onBeginWrapUp else null,
             completedStats = completedStats,
@@ -466,10 +482,14 @@ private fun ProjectDetailContent(
               }
             }
             if (showShuffle) {
+              val unansweredCount = project.unansweredQuestions.size
+              val shuffleGenerates = unansweredCount <= 3
               item {
                 ShuffleRow(
-                  remainingCount = project.unansweredQuestions.size - filteredQuestions.size,
-                  onClick = onShuffle,
+                  remainingCount = if (shuffleGenerates) null else unansweredCount - filteredQuestions.size,
+                  generating = generationActive,
+                  generateFresh = shuffleGenerates,
+                  onClick = if (shuffleGenerates) onGenerateMore else onShuffle,
                 )
               }
             }
@@ -539,6 +559,7 @@ private fun QuestionEmptyState(
   onViewSelected: (QuestionViewMode) -> Unit,
   onGenerateMore: (() -> Unit)?,
   canGenerateMore: Boolean,
+  generationActive: Boolean,
   nextPhases: List<Phase>,
   onBeginWrapUp: (() -> Unit)?,
   completedStats: PhaseStats?,
@@ -561,10 +582,14 @@ private fun QuestionEmptyState(
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
-      if (onGenerateMore != null && canGenerateMore) {
+      if (onGenerateMore != null) {
         Spacer(modifier = Modifier.height(Dimens.EmptyStateActionGap))
-        Button(onClick = onGenerateMore) {
-          Text("Get more questions")
+        if (generationActive) {
+          GeneratingQuestionsRow()
+        } else if (canGenerateMore) {
+          Button(onClick = onGenerateMore) {
+            Text("Get more questions")
+          }
         }
       }
       if (onBeginWrapUp != null && nextPhases.isNotEmpty()) {
@@ -711,8 +736,29 @@ private fun ProjectSynopsis(synopsis: String) {
 }
 
 @Composable
+private fun GeneratingQuestionsRow() {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    CircularProgressIndicator(
+      modifier = Modifier
+        .width(Dimens.ProgressIndicatorSize)
+        .height(Dimens.ProgressIndicatorSize),
+      strokeWidth = Dimens.ProgressStroke,
+      color = MaterialTheme.colorScheme.primary,
+    )
+    Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
+    Text(
+      text = "Preparing questions…",
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+  }
+}
+
+@Composable
 private fun ShuffleRow(
-  remainingCount: Int,
+  remainingCount: Int?,
+  generating: Boolean,
+  generateFresh: Boolean,
   onClick: () -> Unit,
 ) {
   Box(
@@ -720,7 +766,7 @@ private fun ShuffleRow(
       .fillMaxWidth()
       .padding(horizontal = Dimens.ScreenPadding)
       .clip(MaterialTheme.shapes.medium)
-      .clickable(onClick = onClick),
+      .clickable(enabled = !generating, onClick = onClick),
     contentAlignment = Alignment.Center,
   ) {
     Row(
@@ -728,24 +774,40 @@ private fun ShuffleRow(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.Center,
     ) {
-      Icon(
-        Icons.Default.Shuffle,
-        contentDescription = null,
-        modifier = Modifier.size(Dimens.IconSizeMedium),
-        tint = MaterialTheme.colorScheme.primary,
-      )
-      Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-      Text(
-        "Shuffle questions",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.primary,
-      )
-      if (remainingCount > 0) {
+      if (generating) {
+        CircularProgressIndicator(
+          modifier = Modifier
+            .width(Dimens.ProgressIndicatorSize)
+            .height(Dimens.ProgressIndicatorSize),
+          strokeWidth = Dimens.ProgressStroke,
+          color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
         Text(
-          " · $remainingCount more available",
-          style = MaterialTheme.typography.bodySmall,
+          text = "Preparing questions…",
+          style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+      } else {
+        Icon(
+          Icons.Default.Shuffle,
+          contentDescription = null,
+          modifier = Modifier.size(Dimens.IconSizeMedium),
+          tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
+        Text(
+          text = if (generateFresh) "Get fresh questions" else "Shuffle questions",
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.primary,
+        )
+        if (!generateFresh && remainingCount != null && remainingCount > 0) {
+          Text(
+            text = " · $remainingCount more available",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
       }
     }
   }

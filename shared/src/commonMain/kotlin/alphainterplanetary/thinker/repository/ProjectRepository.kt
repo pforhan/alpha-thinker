@@ -61,22 +61,50 @@ class ProjectRepository @Inject constructor(
     )
     // Save the initial version of the project, in case generation fails.
     storage.saveProject(project)
-    enqueueInitialGeneration(project.id)
+    enqueueQuestionGeneration(project.id, roundId, TaskKind.InitialQuestions)
     return project
   }
 
-  /** Generates and persists the opening question batch for the project's current round. */
-  private fun enqueueInitialGeneration(projectId: String) {
-    taskRunner.enqueue(projectId = projectId, kind = TaskKind.InitialQuestions) {
+  /**
+   * The single generation seam every "request new questions" touchpoint flows
+   * through: generate for [roundId] (initial or follow-up depending on [kind]),
+   * dedupe against everything already asked in the project, shuffle, and
+   * persist as a task on the [taskRunner] so the caller returns immediately and
+   * the UI can surface progress (and navigate away freely) while it runs.
+   */
+  private fun enqueueQuestionGeneration(
+    projectId: String,
+    roundId: String,
+    kind: TaskKind,
+  ) {
+    taskRunner.enqueue(projectId, kind) {
       val reloaded = storage.getProject(projectId) ?: return@enqueue
-      val round = reloaded.currentRound ?: return@enqueue
-      val questions = generator.generateInitialQuestions(
-        editableTitle = reloaded.editableTitle,
-        synopsis = reloaded.synopsis,
-        roundId = round.id,
-        phase = round.phase,
-      ).shuffled()
-      val updated = reloaded.copy(questions = questions, updatedAt = now())
+      val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
+      val generated = when (kind) {
+        TaskKind.InitialQuestions -> generator.generateInitialQuestions(
+          editableTitle = reloaded.editableTitle,
+          synopsis = reloaded.synopsis,
+          roundId = round.id,
+          phase = round.phase,
+        )
+
+        TaskKind.FollowUpQuestions -> generator.generateFollowUpQuestions(
+          synopsis = reloaded.synopsis,
+          previousQuestions = reloaded.questions,
+          roundId = round.id,
+          phase = round.phase,
+        )
+
+        else -> return@enqueue
+      }
+      val fresh = generated
+        .filterNot { newQuestion -> reloaded.questions.any { it.text == newQuestion.text } }
+        .shuffled()
+      if (fresh.isEmpty()) return@enqueue
+      val updated = reloaded.copy(
+        questions = reloaded.questions + fresh,
+        updatedAt = now(),
+      )
       storage.saveProject(updated)
     }
   }
@@ -192,41 +220,47 @@ class ProjectRepository @Inject constructor(
     return updatedProject
   }
 
+  /**
+   * Opens a new [RoundOrigin.UserRequested] round in the project's current
+   * phase and enqueues its follow-up generation as a task, returning
+   * immediately with the round in place. When the phase's pool is exhausted
+   * no round is opened and the project is returned untouched — the "Get more
+   * questions" affordance gates on [canGenerateMoreQuestions] to reach here.
+   */
   suspend fun generateMoreQuestions(projectId: String): Project? {
     val project = storage.getProject(projectId) ?: return null
+    if (!hasRemainingQuestions(project)) return project
     val now = now()
     val round = nextRound(project, RoundOrigin.UserRequested, now)
-    val newQs = generator.generateFollowUpQuestions(
-      synopsis = project.synopsis,
-      previousQuestions = project.questions,
-      roundId = round.id,
-      phase = round.phase,
-    )
-    if (newQs.isEmpty()) return project
-    val updatedProject = project.copy(
-      questions = project.questions + newQs,
+    val updated = project.copy(
+      questions = project.questions,
       rounds = project.rounds + round,
       updatedAt = now,
     )
-    storage.saveProject(updatedProject)
-    return updatedProject
+    storage.saveProject(updated)
+    enqueueQuestionGeneration(project.id, round.id, TaskKind.FollowUpQuestions)
+    return updated
   }
 
   /** Whether the current phase's pool still has questions the generator could produce. */
   suspend fun canGenerateMoreQuestions(projectId: String): Boolean {
     val project = storage.getProject(projectId) ?: return false
-    return generator.remainingInPhase(
+    return hasRemainingQuestions(project)
+  }
+
+  private suspend fun hasRemainingQuestions(project: Project): Boolean =
+    generator.remainingInPhase(
       synopsis = project.synopsis,
       previousQuestions = project.questions,
       phase = project.currentPhase,
     ) > 0
-  }
 
   /**
    * Wraps up the round(s) currently in progress and advances the project to
-   * [nextPhase], opening its first `Initial` round with a fresh batch of
-   * generated questions (deduped against everything already asked in the
-   * project).
+   * [nextPhase], opening its first `Initial` round immediately; the round's
+   * fresh batch is generated on the [taskRunner] (deduped against everything
+   * already asked in the project, new questions shuffled) so the phase swap
+   * lands instantly and questions stream in when the task succeeds.
    */
   suspend fun advanceToPhase(projectId: String, nextPhase: Phase): Project? {
     val project = storage.getProject(projectId) ?: return null
@@ -245,21 +279,13 @@ class ProjectRepository @Inject constructor(
       startedAt = now,
     )
 
-    val newQs = generator.generateInitialQuestions(
-      editableTitle = project.editableTitle,
-      synopsis = project.synopsis,
-      roundId = round.id,
-      phase = round.phase,
-    )
-      .filterNot { question -> project.questions.any { it.text == question.text } }
-      .shuffled()
-
     val updatedProject = project.copy(
-      questions = project.questions + newQs,
+      questions = project.questions,
       rounds = completedRounds + round,
       updatedAt = now,
     )
     storage.saveProject(updatedProject)
+    enqueueQuestionGeneration(project.id, round.id, TaskKind.InitialQuestions)
     return updatedProject
   }
 

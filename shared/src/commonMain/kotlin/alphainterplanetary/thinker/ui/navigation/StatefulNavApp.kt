@@ -1,15 +1,22 @@
 package alphainterplanetary.thinker.ui.navigation
 
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ProjectDetailScreen
 import alphainterplanetary.thinker.ui.screens.ProjectListScreen
 import alphainterplanetary.thinker.ui.screens.SettingsScreen
 import alphainterplanetary.thinker.ui.screens.TaskManagerScreen
+import alphainterplanetary.thinker.ui.theme.Dimens
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 
 @Composable
 public expect fun NavApp(appComponent: AppComponent)
@@ -25,37 +32,53 @@ public expect fun NavApp(appComponent: AppComponent)
 @Composable
 internal fun StatefulNavApp(appComponent: AppComponent) {
   var route by remember { mutableStateOf<AppRoute>(AppRoute.ProjectList) }
+  val current = route
 
-  when (val current = route) {
-    AppRoute.ProjectList -> {
-      ProjectListScreen(
-        appComponent = appComponent,
-        onProjectClick = { route = AppRoute.ProjectDetail(it.id) },
-        onProjectCreated = { route = AppRoute.ProjectDetail(it.id) },
-        onSettingsClick = { route = AppRoute.Settings },
+  Box(modifier = Modifier.fillMaxSize()) {
+    when (current) {
+      AppRoute.ProjectList -> {
+        ProjectListScreen(
+          appComponent = appComponent,
+          onProjectClick = { route = AppRoute.ProjectDetail(it.id) },
+          onProjectCreated = { route = AppRoute.ProjectDetail(it.id) },
+          onSettingsClick = { route = AppRoute.Settings },
+          onTaskManagerClick = { route = AppRoute.TaskManager },
+        )
+      }
+
+      is AppRoute.ProjectDetail -> {
+        ProjectDetailScreen(
+          appComponent = appComponent,
+          projectId = current.projectId,
+          onBack = { route = AppRoute.ProjectList },
+        )
+      }
+
+      AppRoute.TaskManager -> {
+        TaskManagerScreen(
+          appComponent = appComponent,
+          onBack = { route = AppRoute.ProjectList },
+        )
+      }
+
+      AppRoute.Settings -> {
+        SettingsScreen(
+          appComponent = appComponent,
+          onBack = { route = AppRoute.ProjectList },
+        )
+      }
+    }
+
+    if (current != AppRoute.TaskManager) {
+      GenerationTaskBar(
+        taskRunner = appComponent.taskRunner,
         onTaskManagerClick = { route = AppRoute.TaskManager },
-      )
-    }
-
-    is AppRoute.ProjectDetail -> {
-      ProjectDetailScreen(
-        appComponent = appComponent,
-        projectId = current.projectId,
-        onBack = { route = AppRoute.ProjectList },
-      )
-    }
-
-    AppRoute.TaskManager -> {
-      TaskManagerScreen(
-        appComponent = appComponent,
-        onBack = { route = AppRoute.ProjectList },
-      )
-    }
-
-    AppRoute.Settings -> {
-      SettingsScreen(
-        appComponent = appComponent,
-        onBack = { route = AppRoute.ProjectList },
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .padding(
+            horizontal = Dimens.ScreenPadding,
+            vertical = Dimens.ScreenPadding,
+          ),
       )
     }
   }

@@ -32,7 +32,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -120,18 +119,8 @@ fun ProjectListScreen(
       )
     },
     floatingActionButton = {
-      Row(
-        horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        if (activeTasks.isNotEmpty()) {
-          FloatingActionButton(onClick = onTaskManagerClick) {
-            Icon(Icons.Filled.Sync, contentDescription = "Task Manager")
-          }
-        }
-        FloatingActionButton(onClick = { showCreateDialog = true }) {
-          Icon(Icons.Default.Add, contentDescription = "Add Project")
-        }
+      FloatingActionButton(onClick = { showCreateDialog = true }) {
+        Icon(Icons.Default.Add, contentDescription = "Add Project")
       }
     }
   ) { paddingValues ->

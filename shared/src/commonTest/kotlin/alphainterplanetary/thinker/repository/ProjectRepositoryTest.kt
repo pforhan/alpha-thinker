@@ -593,36 +593,46 @@ class ProjectRepositoryTest {
   // ---------- generateMoreQuestions ----------
 
   @Test
-  fun `generateMoreQuestions starts a new UserRequested round in the current phase`() = runTest {
-    val generator = FakeGenerator().apply {
-      followUpQuestions += question("f1")
+  fun `generateMoreQuestions starts a UserRequested round and enqueues follow-up generation`() =
+    runTest {
+      val generator = FakeGenerator().apply {
+        remaining = 1
+        followUpQuestions += question("f1")
+      }
+      val original = Project(
+        id = "p1",
+        synopsis = "s",
+        editableTitle = "t",
+        status = "Draft",
+        questions = listOf(question("q1")),
+        rounds = listOf(round(id = "r1", projectId = "p1", phase = BuiltInPhase.Design)),
+        createdAt = now,
+        updatedAt = now,
+      )
+      val storage = FakeStorage(mutableMapOf("p1" to original))
+      val repository = repo(storage = storage, generator = generator)
+
+      val updated = repository.generateMoreQuestions("p1")
+
+      assertNotNull(updated)
+      val round = updated.rounds.last()
+      assertEquals(2, round.roundNumber)
+      assertEquals(RoundOrigin.UserRequested, round.origin)
+      assertEquals(BuiltInPhase.Design, round.phase)
+      assertEquals("p1", round.projectId)
+      // The round lands immediately; the question arrives via the enqueued task.
+      assertEquals(listOf("q1"), updated.questions.map { it.id })
+      assertEquals(2, storage.getProject("p1")?.rounds?.size)
+
+      testScheduler.advanceUntilIdle()
+
+      val persisted = storage.getProject("p1")
+      assertNotNull(persisted)
+      assertEquals(listOf("q1", "f1"), persisted.questions.map { it.id })
+      assertEquals(round.id, generator.followUpCalls.single().roundId)
+      assertEquals(BuiltInPhase.Design, generator.followUpCalls.single().phase)
+      assertEquals(listOf("q1"), generator.followUpCalls.single().previousQuestions.map { it.id })
     }
-    val original = Project(
-      id = "p1",
-      synopsis = "s",
-      editableTitle = "t",
-      status = "Draft",
-      questions = listOf(question("q1")),
-      rounds = listOf(round(id = "r1", projectId = "p1", phase = BuiltInPhase.Design)),
-      createdAt = now,
-      updatedAt = now,
-    )
-    val storage = FakeStorage(mutableMapOf("p1" to original))
-    val repository = repo(storage = storage, generator = generator)
-
-    val updated = repository.generateMoreQuestions("p1")
-
-    assertNotNull(updated)
-    val round = updated.rounds.last()
-    assertEquals(2, round.roundNumber)
-    assertEquals(RoundOrigin.UserRequested, round.origin)
-    assertEquals(BuiltInPhase.Design, round.phase)
-    assertEquals("p1", round.projectId)
-    assertEquals("f1", updated.questions.last().id)
-    assertEquals(round.id, generator.followUpCalls.single().roundId)
-    assertEquals(BuiltInPhase.Design, generator.followUpCalls.single().phase)
-    assertEquals(2, storage.getProject("p1")?.rounds?.size)
-  }
 
   @Test
   fun `generateMoreQuestions does not start a round when the pool is exhausted`() = runTest {
@@ -715,9 +725,8 @@ class ProjectRepositoryTest {
       val updated = repository.advanceToPhase("p1", BuiltInPhase.Research)
 
       assertNotNull(updated)
-      assertEquals(3, updated.questions.size)
-      assertEquals("q1", updated.questions.first().id)
-      assertEquals(setOf("q1", "n1", "n2"), updated.questions.map { it.id }.toSet())
+      // The phase swap is immediate — wrapped-up rounds, fresh Initial round...
+      assertEquals(listOf("q1"), updated.questions.map { it.id })
       assertEquals(2, updated.rounds.size)
       assertTrue(updated.rounds[0].isCompleted, "the wrapped-up round is marked complete")
       val newRound = updated.rounds.last()
@@ -727,12 +736,15 @@ class ProjectRepositoryTest {
       assertEquals("p1", newRound.projectId)
       assertEquals(BuiltInPhase.Research, updated.currentPhase)
 
+      // ...while the fresh batch streams in via the enqueued task.
+      testScheduler.advanceUntilIdle()
+
       val persisted = storage.getProject("p1")
       assertNotNull(persisted)
+      assertEquals(setOf("q1", "n1", "n2"), persisted.questions.map { it.id }.toSet())
       assertEquals(2, persisted.rounds.size)
       assertTrue(persisted.rounds[0].isCompleted)
       assertEquals(BuiltInPhase.Research, persisted.rounds.last().phase)
-      assertEquals(updated.questions.map { it.id }, persisted.questions.map { it.id })
 
       val call = generator.initialCalls.single()
       assertEquals(newRound.id, call.roundId)
@@ -770,26 +782,26 @@ class ProjectRepositoryTest {
       initialQuestions += question("dup", "Already asked?")
       initialQuestions += question("n1", "Fresh?")
     }
-    val repository = repo(
-      storage = storageWith(
-        Project(
-          id = "p1",
-          synopsis = "s",
-          editableTitle = "t",
-          status = "Draft",
-          questions = listOf(question("q1", "Already asked?")),
-          rounds = listOf(
-            round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals),
-          ),
-          createdAt = now,
-          updatedAt = now,
-        )
+    val storage = storageWith(
+      Project(
+        id = "p1",
+        synopsis = "s",
+        editableTitle = "t",
+        status = "Draft",
+        questions = listOf(question("q1", "Already asked?")),
+        rounds = listOf(
+          round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals),
+        ),
+        createdAt = now,
+        updatedAt = now,
       ),
-      generator = generator,
     )
+    val repository = repo(storage = storage, generator = generator)
 
-    val updated = repository.advanceToPhase("p1", BuiltInPhase.Research)
+    repository.advanceToPhase("p1", BuiltInPhase.Research)
+    testScheduler.advanceUntilIdle()
 
+    val updated = storage.getProject("p1")
     assertNotNull(updated)
     assertEquals(setOf("q1", "n1"), updated.questions.map { it.id }.toSet())
   }
@@ -840,26 +852,38 @@ class ProjectRepositoryTest {
         initialQuestions += question("n1", "Fresh 1?")
         initialQuestions += question("n2", "Fresh 2?")
       }
-      val repository = repo(storage = storageWith(revisitedProject()), generator = generator)
+      val storage = storageWith(revisitedProject())
+      val repository = repo(storage = storage, generator = generator)
 
       val updated = repository.advanceToPhase("p1", BuiltInPhase.ScopeGoals)
 
       assertNotNull(updated)
       assertEquals(BuiltInPhase.ScopeGoals, updated.currentPhase)
-      // old questions keep their slots (answered/ignored included); new ones simply append
+      // existing questions keep their slots; the round lands before the batch streams in
       assertEquals(
         listOf("oldOpen", "oldAnswered", "oldIgnored"),
-        updated.questions.take(3).map { it.id },
+        updated.questions.map { it.id },
       )
-      assertEquals(setOf("n1", "n2"), updated.questions.drop(3).map { it.id }.toSet())
-      assertEquals(5, updated.questions.size)
-      assertTrue(updated.questions[1].isAnswered)
-      assertTrue(updated.questions[2].isIgnored)
       val newRound = updated.rounds.last()
       assertEquals(3, newRound.roundNumber)
       assertEquals(RoundOrigin.Initial, newRound.origin)
       assertEquals(BuiltInPhase.ScopeGoals, newRound.phase)
       assertFalse(newRound.isCompleted)
+
+      testScheduler.advanceUntilIdle()
+
+      val persisted = storage.getProject("p1")
+      assertNotNull(persisted)
+      // old questions keep their slots (answered/ignored included); new ones simply append
+      assertEquals(
+        listOf("oldOpen", "oldAnswered", "oldIgnored"),
+        persisted.questions.take(3).map { it.id },
+      )
+      assertEquals(setOf("n1", "n2"), persisted.questions.drop(3).map { it.id }.toSet())
+      assertEquals(5, persisted.questions.size)
+      assertTrue(persisted.questions[1].isAnswered)
+      assertTrue(persisted.questions[2].isIgnored)
+      assertEquals(newRound.id, persisted.rounds.last().id)
     }
 
   @Test

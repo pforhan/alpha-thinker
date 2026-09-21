@@ -51,7 +51,11 @@ class TaskRunner(
     )
     _tasks.update { it + task }
     scope.launch {
-      _tasks.update { it.replace(task.asStarted(now())) }
+      val startedAt = now()
+      _tasks.update { it.replace(task.asStarted(startedAt)) }
+      println(
+        "[AlphaThinker] task started: kind=${task.kind}, project=${task.projectId}, id=${task.id}"
+      )
       var cancelled = false
       var failure: String? = null
       try {
@@ -61,10 +65,20 @@ class TaskRunner(
       } catch (e: Exception) {
         failure = e.message ?: e.toString()
       }
+      val finishedAt = now()
+      val outcome = when {
+        cancelled -> "cancelled"
+        failure != null -> "failed: $failure"
+        else -> "succeeded"
+      }
+      println(
+        "[AlphaThinker] task finished: kind=${task.kind}, project=${task.projectId}, " +
+          "id=${task.id}, outcome=$outcome, duration=${finishedAt - startedAt}"
+      )
       val terminal: (GenerationTask) -> GenerationTask = when {
-        cancelled -> { t -> t.asFailed(now(), "Task cancelled") }
-        failure != null -> { t -> t.asFailed(now(), failure) }
-        else -> { t -> t.asSucceeded(now()) }
+        cancelled -> { t -> t.asFailed(finishedAt, "Task cancelled") }
+        failure != null -> { t -> t.asFailed(finishedAt, failure) }
+        else -> { t -> t.asSucceeded(finishedAt) }
       }
       // Fold any progress/error published via [setProgress] into the terminal
       // state instead of clobbering it with a stale local read.

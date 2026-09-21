@@ -1,5 +1,9 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
+import alphainterplanetary.thinker.llm.GeneratorDelayConfig
+import alphainterplanetary.thinker.llm.GeneratorInteraction
+import alphainterplanetary.thinker.llm.QuestionGenerator
+import alphainterplanetary.thinker.llm.SlowDownQuestionGenerator
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -13,6 +17,7 @@ import alphainterplanetary.thinker.testutil.defaultTestInstant
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.testutil.round
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -34,7 +39,7 @@ class ProjectDetailViewModelTest {
   /** Builds a VM on the test scheduler and guarantees [ProjectDetailViewModel.close]. */
   private suspend fun TestScope.withViewModel(
     storage: FakeStorage = FakeStorage(),
-    generator: FakeGenerator = FakeGenerator(),
+    generator: QuestionGenerator = FakeGenerator(),
     block: suspend (VmContext) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
@@ -50,6 +55,18 @@ class ProjectDetailViewModelTest {
       vm.close()
     }
   }
+
+  /** A [QuestionGenerator] that holds its follow-up generation for [holdSeconds]. */
+  private fun slowFollowUpGenerator(delegate: FakeGenerator, holdSeconds: Int): QuestionGenerator =
+    SlowDownQuestionGenerator(
+      delegate = delegate,
+      config = MutableStateFlow(
+        GeneratorDelayConfig(
+          enabled = true,
+          secondsByInteraction = mapOf(GeneratorInteraction.FollowUpQuestions to holdSeconds),
+        )
+      ),
+    )
 
   private fun project(
     id: String = "p1",
@@ -331,4 +348,68 @@ class ProjectDetailViewModelTest {
       assertEquals(TaskStatus.Succeeded, active.single().status)
     }
   }
+
+  // ---------- in-flight generation is surfaced ----------
+
+  @Test
+  fun `generateMoreQuestions runs on the task runner and reloads when it completes`() = runTest {
+    val fake = FakeGenerator().apply {
+      remaining = 1
+      followUpQuestions += question("n1", "Fresh?")
+    }
+    withViewModel(
+      storage = FakeStorage(mutableMapOf("p1" to project(questions = listOf(question("q1"))))),
+      generator = slowFollowUpGenerator(fake, holdSeconds = 5),
+    ) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+
+      vm.generateMoreQuestions("p1")
+      testScheduler.runCurrent()
+
+      // The round is in place immediately and the task stays observable while it lingers.
+      val state = vm.uiState.value as ProjectDetailUiState.Success
+      assertEquals(1, state.project.rounds.size)
+      assertEquals(listOf("q1"), state.project.questions.map { it.id })
+      assertTrue(vm.tasks.value.any { !it.isFinished })
+
+      testScheduler.advanceUntilIdle()
+
+      val after = vm.uiState.value as ProjectDetailUiState.Success
+      assertEquals(listOf("q1", "n1"), after.project.questions.map { it.id })
+      assertTrue(vm.tasks.value.all { it.isFinished })
+    }
+  }
+
+  @Test
+  fun `entering a project with an extant running task reconnects and reloads on completion`() =
+    runTest {
+      val fake = FakeGenerator().apply {
+        remaining = 1
+        followUpQuestions += question("n1", "Fresh?")
+      }
+      withViewModel(
+        storage = FakeStorage(mutableMapOf("p1" to project(questions = listOf(question("q1"))))),
+        generator = slowFollowUpGenerator(fake, holdSeconds = 5),
+      ) { context ->
+        val vm = context.vm
+        // A generation task is already in flight before the screen enters.
+        context.repository.generateMoreQuestions("p1")
+        testScheduler.runCurrent()
+        assertTrue(context.repository.getProject("p1")!!.rounds.size == 1)
+
+        // Entering the project replays the running task instead of waiting on a reload.
+        vm.loadProject("p1")
+        testScheduler.runCurrent()
+        assertEquals(BuiltInPhase.ScopeGoals, (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase)
+        assertTrue(vm.tasks.value.any { it.isActive })
+
+        // Completing the task streams the generated batch into the loaded project.
+        testScheduler.advanceUntilIdle()
+        val state = vm.uiState.value as ProjectDetailUiState.Success
+        assertEquals(listOf("q1", "n1"), state.project.questions.map { it.id })
+        assertTrue(vm.tasks.value.all { it.isFinished })
+      }
+    }
 }
