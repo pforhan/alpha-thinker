@@ -9,7 +9,7 @@ This document outlines the technical investigations and design decisions require
 
 ### Key Decisions
 - **Layered Architecture:** The UI layer (Compose Multiplatform) remains "logic-free," acting as a presentation layer that observes the KMP engine. Complex business logic and data management reside within the KMP layer.
-- **Inference Engine:** Under evaluation — options include **ondevice-ai** (KMP library for system-installed edge LLMs like Gemini Nano and Apple Foundation) or **Google's LiteRT-LM and MediaPipe** (`litertlm-kmp`). The choice will depend on seamlessness of integration and device support.
+- **Inference Engine:** Adopted **Koog** (`ai.koog:koog-agents`) as the LLM abstraction and agent layer, with a **selectable inference backend per engine mode** (see "LLM Inference Layer" below): system on-device models (Gemini Nano via ML Kit GenAI; Apple Foundation Models via a Swift bridge) through a **hand-rolled Koog `LLMClient`**, remote cloud / OpenAI-compatible / Ollama through Koog's shipped clients, and downloaded local models through **Google's LiteRT-LM** (in-process; a JVM adapter on desktop). Llamatik (llama.cpp KMP) was investigated as an alternative and is reserved as a fallback if the LiteRT-LM desktop path stalls.
 - **Resilience & Fallback:** If the LLM inference fails (e.g., due to resource constraints or malformed output), the app will transparently fall back to the **Alpha Thinker Lite** implementation using the hardcoded seed questions.
 - **State Management:** UI state follows Compose Multiplatform conventions, with ViewModels exposing `StateFlow` state.
 - **Unified UX:** The visual styling and user interface will remain consistent across both the Lite and Edge editions.
@@ -19,7 +19,7 @@ This document outlines the technical investigations and design decisions require
 This iteration proposes a clear separation of concerns:
 1. **Frontend UI:** Compose Multiplatform for a single, unified, and cross-platform user experience.
 2. **Core Logic/Engine:** Kotlin Multiplatform (KMP) for handling core domain logic, data persistence, and heavy computational lifting.
-3. **LLM Inference Layer:** Local edge-LLM execution for offline-first autonomous question generation and synthesis. Solution under evaluation: [ondevice-ai](https://github.com/nicklama/ondevice-ai) (system-installed LLMs) or [litertlm-kmp](https://github.com/sagar-develop/litertlm-kmp) (LiteRT-LM).
+3. **LLM Inference Layer:** Koog-backed edge-LLM execution for offline-first autonomous question generation, synthesis, and (opt-in) agentic lookup. Backends plug into Koog's `LLMClient` / prompt-executor seam: system on-device models (Gemini Nano, Apple Foundation) via a hand-rolled client, remote OpenAI-compatible / Ollama via Koog's shipped clients, and downloaded local models via LiteRT-LM (see "LLM Inference Layer" below).
 
 This model allows the KMP core to be the 'source of truth' for the application's business logic, decoupling it from UI platform specifics.
 
@@ -317,7 +317,8 @@ observable background task.
   `Question.currentAnswer`, skipped ones via `Question.isIgnored`). The same
   call shape works for the hardcoded stand-in and a real LLM alike.
   (Implementors of the `PlanningEngine` interface: `HardcodedPlanningEngine`
-  today; a local-inference engine and a remote HTTP engine in Phase 3.)
+  today; a `KoogPlanningEngine` over the Koog `LLMClient`/executor seam in Phase
+  3, which hosts the on-device, remote, and downloaded-model backends.)
 
 **Roadmap / deferred:**
 
@@ -329,36 +330,69 @@ observable background task.
   `GenerationTask` record. See IMPLEMENTATION-PLAN.md Phase 3 (persistence +
   retention items) for the build order.
 
-### Research: Koog for Lookup & Web Search Tools
+### LLM Inference Layer: Koog (Decision — supersedes "Research: Koog for Lookup & Web Search Tools")
 
-[Koog](https://github.com/jetbrains/koog) is a JetBrains Kotlin Multiplatform
-AI-agent framework that could give the LLM optional lookup and web-search
-capabilities on an as-needed (agentic) basis rather than always-on.
+**Adopted.** Koog (`ai.koog:koog-agents`, 1.2.0, Apache-2.0, JetBrains) is the
+LLM abstraction + agent layer for the Edge engine. It targets the JVM, JS,
+WasmJS, and iOS targets this project compiles for, requires JDK 17+ and Kotlin
+2.3.10+ (this project is on Kotlin 2.3.21 / coroutines 1.10.2), and ships:
+cloud LLM clients (OpenAI, Anthropic, Google, DeepSeek, OpenRouter, Ollama,
+Bedrock), an official LiteRT client module (`prompt-executor-litert-client`),
+prompt executors with multi-provider routing + fallback
+(`MultiLLMPromptExecutor`), tool-calling (`@Tool`, `ToolRegistry`, class-based
+tools), MCP server integration (`agents-mcp`), structured output,
+RAG/embeddings, and tracing. The `PlanningEngine` interface is unchanged; a
+`KoogPlanningEngine` implements it over Koog's client/executor seam.
 
-- [ ] **Evaluate Koog as the LLM tool layer.** Koog exposes custom tools via
-      `@Tool` / `@LLMDescription` annotations plus a `ToolRegistry`, letting the
-      LLM decide when to call them — matching the "lookup / web search as
-      needed" requirement. Verify it composes with the chosen edge inference
-      engine (ondevice-ai vs. litertlm-kmp) or the cloud/Ollama fallback.
-- [ ] **Confirm platform support.** Koog targets JVM, JS, WasmJS, Android, and
-      iOS (KMP). Android (our active target) supports core agents, tool
-      execution, and Ktor/OkHttp clients; it requires JDK 17+ and Kotlin 2.3.10+.
-- [ ] **Choose lookup/search backends.** Options: provider-native web search
-      (`webSearchOptions` / `enableSearch` on OpenAI-style clients), a custom
-      web-search tool, or the built-in `rag` module for local lookup/memory.
-      Decide per backend given the offline-first constraint.
-- [ ] **Map edge vs. cloud inference.** Koog ships cloud LLM clients (OpenAI,
-      Anthropic, Google, DeepSeek, OpenRouter, Ollama, Bedrock); native edge
-      executors aren't core yet (see
-      [KG-654](https://youtrack.jetbrains.com/issue/KG-654/Support-mainstream-Mobile-Edge-AI-Executors-via-KMP)).
-      Research wrapping ondevice-ai / litertlm-kmp as a Koog `PromptExecutor`,
-      or driving edge models through Ollama.
-- [ ] **Privacy & network trade-offs.** Web search sends queries to external
-      services; short-circuit the offline-first guarantee. Gate it behind an
-      opt-in setting surfaced in the settings UI alongside the LLM on/off toggle.
-- [ ] **Failure behavior.** Define graceful degradation (no results, offline,
-      provider unreachable) and whether tool/search calls are captured in the
-      engine activity log.
+**Engine modes** (a persisted setting; `LoggingPlanningEngine` records the
+active backend's `EngineKind` per call):
+
+| Mode | Backend | `EngineKind` |
+|---|---|---|
+| Lite (default) | `HardcodedPlanningEngine` (unchanged) | `Hardcoded` |
+| On-device | `OnDeviceLLMClient` — hand-rolled Koog `LLMClient` | `LocalInference` |
+| Remote | Koog `OpenAILLMClient` / `OllamaClient` | `RemoteInference` |
+| Downloaded | Koog `LiteRTLLMClient` (Android) + own JVM adapter (desktop) | `LocalInference` |
+
+**Fallback:** any LLM backend that raises `AnalysisFailure` (or is unavailable /
+disabled) delegates transparently to Lite via a `FallbackPlanningEngine`-style
+wrapper around the Koog layer — the original resilience decision, tracked
+as IMPLEMENTATION-PLAN.md Phase 3 "Fallback Mechanism".
+
+**System on-device client (hand-rolled).** The system-model path is a thin,
+in-repo Koog `LLMClient`: an Android actual over ML Kit GenAI
+(`Generation.getClient()` / AICore / Gemini Nano) and an iOS actual over a
+Swift `SystemPromptApi` bridge into Apple Foundation Models
+(`LanguageModelSession`), registered from the iOS app at startup. **No
+third-party beta library was adopted** — the commonly cited on-device KMP
+wrappers (`adrianczuczka/ondevice-ai`, `uny/koog-ondevice`) are pre-1.0
+community projects, and `nicklama/ondevice-ai` does not exist. The
+`joreilly/OnDeviceAI` sample is the reference shape for the bridge. The client
+reports availability (`Available / Downloadable / Downloading / Unavailable`)
+to drive engine-picker UI.
+
+**Downloaded local models (LiteRT-LM).** In-process `.litertlm` inference via
+Koog's official `LiteRTLLMClient` on Android plus a small JVM `LLMClient`
+adapter over `litertlm-jvm` for desktop. Roadmap: web (wasm) on-device via
+WebLLM / LiteRT JS. **Llamatik** (llama.cpp KMP covering Android, iOS, Desktop,
+WASM) was investigated as a single-dependency alternative; it has no Koog
+integration and bundles STT/image-generation this app never uses, so it is a
+**contingency** if the LiteRT-LM desktop path stalls.
+
+**Web search / research augmentation — supported via Koog tools.** Search
+capable (tool-calling) backends can invoke custom tools we register (`webSearch`,
+`fetchPage`) on a `ToolRegistry`, or Koog can import an external web-search MCP
+server's tools with zero tool code (`McpToolRegistryProvider`: HTTP/SSE on
+mobile, stdio/`fromProcess` on desktop), or use the `rag`/embeddings module for
+local retrieval. Tool-call rows land in the activity log as child `Lookup`
+events (schema item 4) with `parentActivityId` pointing at the requesting
+inference.
+
+- [ ] **Tool-calling with system on-device models (design task — tracking only, not blocking):** system models (Gemini Nano / Apple Foundation) reject tool prompts today, so decide how the lookup/research agent composes with the On-device mode — e.g. route the research agent to a tool-capable backend (remote client or LiteRT FunctionGemma), or split lookups into an explicit pre-tool step that feeds results into context.
+- [ ] **Confirm Koog support on every `shared` target on the current toolchain** during integration (JVM, JS, WasmJS, iOS; Android consumes the JVM artifact).
+- [ ] **Choose lookup/search backends.** Options: provider-native web search (`webSearchOptions` / `enableSearch` on OpenAI-style clients), a custom `webSearch` / `fetchPage` tool, or the `rag` module for local lookup/memory. Decide per backend given the offline-first constraint.
+- [ ] **Privacy & network trade-offs.** Web search sends queries to external services; short-circuit the offline-first guarantee. Gate it behind an opt-in setting surfaced in the settings UI alongside the LLM on/off toggle.
+- [ ] **Failure behavior.** Define graceful degradation (no results, offline, provider unreachable); tool/search calls are captured in the engine activity log as child `Lookup` events.
 
 ### TODO: LLM Inference Strategy
 - [ ] Define fallback behavior for low-resource devices.
