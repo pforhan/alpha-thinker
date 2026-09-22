@@ -44,7 +44,8 @@ enum class EngineMode(
   fun available(): Boolean =
     when (this) {
       Lite -> true
-      OnDevice, Remote, Downloaded -> false
+      OnDevice -> OnDeviceLLMClient().available
+      Remote, Downloaded -> false
     }
 
   companion object {
