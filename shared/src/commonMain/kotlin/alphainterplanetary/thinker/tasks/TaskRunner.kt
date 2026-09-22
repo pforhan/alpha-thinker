@@ -1,5 +1,8 @@
 package alphainterplanetary.thinker.tasks
 
+import alphainterplanetary.thinker.activitylog.EngineActivityEvent
+import alphainterplanetary.thinker.activitylog.EngineActivityEventType
+import alphainterplanetary.thinker.activitylog.EngineActivityLog
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.coroutines.CoroutineScope
@@ -36,9 +39,21 @@ import kotlin.coroutines.cancellation.CancellationException
  * aggregate, so two writers for one project would clobber each other's write.
  * Parallelism is safe across projects and for read-only checks like
  * [TaskKind.RemainingInPhase].
+ *
+ * When an [EngineActivityLog] is injected, each lifecycle transition is
+ * appended as an immutable [EngineActivityEvent] with `activityId = taskId`:
+ * `Created` when the body starts and the terminal `Succeeded`/`Failed`/
+ * `Cancelled` when it resolves (a `Progress` row with the final value is
+ * written first when the body reported one — transient ticks are not each
+ * persisted, only the terminal value). Appends happen synchronously inside the
+ * task coroutine, so a task's log rows are always in transition order and no
+ * extra coroutines are kept alive. The body receives its [taskId] so it can
+ * pass it to engine calls as `activityId`, joining the `LoggingPlanningEngine`
+ * detail rows to the same activity.
  */
 class TaskRunner(
   private val scope: CoroutineScope,
+  private val activityLog: EngineActivityLog? = null,
 ) {
   private val _tasks = MutableStateFlow<List<GenerationTask>>(emptyList())
 
@@ -61,19 +76,20 @@ class TaskRunner(
   /**
    * Enqueues [body] as a [kind] generation task for [projectId], returning the
    * task immediately (still [TaskStatus.Queued]); the body runs later on the
-   * injected scope. [group] selects the concurrency pool, defaulting to the
-   * kind's [TaskKind.group]; pass an explicit group when the body competes for
-   * a different resource (e.g. a remote HTTP lookup).
+   * injected scope. [body] receives the task's id so it can thread it into
+   * engine calls as `activityId`. [group] selects the concurrency pool,
+   * defaulting to the kind's [TaskKind.group]; pass an explicit group when the
+   * body competes for a different resource (e.g. a remote HTTP lookup).
    */
   fun enqueue(
     projectId: String,
     kind: TaskKind,
     group: TaskGroup = kind.group,
-    body: suspend () -> Unit,
+    body: suspend (taskId: String) -> Unit,
   ): GenerationTask {
     val task = newTask(projectId, kind, group)
     return launchTask(task) {
-      body()
+      body(it)
       null
     }
   }
@@ -87,10 +103,10 @@ class TaskRunner(
     projectId: String,
     kind: TaskKind,
     group: TaskGroup = kind.group,
-    body: suspend () -> Boolean,
+    body: suspend (taskId: String) -> Boolean,
   ): GenerationTask {
     val task = newTask(projectId, kind, group)
-    return launchTask(task) { body() }
+    return launchTask(task) { body(it) }
   }
 
   private fun newTask(
@@ -115,10 +131,19 @@ class TaskRunner(
 
   private fun launchTask(
     task: GenerationTask,
-    produce: suspend () -> Boolean?,
+    produce: suspend (taskId: String) -> Boolean?,
   ): GenerationTask {
     _tasks.update { it + task }
     scope.launch {
+      logAppend(
+        EngineActivityEvent(
+          activityId = task.id,
+          projectId = task.projectId,
+          kind = task.kind,
+          eventType = EngineActivityEventType.Created,
+          timestamp = task.createdAt,
+        )
+      )
       val guard = projectGuard(task.projectId)
       val groupGate = groupGates.getValue(task.group)
       guard.withLock {
@@ -133,7 +158,7 @@ class TaskRunner(
           var failure: String? = null
           var result: Boolean? = null
           try {
-            result = produce()
+            result = produce(task.id)
           } catch (e: CancellationException) {
             cancelled = true
           } catch (e: Exception) {
@@ -155,6 +180,48 @@ class TaskRunner(
             failure != null -> { t -> t.asFailed(finishedAt, failure) }
             else -> { t -> t.asSucceeded(finishedAt).copy(result = result) }
           }
+          // The body may have streamed progress via [setProgress]; persist it
+          // (final value) and then the terminal row, in that order.
+          _tasks.value.find { it.id == task.id }?.progress?.let { progress ->
+            logAppend(
+              EngineActivityEvent(
+                activityId = task.id,
+                projectId = task.projectId,
+                kind = task.kind,
+                eventType = EngineActivityEventType.Progress,
+                progress = progress,
+                timestamp = finishedAt,
+              )
+            )
+          }
+          logAppend(
+            when {
+              cancelled -> EngineActivityEvent(
+                activityId = task.id,
+                projectId = task.projectId,
+                kind = task.kind,
+                eventType = EngineActivityEventType.Cancelled,
+                error = "Task cancelled",
+                timestamp = finishedAt,
+              )
+              failure != null -> EngineActivityEvent(
+                activityId = task.id,
+                projectId = task.projectId,
+                kind = task.kind,
+                eventType = EngineActivityEventType.Failed,
+                error = failure,
+                timestamp = finishedAt,
+              )
+              else -> EngineActivityEvent(
+                activityId = task.id,
+                projectId = task.projectId,
+                kind = task.kind,
+                eventType = EngineActivityEventType.Succeeded,
+                result = result,
+                timestamp = finishedAt,
+              )
+            }
+          )
           // Fold any progress/error published via [setProgress] into the terminal
           // state instead of clobbering it with a stale local read.
           _tasks.update { list -> list.replace(terminal(list.first { it.id == task.id })) }
@@ -168,6 +235,13 @@ class TaskRunner(
   fun setProgress(taskId: String, progress: Float) {
     _tasks.update { list ->
       list.map { task -> if (task.id == taskId) task.copy(progress = progress) else task }
+    }
+  }
+
+  /** Appends one lifecycle row for the durable log (no-op without an injected log). */
+  private suspend fun logAppend(event: EngineActivityEvent) {
+    activityLog?.let { log ->
+      runCatching { log.append(event) }
     }
   }
 }

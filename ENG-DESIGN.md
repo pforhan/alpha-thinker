@@ -119,7 +119,9 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
 
     **Read models are derived, never stored.** Live task state (Task Manager,
     project screens) = the *latest event per `activityId`* — a Room
-    `@DatabaseView` window-function query, or a repository fold over the
+    `@DatabaseView` window-function query (implemented as
+    `ActivityDao.latestPerActivity()` via `ROW_NUMBER() OVER (PARTITION BY
+    activityId ORDER BY eventId DESC)`), or a repository fold over the
     `TaskRunner`'s existing transition flow. The LLM Interaction Log reads the
     full history as a tree via `parentActivityId`. On startup the fold is
     replayed and any activity whose latest event is non-terminal gets a
@@ -134,10 +136,11 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     interaction detail (`promptUsed` / `parameters`,
     `generationPayload` / `suggestedQuestions`, `durationMs`, and child
     `Lookup` tool-call events). The task body passes its `taskId` into the
-    engine call as `activityId` (the `PlanningEngine` methods carry an optional
-    `activityId`/context param), so the decorator's detail groups under the
-    same activity as the lifecycle rows. `ProjectRepository` and the engines
-    are pure producers — neither writes the log.
+    engine call as `activityId` (the `PlanningEngine` methods carry a required
+    `activityId: String` with no defaults, so every call is attributed to its
+    originating generation task by construction), so the decorator's detail
+    groups under the same activity as the lifecycle rows. `ProjectRepository`
+    and the engines are pure producers — neither writes the log.
 
     **Retention:** a settable TTL (new app setting, default 7 days) prunes
     *whole activities* whose terminal event is older than the window — live
@@ -151,8 +154,9 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     an LLM-requested web lookup) all land here. The log is the *persisted*
     form of the current in-memory `GenerationTask`, so the System/Debug
     workspace (PRD 5.5: LLM Interaction Log + Task Manager) reads one
-    append-only table. Tasks stay in-memory today; persistence lands in
-    Phase 3.
+    append-only table. `TaskRunner` still reads/writes its in-memory
+    StateFlow today; the DB read model (`latestPerActivity`) is implemented at
+    the DAO and service level and powers the System/Debug reader (Phase 3).
 
 5. **GlobalQuestion:**
    *   `globalQuestionId` (Unique ID)

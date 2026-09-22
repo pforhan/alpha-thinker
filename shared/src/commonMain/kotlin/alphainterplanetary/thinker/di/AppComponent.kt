@@ -1,8 +1,14 @@
 package alphainterplanetary.thinker.di
 
+import alphainterplanetary.thinker.activitylog.EngineActivityLog
+import alphainterplanetary.thinker.activitylog.RoomEngineActivityLog
+import alphainterplanetary.thinker.database.ActivityDatabase
 import alphainterplanetary.thinker.database.Storage
+import alphainterplanetary.thinker.database.getActivityDatabase
+import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
 import alphainterplanetary.thinker.engine.HardcodedPlanningEngine
+import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -29,6 +35,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   abstract val taskRunner: TaskRunner
 
+  abstract val engineActivityLog: EngineActivityLog
+
   abstract val appScope: CoroutineScope
 
   @AppScope
@@ -37,18 +45,37 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   @AppScope
   @Provides
+  fun providesActivityDatabase(): ActivityDatabase = getActivityDatabase(provideActivityDatabaseBuilder(platformContext))
+
+  @AppScope
+  @Provides
   fun providesAppCoroutineScope(): CoroutineScope =
     CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
   @AppScope
   @Provides
-  fun providesTaskRunner(scope: CoroutineScope): TaskRunner = TaskRunner(scope)
+  fun providesEngineActivityLog(
+    database: ActivityDatabase,
+    storage: Storage,
+    scope: CoroutineScope,
+  ): EngineActivityLog = RoomEngineActivityLog(database, storage, scope)
+
+  @AppScope
+  @Provides
+  fun providesTaskRunner(
+    scope: CoroutineScope,
+    engineActivityLog: EngineActivityLog,
+  ): TaskRunner = TaskRunner(scope, engineActivityLog)
 
   @Provides
   fun providesPlanningEngine(
     settingsRepository: SettingsRepository,
+    engineActivityLog: EngineActivityLog,
   ): PlanningEngine = SlowDownPlanningEngine(
-    delegate = HardcodedPlanningEngine(),
+    delegate = LoggingPlanningEngine(
+      delegate = HardcodedPlanningEngine(),
+      log = engineActivityLog,
+    ),
     config = settingsRepository.engineDelay,
   )
 }

@@ -148,13 +148,14 @@ class ProjectRepositoryTest {
   @Test
   fun `createProject keeps the shell when initial generation fails`() = runTest {
     val failing = object : PlanningEngine {
-      override suspend fun recommendTitle(synopsis: String): String = "Title"
+      override suspend fun recommendTitle(synopsis: String, activityId: String): String = "Title"
 
       override suspend fun generateInitialQuestions(
         editableTitle: String,
         synopsis: String,
         roundId: String,
         phase: Phase,
+        activityId: String,
       ): List<Question> {
         throw PlanningEngine.AnalysisFailure("no model")
       }
@@ -164,12 +165,14 @@ class ProjectRepositoryTest {
         previousQuestions: List<Question>,
         roundId: String,
         phase: Phase,
+        activityId: String,
       ): List<Question> = emptyList()
 
       override suspend fun remainingInPhase(
         synopsis: String,
         previousQuestions: List<Question>,
         phase: Phase,
+        activityId: String,
       ): Int = 0
     }
     val storage = FakeStorage()

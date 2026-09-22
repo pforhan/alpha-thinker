@@ -17,10 +17,10 @@ class SlowDownPlanningEngine(
   private val config: StateFlow<EngineDelayConfig>,
 ) : PlanningEngine {
 
-  override suspend fun recommendTitle(synopsis: String): String {
+  override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     println("SlowDownPlanningEngine.recommendTitle()")
     maybeDelay(EngineInteraction.RecommendTitle)
-    return delegate.recommendTitle(synopsis)
+    return delegate.recommendTitle(synopsis, activityId)
   }
 
   override suspend fun generateInitialQuestions(
@@ -28,10 +28,11 @@ class SlowDownPlanningEngine(
     synopsis: String,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question> {
     println("SlowDownPlanningEngine.generateInitialQuestions()")
     maybeDelay(EngineInteraction.InitialQuestions)
-    return delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase)
+    return delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase, activityId)
   }
 
   override suspend fun generateFollowUpQuestions(
@@ -39,20 +40,22 @@ class SlowDownPlanningEngine(
     previousQuestions: List<Question>,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question> {
     println("SlowDownPlanningEngine.generateFollowUpQuestions()")
     maybeDelay(EngineInteraction.FollowUpQuestions)
-    return delegate.generateFollowUpQuestions(synopsis, previousQuestions, roundId, phase)
+    return delegate.generateFollowUpQuestions(synopsis, previousQuestions, roundId, phase, activityId)
   }
 
   override suspend fun remainingInPhase(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
+    activityId: String,
   ): Int {
     println("SlowDownPlanningEngine.remainingInPhase()")
     maybeDelay(EngineInteraction.RemainingInPhase)
-    return delegate.remainingInPhase(synopsis, previousQuestions, phase)
+    return delegate.remainingInPhase(synopsis, previousQuestions, phase, activityId)
   }
 
   private suspend fun maybeDelay(interaction: EngineInteraction) {

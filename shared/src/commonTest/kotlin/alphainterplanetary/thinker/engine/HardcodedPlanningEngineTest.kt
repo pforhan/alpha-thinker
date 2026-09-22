@@ -100,6 +100,7 @@ class HardcodedPlanningEngineTest {
       "synopsis",
       "ctx",
       BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
     )
 
     assertEquals(5, questions.size)
@@ -113,6 +114,7 @@ class HardcodedPlanningEngineTest {
       "synopsis",
       "ctx",
       BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
     )
 
     assertEquals(3, questions.size)
@@ -125,9 +127,9 @@ class HardcodedPlanningEngineTest {
   @Test
   fun `generateInitialQuestions draws from its own phase's pool`() = runTest {
     val scope =
-      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     val research =
-      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research)
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research, activityId = "test-activity")
 
     assertTrue(scope.map { it.text }.all { it in poolOf(BuiltInPhase.ScopeGoals) })
     assertTrue(research.map { it.text }.all { it in poolOf(BuiltInPhase.Research) })
@@ -142,12 +144,13 @@ class HardcodedPlanningEngineTest {
   @Test
   fun `generateFollowUpQuestions returns questions not already asked`() = runTest {
     val initial =
-      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     val followUp = generator.generateFollowUpQuestions(
       "synopsis",
       initial,
       "ctx",
       BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
     )
 
     assertTrue(followUp.isNotEmpty())
@@ -159,12 +162,13 @@ class HardcodedPlanningEngineTest {
   @Test
   fun `generateFollowUpQuestions dedupes across multiple rounds`() = runTest {
     val initial =
-      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     val round1 = generator.generateFollowUpQuestions(
       "synopsis",
       initial,
       "ctx",
       BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
     )
     val asked = (initial + round1).map { it.text }.toSet()
     val round2 = generator.generateFollowUpQuestions(
@@ -172,6 +176,7 @@ class HardcodedPlanningEngineTest {
       initial + round1,
       "ctx",
       BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
     )
 
     assertTrue(round2.map { it.text }.none { it in asked })
@@ -187,6 +192,7 @@ class HardcodedPlanningEngineTest {
       asked,
       "ctx",
       BuiltInPhase.ValidationPlan,
+      activityId = "test-activity",
     )
 
     assertTrue(followUp.isEmpty())
@@ -197,12 +203,13 @@ class HardcodedPlanningEngineTest {
     val generator = HardcodedPlanningEngine(initialCount = 3, followUpCount = 7)
 
     val initial =
-      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     val followUp = generator.generateFollowUpQuestions(
       "synopsis",
       initial,
       "ctx",
       BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
     )
 
     assertEquals(7, followUp.size)
@@ -211,9 +218,9 @@ class HardcodedPlanningEngineTest {
   @Test
   fun `generation is stateless - same inputs yield same texts`() = runTest {
     val first =
-      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     val second =
-      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
 
     assertEquals(first.map { it.text }, second.map { it.text })
   }
@@ -224,24 +231,24 @@ class HardcodedPlanningEngineTest {
   fun `remainingInPhase returns the full pool when nothing has been asked`() = runTest {
     assertEquals(
       poolOf(BuiltInPhase.ScopeGoals).size,
-      generator.remainingInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals),
+      generator.remainingInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals, activityId = "test-activity"),
     )
   }
 
   @Test
   fun `remainingInPhase counts only the phase's own pool texts not yet asked`() = runTest {
-    val initial = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals)
+    val initial = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
 
-    val remaining = generator.remainingInPhase("synopsis", initial, BuiltInPhase.ScopeGoals)
+    val remaining = generator.remainingInPhase("synopsis", initial, BuiltInPhase.ScopeGoals, activityId = "test-activity")
 
     assertEquals(poolOf(BuiltInPhase.ScopeGoals).size - initial.size, remaining)
   }
 
   @Test
   fun `remainingInPhase ignores questions asked in other phases`() = runTest {
-    val research = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research)
+    val research = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research, activityId = "test-activity")
 
-    val scopeRemaining = generator.remainingInPhase("synopsis", research, BuiltInPhase.ScopeGoals)
+    val scopeRemaining = generator.remainingInPhase("synopsis", research, BuiltInPhase.ScopeGoals, activityId = "test-activity")
 
     assertEquals(poolOf(BuiltInPhase.ScopeGoals).size, scopeRemaining)
   }
@@ -253,7 +260,7 @@ class HardcodedPlanningEngineTest {
 
     assertEquals(
       0,
-      generator.remainingInPhase("synopsis", asked, BuiltInPhase.ValidationPlan),
+      generator.remainingInPhase("synopsis", asked, BuiltInPhase.ValidationPlan, activityId = "test-activity"),
     )
   }
 

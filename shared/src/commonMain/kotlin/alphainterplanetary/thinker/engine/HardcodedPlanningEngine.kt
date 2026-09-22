@@ -18,7 +18,7 @@ class HardcodedPlanningEngine @Inject constructor(
   private val followUpCount: Int = 5,
 ) : PlanningEngine {
 
-  override suspend fun recommendTitle(synopsis: String): String =
+  override suspend fun recommendTitle(synopsis: String, activityId: String): String =
     generateTitleFromSynopsis(synopsis)
 
   fun generateTitleFromSynopsisForTest(synopsis: String): String =
@@ -35,6 +35,7 @@ class HardcodedPlanningEngine @Inject constructor(
     synopsis: String,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question> {
     val now = now()
     return phase.pool
@@ -47,6 +48,7 @@ class HardcodedPlanningEngine @Inject constructor(
     previousQuestions: List<Question>,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question> {
     val remaining = remainingPool(phase, previousQuestions)
     if (remaining.isEmpty()) return emptyList()
@@ -61,6 +63,7 @@ class HardcodedPlanningEngine @Inject constructor(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
+    activityId: String,
   ): Int = remainingPool(phase, previousQuestions).size
 
   /** The phase's pool texts not yet asked in the project, in pool priority order. */

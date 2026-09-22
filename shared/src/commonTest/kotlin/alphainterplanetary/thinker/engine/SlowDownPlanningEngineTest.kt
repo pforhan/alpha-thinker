@@ -26,7 +26,7 @@ class SlowDownPlanningEngineTest {
       config = MutableStateFlow(EngineDelayConfig(enabled = false)),
     )
 
-    generator.recommendTitle("synopsis")
+    generator.recommendTitle("synopsis", activityId = "test-activity")
 
     assertEquals(1, delegate.titleCalls)
   }
@@ -41,7 +41,7 @@ class SlowDownPlanningEngineTest {
       ),
     )
 
-    val job = launch { generator.recommendTitle("synopsis") }
+    val job = launch { generator.recommendTitle("synopsis", activityId = "test-activity") }
     testScheduler.runCurrent()
     assertEquals(0, delegate.titleCalls)
 
@@ -70,9 +70,9 @@ class SlowDownPlanningEngineTest {
     )
 
     val job = launch {
-      generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals)
-      generator.generateFollowUpQuestions("synopsis", emptyList(), "r2", BuiltInPhase.ScopeGoals)
-      generator.remainingInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals)
+      generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+      generator.generateFollowUpQuestions("synopsis", emptyList(), "r2", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+      generator.remainingInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals, activityId = "test-activity")
     }
     testScheduler.runCurrent()
     assertEquals(0, delegate.totalCalls())
@@ -112,8 +112,8 @@ class SlowDownPlanningEngineTest {
     )
 
     val job = launch {
-      generator.recommendTitle("synopsis")
-      generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals)
+      generator.recommendTitle("synopsis", activityId = "test-activity")
+      generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     }
     testScheduler.runCurrent()
     assertEquals(1, delegate.titleCalls)
@@ -134,7 +134,7 @@ class SlowDownPlanningEngineTest {
     val delegate = TrackingPlanningEngine()
     val generator = SlowDownPlanningEngine(delegate = delegate, config = config)
 
-    val first = launch { generator.recommendTitle("a") }
+    val first = launch { generator.recommendTitle("a", activityId = "test-activity") }
     testScheduler.runCurrent()
     assertEquals(0, delegate.titleCalls)
     testScheduler.advanceTimeBy(2_000)
@@ -143,7 +143,7 @@ class SlowDownPlanningEngineTest {
     first.join()
 
     config.value = config.value.copy(enabled = false)
-    val second = launch { generator.recommendTitle("b") }
+    val second = launch { generator.recommendTitle("b", activityId = "test-activity") }
     testScheduler.runCurrent()
     assertEquals(2, delegate.titleCalls)
     second.join()
@@ -159,7 +159,7 @@ private class TrackingPlanningEngine : PlanningEngine {
 
   fun totalCalls(): Int = titleCalls + initialCalls + followUpCalls + remainingCalls
 
-  override suspend fun recommendTitle(synopsis: String): String {
+  override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     titleCalls++
     return "title"
   }
@@ -169,6 +169,7 @@ private class TrackingPlanningEngine : PlanningEngine {
     synopsis: String,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question> {
     initialCalls++
     return emptyList()
@@ -179,6 +180,7 @@ private class TrackingPlanningEngine : PlanningEngine {
     previousQuestions: List<Question>,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question> {
     followUpCalls++
     return emptyList()
@@ -188,6 +190,7 @@ private class TrackingPlanningEngine : PlanningEngine {
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
+    activityId: String,
   ): Int {
     remainingCalls++
     return 0

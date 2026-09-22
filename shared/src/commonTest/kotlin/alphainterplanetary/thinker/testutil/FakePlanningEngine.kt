@@ -13,13 +13,14 @@ class FakePlanningEngine : PlanningEngine {
   var followUpCalls: MutableList<FollowUpCall> = mutableListOf()
   var remainingCalls: MutableList<RemainingCall> = mutableListOf()
 
-  override suspend fun recommendTitle(synopsis: String): String = recommendedTitle
+  override suspend fun recommendTitle(synopsis: String, activityId: String): String = recommendedTitle
 
   override suspend fun generateInitialQuestions(
     editableTitle: String,
     synopsis: String,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question> {
     initialCalls += InitialCall(editableTitle, synopsis, roundId, phase)
     return initialQuestions
@@ -30,6 +31,7 @@ class FakePlanningEngine : PlanningEngine {
     previousQuestions: List<Question>,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question> {
     followUpCalls += FollowUpCall(synopsis, previousQuestions, roundId, phase)
     return followUpQuestions
@@ -39,6 +41,7 @@ class FakePlanningEngine : PlanningEngine {
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
+    activityId: String,
   ): Int {
     remainingCalls += RemainingCall(synopsis, previousQuestions, phase)
     return remaining

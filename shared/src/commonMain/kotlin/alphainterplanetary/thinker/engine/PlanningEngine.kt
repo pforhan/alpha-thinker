@@ -15,10 +15,16 @@ import kotlin.coroutines.cancellation.CancellationException
  * Each interaction is intended to be recorded on the engine activity log (see
  * ENG-DESIGN.md "Core Data Schema") so the System/Debug workspace can show what
  * ran, through which engine, and (for inference) any nested tool calls it made.
+ *
+ * [activityId] threads a generation task's id into every call so the
+ * `LoggingPlanningEngine` decorator's interaction-detail rows group under the
+ * same activity as the task-runner lifecycle rows. It is required — every
+ * interaction today originates inside a task, so an untagged call is a bug
+ * (it would otherwise spawn an orphan activity in the log).
  */
 interface PlanningEngine {
   @Throws(AnalysisFailure::class, CancellationException::class)
-  suspend fun recommendTitle(synopsis: String): String
+  suspend fun recommendTitle(synopsis: String, activityId: String): String
 
   @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun generateInitialQuestions(
@@ -26,6 +32,7 @@ interface PlanningEngine {
     synopsis: String,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question>
 
   @Throws(AnalysisFailure::class, CancellationException::class)
@@ -34,6 +41,7 @@ interface PlanningEngine {
     previousQuestions: List<Question>,
     roundId: String,
     phase: Phase,
+    activityId: String,
   ): List<Question>
 
   /**
@@ -47,6 +55,7 @@ interface PlanningEngine {
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
+    activityId: String,
   ): Int
 
   class AnalysisFailure(override val message: String) : Exception(message)

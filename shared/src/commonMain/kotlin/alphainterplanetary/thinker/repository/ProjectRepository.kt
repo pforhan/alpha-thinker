@@ -75,9 +75,9 @@ class ProjectRepository @Inject constructor(
 
   /** Fills in the project's recommended title on the task runner, re-reading first. */
   private fun enqueueTitleRecommendation(projectId: String) {
-    taskRunner.enqueue(projectId, TaskKind.TitleRecommendation) {
+    taskRunner.enqueue(projectId, TaskKind.TitleRecommendation) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
-      val recommended = engine.recommendTitle(reloaded.synopsis)
+      val recommended = engine.recommendTitle(reloaded.synopsis, activityId = taskId)
       if (recommended.isNotBlank()) {
         storage.saveProject(
           reloaded.copy(
@@ -101,7 +101,7 @@ class ProjectRepository @Inject constructor(
     roundId: String,
     kind: TaskKind,
   ) {
-    taskRunner.enqueue(projectId, kind) {
+    taskRunner.enqueue(projectId, kind) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
       val generated = when (kind) {
@@ -110,6 +110,7 @@ class ProjectRepository @Inject constructor(
           synopsis = reloaded.synopsis,
           roundId = round.id,
           phase = round.phase,
+          activityId = taskId,
         )
 
         TaskKind.FollowUpQuestions -> engine.generateFollowUpQuestions(
@@ -117,6 +118,7 @@ class ProjectRepository @Inject constructor(
           previousQuestions = reloaded.questions,
           roundId = round.id,
           phase = round.phase,
+          activityId = taskId,
         )
 
         else -> return@enqueue
@@ -294,7 +296,7 @@ class ProjectRepository @Inject constructor(
    * also rides on the terminal task's [GenerationTask.result].
    */
   fun enqueueAvailabilityCheck(projectId: String): GenerationTask =
-    taskRunner.enqueueResult(projectId, TaskKind.RemainingInPhase) {
+    taskRunner.enqueueResult(projectId, TaskKind.RemainingInPhase) { taskId ->
       val project = storage.getProject(projectId)
       val remaining = if (project == null) {
         0
@@ -303,6 +305,7 @@ class ProjectRepository @Inject constructor(
           synopsis = project.synopsis,
           previousQuestions = project.questions,
           phase = project.currentPhase,
+          activityId = taskId,
         )
       }
       val can = remaining > 0
