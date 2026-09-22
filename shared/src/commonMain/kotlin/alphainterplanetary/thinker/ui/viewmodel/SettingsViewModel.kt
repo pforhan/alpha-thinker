@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
@@ -28,6 +29,20 @@ class SettingsViewModel(
 
   fun selectPhaseTheme(theme: PhaseTheme) {
     settingsRepository.setPhaseTheme(theme)
+  }
+
+  /** The selected planning backend; only available modes can be chosen. */
+  val engineMode: StateFlow<EngineMode> = settingsRepository.engineMode
+
+  fun selectEngineMode(mode: EngineMode) {
+    settingsRepository.setEngineMode(mode)
+  }
+
+  /** Whether the planning LLM is allowed to run. */
+  val llmEnabled: StateFlow<Boolean> = settingsRepository.llmEnabled
+
+  fun setLlmEnabled(enabled: Boolean) {
+    settingsRepository.setLlmEnabled(enabled)
   }
 
   /** Whether PlanningEngine interactions carry the artificial testing delay. */

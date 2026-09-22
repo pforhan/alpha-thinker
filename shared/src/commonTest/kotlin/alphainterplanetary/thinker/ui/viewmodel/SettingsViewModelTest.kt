@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
@@ -68,6 +69,40 @@ class SettingsViewModelTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals(PhaseTheme.Ocean, vm.phaseTheme.value)
+  }
+
+  @Test
+  fun `engineMode starts at Lite`() = runTest {
+    val vm = viewModel()
+
+    assertEquals(EngineMode.Default, vm.engineMode.value)
+  }
+
+  @Test
+  fun `selectEngineMode updates the exposed mode`() = runTest {
+    val vm = viewModel()
+
+    vm.selectEngineMode(EngineMode.OnDevice)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineMode.OnDevice, vm.engineMode.value)
+  }
+
+  @Test
+  fun `llmEnabled starts on`() = runTest {
+    val vm = viewModel()
+
+    assertEquals(true, vm.llmEnabled.value)
+  }
+
+  @Test
+  fun `setLlmEnabled updates the exposed toggle`() = runTest {
+    val vm = viewModel()
+
+    vm.setLlmEnabled(false)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(false, vm.llmEnabled.value)
   }
 
   @Test

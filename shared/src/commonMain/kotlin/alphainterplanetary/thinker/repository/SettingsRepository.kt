@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,18 @@ class SettingsRepository @Inject constructor(
   private val _phaseTheme = MutableStateFlow(PhaseTheme.Default)
   val phaseTheme: StateFlow<PhaseTheme> = _phaseTheme.asStateFlow()
 
+  /**
+   * The selected planning backend ([EngineMode]). Only [EngineMode.Lite] is
+   * selectable today — the LLM backends are gated off by [EngineMode.available]
+   * until they land (IMPLEMENTATION-PLAN.md Phase 3).
+   */
+  private val _engineMode = MutableStateFlow(EngineMode.Default)
+  val engineMode: StateFlow<EngineMode> = _engineMode.asStateFlow()
+
+  /** Whether the planning LLM may run at all; when off, Lite is used. */
+  private val _llmEnabled = MutableStateFlow(true)
+  val llmEnabled: StateFlow<Boolean> = _llmEnabled.asStateFlow()
+
   private val _engineDelay = MutableStateFlow(EngineDelayConfig.Default)
   val engineDelay: StateFlow<EngineDelayConfig> = _engineDelay.asStateFlow()
 
@@ -41,6 +54,24 @@ class SettingsRepository @Inject constructor(
       // different theme, so a startup load never clobbers their selection.
       if (_phaseTheme.value == PhaseTheme.Default) {
         _phaseTheme.value = loaded
+      }
+    }
+    scope.launch {
+      val loaded = storage.getSetting(SettingsKey.EngineMode, EngineMode.Default.key)
+        .let(EngineMode::fromKey)
+        ?: EngineMode.Default
+      // Only apply the persisted value while the user hasn't already picked a
+      // different mode, so a startup load never clobbers their selection.
+      if (_engineMode.value == EngineMode.Default) {
+        _engineMode.value = loaded
+      }
+    }
+    scope.launch {
+      val enabled = storage.getSetting(SettingsKey.LlmEnabled, "true").toBoolean()
+      // Only apply the persisted value while the user hasn't already flipped the
+      // toggle off this session, so a startup load never clobbers their choice.
+      if (_llmEnabled.value && !enabled) {
+        _llmEnabled.value = enabled
       }
     }
     scope.launch {
@@ -71,6 +102,24 @@ class SettingsRepository @Inject constructor(
     _phaseTheme.value = theme
     scope.launch {
       storage.saveSetting(SettingsKey.PhaseTheme, theme.key)
+    }
+  }
+
+  /** Selects the planning backend; unavailable modes are rejected by the picker UI. */
+  fun setEngineMode(mode: EngineMode) {
+    if (mode == _engineMode.value) return
+    _engineMode.value = mode
+    scope.launch {
+      storage.saveSetting(SettingsKey.EngineMode, mode.key)
+    }
+  }
+
+  /** Turns the planning LLM on or off; when off, planning falls back to Lite. */
+  fun setLlmEnabled(enabled: Boolean) {
+    if (enabled == _llmEnabled.value) return
+    _llmEnabled.value = enabled
+    scope.launch {
+      storage.saveSetting(SettingsKey.LlmEnabled, enabled.toString())
     }
   }
 

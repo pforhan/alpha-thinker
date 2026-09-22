@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
@@ -66,6 +67,101 @@ class SettingsRepositoryTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals(PhaseTheme.Default, repo.phaseTheme.value)
+  }
+
+  // ---------- planning engine mode + LLM toggle ----------
+
+  @Test
+  fun `engineMode starts at Lite before the saved value loads`() = runTest {
+    val repo = repository()
+
+    assertEquals(EngineMode.Default, repo.engineMode.value)
+  }
+
+  @Test
+  fun `engineMode loads the persisted mode at startup`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.EngineMode, "remote")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineMode.Remote, repo.engineMode.value)
+  }
+
+  @Test
+  fun `setEngineMode updates state and persists the choice`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setEngineMode(EngineMode.OnDevice)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineMode.OnDevice, repo.engineMode.value)
+    assertEquals("on-device", storage.settings[SettingsKey.EngineMode.storageKey])
+  }
+
+  @Test
+  fun `setEngineMode ignores the already-selected mode`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setEngineMode(EngineMode.Lite)
+
+    assertEquals(EngineMode.Lite, repo.engineMode.value)
+    assertEquals(null, storage.settings[SettingsKey.EngineMode.storageKey])
+  }
+
+  @Test
+  fun `an unknown persisted mode falls back to Lite`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.EngineMode, "nope")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineMode.Default, repo.engineMode.value)
+  }
+
+  @Test
+  fun `llmEnabled starts on before the saved value loads`() = runTest {
+    val repo = repository()
+
+    assertEquals(true, repo.llmEnabled.value)
+  }
+
+  @Test
+  fun `llmEnabled loads the persisted toggle at startup`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.LlmEnabled, "false")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(false, repo.llmEnabled.value)
+  }
+
+  @Test
+  fun `setLlmEnabled updates state and persists the choice`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setLlmEnabled(false)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(false, repo.llmEnabled.value)
+    assertEquals("false", storage.settings[SettingsKey.LlmEnabled.storageKey])
+  }
+
+  @Test
+  fun `setLlmEnabled ignores the already-set value`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setLlmEnabled(true)
+
+    assertEquals(true, repo.llmEnabled.value)
+    assertEquals(null, storage.settings[SettingsKey.LlmEnabled.storageKey])
   }
 
   // ---------- engine slow-down delays ----------

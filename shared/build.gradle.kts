@@ -108,6 +108,7 @@ kotlin {
       implementation(libs.kotlinx.coroutines.core)
       implementation(libs.kotlin.inject)
       implementation(libs.room.runtime)
+      implementation(libs.koog.agents)
     }
 
     androidMain.dependencies {

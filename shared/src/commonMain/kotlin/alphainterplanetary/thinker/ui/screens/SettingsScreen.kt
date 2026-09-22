@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.ui.screens
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.theme.BadgeShape
@@ -76,6 +77,8 @@ fun SettingsScreen(
   }
   val uiState by viewModel.uiState.collectAsState()
   val phaseTheme by viewModel.phaseTheme.collectAsState()
+  val engineMode by viewModel.engineMode.collectAsState()
+  val llmEnabled by viewModel.llmEnabled.collectAsState()
   val engineDelay by viewModel.engineDelay.collectAsState()
   val scrollState = rememberScrollState()
   var delayExpandedHeight by remember { mutableIntStateOf(0) }
@@ -122,6 +125,22 @@ fun SettingsScreen(
           theme = theme,
           selected = phaseTheme == theme,
           onClick = { viewModel.selectPhaseTheme(theme) },
+        )
+      }
+      Text(
+        text = "Intelligence",
+        style = MaterialTheme.typography.titleMedium,
+      )
+      IntelligenceLlmToggleItem(
+        enabled = llmEnabled,
+        onEnabledChange = { viewModel.setLlmEnabled(it) },
+      )
+      EngineMode.entries.forEach { mode ->
+        EngineModeOption(
+          mode = mode,
+          selected = engineMode == mode,
+          selectable = mode.available(),
+          onClick = { viewModel.selectEngineMode(mode) },
         )
       }
       Text(
@@ -259,6 +278,94 @@ private fun ThemePreviewRow(
           Spacer(modifier = Modifier.width(Dimens.ThemeSwatchGap))
         }
         PhaseBadge(phase = phase)
+      }
+    }
+  }
+}
+
+/**
+ * The master LLM switch for the "Intelligence" section: while on, LLM
+ * backends may generate planning content; while off, the built-in Lite engine
+ * runs instead (per PRD the toggle sits alongside the future lookup/search one).
+ */
+@Composable
+private fun IntelligenceLlmToggleItem(
+  enabled: Boolean,
+  onEnabledChange: (Boolean) -> Unit,
+) {
+  Card(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.padding(Dimens.CardPadding)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = "Use the planning LLM",
+            style = MaterialTheme.typography.titleSmall,
+          )
+          Spacer(modifier = Modifier.height(Dimens.TightGap))
+          Text(
+            text = "Lets Alpha Thinker generate titles and questions with a language model. " +
+              "When off, the built-in Lite engine runs instead.",
+            style = MaterialTheme.typography.bodyMedium,
+          )
+        }
+        Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
+        Switch(
+          checked = enabled,
+          onCheckedChange = onEnabledChange,
+        )
+      }
+    }
+  }
+}
+
+/**
+ * One selectable planning backend in the "Intelligence" section: names and
+ * describes the mode, marks the selected one, and gates unavailable backends
+ * off (only Lite is shipped today — the LLM backends land in Phase 3).
+ */
+@Composable
+private fun EngineModeOption(
+  mode: EngineMode,
+  selected: Boolean,
+  selectable: Boolean,
+  onClick: () -> Unit,
+) {
+  Card(
+    onClick = onClick,
+    enabled = selectable,
+    modifier = Modifier.fillMaxWidth(),
+  ) {
+    Column(modifier = Modifier.padding(Dimens.CardPadding)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = mode.label,
+            style = MaterialTheme.typography.titleSmall,
+          )
+          Spacer(modifier = Modifier.height(Dimens.TightGap))
+          Text(
+            text = mode.description,
+            style = MaterialTheme.typography.bodyMedium,
+          )
+        }
+        Spacer(modifier = Modifier.width(Dimens.ContentGap))
+        Box(
+          modifier = Modifier
+            .size(Dimens.ScrollControlSize)
+            .clip(BadgeShape)
+            .background(
+              if (selected) MaterialTheme.colorScheme.primary
+              else MaterialTheme.colorScheme.outlineVariant,
+            ),
+        )
+      }
+      if (!selectable) {
+        Spacer(modifier = Modifier.height(Dimens.TightGap))
+        Text(
+          text = "Not available on this device yet.",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
       }
     }
   }

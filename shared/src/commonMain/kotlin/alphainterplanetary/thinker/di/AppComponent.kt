@@ -7,7 +7,10 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getActivityDatabase
 import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
+import alphainterplanetary.thinker.engine.DynamicPlanningEngine
+import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.engine.HardcodedPlanningEngine
+import alphainterplanetary.thinker.engine.KoogPlanningEngine
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
@@ -71,13 +74,24 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   fun providesPlanningEngine(
     settingsRepository: SettingsRepository,
     engineActivityLog: EngineActivityLog,
-  ): PlanningEngine = SlowDownPlanningEngine(
-    delegate = LoggingPlanningEngine(
-      delegate = HardcodedPlanningEngine(),
-      log = engineActivityLog,
-    ),
-    config = settingsRepository.engineDelay,
-  )
+    platformContext: PlatformContext,
+  ): PlanningEngine {
+    val liteEngine = HardcodedPlanningEngine()
+    
+    val dynamic = DynamicPlanningEngine(
+      settingsRepository = settingsRepository,
+      liteEngine = liteEngine,
+      koogEngine = HardcodedPlanningEngine(), // Placeholder until Koog is wired
+    )
+
+    return SlowDownPlanningEngine(
+      delegate = LoggingPlanningEngine(
+        delegate = dynamic,
+        log = engineActivityLog,
+      ),
+      config = settingsRepository.engineDelay,
+    )
+  }
 }
 
 @KmpComponentCreate
