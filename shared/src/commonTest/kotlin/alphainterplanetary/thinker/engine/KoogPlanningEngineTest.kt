@@ -4,6 +4,7 @@ import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.prompt.Prompt
 import ai.koog.prompt.dsl.ModerationResult
 import ai.koog.prompt.executor.clients.LLMClient
+import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMProvider
@@ -25,8 +26,13 @@ class KoogPlanningEngineTest {
   private val provider = LLMProvider("fake", "Fake")
   private val model = LLModel(provider, "fake-model")
 
-  private fun engine(client: LLMClient): KoogPlanningEngine =
-    KoogPlanningEngine(executor = MultiLLMPromptExecutor(client), model = model)
+  private fun engine(client: LLMClient): KoogPlanningEngine {
+    val backend = object : PlanningBackend {
+      override val executor: PromptExecutor = MultiLLMPromptExecutor(client)
+      override val model: LLModel = this@KoogPlanningEngineTest.model
+    }
+    return KoogPlanningEngine(backend)
+  }
 
   @Test
   fun `recommendTitle returns the model's plain text reply trimmed`() = runTest {

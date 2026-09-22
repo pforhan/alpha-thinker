@@ -29,8 +29,7 @@ import kotlin.time.Instant
  * LLM's "nothing more to produce" signal.
  */
 class KoogPlanningEngine(
-  private val executor: PromptExecutor,
-  private val model: LLModel,
+  private val backend: PlanningBackend,
 ) : PlanningEngine {
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
@@ -85,7 +84,7 @@ class KoogPlanningEngine(
 
   private suspend fun ask(promptId: String, content: PromptBuilder.() -> Unit): String {
     val assistant = try {
-      executor.execute(prompt(promptId) { content() }, model)
+      backend.executor.execute(prompt(promptId) { content() }, backend.model)
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
