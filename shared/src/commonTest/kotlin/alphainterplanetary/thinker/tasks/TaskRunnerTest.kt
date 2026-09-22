@@ -62,6 +62,78 @@ class TaskRunnerTest {
   }
 
   @Test
+  fun `existing kinds default to the serial engine group`() {
+    assertEquals(
+      TaskGroup.Engine,
+      TaskKind.entries.map { it.group }.distinct().single(),
+    )
+    assertEquals(
+      listOf(1, 4),
+      listOf(TaskGroup.Engine.concurrency, TaskGroup.Remote.concurrency),
+    )
+  }
+
+  @Test
+  fun `remote-group tasks across projects run concurrently`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val a = runner.enqueue("p1", TaskKind.SynopsisRewrite, group = TaskGroup.Remote) {
+      delay(1_000)
+    }
+    val b = runner.enqueue("p2", TaskKind.FollowUpQuestions, group = TaskGroup.Remote) {
+      delay(1_000)
+    }
+
+    testScheduler.runCurrent()
+
+    assertEquals(TaskStatus.Running, runner.tasks.value.single { it.id == a.id }.status)
+    assertEquals(TaskStatus.Running, runner.tasks.value.single { it.id == b.id }.status)
+
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(runner.tasks.value.all { it.isFinished })
+  }
+
+  @Test
+  fun `engine group is shared across projects so only one engine task runs at a time`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val slow = runner.enqueue("p1", TaskKind.InitialQuestions) {
+      delay(1_000)
+    }
+    val other = runner.enqueue("p2", TaskKind.FollowUpQuestions) {
+      delay(500)
+    }
+
+    testScheduler.runCurrent()
+
+    assertEquals(TaskStatus.Running, runner.tasks.value.single { it.id == slow.id }.status)
+    assertEquals(TaskStatus.Queued, runner.tasks.value.single { it.id == other.id }.status)
+
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(runner.tasks.value.all { it.isFinished })
+  }
+
+  @Test
+  fun `same-project tasks never run concurrently even across groups`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val engine = runner.enqueue("p1", TaskKind.InitialQuestions) {
+      delay(1_000)
+    }
+    val remote = runner.enqueue("p1", TaskKind.FollowUpQuestions, group = TaskGroup.Remote) {
+      delay(500)
+    }
+
+    testScheduler.runCurrent()
+
+    assertEquals(TaskStatus.Running, runner.tasks.value.single { it.id == engine.id }.status)
+    assertEquals(TaskStatus.Queued, runner.tasks.value.single { it.id == remote.id }.status)
+
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(runner.tasks.value.all { it.isFinished })
+  }
+
+  @Test
   fun `enqueueResult folds the boolean answer into the terminal task`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
 

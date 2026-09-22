@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -22,19 +23,33 @@ import kotlin.coroutines.cancellation.CancellationException
  * owns the injected, app-lifetime [scope]; bodies are cancellable like any
  * launched coroutine.
  *
- * Bodies run strictly **serially** in enqueue order: generation is a single
- * shared resource (the planning engine), so a recommendation that another
- * task's output depends on (e.g. the title before the initial question batch)
- * is guaranteed to land before the dependent task reads the project. A task
- * behind a slow peer stays [TaskStatus.Queued] until the peer finishes.
+ * Bodies are scheduled by **resource group** ([TaskGroup], defaulting to the
+ * task's [TaskKind.group]): engine work is a single shared resource and
+ * serializes (limit 1, FIFO in enqueue order), while remote groups run with
+ * bounded parallelism. Grouping is a scheduling policy, not a fixed property
+ * of a run — a title recommendation and the initial batch both run in the
+ * serial engine group, so a recommendation another task's output depends on
+ * (the title before the batch reads the project) is guaranteed to land first.
+ *
+ * On top of the group limit, tasks for the **same project never run
+ * concurrently**: task bodies re-read and re-persist the whole `Project`
+ * aggregate, so two writers for one project would clobber each other's write.
+ * Parallelism is safe across projects and for read-only checks like
+ * [TaskKind.RemainingInPhase].
  */
 class TaskRunner(
   private val scope: CoroutineScope,
 ) {
   private val _tasks = MutableStateFlow<List<GenerationTask>>(emptyList())
 
-  /** Serializes [body] execution so tasks run in enqueue order. */
-  private val bodyLock = Mutex()
+  /** Per-resource concurrency gate; see [TaskGroup]. */
+  private val groupGates: Map<TaskGroup, Gate> = TaskGroup.entries.associateWith { Gate(it.concurrency) }
+
+  /** Guards the [projectGuards] map so lookups are safe on any dispatcher. */
+  private val projectGuardsLock = Mutex()
+
+  /** Serializes bodies that touch the same project (they rewrite the whole aggregate). */
+  private val projectGuards = mutableMapOf<String, Mutex>()
 
   /** Live tasks in insertion order; [GenerationTask.status] is the read model. */
   val tasks: StateFlow<List<GenerationTask>> = _tasks.asStateFlow()
@@ -46,14 +61,17 @@ class TaskRunner(
   /**
    * Enqueues [body] as a [kind] generation task for [projectId], returning the
    * task immediately (still [TaskStatus.Queued]); the body runs later on the
-   * injected scope.
+   * injected scope. [group] selects the concurrency pool, defaulting to the
+   * kind's [TaskKind.group]; pass an explicit group when the body competes for
+   * a different resource (e.g. a remote HTTP lookup).
    */
   fun enqueue(
     projectId: String,
     kind: TaskKind,
+    group: TaskGroup = kind.group,
     body: suspend () -> Unit,
   ): GenerationTask {
-    val task = newTask(projectId, kind)
+    val task = newTask(projectId, kind, group)
     return launchTask(task) {
       body()
       null
@@ -68,20 +86,32 @@ class TaskRunner(
   fun enqueueResult(
     projectId: String,
     kind: TaskKind,
+    group: TaskGroup = kind.group,
     body: suspend () -> Boolean,
   ): GenerationTask {
-    val task = newTask(projectId, kind)
+    val task = newTask(projectId, kind, group)
     return launchTask(task) { body() }
   }
 
-  private fun newTask(projectId: String, kind: TaskKind): GenerationTask =
+  private fun newTask(
+    projectId: String,
+    kind: TaskKind,
+    group: TaskGroup,
+  ): GenerationTask =
     GenerationTask(
       id = randomUUID(),
       projectId = projectId,
       kind = kind,
+      group = group,
       status = TaskStatus.Queued,
       createdAt = now(),
     )
+
+  private suspend fun projectGuard(projectId: String): Mutex {
+    projectGuardsLock.withLock {
+      return projectGuards.getOrPut(projectId) { Mutex() }
+    }
+  }
 
   private fun launchTask(
     task: GenerationTask,
@@ -89,40 +119,46 @@ class TaskRunner(
   ): GenerationTask {
     _tasks.update { it + task }
     scope.launch {
-      bodyLock.withLock {
-        val startedAt = now()
-        _tasks.update { it.replace(task.asStarted(startedAt)) }
-        println(
-          "[AlphaThinker] task started: kind=${task.kind}, project=${task.projectId}, id=${task.id}"
-        )
-        var cancelled = false
-        var failure: String? = null
-        var result: Boolean? = null
-        try {
-          result = produce()
-        } catch (e: CancellationException) {
-          cancelled = true
-        } catch (e: Exception) {
-          failure = e.message ?: e.toString()
+      val guard = projectGuard(task.projectId)
+      val groupGate = groupGates.getValue(task.group)
+      guard.withLock {
+        groupGate.withLock {
+          val startedAt = now()
+          _tasks.update { it.replace(task.asStarted(startedAt)) }
+          println(
+            "[AlphaThinker] task started: kind=${task.kind}, group=${task.group}, " +
+              "project=${task.projectId}, id=${task.id}"
+          )
+          var cancelled = false
+          var failure: String? = null
+          var result: Boolean? = null
+          try {
+            result = produce()
+          } catch (e: CancellationException) {
+            cancelled = true
+          } catch (e: Exception) {
+            failure = e.message ?: e.toString()
+          }
+          val finishedAt = now()
+          val outcome = when {
+            cancelled -> "cancelled"
+            failure != null -> "failed: $failure"
+            else -> "succeeded"
+          }
+          println(
+            "[AlphaThinker] task finished: kind=${task.kind}, group=${task.group}, " +
+              "project=${task.projectId}, id=${task.id}, outcome=$outcome, " +
+              "duration=${finishedAt - startedAt}"
+          )
+          val terminal: (GenerationTask) -> GenerationTask = when {
+            cancelled -> { t -> t.asFailed(finishedAt, "Task cancelled") }
+            failure != null -> { t -> t.asFailed(finishedAt, failure) }
+            else -> { t -> t.asSucceeded(finishedAt).copy(result = result) }
+          }
+          // Fold any progress/error published via [setProgress] into the terminal
+          // state instead of clobbering it with a stale local read.
+          _tasks.update { list -> list.replace(terminal(list.first { it.id == task.id })) }
         }
-        val finishedAt = now()
-        val outcome = when {
-          cancelled -> "cancelled"
-          failure != null -> "failed: $failure"
-          else -> "succeeded"
-        }
-        println(
-          "[AlphaThinker] task finished: kind=${task.kind}, project=${task.projectId}, " +
-            "id=${task.id}, outcome=$outcome, duration=${finishedAt - startedAt}"
-        )
-        val terminal: (GenerationTask) -> GenerationTask = when {
-          cancelled -> { t -> t.asFailed(finishedAt, "Task cancelled") }
-          failure != null -> { t -> t.asFailed(finishedAt, failure) }
-          else -> { t -> t.asSucceeded(finishedAt).copy(result = result) }
-        }
-        // Fold any progress/error published via [setProgress] into the terminal
-        // state instead of clobbering it with a stale local read.
-        _tasks.update { list -> list.replace(terminal(list.first { it.id == task.id })) }
       }
     }
     return task
@@ -132,6 +168,34 @@ class TaskRunner(
   fun setProgress(taskId: String, progress: Float) {
     _tasks.update { list ->
       list.map { task -> if (task.id == taskId) task.copy(progress = progress) else task }
+    }
+  }
+}
+
+/**
+ * One concurrency gate: a fair FIFO [Mutex] when the limit is one (so serial
+ * groups preserve enqueue order), a counting [Semaphore] otherwise.
+ */
+private class Gate(concurrency: Int) {
+  private val mutex: Mutex? = if (concurrency == 1) Mutex() else null
+  private val semaphore: Semaphore? = if (concurrency > 1) Semaphore(concurrency) else null
+
+  suspend fun <T> withLock(block: suspend () -> T): T {
+    val runningMutex = mutex
+    if (runningMutex != null) {
+      runningMutex.lock()
+      try {
+        return block()
+      } finally {
+        runningMutex.unlock()
+      }
+    }
+    val permit = requireNotNull(semaphore) { "concurrency must be at least 1" }
+    permit.acquire()
+    try {
+      return block()
+    } finally {
+      permit.release()
     }
   }
 }

@@ -31,8 +31,9 @@ class ProjectRepository @Inject constructor(
   /**
    * Persists the project shell immediately and returns it. When no [title] is
    * supplied, the shell ships with an empty title and a [TaskKind.TitleRecommendation]
-   * task fills it in from the synopsis — tasks run serially, so the title lands
-   * before the [TaskKind.InitialQuestions] batch reads the project.
+   * task fills it in from the synopsis — the title and batch both run in the
+   * serial engine group ([TaskKind.group]), so the title lands before the
+   * [TaskKind.InitialQuestions] batch reads the project.
    */
   suspend fun createProject(synopsis: String, title: String? = null): Project {
     val now = now()
@@ -314,10 +315,11 @@ class ProjectRepository @Inject constructor(
    * Skipped while a check is already active for the project and when the last
    * completed check was enqueued after every question-generating task (only
    * generated questions change the remaining count), so opening a project or
-   * answering questions never re-asks the engine. Tasks run serially, so the
-   * enqueue order in [TaskRunner.tasks] is also the completion order and the
-   * comparison is stable across clock granularities. Returns the task when one
-   * was enqueued, null when the cached result is fresh.
+   * answered questions never re-asks the engine. Engine-group tasks (and
+   * same-project tasks generally) run serially in enqueue order ([TaskGroup]),
+   * so the enqueue order in [TaskRunner.tasks] is also the completion order and
+   * the comparison is stable across clock granularities. Returns the task when
+   * one was enqueued, null when the cached result is fresh.
    */
   fun ensureFreshAvailability(projectId: String): GenerationTask? {
     val projectTasks = taskRunner.tasks.value.filter { it.projectId == projectId }

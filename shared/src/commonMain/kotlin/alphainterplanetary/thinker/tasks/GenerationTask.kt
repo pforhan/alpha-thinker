@@ -22,7 +22,24 @@ enum class TaskKind {
   SynopsisRewrite,
 
   /** Deciding whether older questions should be auto-archived/deselected. */
-  AutoArchive,
+  AutoArchive;
+
+  /**
+   * The resource group this kind lands in by default ([TaskRunner] schedules
+   * against [TaskGroup]). Every current kind drives the shared local planning
+   * engine and stays serial; a future remote-engine kind (e.g. `Lookup`)
+   * opts into [TaskGroup.Remote] here so it runs in parallel.
+   */
+  val group: TaskGroup
+    get() = when (this) {
+      InitialQuestions,
+      FollowUpQuestions,
+      TitleRecommendation,
+      RemainingInPhase,
+      SynopsisRewrite,
+      AutoArchive,
+      -> TaskGroup.Engine
+    }
 }
 
 enum class TaskStatus {
@@ -41,6 +58,8 @@ data class GenerationTask(
   val id: String,
   val projectId: String,
   val kind: TaskKind,
+  /** The resource group the task runs in; drives [TaskRunner] scheduling. */
+  val group: TaskGroup = TaskGroup.Engine,
   val status: TaskStatus,
   /** Streaming progress 0..1; `null` means indeterminate (e.g. discrete question rounds). */
   val progress: Float? = null,

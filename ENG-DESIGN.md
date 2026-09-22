@@ -284,6 +284,16 @@ observable background task.
   `projectId` via `tasksFor`). Progress is reported separately with
   `setProgress(taskId, progress)` and folded into the terminal publish, so a
   body reporting progress mid-run keeps it after completion.
+- **Scheduling is per-resource-group, not global-serial.** Each task declares a
+  `TaskGroup` (defaulting to `TaskKind.group`): `Engine` (concurrency 1 — the
+  local planning engine is a single shared resource, so its tasks stay FIFO
+  serial and a title recommendation always lands before the initial batch that
+  reads the project) vs `Remote` (bounded parallelism for independent remote
+  calls — remote LLM, HTTP lookups). On top of the group limit, tasks for the
+  **same project never run concurrently** — bodies re-read and re-persist the
+  whole `Project` aggregate, so two writers for one project would clobber each
+  other; parallelism is safe across projects and for read-only checks like
+  `RemainingInPhase`.
 - Cancellation is intentionally coarse for now: `CancellationException` marks
   the task `Failed` with "Task cancelled" (policy refines when background
   notification lands, IMPLEMENTATION-PLAN.md Phase 3). Writes are always
