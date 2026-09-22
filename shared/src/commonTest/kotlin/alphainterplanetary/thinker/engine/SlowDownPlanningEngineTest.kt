@@ -72,7 +72,7 @@ class SlowDownPlanningEngineTest {
     val job = launch {
       generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
       generator.generateFollowUpQuestions("synopsis", emptyList(), "r2", BuiltInPhase.ScopeGoals, activityId = "test-activity")
-      generator.remainingInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals, activityId = "test-activity")
+      generator.canProduceMoreInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals, activityId = "test-activity")
     }
     testScheduler.runCurrent()
     assertEquals(0, delegate.totalCalls())
@@ -170,9 +170,9 @@ private class TrackingPlanningEngine : PlanningEngine {
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     initialCalls++
-    return emptyList()
+    return QuestionBatch(emptyList(), done = true)
   }
 
   override suspend fun generateFollowUpQuestions(
@@ -181,18 +181,18 @@ private class TrackingPlanningEngine : PlanningEngine {
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     followUpCalls++
-    return emptyList()
+    return QuestionBatch(emptyList(), done = true)
   }
 
-  override suspend fun remainingInPhase(
+  override suspend fun canProduceMoreInPhase(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
     activityId: String,
-  ): Int {
+  ): Boolean {
     remainingCalls++
-    return 0
+    return false
   }
 }

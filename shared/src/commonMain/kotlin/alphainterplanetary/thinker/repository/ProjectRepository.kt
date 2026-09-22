@@ -123,9 +123,12 @@ class ProjectRepository @Inject constructor(
 
         else -> return@enqueue
       }
-      val fresh = generated
+      val fresh = generated.questions
         .filterNot { newQuestion -> reloaded.questions.any { it.text == newQuestion.text } }
         .shuffled()
+      if (generated.done) {
+        _remainingInPhase.update { it + (projectId to false) }
+      }
       if (fresh.isEmpty()) return@enqueue
       val updated = reloaded.copy(
         questions = reloaded.questions + fresh,
@@ -291,24 +294,23 @@ class ProjectRepository @Inject constructor(
 
   /**
    * Runs one [TaskKind.RemainingInPhase] check as a task: asks the engine
-   * how many questions the current phase could still produce and records
-   * whether any remain on [remainingInPhase]. Returns the queued task; the
+   * whether the current phase could still produce questions and records the
+   * capability answer on [remainingInPhase]. Returns the queued task; the
    * result also rides on the terminal task's [GenerationTask.result].
    */
   fun enqueueRemainingInPhaseCheck(projectId: String): GenerationTask =
     taskRunner.enqueueResult(projectId, TaskKind.RemainingInPhase) { taskId ->
       val project = storage.getProject(projectId)
-      val remaining = if (project == null) {
-        0
+      val can = if (project == null) {
+        false
       } else {
-        engine.remainingInPhase(
+        engine.canProduceMoreInPhase(
           synopsis = project.synopsis,
           previousQuestions = project.questions,
           phase = project.currentPhase,
           activityId = taskId,
         )
       }
-      val can = remaining > 0
       _remainingInPhase.update { it + (projectId to can) }
       can
     }

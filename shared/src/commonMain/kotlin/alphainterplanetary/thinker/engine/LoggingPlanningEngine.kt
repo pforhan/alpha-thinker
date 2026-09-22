@@ -59,7 +59,7 @@ class LoggingPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     val created = baseEvent(
       kind = TaskKind.InitialQuestions,
       activityId = activityId,
@@ -69,9 +69,9 @@ class LoggingPlanningEngine(
     log.append(created)
     val start = TimeSource.Monotonic.markNow()
     return try {
-      val questions = delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase, activityId)
-      finish(created, start, suggestedQuestions = texts(questions))
-      questions
+      val batch = delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase, activityId)
+      finish(created, start, suggestedQuestions = texts(batch.questions), generationPayload = "done=${batch.done}")
+      batch
     } catch (e: CancellationException) {
       finish(created, start, error = "cancelled")
       throw e
@@ -87,7 +87,7 @@ class LoggingPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     val created = baseEvent(
       kind = TaskKind.FollowUpQuestions,
       activityId = activityId,
@@ -97,11 +97,11 @@ class LoggingPlanningEngine(
     log.append(created)
     val start = TimeSource.Monotonic.markNow()
     return try {
-      val questions = delegate.generateFollowUpQuestions(
+      val batch = delegate.generateFollowUpQuestions(
         synopsis, previousQuestions, roundId, phase, activityId
       )
-      finish(created, start, suggestedQuestions = texts(questions))
-      questions
+      finish(created, start, suggestedQuestions = texts(batch.questions), generationPayload = "done=${batch.done}")
+      batch
     } catch (e: CancellationException) {
       finish(created, start, error = "cancelled")
       throw e
@@ -111,12 +111,12 @@ class LoggingPlanningEngine(
     }
   }
 
-  override suspend fun remainingInPhase(
+  override suspend fun canProduceMoreInPhase(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
     activityId: String,
-  ): Int {
+  ): Boolean {
     val created = baseEvent(
       kind = TaskKind.RemainingInPhase,
       activityId = activityId,
@@ -125,9 +125,9 @@ class LoggingPlanningEngine(
     log.append(created)
     val start = TimeSource.Monotonic.markNow()
     return try {
-      val remaining = delegate.remainingInPhase(synopsis, previousQuestions, phase, activityId)
-      finish(created, start, generationPayload = remaining.toString())
-      remaining
+      val can = delegate.canProduceMoreInPhase(synopsis, previousQuestions, phase, activityId)
+      finish(created, start, generationPayload = can.toString())
+      can
     } catch (e: CancellationException) {
       finish(created, start, error = "cancelled")
       throw e

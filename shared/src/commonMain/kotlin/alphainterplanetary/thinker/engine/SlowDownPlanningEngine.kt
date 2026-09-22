@@ -29,7 +29,7 @@ class SlowDownPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     println("SlowDownPlanningEngine.generateInitialQuestions()")
     maybeDelay(EngineInteraction.InitialQuestions)
     return delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase, activityId)
@@ -41,21 +41,21 @@ class SlowDownPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     println("SlowDownPlanningEngine.generateFollowUpQuestions()")
     maybeDelay(EngineInteraction.FollowUpQuestions)
     return delegate.generateFollowUpQuestions(synopsis, previousQuestions, roundId, phase, activityId)
   }
 
-  override suspend fun remainingInPhase(
+  override suspend fun canProduceMoreInPhase(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
     activityId: String,
-  ): Int {
-    println("SlowDownPlanningEngine.remainingInPhase()")
+  ): Boolean {
+    println("SlowDownPlanningEngine.canProduceMoreInPhase()")
     maybeDelay(EngineInteraction.RemainingInPhase)
-    return delegate.remainingInPhase(synopsis, previousQuestions, phase, activityId)
+    return delegate.canProduceMoreInPhase(synopsis, previousQuestions, phase, activityId)
   }
 
   private suspend fun maybeDelay(interaction: EngineInteraction) {

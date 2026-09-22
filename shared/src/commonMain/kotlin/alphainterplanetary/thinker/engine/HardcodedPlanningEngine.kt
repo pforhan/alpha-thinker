@@ -36,11 +36,14 @@ class HardcodedPlanningEngine @Inject constructor(
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     val now = now()
-    return phase.pool
-      .take(initialCount)
-      .map { text -> newQuestion(text, roundId, now) }
+    val pool = phase.pool
+    val served = pool.take(initialCount)
+    return QuestionBatch(
+      questions = served.map { text -> newQuestion(text, roundId, now) },
+      done = served.size == pool.size,
+    )
   }
 
   override suspend fun generateFollowUpQuestions(
@@ -49,22 +52,24 @@ class HardcodedPlanningEngine @Inject constructor(
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     val remaining = remainingPool(phase, previousQuestions)
-    if (remaining.isEmpty()) return emptyList()
+    if (remaining.isEmpty()) return QuestionBatch(emptyList(), done = true)
 
     val now = now()
-    return remaining
-      .take(followUpCount)
-      .map { text -> newQuestion(text, roundId, now) }
+    val served = remaining.take(followUpCount)
+    return QuestionBatch(
+      questions = served.map { text -> newQuestion(text, roundId, now) },
+      done = served.size == remaining.size,
+    )
   }
 
-  override suspend fun remainingInPhase(
+  override suspend fun canProduceMoreInPhase(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
     activityId: String,
-  ): Int = remainingPool(phase, previousQuestions).size
+  ): Boolean = remainingPool(phase, previousQuestions).isNotEmpty()
 
   /** The phase's pool texts not yet asked in the project, in pool priority order. */
   private fun remainingPool(phase: Phase, previousQuestions: List<Question>): List<String> {

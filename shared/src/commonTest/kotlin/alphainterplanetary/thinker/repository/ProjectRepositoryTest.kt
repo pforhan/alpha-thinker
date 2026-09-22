@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.engine.PlanningEngine
+import alphainterplanetary.thinker.engine.QuestionBatch
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOrigin
@@ -156,7 +157,7 @@ class ProjectRepositoryTest {
         roundId: String,
         phase: Phase,
         activityId: String,
-      ): List<Question> {
+      ): QuestionBatch {
         throw PlanningEngine.AnalysisFailure("no model")
       }
 
@@ -166,14 +167,14 @@ class ProjectRepositoryTest {
         roundId: String,
         phase: Phase,
         activityId: String,
-      ): List<Question> = emptyList()
+      ): QuestionBatch = QuestionBatch(emptyList(), done = true)
 
-      override suspend fun remainingInPhase(
+      override suspend fun canProduceMoreInPhase(
         synopsis: String,
         previousQuestions: List<Question>,
         phase: Phase,
         activityId: String,
-      ): Int = 0
+      ): Boolean = false
     }
     val storage = FakeStorage()
     val repository = repo(storage = storage, generator = failing)
@@ -607,7 +608,7 @@ class ProjectRepositoryTest {
   fun `generateMoreQuestions starts a UserRequested round and enqueues follow-up generation`() =
     runTest {
       val generator = FakePlanningEngine().apply {
-        remaining = 1
+        canProduceMore = true
         followUpQuestions += question("f1")
       }
       val original = Project(
@@ -694,7 +695,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `canGenerateMoreInPhase is true when the generator still has questions`() = runTest {
-    val generator = FakePlanningEngine().apply { remaining = 5 }
+    val generator = FakePlanningEngine().apply { canProduceMore = true }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -718,7 +719,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `canGenerateMoreInPhase reads the current phase and the full asked history`() = runTest {
-    val generator = FakePlanningEngine().apply { remaining = 2 }
+    val generator = FakePlanningEngine().apply { canProduceMore = true }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.ExecutionPlan)),
       generator = generator,
@@ -728,7 +729,7 @@ class ProjectRepositoryTest {
     testScheduler.advanceUntilIdle()
 
     assertTrue(repository.canGenerateMoreInPhase("p1"))
-    val call = generator.remainingCalls.single()
+    val call = generator.canProduceMoreCalls.single()
     assertEquals(BuiltInPhase.ExecutionPlan, call.phase)
     assertEquals(listOf("q1"), call.previousQuestions.map { it.id })
     assertEquals("s", call.synopsis)
@@ -738,7 +739,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `ensureFreshRemainingInPhase runs one check and caches the answer`() = runTest {
-    val generator = FakePlanningEngine().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { canProduceMore = true }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -750,14 +751,14 @@ class ProjectRepositoryTest {
     assertNotNull(task)
     testScheduler.advanceUntilIdle()
 
-    assertEquals(1, generator.remainingCalls.size)
+    assertEquals(1, generator.canProduceMoreCalls.size)
     assertTrue(repository.canGenerateMoreInPhase("p1"))
     assertEquals(true, repository.remainingInPhase.value["p1"])
   }
 
   @Test
   fun `ensureFreshRemainingInPhase reuses a fresh check instead of re-asking`() = runTest {
-    val generator = FakePlanningEngine().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { canProduceMore = true }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -770,13 +771,13 @@ class ProjectRepositoryTest {
     testScheduler.advanceUntilIdle()
 
     assertNull(again)
-    assertEquals(1, generator.remainingCalls.size)
+    assertEquals(1, generator.canProduceMoreCalls.size)
     assertTrue(repository.canGenerateMoreInPhase("p1"))
   }
 
   @Test
   fun `ensureFreshRemainingInPhase skips while a check is already active`() = runTest {
-    val generator = FakePlanningEngine().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { canProduceMore = true }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -787,12 +788,12 @@ class ProjectRepositoryTest {
     testScheduler.advanceUntilIdle()
 
     assertNull(again)
-    assertEquals(1, generator.remainingCalls.size)
+    assertEquals(1, generator.canProduceMoreCalls.size)
   }
 
   @Test
   fun `question-generating tasks make the cached remaining-in-phase answer stale`() = runTest {
-    val generator = FakePlanningEngine().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { canProduceMore = true }
     val repository = repo(
       storage = storageWith(phaseProject(BuiltInPhase.Design)),
       generator = generator,
@@ -800,14 +801,14 @@ class ProjectRepositoryTest {
 
     repository.ensureFreshRemainingInPhase("p1")
     testScheduler.advanceUntilIdle()
-    assertEquals(1, generator.remainingCalls.size)
+    assertEquals(1, generator.canProduceMoreCalls.size)
 
     repository.advanceToPhase("p1", BuiltInPhase.Research)
     testScheduler.advanceUntilIdle()
 
     assertNotNull(repository.ensureFreshRemainingInPhase("p1"))
     testScheduler.advanceUntilIdle()
-    assertEquals(2, generator.remainingCalls.size, "a new round forces a re-check")
+    assertEquals(2, generator.canProduceMoreCalls.size, "a new round forces a re-check")
   }
 
   @Test
@@ -1017,7 +1018,7 @@ class ProjectRepositoryTest {
       // generation sees the whole project history, including the earlier visit
       assertEquals(
         listOf("oldOpen", "oldAnswered", "oldIgnored"),
-        generator.remainingCalls.single().previousQuestions.map { it.id },
+        generator.canProduceMoreCalls.single().previousQuestions.map { it.id },
       )
     }
 

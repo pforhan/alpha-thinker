@@ -202,7 +202,7 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `Success exposes whether the generator can produce more questions`() = runTest {
-    val generator = FakePlanningEngine().apply { remaining = 3 }
+    val generator = FakePlanningEngine().apply { canProduceMore = true }
     withViewModel(FakeStorage(mutableMapOf("p1" to project())), generator) { context ->
       val vm = context.vm
       vm.loadProject("p1")
@@ -363,7 +363,7 @@ class ProjectDetailViewModelTest {
   @Test
   fun `generateMoreQuestions runs on the task runner and reloads when it completes`() = runTest {
     val fake = FakePlanningEngine().apply {
-      remaining = 1
+      canProduceMore = true
       followUpQuestions += question("n1", "Fresh?")
     }
     withViewModel(
@@ -395,7 +395,7 @@ class ProjectDetailViewModelTest {
   fun `entering a project with an extant running task reconnects and reloads on completion`() =
     runTest {
       val fake = FakePlanningEngine().apply {
-        remaining = 1
+        canProduceMore = true
         followUpQuestions += question("n1", "Fresh?")
       }
       withViewModel(

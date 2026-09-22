@@ -56,7 +56,7 @@ class LoggingPlanningEngineTest {
       roundId = "r1",
       phase = BuiltInPhase.ScopeGoals,
       activityId = "task-2",
-    )
+    ).questions
 
     assertEquals(2, questions.size)
     val terminal = log.events.last()
@@ -68,24 +68,45 @@ class LoggingPlanningEngineTest {
   }
 
   @Test
-  fun `remaining in phase records the count as generation payload`() = runTest {
+  fun `can produce more in phase records the capability answer as generation payload`() = runTest {
     val delegate = FakePlanningEngine()
-    delegate.remaining = 4
+    delegate.canProduceMore = true
     val log = RecordingActivityLog()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
-    val remaining = engine.remainingInPhase(
+    val can = engine.canProduceMoreInPhase(
       synopsis = "S",
       previousQuestions = emptyList(),
       phase = BuiltInPhase.ScopeGoals,
       activityId = "task-3",
     )
 
-    assertEquals(4, remaining)
+    assertTrue(can)
     val terminal = log.events.last()
     assertEquals(EngineActivityEventType.Succeeded, terminal.eventType)
     assertEquals(TaskKind.RemainingInPhase, terminal.kind)
-    assertEquals("4", terminal.generationPayload)
+    assertEquals("true", terminal.generationPayload)
+  }
+
+  @Test
+  fun `question generation records the done signal as generation payload`() = runTest {
+    val delegate = FakePlanningEngine()
+    delegate.followUpDone = true
+    val log = RecordingActivityLog()
+    val engine = LoggingPlanningEngine(delegate = delegate, log = log)
+
+    engine.generateFollowUpQuestions(
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      roundId = "r1",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "task-3",
+    )
+
+    val terminal = log.events.last()
+    assertEquals(EngineActivityEventType.Succeeded, terminal.eventType)
+    assertEquals(TaskKind.FollowUpQuestions, terminal.kind)
+    assertEquals("done=true", terminal.generationPayload)
   }
 
   @Test
@@ -126,7 +147,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
-    ): List<Question> = throw PlanningEngine.AnalysisFailure("model exploded")
+    ): QuestionBatch = throw PlanningEngine.AnalysisFailure("model exploded")
 
     override suspend fun generateFollowUpQuestions(
       synopsis: String,
@@ -134,13 +155,13 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
-    ): List<Question> = throw PlanningEngine.AnalysisFailure("model exploded")
+    ): QuestionBatch = throw PlanningEngine.AnalysisFailure("model exploded")
 
-    override suspend fun remainingInPhase(
+    override suspend fun canProduceMoreInPhase(
       synopsis: String,
       previousQuestions: List<Question>,
       phase: Phase,
       activityId: String,
-    ): Int = throw PlanningEngine.AnalysisFailure("model exploded")
+    ): Boolean = throw PlanningEngine.AnalysisFailure("model exploded")
   }
 }

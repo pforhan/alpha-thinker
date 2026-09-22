@@ -1,17 +1,20 @@
 package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.engine.PlanningEngine
+import alphainterplanetary.thinker.engine.QuestionBatch
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 
 class FakePlanningEngine : PlanningEngine {
   var recommendedTitle: String = "Recommended"
-  var remaining: Int = 0
+  var canProduceMore: Boolean = false
+  var initialDone: Boolean = false
+  var followUpDone: Boolean = false
   val initialQuestions: MutableList<Question> = mutableListOf()
   val followUpQuestions: MutableList<Question> = mutableListOf()
   var initialCalls: MutableList<InitialCall> = mutableListOf()
   var followUpCalls: MutableList<FollowUpCall> = mutableListOf()
-  var remainingCalls: MutableList<RemainingCall> = mutableListOf()
+  var canProduceMoreCalls: MutableList<CanProduceMoreCall> = mutableListOf()
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String = recommendedTitle
 
@@ -21,9 +24,9 @@ class FakePlanningEngine : PlanningEngine {
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     initialCalls += InitialCall(editableTitle, synopsis, roundId, phase)
-    return initialQuestions
+    return QuestionBatch(initialQuestions, initialDone)
   }
 
   override suspend fun generateFollowUpQuestions(
@@ -32,19 +35,19 @@ class FakePlanningEngine : PlanningEngine {
     roundId: String,
     phase: Phase,
     activityId: String,
-  ): List<Question> {
+  ): QuestionBatch {
     followUpCalls += FollowUpCall(synopsis, previousQuestions, roundId, phase)
-    return followUpQuestions
+    return QuestionBatch(followUpQuestions, followUpDone)
   }
 
-  override suspend fun remainingInPhase(
+  override suspend fun canProduceMoreInPhase(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
     activityId: String,
-  ): Int {
-    remainingCalls += RemainingCall(synopsis, previousQuestions, phase)
-    return remaining
+  ): Boolean {
+    canProduceMoreCalls += CanProduceMoreCall(synopsis, previousQuestions, phase)
+    return canProduceMore
   }
 
   data class InitialCall(
@@ -61,7 +64,7 @@ class FakePlanningEngine : PlanningEngine {
     val phase: Phase,
   )
 
-  data class RemainingCall(
+  data class CanProduceMoreCall(
     val synopsis: String,
     val previousQuestions: List<Question>,
     val phase: Phase,

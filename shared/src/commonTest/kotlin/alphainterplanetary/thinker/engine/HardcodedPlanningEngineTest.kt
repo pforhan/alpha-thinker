@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.testutil.question
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 private const val FOLLOW_UP_COUNT = 3
@@ -95,7 +96,7 @@ class HardcodedPlanningEngineTest {
   fun `generateInitialQuestions returns the configured number of questions`() = runTest {
     val generator = HardcodedPlanningEngine(initialCount = 5, followUpCount = FOLLOW_UP_COUNT)
 
-    val questions = generator.generateInitialQuestions(
+    val batch = generator.generateInitialQuestions(
       "title",
       "synopsis",
       "ctx",
@@ -103,13 +104,14 @@ class HardcodedPlanningEngineTest {
       activityId = "test-activity",
     )
 
-    assertEquals(5, questions.size)
-    assertEquals(setOf("ctx"), questions.map { it.roundId }.toSet())
+    assertEquals(5, batch.questions.size)
+    assertEquals(setOf("ctx"), batch.questions.map { it.roundId }.toSet())
+    assertFalse(batch.done)
   }
 
   @Test
   fun `generateInitialQuestions draws from the start of the phase's pool`() = runTest {
-    val questions = generator.generateInitialQuestions(
+    val batch = generator.generateInitialQuestions(
       "title",
       "synopsis",
       "ctx",
@@ -117,10 +119,10 @@ class HardcodedPlanningEngineTest {
       activityId = "test-activity",
     )
 
-    assertEquals(3, questions.size)
+    assertEquals(3, batch.questions.size)
     assertEquals(
       poolOf(BuiltInPhase.ScopeGoals).take(3),
-      questions.map { it.text },
+      batch.questions.map { it.text },
     )
   }
 
@@ -131,12 +133,28 @@ class HardcodedPlanningEngineTest {
     val research =
       generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research, activityId = "test-activity")
 
-    assertTrue(scope.map { it.text }.all { it in poolOf(BuiltInPhase.ScopeGoals) })
-    assertTrue(research.map { it.text }.all { it in poolOf(BuiltInPhase.Research) })
+    assertTrue(scope.questions.map { it.text }.all { it in poolOf(BuiltInPhase.ScopeGoals) })
+    assertTrue(research.questions.map { it.text }.all { it in poolOf(BuiltInPhase.Research) })
     assertTrue(
-      scope.map { it.text }.none { it in poolOf(BuiltInPhase.Research) },
+      scope.questions.map { it.text }.none { it in poolOf(BuiltInPhase.Research) },
       "a phase must not draw from another phase's pool",
     )
+  }
+
+  @Test
+  fun `generateInitialQuestions reports done once the whole pool has been served`() = runTest {
+    val generator = HardcodedPlanningEngine(initialCount = 12, followUpCount = FOLLOW_UP_COUNT)
+
+    val batch = generator.generateInitialQuestions(
+      "title",
+      "synopsis",
+      "ctx",
+      BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
+    )
+
+    assertEquals(12, batch.questions.size)
+    assertTrue(batch.done)
   }
 
   // ---------- generateFollowUpQuestions ----------
@@ -147,16 +165,16 @@ class HardcodedPlanningEngineTest {
       generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     val followUp = generator.generateFollowUpQuestions(
       "synopsis",
-      initial,
+      initial.questions,
       "ctx",
       BuiltInPhase.ScopeGoals,
       activityId = "test-activity",
     )
 
-    assertTrue(followUp.isNotEmpty())
-    assertTrue(followUp.size <= FOLLOW_UP_COUNT)
-    val initialTexts = initial.map { it.text }.toSet()
-    assertTrue(followUp.map { it.text }.none { it in initialTexts })
+    assertTrue(followUp.questions.isNotEmpty())
+    assertTrue(followUp.questions.size <= FOLLOW_UP_COUNT)
+    val initialTexts = initial.questions.map { it.text }.toSet()
+    assertTrue(followUp.questions.map { it.text }.none { it in initialTexts })
   }
 
   @Test
@@ -165,25 +183,25 @@ class HardcodedPlanningEngineTest {
       generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     val round1 = generator.generateFollowUpQuestions(
       "synopsis",
-      initial,
+      initial.questions,
       "ctx",
       BuiltInPhase.ScopeGoals,
       activityId = "test-activity",
     )
-    val asked = (initial + round1).map { it.text }.toSet()
+    val asked = (initial.questions + round1.questions).map { it.text }.toSet()
     val round2 = generator.generateFollowUpQuestions(
       "synopsis",
-      initial + round1,
+      initial.questions + round1.questions,
       "ctx",
       BuiltInPhase.ScopeGoals,
       activityId = "test-activity",
     )
 
-    assertTrue(round2.map { it.text }.none { it in asked })
+    assertTrue(round2.questions.map { it.text }.none { it in asked })
   }
 
   @Test
-  fun `generateFollowUpQuestions returns empty when the phase's pool is exhausted`() = runTest {
+  fun `generateFollowUpQuestions returns empty and reports done when the phase's pool is exhausted`() = runTest {
     val pool = poolOf(BuiltInPhase.ValidationPlan)
     val asked = pool.mapIndexed { index, text -> question(id = "q$index", text = text) }
 
@@ -195,24 +213,43 @@ class HardcodedPlanningEngineTest {
       activityId = "test-activity",
     )
 
-    assertTrue(followUp.isEmpty())
+    assertTrue(followUp.questions.isEmpty())
+    assertTrue(followUp.done)
   }
 
   @Test
-  fun `generateFollowUpQuestions respects followUpCount`() = runTest {
-    val generator = HardcodedPlanningEngine(initialCount = 3, followUpCount = 7)
-
+  fun `generateFollowUpQuestions reports done when the last of the remaining pool is served`() = runTest {
+    val generator = HardcodedPlanningEngine(initialCount = 3, followUpCount = 9)
     val initial =
       generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+
     val followUp = generator.generateFollowUpQuestions(
       "synopsis",
-      initial,
+      initial.questions,
       "ctx",
       BuiltInPhase.ScopeGoals,
       activityId = "test-activity",
     )
 
-    assertEquals(7, followUp.size)
+    assertEquals(9, followUp.questions.size)
+    assertTrue(followUp.done)
+  }
+
+  @Test
+  fun `generateFollowUpQuestions respects followUpCount`() = runTest {
+    val generator = HardcodedPlanningEngine(initialCount = 3, followUpCount = 4)
+
+    val initial =
+      generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+    val followUp = generator.generateFollowUpQuestions(
+      "synopsis",
+      initial.questions,
+      "ctx",
+      BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
+    )
+
+    assertEquals(4, followUp.questions.size)
   }
 
   @Test
@@ -222,45 +259,53 @@ class HardcodedPlanningEngineTest {
     val second =
       generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
 
-    assertEquals(first.map { it.text }, second.map { it.text })
+    assertEquals(first.questions.map { it.text }, second.questions.map { it.text })
   }
 
-  // ---------- remainingInPhase ----------
+  // ---------- canProduceMoreInPhase ----------
 
   @Test
-  fun `remainingInPhase returns the full pool when nothing has been asked`() = runTest {
-    assertEquals(
-      poolOf(BuiltInPhase.ScopeGoals).size,
-      generator.remainingInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals, activityId = "test-activity"),
+  fun `canProduceMoreInPhase is true before anything has been asked`() = runTest {
+    assertTrue(
+      generator.canProduceMoreInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals, activityId = "test-activity"),
     )
   }
 
   @Test
-  fun `remainingInPhase counts only the phase's own pool texts not yet asked`() = runTest {
+  fun `canProduceMoreInPhase counts only the phase's own pool texts not yet asked`() = runTest {
     val initial = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
 
-    val remaining = generator.remainingInPhase("synopsis", initial, BuiltInPhase.ScopeGoals, activityId = "test-activity")
+    val canProduceMore = generator.canProduceMoreInPhase(
+      "synopsis",
+      initial.questions,
+      BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
+    )
 
-    assertEquals(poolOf(BuiltInPhase.ScopeGoals).size - initial.size, remaining)
+    assertEquals(poolOf(BuiltInPhase.ScopeGoals).size > initial.questions.size, canProduceMore)
   }
 
   @Test
-  fun `remainingInPhase ignores questions asked in other phases`() = runTest {
+  fun `canProduceMoreInPhase ignores questions asked in other phases`() = runTest {
     val research = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research, activityId = "test-activity")
 
-    val scopeRemaining = generator.remainingInPhase("synopsis", research, BuiltInPhase.ScopeGoals, activityId = "test-activity")
+    val scopeCanProduceMore = generator.canProduceMoreInPhase(
+      "synopsis",
+      research.questions,
+      BuiltInPhase.ScopeGoals,
+      activityId = "test-activity",
+    )
 
-    assertEquals(poolOf(BuiltInPhase.ScopeGoals).size, scopeRemaining)
+    assertTrue(scopeCanProduceMore)
   }
 
   @Test
-  fun `remainingInPhase returns zero once the phase pool is exhausted`() = runTest {
+  fun `canProduceMoreInPhase is false once the phase pool is exhausted`() = runTest {
     val asked = poolOf(BuiltInPhase.ValidationPlan)
       .mapIndexed { index, text -> question(id = "q$index", text = text) }
 
-    assertEquals(
-      0,
-      generator.remainingInPhase("synopsis", asked, BuiltInPhase.ValidationPlan, activityId = "test-activity"),
+    assertFalse(
+      generator.canProduceMoreInPhase("synopsis", asked, BuiltInPhase.ValidationPlan, activityId = "test-activity"),
     )
   }
 
