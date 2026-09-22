@@ -209,7 +209,7 @@ class ProjectDetailViewModelTest {
       testScheduler.advanceUntilIdle()
 
       val state = vm.uiState.value as ProjectDetailUiState.Success
-      assertTrue(state.canGenerateMoreQuestions)
+      assertTrue(state.canGenerateMoreInPhase)
     }
 
     withViewModel(FakeStorage(mutableMapOf("p1" to project())), FakePlanningEngine()) { context ->
@@ -217,7 +217,7 @@ class ProjectDetailViewModelTest {
       vm.loadProject("p1")
       testScheduler.advanceUntilIdle()
 
-      assertTrue(!(vm.uiState.value as ProjectDetailUiState.Success).canGenerateMoreQuestions)
+      assertTrue(!(vm.uiState.value as ProjectDetailUiState.Success).canGenerateMoreInPhase)
     }
   }
 
@@ -353,7 +353,7 @@ class ProjectDetailViewModelTest {
       )
       assertTrue(
         active.all { it.status == TaskStatus.Succeeded },
-        "the title, the batch, and the availability check all complete",
+        "the title, the batch, and the remaining-in-phase check all complete",
       )
     }
   }
@@ -404,7 +404,7 @@ class ProjectDetailViewModelTest {
       ) { context ->
         val vm = context.vm
         // Availability gates the affordance; establish it before generating.
-        context.repository.ensureFreshAvailability("p1")
+        context.repository.ensureFreshRemainingInPhase("p1")
         testScheduler.advanceUntilIdle()
         // A generation task is already in flight before the screen enters.
         context.repository.generateMoreQuestions("p1")

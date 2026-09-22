@@ -28,7 +28,7 @@ sealed interface ProjectDetailUiState {
   data object Loading : ProjectDetailUiState
   data class Success(
     val project: Project,
-    val canGenerateMoreQuestions: Boolean,
+    val canGenerateMoreInPhase: Boolean,
   ) : ProjectDetailUiState
   data class Error(val message: String) : ProjectDetailUiState
 }
@@ -95,9 +95,9 @@ class ProjectDetailViewModel(
         } else {
           // Availability is cached (no engine call here); a stale check is
           // enqueued as a task and this reloads once it lands.
-          val canGenerate = repository.canGenerateMoreQuestions(id)
+          val canGenerate = repository.canGenerateMoreInPhase(id)
           _uiState.value = ProjectDetailUiState.Success(loaded, canGenerate)
-          repository.ensureFreshAvailability(id)
+          repository.ensureFreshRemainingInPhase(id)
         }
       } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
@@ -168,12 +168,12 @@ class ProjectDetailViewModel(
     }
   }
 
-  /** A [ProjectDetailUiState.Success] that keeps the previously-computed availability flag. */
+  /** A [ProjectDetailUiState.Success] that keeps the previously-computed remaining-in-phase flag. */
   private fun successPreservingAvailability(project: Project): ProjectDetailUiState.Success =
     ProjectDetailUiState.Success(
       project = project,
-      canGenerateMoreQuestions = (_uiState.value as? ProjectDetailUiState.Success)
-        ?.canGenerateMoreQuestions ?: false,
+      canGenerateMoreInPhase = (_uiState.value as? ProjectDetailUiState.Success)
+        ?.canGenerateMoreInPhase ?: false,
     )
 
   fun saveAnswer(projectId: String, questionId: String, text: String, completed: Boolean) {

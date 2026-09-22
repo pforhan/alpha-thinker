@@ -217,7 +217,7 @@ fun ProjectDetailScreen(
         ProjectDetailContent(
           project = ui.project,
           selectedView = selectedView,
-          canGenerateMore = ui.canGenerateMoreQuestions,
+          canGenerateMore = ui.canGenerateMoreInPhase,
           activeTaskLabel = activeTasksLabel,
           nextPhases = nextPhases,
           onViewSelected = { selectedView = it },

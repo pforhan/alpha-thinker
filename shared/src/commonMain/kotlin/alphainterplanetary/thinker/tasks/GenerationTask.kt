@@ -67,7 +67,7 @@ data class GenerationTask(
   val progress: Float? = null,
   /** Set when [status] is [TaskStatus.Failed]. */
   val error: String? = null,
-  /** Result of a boolean-answering task, e.g. [TaskKind.RemainingInPhase] availability. */
+  /** Result of a boolean-answering task, e.g. [TaskKind.RemainingInPhase] remaining-in-phase. */
   val result: Boolean? = null,
   val createdAt: Instant,
   val startedAt: Instant? = null,

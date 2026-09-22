@@ -251,11 +251,11 @@ class ProjectRepository @Inject constructor(
    * phase and enqueues its follow-up generation as a task, returning
    * immediately with the round in place. When the phase's pool is exhausted
    * no round is opened and the project is returned untouched — the "Get more
-   * questions" affordance gates on [canGenerateMoreQuestions] to reach here.
+   * questions" affordance gates on [canGenerateMoreInPhase] to reach here.
    */
   suspend fun generateMoreQuestions(projectId: String): Project? {
     val project = storage.getProject(projectId) ?: return null
-    if (_availability.value[projectId] != true) return project
+    if (_remainingInPhase.value[projectId] != true) return project
     val now = now()
     val round = nextRound(project, RoundOrigin.UserRequested, now)
     val updated = project.copy(
@@ -269,33 +269,33 @@ class ProjectRepository @Inject constructor(
   }
 
   /**
-   * Availability ("can the current phase's pool still produce questions?") per
-   * project, recorded by [enqueueAvailabilityCheck] and read by
-   * [canGenerateMoreQuestions]. Kept on the repository so the answer is shared
-   * by every consumer and never triggers an engine call of its own.
+   * Whether the current phase's pool can still produce questions ("does anything
+   * remain in phase"), per project, recorded by [enqueueRemainingInPhaseCheck]
+   * and read by [canGenerateMoreInPhase]. Kept on the repository so the answer
+   * is shared by every consumer and never triggers an engine call of its own.
    */
-  private val _availability = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+  private val _remainingInPhase = MutableStateFlow<Map<String, Boolean>>(emptyMap())
 
-  val availability: StateFlow<Map<String, Boolean>> = _availability.asStateFlow()
+  val remainingInPhase: StateFlow<Map<String, Boolean>> = _remainingInPhase.asStateFlow()
 
   /**
    * Whether the current phase's pool still has questions the engine could
-   * produce, from the last [enqueueAvailabilityCheck] — never blocks on the
+   * produce, from the last [enqueueRemainingInPhaseCheck] — never blocks on the
    * engine itself. Unknown projects answer "no", gating the generate-more
    * affordances until a check lands.
    */
-  suspend fun canGenerateMoreQuestions(projectId: String): Boolean {
+  suspend fun canGenerateMoreInPhase(projectId: String): Boolean {
     val project = storage.getProject(projectId) ?: return false
-    return _availability.value[projectId] ?: false
+    return _remainingInPhase.value[projectId] ?: false
   }
 
   /**
    * Runs one [TaskKind.RemainingInPhase] check as a task: asks the engine
    * how many questions the current phase could still produce and records
-   * whether any remain on [availability]. Returns the queued task; the result
-   * also rides on the terminal task's [GenerationTask.result].
+   * whether any remain on [remainingInPhase]. Returns the queued task; the
+   * result also rides on the terminal task's [GenerationTask.result].
    */
-  fun enqueueAvailabilityCheck(projectId: String): GenerationTask =
+  fun enqueueRemainingInPhaseCheck(projectId: String): GenerationTask =
     taskRunner.enqueueResult(projectId, TaskKind.RemainingInPhase) { taskId ->
       val project = storage.getProject(projectId)
       val remaining = if (project == null) {
@@ -309,35 +309,35 @@ class ProjectRepository @Inject constructor(
         )
       }
       val can = remaining > 0
-      _availability.update { it + (projectId to can) }
+      _remainingInPhase.update { it + (projectId to can) }
       can
     }
 
   /**
-   * Schedules an availability check only when the cached answer is stale.
-   * Skipped while a check is already active for the project and when the last
-   * completed check was enqueued after every question-generating task (only
-   * generated questions change the remaining count), so opening a project or
-   * answered questions never re-asks the engine. Engine-group tasks (and
+   * Runs a fresh [TaskKind.RemainingInPhase] check only when the cached answer
+   * is stale. Skipped while a check is already active for the project and when
+   * the last completed check was enqueued after every question-generating task
+   * (only generated questions change the remaining count), so opening a project
+   * or answered questions never re-asks the engine. Engine-group tasks (and
    * same-project tasks generally) run serially in enqueue order ([TaskGroup]),
    * so the enqueue order in [TaskRunner.tasks] is also the completion order and
    * the comparison is stable across clock granularities. Returns the task when
    * one was enqueued, null when the cached result is fresh.
    */
-  fun ensureFreshAvailability(projectId: String): GenerationTask? {
+  fun ensureFreshRemainingInPhase(projectId: String): GenerationTask? {
     val projectTasks = taskRunner.tasks.value.filter { it.projectId == projectId }
     if (projectTasks.any { it.kind == TaskKind.RemainingInPhase && it.isActive }) return null
 
     val lastCheckIndex = projectTasks.indexOfLast {
       it.isFinished && it.kind == TaskKind.RemainingInPhase
     }
-    if (lastCheckIndex == -1) return enqueueAvailabilityCheck(projectId)
+    if (lastCheckIndex == -1) return enqueueRemainingInPhaseCheck(projectId)
 
     val lastMutationIndex = projectTasks.indexOfLast {
       it.isFinished && (it.kind == TaskKind.InitialQuestions || it.kind == TaskKind.FollowUpQuestions)
     }
     return if (lastMutationIndex > lastCheckIndex) {
-      enqueueAvailabilityCheck(projectId)
+      enqueueRemainingInPhaseCheck(projectId)
     } else {
       null
     }
