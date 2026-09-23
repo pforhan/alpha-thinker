@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
+import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
@@ -23,7 +24,7 @@ class ProjectListViewModelTest {
     block: (ProjectListViewModel) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val repository = ProjectRepository(storage, FakePlanningEngine(), runner)
+    val repository = ProjectRepository(storage, PlanningEngineSelector { FakePlanningEngine() }, runner)
     val vm = ProjectListViewModel(repository, runner, CoroutineScope(coroutineContext))
     try {
       block(vm)

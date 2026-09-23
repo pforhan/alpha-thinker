@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.ui.viewmodel
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.PlanningEngine
+import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.phases.BuiltInPhase
@@ -43,7 +44,7 @@ class ProjectDetailViewModelTest {
     block: suspend (VmContext) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val repository = ProjectRepository(storage, generator, runner)
+    val repository = ProjectRepository(storage, PlanningEngineSelector { generator }, runner)
     val vm = ProjectDetailViewModel(
       repository = repository,
       taskRunner = runner,

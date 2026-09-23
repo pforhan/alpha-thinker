@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.activitylog.EngineActivityEventType
-import alphainterplanetary.thinker.activitylog.EngineKind
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
@@ -32,7 +32,7 @@ class LoggingPlanningEngineTest {
     assertEquals("task-1", created.activityId)
     assertEquals(EngineActivityEventType.Created, created.eventType)
     assertEquals(TaskKind.TitleRecommendation, created.kind)
-    assertEquals(EngineKind.Hardcoded, created.engine)
+    assertEquals(LogCategory.Hardcoded, created.logCategory)
     assertTrue(created.parameters.orEmpty().contains("synopsis=Build a rocketship"))
     val terminal = log.events[1]
     assertEquals(EngineActivityEventType.Succeeded, terminal.eventType)
@@ -110,6 +110,18 @@ class LoggingPlanningEngineTest {
   }
 
   @Test
+  fun `records the delegated engine's kind on detail rows`() = runTest {
+    val delegate = FakePlanningEngine()
+    delegate.logCategory = LogCategory.RemoteInference
+    val log = RecordingActivityLog()
+    val engine = LoggingPlanningEngine(delegate = delegate, log = log)
+
+    engine.recommendTitle("Build a rocketship", activityId = "task-5")
+
+    assertEquals(LogCategory.RemoteInference, log.events.first().logCategory)
+  }
+
+  @Test
   fun `a throwing engine records a failed detail row and still propagates`() = runTest {
     val log = RecordingActivityLog()
     val engine = LoggingPlanningEngine(delegate = ThrowingEngine(), log = log)
@@ -138,6 +150,8 @@ class LoggingPlanningEngineTest {
     Question(id = text, text = text, timestamp = now(), roundId = "r1")
 
   private class ThrowingEngine : PlanningEngine {
+    override val logCategory: LogCategory = LogCategory.Hardcoded
+
     override suspend fun recommendTitle(synopsis: String, activityId: String): String =
       throw PlanningEngine.AnalysisFailure("model exploded")
 

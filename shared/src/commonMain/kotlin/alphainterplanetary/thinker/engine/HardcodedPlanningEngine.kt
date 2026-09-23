@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase.DefinitionOfDone
 import alphainterplanetary.thinker.phases.BuiltInPhase.Design
@@ -17,6 +18,8 @@ class HardcodedPlanningEngine @Inject constructor(
   private val initialCount: Int = 5,
   private val followUpCount: Int = 5,
 ) : PlanningEngine {
+
+  override val logCategory: LogCategory = LogCategory.Hardcoded
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String =
     generateTitleFromSynopsis(synopsis)

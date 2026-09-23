@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.database
 
 import alphainterplanetary.thinker.activitylog.EngineActivityEvent
 import alphainterplanetary.thinker.activitylog.EngineActivityEventType
-import alphainterplanetary.thinker.activitylog.EngineKind
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.tasks.TaskKind
 import androidx.room3.Entity
 import androidx.room3.Index
@@ -51,7 +51,7 @@ fun EngineActivityEvent.toEntity(): ActivityEventEntity = ActivityEventEntity(
   projectId = projectId,
   roundId = roundId,
   kind = kind?.name,
-  engine = engine?.name,
+  engine = logCategory?.name,
   eventType = eventType.name,
   progress = progress,
   error = error,
@@ -71,7 +71,7 @@ fun ActivityEventEntity.toEvent(): EngineActivityEvent = EngineActivityEvent(
   projectId = projectId,
   roundId = roundId,
   kind = kind?.let(::parseTaskKind),
-  engine = engine?.let(::parseEngineKind),
+  logCategory = engine?.let(::parseEngineKind),
   eventType = parseEventType(eventType),
   progress = progress,
   error = error,
@@ -86,7 +86,7 @@ fun ActivityEventEntity.toEvent(): EngineActivityEvent = EngineActivityEvent(
 
 private fun parseTaskKind(name: String): TaskKind? = runCatching { TaskKind.valueOf(name) }.getOrNull()
 
-private fun parseEngineKind(name: String): EngineKind? = runCatching { EngineKind.valueOf(name) }.getOrNull()
+private fun parseEngineKind(name: String): LogCategory? = runCatching { LogCategory.valueOf(name) }.getOrNull()
 
 private fun parseEventType(name: String): EngineActivityEventType =
   runCatching { EngineActivityEventType.valueOf(name) }

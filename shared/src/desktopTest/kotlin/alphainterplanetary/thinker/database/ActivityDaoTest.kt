@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.database
 
 import alphainterplanetary.thinker.activitylog.EngineActivityEvent
 import alphainterplanetary.thinker.activitylog.EngineActivityEventType
-import alphainterplanetary.thinker.activitylog.EngineKind
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.tasks.TaskKind
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -29,7 +29,7 @@ class ActivityDaoTest {
     activityId = activityId,
     projectId = projectId,
     kind = TaskKind.InitialQuestions,
-    engine = EngineKind.Hardcoded,
+    logCategory = LogCategory.Hardcoded,
     eventType = eventType,
     timestamp = timestamp,
   ).toEntity()

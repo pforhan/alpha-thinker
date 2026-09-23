@@ -164,6 +164,80 @@ class SettingsRepositoryTest {
     assertEquals(null, storage.settings[SettingsKey.LlmEnabled.storageKey])
   }
 
+  // ---------- remote LLM connection ----------
+
+  @Test
+  fun `remote settings start at the Ollama defaults before load`() = runTest {
+    val repo = repository()
+
+    assertEquals(SettingsRepository.DefaultRemoteLlmBaseUrl, repo.remoteLlmBaseUrl.value)
+    assertEquals(SettingsRepository.DefaultRemoteLlmApiKey, repo.remoteLlmApiKey.value)
+    assertEquals(SettingsRepository.DefaultRemoteLlmModel, repo.remoteLlmModel.value)
+  }
+
+  @Test
+  fun `remote settings load the persisted values at startup`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.RemoteLlmBaseUrl, "http://example.com/v1")
+    storage.saveSetting(SettingsKey.RemoteLlmApiKey, "secret")
+    storage.saveSetting(SettingsKey.RemoteLlmModel, "gpt-4o-mini")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("http://example.com/v1", repo.remoteLlmBaseUrl.value)
+    assertEquals("secret", repo.remoteLlmApiKey.value)
+    assertEquals("gpt-4o-mini", repo.remoteLlmModel.value)
+  }
+
+  @Test
+  fun `setRemoteLlmBaseUrl updates state and persists the choice`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setRemoteLlmBaseUrl("http://example.com/v1")
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("http://example.com/v1", repo.remoteLlmBaseUrl.value)
+    assertEquals("http://example.com/v1", storage.settings[SettingsKey.RemoteLlmBaseUrl.storageKey])
+  }
+
+  @Test
+  fun `setRemoteLlmApiKey updates state and persists the choice`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setRemoteLlmApiKey("secret")
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("secret", repo.remoteLlmApiKey.value)
+    assertEquals("secret", storage.settings[SettingsKey.RemoteLlmApiKey.storageKey])
+  }
+
+  @Test
+  fun `setRemoteLlmModel updates state and persists the choice`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setRemoteLlmModel("gpt-4o-mini")
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("gpt-4o-mini", repo.remoteLlmModel.value)
+    assertEquals("gpt-4o-mini", storage.settings[SettingsKey.RemoteLlmModel.storageKey])
+  }
+
+  @Test
+  fun `remote setters ignore the already-set value`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setRemoteLlmBaseUrl(SettingsRepository.DefaultRemoteLlmBaseUrl)
+    repo.setRemoteLlmApiKey(SettingsRepository.DefaultRemoteLlmApiKey)
+    repo.setRemoteLlmModel(SettingsRepository.DefaultRemoteLlmModel)
+
+    assertEquals(0, storage.settings.size)
+  }
+
   // ---------- engine slow-down delays ----------
 
   @Test

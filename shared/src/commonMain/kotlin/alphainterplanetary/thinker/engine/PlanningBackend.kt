@@ -2,11 +2,15 @@ package alphainterplanetary.thinker.engine
 
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
+import alphainterplanetary.thinker.activitylog.LogCategory
 
 /**
- * Couples a [PromptExecutor] and [LLModel] for a specific inference backend.
+ * Couples a [PromptExecutor] and [LLModel] for a specific inference backend,
+ * along with the [LogCategory] an engine built over it reports on the activity
+ * log (local edge vs remote/cloud).
  */
 interface PlanningBackend {
   val executor: PromptExecutor
   val model: LLModel
+  val logCategory: LogCategory
 }

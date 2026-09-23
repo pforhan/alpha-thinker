@@ -3,12 +3,11 @@ package alphainterplanetary.thinker.engine
 import alphainterplanetary.thinker.activitylog.EngineActivityEvent
 import alphainterplanetary.thinker.activitylog.EngineActivityEventType
 import alphainterplanetary.thinker.activitylog.EngineActivityLog
-import alphainterplanetary.thinker.activitylog.EngineKind
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.util.now
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.TimeMark
@@ -29,8 +28,10 @@ import kotlin.time.TimeSource
 class LoggingPlanningEngine(
   private val delegate: PlanningEngine,
   private val log: EngineActivityLog,
-  private val engineKind: EngineKind = EngineKind.Hardcoded,
 ) : PlanningEngine {
+
+  override val logCategory: LogCategory
+    get() = delegate.logCategory
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     val created = baseEvent(
@@ -146,7 +147,7 @@ class LoggingPlanningEngine(
     activityId = activityId,
     roundId = roundId,
     kind = kind,
-    engine = engineKind,
+    logCategory = this.logCategory,
     eventType = EngineActivityEventType.Created,
     parameters = parameters,
     timestamp = now(),

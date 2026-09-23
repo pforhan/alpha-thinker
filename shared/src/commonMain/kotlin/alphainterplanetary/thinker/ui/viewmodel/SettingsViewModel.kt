@@ -45,6 +45,27 @@ class SettingsViewModel(
     settingsRepository.setLlmEnabled(enabled)
   }
 
+  /** The OpenAI-compatible endpoint the Remote backend connects to. */
+  val remoteLlmBaseUrl: StateFlow<String> = settingsRepository.remoteLlmBaseUrl
+
+  fun setRemoteLlmBaseUrl(url: String) {
+    settingsRepository.setRemoteLlmBaseUrl(url)
+  }
+
+  /** The API key for the remote endpoint (empty for local Ollama). */
+  val remoteLlmApiKey: StateFlow<String> = settingsRepository.remoteLlmApiKey
+
+  fun setRemoteLlmApiKey(key: String) {
+    settingsRepository.setRemoteLlmApiKey(key)
+  }
+
+  /** The model name the remote endpoint serves. */
+  val remoteLlmModel: StateFlow<String> = settingsRepository.remoteLlmModel
+
+  fun setRemoteLlmModel(model: String) {
+    settingsRepository.setRemoteLlmModel(model)
+  }
+
   /** Whether PlanningEngine interactions carry the artificial testing delay. */
   val engineDelay: StateFlow<EngineDelayConfig> = settingsRepository.engineDelay
 

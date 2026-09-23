@@ -42,6 +42,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -61,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +81,9 @@ fun SettingsScreen(
   val phaseTheme by viewModel.phaseTheme.collectAsState()
   val engineMode by viewModel.engineMode.collectAsState()
   val llmEnabled by viewModel.llmEnabled.collectAsState()
+  val remoteLlmBaseUrl by viewModel.remoteLlmBaseUrl.collectAsState()
+  val remoteLlmApiKey by viewModel.remoteLlmApiKey.collectAsState()
+  val remoteLlmModel by viewModel.remoteLlmModel.collectAsState()
   val engineDelay by viewModel.engineDelay.collectAsState()
   val scrollState = rememberScrollState()
   var delayExpandedHeight by remember { mutableIntStateOf(0) }
@@ -141,6 +146,16 @@ fun SettingsScreen(
           selected = engineMode == mode,
           selectable = mode.available(),
           onClick = { viewModel.selectEngineMode(mode) },
+        )
+      }
+      if (engineMode == EngineMode.Remote) {
+        RemoteConnectionItem(
+          baseUrl = remoteLlmBaseUrl,
+          apiKey = remoteLlmApiKey,
+          model = remoteLlmModel,
+          onBaseUrlChange = viewModel::setRemoteLlmBaseUrl,
+          onApiKeyChange = viewModel::setRemoteLlmApiKey,
+          onModelChange = viewModel::setRemoteLlmModel,
         )
       }
       Text(
@@ -367,6 +382,67 @@ private fun EngineModeOption(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
+    }
+  }
+}
+
+/**
+ * The Remote backend's connection settings: any OpenAI-compatible endpoint,
+ * its API key (empty for a local Ollama), and the model name. Shown while
+ * [EngineMode.Remote] is the selected backend; changes take effect from the
+ * next planning interaction.
+ */
+@Composable
+private fun RemoteConnectionItem(
+  baseUrl: String,
+  apiKey: String,
+  model: String,
+  onBaseUrlChange: (String) -> Unit,
+  onApiKeyChange: (String) -> Unit,
+  onModelChange: (String) -> Unit,
+) {
+  Card(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.padding(Dimens.CardPadding)) {
+      Text(
+        text = "Remote connection",
+        style = MaterialTheme.typography.titleSmall,
+      )
+      Spacer(modifier = Modifier.height(Dimens.TightGap))
+      Text(
+        text = "Defaults to a local Ollama install; a trailing /v1 endpoint " +
+          "root (as Ollama's docs print) works too.",
+        style = MaterialTheme.typography.bodyMedium,
+      )
+      Spacer(modifier = Modifier.height(Dimens.ContentGap))
+      OutlinedTextField(
+        value = baseUrl,
+        onValueChange = onBaseUrlChange,
+        label = { Text("Base URL") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        isError = baseUrl.isBlank(),
+      )
+      Spacer(modifier = Modifier.height(Dimens.ContentGap))
+      OutlinedTextField(
+        value = apiKey,
+        onValueChange = onApiKeyChange,
+        label = { Text("API key") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        visualTransformation = PasswordVisualTransformation(),
+        supportingText = {
+          Text("Leave empty for a local Ollama that needs no key.")
+        },
+      )
+      Spacer(modifier = Modifier.height(Dimens.ContentGap))
+      OutlinedTextField(
+        value = model,
+        onValueChange = onModelChange,
+        label = { Text("Model") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        isError = model.isBlank(),
+      )
     }
   }
 }

@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.testutil
 
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.QuestionBatch
 import alphainterplanetary.thinker.model.Question
@@ -15,6 +16,8 @@ class FakePlanningEngine : PlanningEngine {
   var initialCalls: MutableList<InitialCall> = mutableListOf()
   var followUpCalls: MutableList<FollowUpCall> = mutableListOf()
   var canProduceMoreCalls: MutableList<CanProduceMoreCall> = mutableListOf()
+
+  override var logCategory: LogCategory = LogCategory.Hardcoded
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String = recommendedTitle
 

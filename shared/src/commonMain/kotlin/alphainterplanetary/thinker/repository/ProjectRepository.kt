@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
-import alphainterplanetary.thinker.engine.PlanningEngine
+import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round
@@ -24,7 +24,7 @@ import kotlin.time.Instant
 @AppScope
 class ProjectRepository @Inject constructor(
   private val storage: Storage,
-  private val engine: PlanningEngine,
+  private val engineSelector: PlanningEngineSelector,
   private val taskRunner: TaskRunner,
 ) {
 
@@ -73,8 +73,13 @@ class ProjectRepository @Inject constructor(
     return project
   }
 
-  /** Fills in the project's recommended title on the task runner, re-reading first. */
+  /**
+   * Fills in the project's recommended title on the task runner, re-reading first.
+   * The engine is frozen via [engineSelector] at enqueue time, so a queued task
+   * runs the engine it was created under even if settings change before it runs.
+   */
   private fun enqueueTitleRecommendation(projectId: String) {
+    val engine = engineSelector.selectedEngine()
     taskRunner.enqueue(projectId, TaskKind.TitleRecommendation) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val recommended = engine.recommendTitle(reloaded.synopsis, activityId = taskId)
@@ -101,6 +106,7 @@ class ProjectRepository @Inject constructor(
     roundId: String,
     kind: TaskKind,
   ) {
+    val engine = engineSelector.selectedEngine()
     taskRunner.enqueue(projectId, kind) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
@@ -298,8 +304,9 @@ class ProjectRepository @Inject constructor(
    * capability answer on [remainingInPhase]. Returns the queued task; the
    * result also rides on the terminal task's [GenerationTask.result].
    */
-  fun enqueueRemainingInPhaseCheck(projectId: String): GenerationTask =
-    taskRunner.enqueueResult(projectId, TaskKind.RemainingInPhase) { taskId ->
+  fun enqueueRemainingInPhaseCheck(projectId: String): GenerationTask {
+    val engine = engineSelector.selectedEngine()
+    return taskRunner.enqueueResult(projectId, TaskKind.RemainingInPhase) { taskId ->
       val project = storage.getProject(projectId)
       val can = if (project == null) {
         false
@@ -314,6 +321,7 @@ class ProjectRepository @Inject constructor(
       _remainingInPhase.update { it + (projectId to can) }
       can
     }
+  }
 
   /**
    * Runs a fresh [TaskKind.RemainingInPhase] check only when the cached answer

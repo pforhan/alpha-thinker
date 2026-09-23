@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.coroutines.cancellation.CancellationException
@@ -37,6 +38,9 @@ data class QuestionBatch(
  * (it would otherwise spawn an orphan activity in the log).
  */
 interface PlanningEngine {
+  /** The engine family this engine reports on the activity log (e.g. [LogCategory.RemoteInference] for a Koog-backed mode, [LogCategory.Hardcoded] for Lite). */
+  val logCategory: LogCategory
+
   @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun recommendTitle(synopsis: String, activityId: String): String
 

@@ -1,7 +1,9 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.engine.PlanningEngine
+import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.QuestionBatch
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
@@ -35,7 +37,7 @@ class ProjectRepositoryTest {
     generator: PlanningEngine = FakePlanningEngine(),
   ): ProjectRepository {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    return ProjectRepository(storage, generator, runner)
+    return ProjectRepository(storage, PlanningEngineSelector { generator }, runner)
   }
 
   // ---------- createProject ----------
@@ -149,6 +151,8 @@ class ProjectRepositoryTest {
   @Test
   fun `createProject keeps the shell when initial generation fails`() = runTest {
     val failing = object : PlanningEngine {
+      override val logCategory: LogCategory = LogCategory.Hardcoded
+
       override suspend fun recommendTitle(synopsis: String, activityId: String): String = "Title"
 
       override suspend fun generateInitialQuestions(
@@ -187,6 +191,33 @@ class ProjectRepositoryTest {
     assertTrue(persisted.questions.isEmpty(), "the shell persists even when generation fails")
     assertEquals(listOf(project.id), storage.getAllProjects().map { it.id })
   }
+
+  @Test
+  fun `a queued task runs the engine frozen when it was enqueued`() =
+    runTest {
+      val enqueued = FakePlanningEngine().apply {
+        recommendedTitle = "Enqueued Engine"
+        initialQuestions += question("qa", "From the enqueued engine?")
+      }
+      val later = FakePlanningEngine().apply { recommendedTitle = "Latest Engine" }
+      var current: PlanningEngine = enqueued
+      val runner = TaskRunner(CoroutineScope(coroutineContext))
+      val storage = FakeStorage()
+      val repository = ProjectRepository(storage, PlanningEngineSelector { current }, runner)
+
+      // createProject enqueues the title + initial batch under `current` (enqueued).
+      val project = repository.createProject("My synopsis")
+      // The engine setting changes before the queue drains.
+      current = later
+      testScheduler.advanceUntilIdle()
+
+      val persisted = storage.getProject(project.id)
+      assertNotNull(persisted)
+      assertEquals("Enqueued Engine", persisted.editableTitle)
+      assertEquals(listOf("qa"), persisted.questions.map { it.id })
+      assertEquals(1, enqueued.initialCalls.size)
+      assertTrue(later.initialCalls.isEmpty(), "the later engine never touches the locked task")
+    }
 
   // ---------- updateProject ----------
 

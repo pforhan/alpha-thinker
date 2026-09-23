@@ -10,10 +10,11 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
-import kotlin.time.Instant
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.util.now
+import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,6 +31,7 @@ class KoogPlanningEngineTest {
     val backend = object : PlanningBackend {
       override val executor: PromptExecutor = MultiLLMPromptExecutor(client)
       override val model: LLModel = this@KoogPlanningEngineTest.model
+      override val logCategory: LogCategory = LogCategory.RemoteInference
     }
     return KoogPlanningEngine(backend)
   }

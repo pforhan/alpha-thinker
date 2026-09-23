@@ -31,9 +31,10 @@ class SettingsRepository @Inject constructor(
   val phaseTheme: StateFlow<PhaseTheme> = _phaseTheme.asStateFlow()
 
   /**
-   * The selected planning backend ([EngineMode]). Only [EngineMode.Lite] is
-   * selectable today — the LLM backends are gated off by [EngineMode.available]
-   * until they land (IMPLEMENTATION-PLAN.md Phase 3).
+   * The selected planning backend ([EngineMode]). [EngineMode.Lite] and
+   * [EngineMode.Remote] are selectable today; the on-device backends are gated
+   * off by [EngineMode.available] until they land (IMPLEMENTATION-PLAN.md
+   * Phase 3).
    */
   private val _engineMode = MutableStateFlow(EngineMode.Default)
   val engineMode: StateFlow<EngineMode> = _engineMode.asStateFlow()
@@ -41,6 +42,18 @@ class SettingsRepository @Inject constructor(
   /** Whether the planning LLM may run at all; when off, Lite is used. */
   private val _llmEnabled = MutableStateFlow(true)
   val llmEnabled: StateFlow<Boolean> = _llmEnabled.asStateFlow()
+
+  /** The OpenAI-compatible endpoint the Remote backend talks to. */
+  private val _remoteLlmBaseUrl = MutableStateFlow(DefaultRemoteLlmBaseUrl)
+  val remoteLlmBaseUrl: StateFlow<String> = _remoteLlmBaseUrl.asStateFlow()
+
+  /** The API key for the remote endpoint; empty for localhost (Ollama). */
+  private val _remoteLlmApiKey = MutableStateFlow(DefaultRemoteLlmApiKey)
+  val remoteLlmApiKey: StateFlow<String> = _remoteLlmApiKey.asStateFlow()
+
+  /** The model name the remote endpoint serves. */
+  private val _remoteLlmModel = MutableStateFlow(DefaultRemoteLlmModel)
+  val remoteLlmModel: StateFlow<String> = _remoteLlmModel.asStateFlow()
 
   private val _engineDelay = MutableStateFlow(EngineDelayConfig.Default)
   val engineDelay: StateFlow<EngineDelayConfig> = _engineDelay.asStateFlow()
@@ -72,6 +85,26 @@ class SettingsRepository @Inject constructor(
       // toggle off this session, so a startup load never clobbers their choice.
       if (_llmEnabled.value && !enabled) {
         _llmEnabled.value = enabled
+      }
+    }
+    scope.launch {
+      val url = storage.getSetting(SettingsKey.RemoteLlmBaseUrl, DefaultRemoteLlmBaseUrl)
+      // Only apply the persisted value while the user hasn't already typed one
+      // this session, so a startup load never clobbers their edit.
+      if (_remoteLlmBaseUrl.value == DefaultRemoteLlmBaseUrl) {
+        _remoteLlmBaseUrl.value = url
+      }
+    }
+    scope.launch {
+      val key = storage.getSetting(SettingsKey.RemoteLlmApiKey, DefaultRemoteLlmApiKey)
+      if (_remoteLlmApiKey.value == DefaultRemoteLlmApiKey) {
+        _remoteLlmApiKey.value = key
+      }
+    }
+    scope.launch {
+      val model = storage.getSetting(SettingsKey.RemoteLlmModel, DefaultRemoteLlmModel)
+      if (_remoteLlmModel.value == DefaultRemoteLlmModel) {
+        _remoteLlmModel.value = model
       }
     }
     scope.launch {
@@ -123,6 +156,33 @@ class SettingsRepository @Inject constructor(
     }
   }
 
+  /** Sets the OpenAI-compatible base URL the Remote backend connects to. */
+  fun setRemoteLlmBaseUrl(url: String) {
+    if (url == _remoteLlmBaseUrl.value) return
+    _remoteLlmBaseUrl.value = url
+    scope.launch {
+      storage.saveSetting(SettingsKey.RemoteLlmBaseUrl, url)
+    }
+  }
+
+  /** Sets the API key the Remote backend authenticates with (empty for Ollama). */
+  fun setRemoteLlmApiKey(key: String) {
+    if (key == _remoteLlmApiKey.value) return
+    _remoteLlmApiKey.value = key
+    scope.launch {
+      storage.saveSetting(SettingsKey.RemoteLlmApiKey, key)
+    }
+  }
+
+  /** Sets the model name the Remote backend asks the endpoint for. */
+  fun setRemoteLlmModel(model: String) {
+    if (model == _remoteLlmModel.value) return
+    _remoteLlmModel.value = model
+    scope.launch {
+      storage.saveSetting(SettingsKey.RemoteLlmModel, model)
+    }
+  }
+
   /** Turns the artificial PlanningEngine slow-down on or off for Task Manager testing. */
   fun setEngineDelayEnabled(enabled: Boolean) {
     if (enabled == _engineDelay.value.enabled) return
@@ -160,4 +220,15 @@ class SettingsRepository @Inject constructor(
       EngineInteraction.FollowUpQuestions -> SettingsKey.EngineFollowUpQuestionsDelay
       EngineInteraction.RemainingInPhase -> SettingsKey.EngineRemainingInPhaseDelay
     }
+
+  companion object {
+    /** The OpenAI-compatible endpoint of a local Ollama install (v1 API root). */
+    const val DefaultRemoteLlmBaseUrl: String = "http://localhost:11434/v1"
+
+    /** Ollama serves requests unauthenticated, so the default key is empty. */
+    const val DefaultRemoteLlmApiKey: String = ""
+
+    /** The default model a fresh Ollama install exposes over that endpoint. */
+    const val DefaultRemoteLlmModel: String = "llama3.2:latest"
+  }
 }

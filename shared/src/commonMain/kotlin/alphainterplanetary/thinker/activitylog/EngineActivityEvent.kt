@@ -9,7 +9,7 @@ import kotlin.time.Instant
  * [EngineActivityEvent.parentActivityId]); the inference kinds distinguish a
  * local edge model from a remote/cloud one.
  */
-enum class EngineKind {
+enum class LogCategory {
   LocalInference,
   RemoteInference,
   Hardcoded,
@@ -52,7 +52,7 @@ data class EngineActivityEvent(
   val roundId: String? = null,
   /** The generation kind this activity belongs to; null for tool-call (`Lookup`) rows. */
   val kind: TaskKind? = null,
-  val engine: EngineKind? = null,
+  val logCategory: LogCategory? = null,
   val eventType: EngineActivityEventType,
   val progress: Float? = null,
   val error: String? = null,

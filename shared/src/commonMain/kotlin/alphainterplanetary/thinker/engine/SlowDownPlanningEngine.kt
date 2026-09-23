@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import kotlinx.coroutines.delay
@@ -16,6 +17,9 @@ class SlowDownPlanningEngine(
   private val delegate: PlanningEngine,
   private val config: StateFlow<EngineDelayConfig>,
 ) : PlanningEngine {
+
+  override val logCategory: LogCategory
+    get() = delegate.logCategory
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     println("SlowDownPlanningEngine.recommendTitle()")

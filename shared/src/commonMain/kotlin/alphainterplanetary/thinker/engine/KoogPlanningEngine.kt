@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.engine
 import ai.koog.prompt.dsl.PromptBuilder
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
-import ai.koog.prompt.llm.LLModel
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.jsonObject
@@ -31,6 +31,9 @@ import kotlin.time.Instant
 class KoogPlanningEngine(
   private val backend: PlanningBackend,
 ) : PlanningEngine {
+
+  override val logCategory: LogCategory
+    get() = backend.logCategory
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     val text = ask(PromptRecommendTitle) {

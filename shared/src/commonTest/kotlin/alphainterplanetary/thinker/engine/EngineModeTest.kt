@@ -23,10 +23,10 @@ class EngineModeTest {
   }
 
   @Test
-  fun `only Lite is selectable until its backend ships`() {
+  fun `Lite and Remote are selectable while the on-device modes are not yet`() {
     assertTrue(EngineMode.Lite.available())
+    assertTrue(EngineMode.Remote.available())
     assertFalse(EngineMode.OnDevice.available())
-    assertFalse(EngineMode.Remote.available())
     assertFalse(EngineMode.Downloaded.available())
   }
 }

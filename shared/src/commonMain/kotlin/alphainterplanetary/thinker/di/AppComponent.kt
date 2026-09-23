@@ -7,13 +7,15 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getActivityDatabase
 import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
-import alphainterplanetary.thinker.engine.DynamicPlanningEngine
+import alphainterplanetary.thinker.engine.DynamicPlanningBackend
 import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.engine.HardcodedPlanningEngine
 import alphainterplanetary.thinker.engine.KoogPlanningEngine
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
-import alphainterplanetary.thinker.engine.PlanningEngine
+import alphainterplanetary.thinker.engine.PlanningEngineSelector
+import alphainterplanetary.thinker.engine.RemotePlanningBackend
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
+import alphainterplanetary.thinker.engine.resolveSelectedEngine
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
@@ -34,7 +36,7 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   abstract val sampleProjectGenerator: SampleProjectGenerator
 
-  abstract val planningEngine: PlanningEngine
+  abstract val engineSelector: PlanningEngineSelector
 
   abstract val taskRunner: TaskRunner
 
@@ -70,27 +72,42 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
     engineActivityLog: EngineActivityLog,
   ): TaskRunner = TaskRunner(scope, engineActivityLog)
 
+  @AppScope
   @Provides
-  fun providesPlanningEngine(
+  fun providesEngineSelector(
     settingsRepository: SettingsRepository,
     engineActivityLog: EngineActivityLog,
-    platformContext: PlatformContext,
-  ): PlanningEngine {
+  ): PlanningEngineSelector {
     val liteEngine = HardcodedPlanningEngine()
-    
-    val dynamic = DynamicPlanningEngine(
-      settingsRepository = settingsRepository,
-      liteEngine = liteEngine,
-      koogEngine = HardcodedPlanningEngine(), // Placeholder until Koog is wired
+
+    // One Koog engine per selectable LLM mode, each bound to that mode's
+    // backend. Binding at construction (rather than re-reading the live
+    // engine-mode setting) is what lets [PlanningEngineSelector] freeze the
+    // selection into a task: a queued task keeps the engine it was created
+    // under even if the user changes modes before it runs.
+    val koogBackends = mapOf(
+      EngineMode.Remote to RemotePlanningBackend(settingsRepository),
+    )
+    val koogEngines = mapOf(
+      EngineMode.Remote to KoogPlanningEngine(
+        DynamicPlanningBackend(EngineMode.Remote, koogBackends),
+      ),
     )
 
-    return SlowDownPlanningEngine(
-      delegate = LoggingPlanningEngine(
-        delegate = dynamic,
-        log = engineActivityLog,
-      ),
-      config = settingsRepository.engineDelay,
-    )
+    return PlanningEngineSelector {
+      SlowDownPlanningEngine(
+        delegate = LoggingPlanningEngine(
+          delegate = resolveSelectedEngine(
+            selectedMode = settingsRepository.engineMode.value,
+            llmEnabled = settingsRepository.llmEnabled.value,
+            liteEngine = liteEngine,
+            koogEngines = koogEngines,
+          ),
+          log = engineActivityLog,
+        ),
+        config = settingsRepository.engineDelay,
+      )
+    }
   }
 }
 

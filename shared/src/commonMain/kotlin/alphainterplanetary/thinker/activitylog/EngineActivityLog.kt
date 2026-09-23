@@ -105,7 +105,7 @@ class RoomEngineActivityLog(
             projectId = latest.projectId,
             roundId = latest.roundId,
             kind = latest.kind,
-            engine = latest.engine,
+            logCategory = latest.logCategory,
             eventType = EngineActivityEventType.Failed,
             error = "interrupted",
             timestamp = now,
