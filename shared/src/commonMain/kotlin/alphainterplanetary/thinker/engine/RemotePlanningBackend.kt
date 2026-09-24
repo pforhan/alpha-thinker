@@ -9,7 +9,7 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.repository.SettingsRepository
 
 /**
@@ -35,7 +35,7 @@ class RemotePlanningBackend(
   private val httpClientFactory: KoogHttpClient.Factory = KtorKoogHttpClient.Factory(),
 ) : PlanningBackend {
 
-  override val logCategory: LogCategory = LogCategory.RemoteInference
+  override val source: LogSource = LogSource.RemoteLLM
 
   private var current: State? = null
 

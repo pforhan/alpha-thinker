@@ -69,94 +69,78 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
         in history) so old versions can be viewed/restored by making a new
         version.)
 
-4. **EngineActivity** (renamed and broadened from `LLMInteraction`) — an
-    **append-only event log**, one table in its own `ActivityDatabase` (a
-    separate Room database file: independent growth, pruning, and migration,
-    and a wholesale "Clear log" wipe can never touch projects/questions/
-    settings). A logical interaction/task is the group of event rows sharing
-    `activityId`; nothing is ever updated — every engine action appends.
-    Global order is the autoincrement `eventId`.
+4. **ActivityLog** (renamed and simplified from `EngineActivity`) — a **flat,
+    append-only journal**, one table (`log_events`) in its own
+    `ActivityDatabase` (a separate Room database file: independent growth,
+    pruning, and migration, and a wholesale "Clear log" wipe can never touch
+    projects/questions/settings). A logical interaction/task is simply the
+    group of rows sharing an `activityId`; nothing is ever updated — every
+    engine action appends. There is no parent/child nesting and no per-event
+    duration: aggregation by shared `activityId` and duration derived from the
+    clumped rows' timestamps are read model concerns, never stored.
 
     Columns:
-    *   `eventId` (PK, autoincrement — global event order)
-    *   `activityId` (indexed — one logical activity; the group of rows whose
-        *latest* event is that activity's current state)
-    *   `parentActivityId` (indexed, Optional — **nesting**: a lookup / web
-        search requested by the LLM is a *child activity* of the inference
-        that requested it, so the log is a tree, not a flat list)
-    *   `projectId` (Foreign Key, Optional)
-    *   `roundId` (Foreign Key, Optional)
-    *   `kind` (Enum: `TitleRecommendation`, `InitialQuestions`,
-        `FollowUpQuestions`, `AvailabilityCheck`, `SynopsisRewrite`,
-        `AutoArchive`, `Lookup`, ... — same vocabulary as the `TaskKind` enum)
-    *   `engine` (Enum: `LocalInference` (edge LLM), `RemoteInference`
-        (HTTP / cloud / OpenAI-compatible), `Hardcoded` (Lite fallback —
-        `HardcodedPlanningEngine`), `Lookup` (web/lookup tool call)) — which
-        backend actually executed. `LLMInteraction` only ever assumed the
-        local LLM; the log records whichever engine ran.)
-    *   `eventType` (Enum: `Created | Progress | Succeeded | Failed |
-        Cancelled` — each row is one immutable transition; the payload fields
-        fill per type)
-    *   `progress` (Float, Optional — `Progress` events, 0..1)
-    *   `error` (String, Optional — `Failed` / `Cancelled` events)
-    *   `result` (Boolean, Optional — boolean-answering task outcomes, e.g.
-        `AvailabilityCheck`)
-    *   `promptUsed` / `parameters` (String / JSON, Optional — the input
-        prompt or remote request body and its config, on the `Created` event)
-    *   `generationPayload` / `suggestedQuestions` (JSON/Text, Optional — the
-        engine's raw output and any structured question list, on terminal
-        events)
-    *   `durationMs` (Long, Optional — on the terminal event: the call's
-        timing, or per-call timing for a `Lookup` child)
+    *   `id` (PK, autoincrement — global row order)
+    *   `activityId` (indexed, Optional — one logical activity; rows without an
+        activity id are standalone lines of their own)
+    *   `projectId` (indexed, Optional — a pure per-project visibility filter;
+        deleting a project never cascades into the log)
+    *   `category` (Enum: `QuestionGeneration`, `TitleRecommendation`,
+        `CapabilityCheck`, `Lookup`, `TaskRun`, `Info` — the row's *topic*,
+        stable and filterable, chosen per interaction by the writing layer)
+    *   `source` (Enum: `Lite`, `LocalLLM`, `RemoteLLM`, `Tool`, `TaskRunner`,
+        `App`, Optional — the *producer* of the row: which engine family, the
+        task framework, or the app itself). `logCategory`-style topic confusion
+        is avoided by splitting the old composite into these two orthogonal
+        fields: e.g. a Koog-backed recommendation is `TitleRecommendation` from
+        `RemoteLLM`.
+    *   `log` (String — the durable text: lifecycle rows read
+        `started:`/`succeeded`/`failed: <msg>`/`cancelled`; interaction rows
+        read `prompt:` (full rendered prompt) or `input:` plus a terminal
+        `response:`/`error:` row. The bylines namespace its free-form text the
+        way the old typed per-event payload columns did.)
     *   `timestamp` (Timestamp)
 
-    **Tool calls are child events, not a blob:** there is no `toolCalls`
-    column. Each tool invocation (e.g. an LLM-requested web lookup) is its own
-    child row (`engine = Lookup`, `parentActivityId` = the requesting
-    inference) carrying name, arguments, results, and per-call timing in its
-    event payload — one normalized source of truth for both tree display and
-    per-call latency.
-
-    **Read models are derived, never stored.** Live task state (Task Manager,
-    project screens) = the *latest event per `activityId`* — a Room
-    `@DatabaseView` window-function query (implemented as
-    `ActivityDao.latestPerActivity()` via `ROW_NUMBER() OVER (PARTITION BY
-    activityId ORDER BY eventId DESC)`), or a repository fold over the
-    `TaskRunner`'s existing transition flow. The LLM Interaction Log reads the
-    full history as a tree via `parentActivityId`. On startup the fold is
-    replayed and any activity whose latest event is non-terminal gets a
-    terminal `Failed("interrupted")` event (or is re-enqueued), so in-flight
-    work recovers after process death.
+    **Read models are derived, never stored.** `LogActivity.groupByActivity()`
+    groups rows by `activityId` (newest activity first) and synthesizes, per
+    activity, a one-line `summary` (the last `response:`/terminal row, else the
+    newest row), a `source`, a failure flag (`hasError`), and an elapsed
+    `duration` from the clumped rows' timestamps — the LLM Interaction Log
+    viewer is a thin projection over these. There is no startup recovery: the
+    journal is flat and TTL-pruned by **row age**, so in-flight work simply
+    ages out after process death.
 
     **Write path — two writers, one channel.** `TaskRunner` appends the
-    lifecycle events (`Created` / `Progress` / `Succeeded` / `Failed` /
-    `Cancelled`, with `activityId = taskId`). A **`LoggingPlanningEngine`
-    decorator** — wrapping whichever engine is active, exactly as
-    `SlowDownPlanningEngine` wraps `HardcodedPlanningEngine` — appends the
-    interaction detail (`promptUsed` / `parameters`,
-    `generationPayload` / `suggestedQuestions`, `durationMs`, and child
-    `Lookup` tool-call events). The task body passes its `taskId` into the
-    engine call as `activityId` (the `PlanningEngine` methods carry a required
-    `activityId: String` with no defaults, so every call is attributed to its
-    originating generation task by construction), so the decorator's detail
-    groups under the same activity as the lifecycle rows. `ProjectRepository`
-    and the engines are pure producers — neither writes the log.
+    lifecycle rows (`started:` on start, then `succeeded` / `failed: <msg>` /
+    `cancelled` on resolution, with `activityId = taskId`). A
+    **`LoggingPlanningEngine` decorator** — wrapping whichever engine is
+    active, exactly as `SlowDownPlanningEngine` wraps
+    `HardcodedPlanningEngine` — appends the interaction detail (an `input:` or
+    full `prompt:` row, then a terminal `response:` or `error:` row). The task
+    body passes its `taskId` into the engine call as `activityId` (the
+    `PlanningEngine` methods carry a required `activityId: String` with no
+    defaults, so every call is attributed to its originating generation task by
+    construction), so the decorator's detail groups under the same activity as
+    the lifecycle rows. `ProjectRepository` and the engines are pure producers
+    — neither writes the log.
 
     **Retention:** a settable TTL (new app setting, default 7 days) prunes
-    *whole activities* whose terminal event is older than the window — live
-    (non-terminal) activities are never pruned; a manual **"Clear log"**
+    rows whose timestamp is older than the window; a manual **"Clear log"**
     action wipes the separate database wholesale. Deleting a project does not
     cascade into the log; per-project visibility is a `projectId` filter.
 
-    The rename from `LLMInteraction` reflects that the app tracks more than
-    LLM traffic: **remote HTTP calls** (cloud / OpenAI-compatible backends,
-    PRD 6), the **hardcoded Lite fallback**, and **nested tool calls** (e.g.
-    an LLM-requested web lookup) all land here. The log is the *persisted*
-    form of the current in-memory `GenerationTask`, so the System/Debug
-    workspace (PRD 5.5: LLM Interaction Log + Task Manager) reads one
-    append-only table. `TaskRunner` still reads/writes its in-memory
-    StateFlow today; the DB read model (`latestPerActivity`) is implemented at
-    the DAO and service level and powers the System/Debug reader (Phase 3).
+    The rename from `LLMInteraction` (and simplification from `EngineActivity`)
+    reflects that the app tracks more than LLM traffic: **remote HTTP calls**
+    (cloud / OpenAI-compatible backends, PRD 6), the **hardcoded Lite
+    fallback**, and **tool calls** (e.g. an LLM-requested web lookup) all land
+    here. The log is the *persisted* form of the current in-memory
+    `GenerationTask`, so the System/Debug workspace (PRD 5.5: LLM Interaction
+    Log + Task Manager) reads one append-only table. `TaskRunner` still
+    reads/writes its in-memory StateFlow today; the derived
+    `LogActivity.groupByActivity()` read model powers the Activity Log viewer
+    (Phase 3). The engine-family naming collision this removes (item 4's old
+    `engine` enum vs the `LogCategory` type) is why the engines report
+    `LogSource` on the log.
 
 5. **GlobalQuestion:**
    *   `globalQuestionId` (Unique ID)
@@ -344,15 +328,15 @@ tools), MCP server integration (`agents-mcp`), structured output,
 RAG/embeddings, and tracing. The `PlanningEngine` interface is unchanged; a
 `KoogPlanningEngine` implements it over Koog's client/executor seam.
 
-**Engine modes** (a persisted setting; `LoggingPlanningEngine` records the
-active backend's `EngineKind` per call):
+**Engine modes** (a persisted setting; the active engine reports its producer
+as `LogSource` on each activity-log row):
 
-| Mode | Backend | `EngineKind` |
+| Mode | Backend | `LogSource` |
 |---|---|---|
-| Lite (default) | `HardcodedPlanningEngine` (unchanged) | `Hardcoded` |
-| On-device | `OnDeviceLLMClient` — hand-rolled Koog `LLMClient` | `LocalInference` |
-| Remote | Koog `OpenAILLMClient` / `OllamaClient` | `RemoteInference` |
-| Downloaded | Koog `LiteRTLLMClient` (Android) + own JVM adapter (desktop) | `LocalInference` |
+| Lite (default) | `HardcodedPlanningEngine` (unchanged) | `Lite` |
+| On-device | `OnDeviceLLMClient` — hand-rolled Koog `LLMClient` | `LocalLLM` |
+| Remote | Koog `OpenAILLMClient` / `OllamaClient` | `RemoteLLM` |
+| Downloaded | Koog `LiteRTLLMClient` (Android) + own JVM adapter (desktop) | `LocalLLM` |
 
 **Fallback:** any LLM backend that raises `AnalysisFailure` (or is unavailable /
 disabled) delegates transparently to Lite via a `FallbackPlanningEngine`-style
@@ -384,15 +368,15 @@ capable (tool-calling) backends can invoke custom tools we register (`webSearch`
 `fetchPage`) on a `ToolRegistry`, or Koog can import an external web-search MCP
 server's tools with zero tool code (`McpToolRegistryProvider`: HTTP/SSE on
 mobile, stdio/`fromProcess` on desktop), or use the `rag`/embeddings module for
-local retrieval. Tool-call rows land in the activity log as child `Lookup`
-events (schema item 4) with `parentActivityId` pointing at the requesting
-inference.
+local retrieval. Tool-call rows land in the activity log as flat `Lookup`
+category rows from the `Tool` source (schema item 4), their own activities until
+grouped with a shared `activityId`.
 
 - [ ] **Tool-calling with system on-device models (design task — tracking only, not blocking):** system models (Gemini Nano / Apple Foundation) reject tool prompts today, so decide how the lookup/research agent composes with the On-device mode — e.g. route the research agent to a tool-capable backend (remote client or LiteRT FunctionGemma), or split lookups into an explicit pre-tool step that feeds results into context.
 - [ ] **Confirm Koog support on every `shared` target on the current toolchain** during integration (JVM, JS, WasmJS, iOS; Android consumes the JVM artifact).
 - [ ] **Choose lookup/search backends.** Options: provider-native web search (`webSearchOptions` / `enableSearch` on OpenAI-style clients), a custom `webSearch` / `fetchPage` tool, or the `rag` module for local lookup/memory. Decide per backend given the offline-first constraint.
 - [ ] **Privacy & network trade-offs.** Web search sends queries to external services; short-circuit the offline-first guarantee. Gate it behind an opt-in setting surfaced in the settings UI alongside the LLM on/off toggle.
-- [ ] **Failure behavior.** Define graceful degradation (no results, offline, provider unreachable); tool/search calls are captured in the engine activity log as child `Lookup` events.
+- [ ] **Failure behavior.** Define graceful degradation (no results, offline, provider unreachable); tool/search calls are captured in the app-wide activity log.
 
 ### TODO: LLM Inference Strategy
 - [ ] Define fallback behavior for low-resource devices.

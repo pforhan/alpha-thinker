@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.coroutines.cancellation.CancellationException
@@ -38,8 +38,8 @@ data class QuestionBatch(
  * (it would otherwise spawn an orphan activity in the log).
  */
 interface PlanningEngine {
-  /** The engine family this engine reports on the activity log (e.g. [LogCategory.RemoteInference] for a Koog-backed mode, [LogCategory.Hardcoded] for Lite). */
-  val logCategory: LogCategory
+  /** The producer this engine reports on the activity log (e.g. [LogSource.RemoteLLM] for a Koog-backed mode, [LogSource.Lite] for the built-in fallback). */
+  val source: LogSource
 
   @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun recommendTitle(synopsis: String, activityId: String): String
@@ -86,10 +86,10 @@ interface PlanningEngine {
 /**
  * Engines that can render the exact prompt text they send the backend for each
  * planning interaction. The `LoggingPlanningEngine` decorator asks its delegate
- * for this text and records it as [EngineActivityEvent.promptUsed] on the
- * detail `Created` row, so the Activity Log viewer can show the full prompt
- * that produced a result (or produced nothing, "why has it stopped"); engines
- * that don't render prompts (the hardcoded Lite engine) simply skip it.
+ * for this text and records it (prefixing the whole row with `prompt:`) on the
+ * detail input row, so the Activity Log viewer can show the full prompt that
+ * produced a result (or produced nothing, "why has it stopped"); engines that
+ * don't render prompts (the hardcoded Lite engine) simply skip it.
  */
 interface PromptRenderer {
   fun titlePrompt(synopsis: String): String

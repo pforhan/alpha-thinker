@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.engine
 import ai.koog.prompt.dsl.PromptBuilder
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.jsonObject
@@ -32,8 +32,8 @@ class KoogPlanningEngine(
   private val backend: PlanningBackend,
 ) : PlanningEngine, PromptRenderer {
 
-  override val logCategory: LogCategory
-    get() = backend.logCategory
+  override val source: LogSource
+    get() = backend.source
 
   override fun titlePrompt(synopsis: String): String =
     render(TitleSystemPrompt, titleUserPrompt(synopsis))

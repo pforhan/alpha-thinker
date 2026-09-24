@@ -52,9 +52,9 @@ enum class TaskStatus {
 /**
  * An observable unit of long-running generation work (see ENG-DESIGN.md
  * "Generation Task Framework"). The live set stays in memory for the Task
- * Manager; every lifecycle transition is also appended to the durable engine
- * activity log ([EngineActivityEvent] via [TaskRunner]) so the System/Debug
- * workspace can replay what ran.
+ * Manager; every lifecycle transition is also appended to the durable app-wide
+ * activity log ([LogEntry] via [TaskRunner]) so the System/Debug workspace can
+ * replay what ran.
  */
 data class GenerationTask(
   val id: String,

@@ -172,7 +172,7 @@ fun SettingsScreen(
       )
       ToolItem(
         title = "Activity Log",
-        description = "View the append-only engine activity log: generation tasks, planning-engine interactions, tool calls and diagnostics.",
+        description = "View the activity log: generation tasks, planning-engine interactions, tool calls and diagnostics.",
         isLoading = false,
         buttonLabel = "Open",
         onClick = { onOpenActivityLog() },

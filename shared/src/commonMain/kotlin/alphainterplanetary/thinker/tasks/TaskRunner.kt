@@ -1,8 +1,9 @@
 package alphainterplanetary.thinker.tasks
 
-import alphainterplanetary.thinker.activitylog.EngineActivityEvent
-import alphainterplanetary.thinker.activitylog.EngineActivityEventType
-import alphainterplanetary.thinker.activitylog.EngineActivityLog
+import alphainterplanetary.thinker.activitylog.ActivityLog
+import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogEntry
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.coroutines.CoroutineScope
@@ -40,20 +41,18 @@ import kotlin.coroutines.cancellation.CancellationException
  * Parallelism is safe across projects and for read-only checks like
  * [TaskKind.RemainingInPhase].
  *
- * When an [EngineActivityLog] is injected, each lifecycle transition is
- * appended as an immutable [EngineActivityEvent] with `activityId = taskId`:
- * `Created` when the body starts and the terminal `Succeeded`/`Failed`/
- * `Cancelled` when it resolves (a `Progress` row with the final value is
- * written first when the body reported one — transient ticks are not each
- * persisted, only the terminal value). Appends happen synchronously inside the
- * task coroutine, so a task's log rows are always in transition order and no
- * extra coroutines are kept alive. The body receives its [taskId] so it can
- * pass it to engine calls as `activityId`, joining the `LoggingPlanningEngine`
- * detail rows to the same activity.
+ * When an [ActivityLog] is injected, each lifecycle transition is appended as
+ * an immutable [LogEntry] with `activityId = taskId` and `source = TaskRunner`:
+ * a `TaskRun` "started:" row when the body begins and a terminal
+ * `succeeded`/`failed: <msg>`/`cancelled` row when it resolves. Appends happen
+ * synchronously inside the task coroutine, so a task's log rows are always in
+ * transition order and no extra coroutines are kept alive. The body receives
+ * its [taskId] so it can pass it to engine calls as `activityId`, joining the
+ * `LoggingPlanningEngine` detail rows to the same activity.
  */
 class TaskRunner(
   private val scope: CoroutineScope,
-  private val activityLog: EngineActivityLog? = null,
+  private val activityLog: ActivityLog? = null,
 ) {
   private val _tasks = MutableStateFlow<List<GenerationTask>>(emptyList())
 
@@ -136,11 +135,12 @@ class TaskRunner(
     _tasks.update { it + task }
     scope.launch {
       logAppend(
-        EngineActivityEvent(
+        LogEntry(
           activityId = task.id,
           projectId = task.projectId,
-          kind = task.kind,
-          eventType = EngineActivityEventType.Created,
+          category = LogCategory.TaskRun,
+          source = LogSource.TaskRunner,
+          log = "started: ${task.kind.name}",
           timestamp = task.createdAt,
         )
       )
@@ -180,47 +180,17 @@ class TaskRunner(
             failure != null -> { t -> t.asFailed(finishedAt, failure) }
             else -> { t -> t.asSucceeded(finishedAt).copy(result = result) }
           }
-          // The body may have streamed progress via [setProgress]; persist it
-          // (final value) and then the terminal row, in that order.
-          _tasks.value.find { it.id == task.id }?.progress?.let { progress ->
-            logAppend(
-              EngineActivityEvent(
-                activityId = task.id,
-                projectId = task.projectId,
-                kind = task.kind,
-                eventType = EngineActivityEventType.Progress,
-                progress = progress,
-                timestamp = finishedAt,
-              )
-            )
-          }
+          // The body may have streamed progress via [setProgress]; the durable
+          // log keeps just the terminal row (transient ticks are UI-only).
           logAppend(
-            when {
-              cancelled -> EngineActivityEvent(
-                activityId = task.id,
-                projectId = task.projectId,
-                kind = task.kind,
-                eventType = EngineActivityEventType.Cancelled,
-                error = "Task cancelled",
-                timestamp = finishedAt,
-              )
-              failure != null -> EngineActivityEvent(
-                activityId = task.id,
-                projectId = task.projectId,
-                kind = task.kind,
-                eventType = EngineActivityEventType.Failed,
-                error = failure,
-                timestamp = finishedAt,
-              )
-              else -> EngineActivityEvent(
-                activityId = task.id,
-                projectId = task.projectId,
-                kind = task.kind,
-                eventType = EngineActivityEventType.Succeeded,
-                result = result,
-                timestamp = finishedAt,
-              )
-            }
+            LogEntry(
+              activityId = task.id,
+              projectId = task.projectId,
+              category = LogCategory.TaskRun,
+              source = LogSource.TaskRunner,
+              log = terminalLog(cancelled, failure, result),
+              timestamp = finishedAt,
+            )
           )
           // Fold any progress/error published via [setProgress] into the terminal
           // state instead of clobbering it with a stale local read.
@@ -239,10 +209,21 @@ class TaskRunner(
   }
 
   /** Appends one lifecycle row for the durable log (no-op without an injected log). */
-  private suspend fun logAppend(event: EngineActivityEvent) {
+  private suspend fun logAppend(entry: LogEntry) {
     activityLog?.let { log ->
-      runCatching { log.append(event) }
+      runCatching { log.append(entry) }
     }
+  }
+
+  /** One-line terminal row for the durable log. */
+  private fun terminalLog(
+    cancelled: Boolean,
+    failure: String?,
+    result: Boolean?,
+  ): String = when {
+    cancelled -> "cancelled"
+    failure != null -> "failed: $failure"
+    else -> if (result != null) "succeeded: result=$result" else "succeeded"
   }
 }
 

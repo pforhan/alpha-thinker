@@ -10,7 +10,7 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.util.now
@@ -31,7 +31,7 @@ class KoogPlanningEngineTest {
     val backend = object : PlanningBackend {
       override val executor: PromptExecutor = MultiLLMPromptExecutor(client)
       override val model: LLModel = this@KoogPlanningEngineTest.model
-      override val logCategory: LogCategory = LogCategory.RemoteInference
+      override val source: LogSource = LogSource.RemoteLLM
     }
     return KoogPlanningEngine(backend)
   }

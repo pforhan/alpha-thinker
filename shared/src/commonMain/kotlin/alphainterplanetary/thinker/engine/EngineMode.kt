@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 
 /**
  * The selectable planning backends (ENG-DESIGN.md "Engine modes"). `Lite` is
@@ -14,31 +14,31 @@ enum class EngineMode(
   val key: String,
   val label: String,
   val description: String,
-  val logCategory: LogCategory,
+  val logSource: LogSource,
 ) {
   Lite(
     key = "lite",
     label = "Lite",
     description = "Built-in question library. No network or device models — always available.",
-    logCategory = LogCategory.Hardcoded,
+    logSource = LogSource.Lite,
   ),
   OnDevice(
     key = "on-device",
     label = "On device",
     description = "System models (Gemini Nano / Apple Foundation) running locally.",
-    logCategory = LogCategory.LocalInference,
+    logSource = LogSource.LocalLLM,
   ),
   Remote(
     key = "remote",
     label = "Remote",
     description = "A cloud or localhost endpoint (OpenAI-compatible / Ollama).",
-    logCategory = LogCategory.RemoteInference,
+    logSource = LogSource.RemoteLLM,
   ),
   Downloaded(
     key = "downloaded",
     label = "Downloaded",
     description = "An in-process model installed on this device (LiteRT-LM).",
-    logCategory = LogCategory.LocalInference,
+    logSource = LogSource.LocalLLM,
   ),
   ;
 

@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
@@ -33,13 +33,13 @@ class SlowDownPlanningEngineTest {
   }
 
   @Test
-  fun `reports the delegated engine's kind`() {
+  fun `reports the delegated engine's source`() {
     val generator = SlowDownPlanningEngine(
-      delegate = TrackingPlanningEngine(logCategory = LogCategory.RemoteInference),
+      delegate = TrackingPlanningEngine(source = LogSource.RemoteLLM),
       config = MutableStateFlow(EngineDelayConfig(enabled = false)),
     )
 
-    assertEquals(LogCategory.RemoteInference, generator.logCategory)
+    assertEquals(LogSource.RemoteLLM, generator.source)
   }
 
   @Test
@@ -163,7 +163,7 @@ class SlowDownPlanningEngineTest {
 
 /** Counts calls into each [PlanningEngine] interaction. */
 private class TrackingPlanningEngine(
-  override val logCategory: LogCategory = LogCategory.Hardcoded,
+  override val source: LogSource = LogSource.Lite,
 ) : PlanningEngine {
   var titleCalls: Int = 0
   var initialCalls: Int = 0

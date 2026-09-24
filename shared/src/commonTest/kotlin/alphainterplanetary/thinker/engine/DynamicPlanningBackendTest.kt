@@ -9,7 +9,7 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,11 +22,11 @@ class DynamicPlanningBackendTest {
   private val provider = LLMProvider("fake", "Fake")
   private val remoteModel = LLModel(provider, "remote-model")
 
-  private fun backend(model: LLModel, kind: LogCategory = LogCategory.LocalInference): PlanningBackend =
+  private fun backend(model: LLModel, kind: LogSource = LogSource.LocalLLM): PlanningBackend =
     object : PlanningBackend {
       override val executor = MultiLLMPromptExecutor(StaticClient(provider))
       override val model: LLModel = model
-      override val logCategory: LogCategory = kind
+      override val source: LogSource = kind
     }
 
   @Test
@@ -42,14 +42,14 @@ class DynamicPlanningBackendTest {
   }
 
   @Test
-  fun `kind reflects the bound mode`() {
+  fun `source reflects the bound mode`() {
     val remote = backend(remoteModel)
     val dynamic = DynamicPlanningBackend(
       mode = EngineMode.Remote,
       backends = mapOf(EngineMode.Remote to remote),
     )
 
-    assertEquals(LogCategory.RemoteInference, dynamic.logCategory)
+    assertEquals(LogSource.RemoteLLM, dynamic.source)
   }
 
   @Test

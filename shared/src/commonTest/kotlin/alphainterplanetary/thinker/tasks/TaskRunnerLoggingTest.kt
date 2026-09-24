@@ -1,18 +1,18 @@
 package alphainterplanetary.thinker.tasks
 
-import alphainterplanetary.thinker.activitylog.EngineActivityEventType
+import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.testutil.RecordingActivityLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class TaskRunnerLoggingTest {
 
   @Test
-  fun `a successful task appends created then succeeded lifecycle events`() = runTest {
+  fun `a successful task appends started then succeeded rows`() = runTest {
     val log = RecordingActivityLog()
     val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
 
@@ -21,24 +21,26 @@ class TaskRunnerLoggingTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals(
-      listOf(EngineActivityEventType.Created, EngineActivityEventType.Succeeded),
-      log.events.map { it.eventType },
-      "transitions append in order, nothing else",
+      listOf("started: InitialQuestions", "succeeded"),
+      log.entries.map { it.log },
+      "lifecycle rows append in order, nothing else",
     )
     assertTrue(
-      log.events.all { it.activityId == task.id },
-      "every lifecycle event joins the task's activity id",
+      log.entries.all { it.activityId == task.id },
+      "every lifecycle row joins the task's activity id",
     )
     assertTrue(
-      log.events.all { it.projectId == "p1" && it.kind == TaskKind.InitialQuestions },
-      "lifecycle rows carry the task's project and kind",
+      log.entries.all { it.projectId == "p1" },
+      "lifecycle rows carry the task's project",
     )
-    assertTrue(log.events.first().isTerminal.not())
-    assertTrue(log.events.last().isTerminal)
+    assertTrue(
+      log.entries.all { it.category == LogCategory.TaskRun && it.source == LogSource.TaskRunner },
+      "lifecycle rows report the TaskRun category and TaskRunner source",
+    )
   }
 
   @Test
-  fun `a failing task appends a failed lifecycle event with its error`() = runTest {
+  fun `a failing task appends a failed row with its error`() = runTest {
     val log = RecordingActivityLog()
     val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
 
@@ -48,14 +50,13 @@ class TaskRunnerLoggingTest {
 
     testScheduler.advanceUntilIdle()
 
-    val terminal = log.events.last()
-    assertEquals(EngineActivityEventType.Failed, terminal.eventType)
+    val terminal = log.entries.last()
+    assertEquals("failed: model exploded", terminal.log)
     assertEquals(task.id, terminal.activityId)
-    assertEquals("model exploded", terminal.error)
   }
 
   @Test
-  fun `setProgress appends a progress event between created and terminal`() = runTest {
+  fun `setProgress updates the live task without adding a log row`() = runTest {
     val log = RecordingActivityLog()
     val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
 
@@ -67,14 +68,14 @@ class TaskRunnerLoggingTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals(
-      listOf(EngineActivityEventType.Created, EngineActivityEventType.Progress, EngineActivityEventType.Succeeded),
-      log.events.map { it.eventType },
+      listOf("started: SynopsisRewrite", "succeeded"),
+      log.entries.map { it.log },
+      "progress ticks are UI-only; the durable log keeps just start + terminal",
     )
-    assertEquals(0.5f, log.events[1].progress)
   }
 
   @Test
-  fun `enqueueResult rides the boolean answer on the succeeded event`() = runTest {
+  fun `enqueueResult rides the boolean answer on the succeeded row`() = runTest {
     val log = RecordingActivityLog()
     val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
 
@@ -82,8 +83,7 @@ class TaskRunnerLoggingTest {
 
     testScheduler.advanceUntilIdle()
 
-    assertEquals(EngineActivityEventType.Succeeded, log.events.last().eventType)
-    assertEquals(true, log.events.last().result)
+    assertEquals(listOf("started: RemainingInPhase", "succeeded: result=true"), log.entries.map { it.log })
   }
 
   @Test
@@ -97,13 +97,11 @@ class TaskRunnerLoggingTest {
 
     testScheduler.advanceUntilIdle()
 
-    assertEquals(EngineActivityEventType.Cancelled, log.events.last().eventType)
-    assertEquals("Task cancelled", log.events.last().error)
-    assertNull(log.events.last().result)
+    assertEquals(listOf("started: InitialQuestions", "cancelled"), log.entries.map { it.log })
   }
 
   @Test
-  fun `no log injected means no log events and tasks still complete`() = runTest {
+  fun `no log injected means no log rows and tasks still complete`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
 
     runner.enqueue("p1", TaskKind.InitialQuestions) {}

@@ -7,19 +7,19 @@ import androidx.room3.RoomDatabaseConstructor
 import kotlinx.coroutines.Dispatchers
 
 /**
- * The engine activity event log's own database, deliberately separate from
+ * The app-wide activity log's own database, deliberately separate from
  * [AppDatabase] (see ENG-DESIGN.md schema item 4): it grows and prunes on its
  * own schedule, and a wholesale "clear log" never touches
  * projects/questions/settings.
  */
 @Database(
-  entities = [ActivityEventEntity::class],
-  version = 1,
+  entities = [LogEntryEntity::class],
+  version = 2,
   exportSchema = false,
 )
 @ConstructedBy(ActivityDatabaseConstructor::class)
 abstract class ActivityDatabase : RoomDatabase() {
-  abstract fun activityDao(): ActivityDao
+  abstract fun logDao(): LogDao
 }
 
 @Suppress("KotlinNoActualForExpect")

@@ -1,49 +1,44 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.EngineActivityEventType
 import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
-import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.RecordingActivityLog
 import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class LoggingPlanningEngineTest {
 
   @Test
-  fun `recommendation records created and succeeded detail rows under the activity id`() = runTest {
+  fun `recommendation records input then response rows under the activity id`() = runTest {
     val log = RecordingActivityLog()
     val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
 
     val title = engine.recommendTitle("Build a rocketship", activityId = "task-1")
 
     assertEquals("Recommended", title)
-    assertEquals(2, log.events.size)
-    val created = log.events[0]
-    assertEquals("task-1", created.activityId)
-    assertEquals(EngineActivityEventType.Created, created.eventType)
-    assertEquals(TaskKind.TitleRecommendation, created.kind)
-    assertEquals(LogCategory.Hardcoded, created.logCategory)
-    assertTrue(created.parameters.orEmpty().contains("synopsis=Build a rocketship"))
-    val terminal = log.events[1]
-    assertEquals(EngineActivityEventType.Succeeded, terminal.eventType)
+    assertEquals(2, log.entries.size)
+    val input = log.entries[0]
+    assertEquals("task-1", input.activityId)
+    assertEquals(LogCategory.TitleRecommendation, input.category)
+    assertEquals(LogSource.Lite, input.source)
+    assertEquals("input: synopsis=Build a rocketship", input.log)
+    val terminal = log.entries[1]
     assertEquals("task-1", terminal.activityId)
-    assertEquals("Recommended", terminal.generationPayload)
-    assertNotNull(terminal.durationMs)
-    assertNull(terminal.error)
+    assertEquals("response: Recommended", terminal.log)
+    assertEquals(LogCategory.TitleRecommendation, terminal.category)
+    assertTrue(terminal.timestamp >= input.timestamp)
   }
 
   @Test
-  fun `initial questions record the produced texts as suggested questions`() = runTest {
+  fun `initial questions record the produced texts in the response row`() = runTest {
     val delegate = FakePlanningEngine()
     delegate.initialQuestions += question("first")
     delegate.initialQuestions += question("second")
@@ -59,16 +54,16 @@ class LoggingPlanningEngineTest {
     ).questions
 
     assertEquals(2, questions.size)
-    val terminal = log.events.last()
-    assertEquals(EngineActivityEventType.Succeeded, terminal.eventType)
-    assertEquals(TaskKind.InitialQuestions, terminal.kind)
-    assertEquals("r1", terminal.roundId)
-    assertTrue(terminal.suggestedQuestions.orEmpty().contains("first"))
-    assertTrue(terminal.suggestedQuestions.orEmpty().contains("second"))
+    val terminal = log.entries.last()
+    assertEquals(LogCategory.QuestionGeneration, terminal.category)
+    assertEquals(2, log.entries.size, "input + response, nothing else")
+    assertTrue(terminal.log.startsWith("response: 2 questions, done=false"))
+    assertTrue(terminal.log.contains("first"))
+    assertTrue(terminal.log.contains("second"))
   }
 
   @Test
-  fun `can produce more in phase records the capability answer as generation payload`() = runTest {
+  fun `can produce more in phase records the capability answer`() = runTest {
     val delegate = FakePlanningEngine()
     delegate.canProduceMore = true
     val log = RecordingActivityLog()
@@ -82,14 +77,13 @@ class LoggingPlanningEngineTest {
     )
 
     assertTrue(can)
-    val terminal = log.events.last()
-    assertEquals(EngineActivityEventType.Succeeded, terminal.eventType)
-    assertEquals(TaskKind.RemainingInPhase, terminal.kind)
-    assertEquals("true", terminal.generationPayload)
+    val terminal = log.entries.last()
+    assertEquals(LogCategory.CapabilityCheck, terminal.category)
+    assertEquals("response: canProduceMore=true", terminal.log)
   }
 
   @Test
-  fun `question generation records the done signal as generation payload`() = runTest {
+  fun `follow-up questions record the done signal in the response row`() = runTest {
     val delegate = FakePlanningEngine()
     delegate.followUpDone = true
     val log = RecordingActivityLog()
@@ -103,26 +97,25 @@ class LoggingPlanningEngineTest {
       activityId = "task-3",
     )
 
-    val terminal = log.events.last()
-    assertEquals(EngineActivityEventType.Succeeded, terminal.eventType)
-    assertEquals(TaskKind.FollowUpQuestions, terminal.kind)
-    assertEquals("done=true", terminal.generationPayload)
+    val terminal = log.entries.last()
+    assertEquals(LogCategory.QuestionGeneration, terminal.category)
+    assertTrue(terminal.log.startsWith("response: 0 questions, done=true"))
   }
 
   @Test
-  fun `records the delegated engine's kind on detail rows`() = runTest {
+  fun `records the delegated engine's source on detail rows`() = runTest {
     val delegate = FakePlanningEngine()
-    delegate.logCategory = LogCategory.RemoteInference
+    delegate.source = LogSource.RemoteLLM
     val log = RecordingActivityLog()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
     engine.recommendTitle("Build a rocketship", activityId = "task-5")
 
-    assertEquals(LogCategory.RemoteInference, log.events.first().logCategory)
+    assertEquals(LogSource.RemoteLLM, log.entries.first().source)
   }
 
   @Test
-  fun `records the full prompt on detail rows when the delegate renders prompts`() = runTest {
+  fun `records the full prompt when the delegate renders prompts`() = runTest {
     val delegate = FakePlanningEngine().let { engine ->
       object : PlanningEngine by engine, PromptRenderer {
         override fun titlePrompt(synopsis: String): String =
@@ -146,22 +139,24 @@ class LoggingPlanningEngineTest {
 
     engine.recommendTitle("Build a rocketship", activityId = "task-6")
 
-    val created = log.events.first()
-    assertEquals("SYSTEM\nTitle system\n\nUSER\nBuild a rocketship", created.promptUsed)
+    assertEquals(
+      "prompt: SYSTEM\nTitle system\n\nUSER\nBuild a rocketship",
+      log.entries.first().log,
+    )
   }
 
   @Test
-  fun `leaves prompt unused to a non-rendering delegate null`() = runTest {
+  fun `leaves prompt unused null to a non-rendering delegate`() = runTest {
     val log = RecordingActivityLog()
     val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
 
     engine.recommendTitle("Build a rocketship", activityId = "task-7")
 
-    assertNull(log.events.first().promptUsed)
+    assertTrue(log.entries.first().log.startsWith("input: synopsis="))
   }
 
   @Test
-  fun `a throwing engine records a failed detail row and still propagates`() = runTest {
+  fun `a throwing engine records an error row and still propagates`() = runTest {
     val log = RecordingActivityLog()
     val engine = LoggingPlanningEngine(delegate = ThrowingEngine(), log = log)
 
@@ -178,18 +173,17 @@ class LoggingPlanningEngineTest {
       assertEquals("model exploded", e.message)
     }
 
-    val terminal = log.events.last()
-    assertEquals(EngineActivityEventType.Failed, terminal.eventType)
+    val terminal = log.entries.last()
+    assertEquals(LogCategory.QuestionGeneration, terminal.category)
     assertEquals("task-4", terminal.activityId)
-    assertEquals("model exploded", terminal.error)
-    assertNotNull(terminal.durationMs, "a failed call still records how long it burned before erroring")
+    assertEquals("error: model exploded", terminal.log)
   }
 
   private fun question(text: String): Question =
     Question(id = text, text = text, timestamp = now(), roundId = "r1")
 
   private class ThrowingEngine : PlanningEngine {
-    override val logCategory: LogCategory = LogCategory.Hardcoded
+    override val source: LogSource = LogSource.Lite
 
     override suspend fun recommendTitle(synopsis: String, activityId: String): String =
       throw PlanningEngine.AnalysisFailure("model exploded")

@@ -1,18 +1,12 @@
 package alphainterplanetary.thinker.ui.screens
 
-import alphainterplanetary.thinker.activitylog.EngineActivityEvent
-import alphainterplanetary.thinker.activitylog.EngineActivityEventType
-import alphainterplanetary.thinker.activitylog.LogCategory
-import alphainterplanetary.thinker.tasks.TaskKind
-import alphainterplanetary.thinker.ui.format.title
+import alphainterplanetary.thinker.activitylog.LogActivity
+import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
-import alphainterplanetary.thinker.ui.viewmodel.ActivityLogItem
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
-import alphainterplanetary.thinker.ui.viewmodel.decodeQuestionCount
 import alphainterplanetary.thinker.util.formatTaskDuration
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,30 +46,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 /**
- * Diagnostic viewer for the append-only EngineActivity log (ENG-DESIGN.md schema
- * item 4). Launched from Settings → Activity Log.
+ * Diagnostic viewer for the app-wide activity log (ENG-DESIGN.md schema item 4).
+ * Launched from Settings → Activity Log.
  *
- * Each card is one activity ([EngineActivityEvent.activityId]): its collapsed
- * headline summarizes the terminal result (question counts, `done` flag,
- * remaining-in-phase answer, title, or error), and tapping expands the full
- * ordered history plus any child `Lookup` tool-call rows
- * ([EngineActivityEvent.parentActivityId]) with their arguments, results and
- * per-call latency.
+ * Each card is one activity (the [LogEntry] rows sharing an
+ * [LogEntry.activityId]): its collapsed headline summarizes the outcome (a
+ * question count + `done` flag, a capability answer, a produced title, or an
+ * error), and tapping expands the full ordered rows with timestamps.
  *
  * This addresses IMPLEMENTATION-PLAN.md line 228 and the "why has the backend
- * stopped offering questions" audit: a `RemainingInPhase` activity whose
- * [EngineActivityEvent.result] is `false`, a `FollowUpQuestions` batch that
- * produced zero questions but marked `done`, or a failed/cancelled generation
- * task with its error message all read directly off the collapsed row.
+ * stopped offering questions" audit: a `RemainingInPhase` activity whose answer
+ * is `false`, a `FollowUpQuestions` batch that produced zero questions but
+ * marked `done`, or a failed/cancelled generation task with its error message
+ * all read directly off the collapsed row.
  *
  * It is read-only; the delete action wipes the whole log (no confirmation) and
  * nothing else is mutated.
@@ -133,7 +121,7 @@ fun ActivityLogScreen(
         verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
       ) {
         items(items, key = { it.activityId }) { item ->
-          ActivityLogCard(item = item)
+          ActivityLogCard(activity = item)
         }
       }
     }
@@ -141,15 +129,14 @@ fun ActivityLogScreen(
 }
 
 /**
- * One activity as a tappable card: headline summary up top, full event history
- * and child tool calls revealed when expanded (runs the whole activity list in
- * a flat scroll — each card owns its own expand state via [mutableStateOf]).
+ * One activity as a tappable card: headline summary up top, the full ordered
+ * rows revealed when expanded (each card owns its own expand state via
+ * [mutableStateOf]). Failed/cancelled activities tint the summary error-red so
+ * the audit (IMPLEMENTATION-PLAN.md line 228) works off the collapsed view.
  */
 @Composable
-private fun ActivityLogCard(item: ActivityLogItem) {
+private fun ActivityLogCard(activity: LogActivity) {
   var expanded by remember { mutableStateOf(false) }
-  val latest = item.latest
-  val terminal = item.terminal
 
   Card(
     onClick = { expanded = !expanded },
@@ -165,17 +152,19 @@ private fun ActivityLogCard(item: ActivityLogItem) {
         Column(modifier = Modifier.weight(1f)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-              text = item.kind?.title ?: toolLabel(item.logCategory),
+              text = activity.category.label,
               style = MaterialTheme.typography.titleSmall,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
-            EventTypeChip(eventType = terminal?.eventType ?: latest.eventType)
+            activity.source?.let { source ->
+              Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
+              SourceChip(label = source.label, hasError = activity.hasError)
+            }
           }
           Spacer(modifier = Modifier.height(Dimens.TightGap))
           Text(
-            text = secondaryLine(item),
+            text = secondaryLine(activity),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
@@ -190,9 +179,9 @@ private fun ActivityLogCard(item: ActivityLogItem) {
 
       Spacer(modifier = Modifier.height(Dimens.TightGap))
       Text(
-        text = summaryLine(item),
+        text = activity.summary,
         style = MaterialTheme.typography.bodyMedium,
-        color = summaryColor(terminal?.eventType ?: latest.eventType),
+        color = summaryColor(activity.hasError),
         maxLines = 3,
         overflow = TextOverflow.Ellipsis,
       )
@@ -202,22 +191,9 @@ private fun ActivityLogCard(item: ActivityLogItem) {
           Spacer(modifier = Modifier.height(Dimens.ContentGap))
           HorizontalDivider()
           Spacer(modifier = Modifier.height(Dimens.ContentGap))
-          item.history.forEach { event ->
-            EventDetailRow(event = event)
+          activity.entries.forEach { entry ->
+            EntryRow(entry = entry)
             Spacer(modifier = Modifier.height(Dimens.ContentGap))
-          }
-          if (item.children.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(Dimens.TightGap))
-            Text(
-              text = "Tool calls",
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(Dimens.TightGap))
-            item.children.forEach { child ->
-              ToolCallRow(event = child)
-              Spacer(modifier = Modifier.height(Dimens.TightGap))
-            }
           }
         }
       }
@@ -225,174 +201,81 @@ private fun ActivityLogCard(item: ActivityLogItem) {
   }
 }
 
-/** Compact "activityId • engine • project/round • time [• duration]" line. */
-private fun secondaryLine(item: ActivityLogItem): String {
+/** Compact "activityId • source • time [• duration]" line. */
+private fun secondaryLine(activity: LogActivity): String {
   val pieces = mutableListOf<String>()
-  pieces += item.activityId.take(8)
-  item.logCategory?.let { pieces += it.name }
-  item.latest.projectId?.let { pieces += "proj ${it.take(6)}" }
-  item.latest.roundId?.let { pieces += "round ${it.take(6)}" }
-  pieces += formatInstant(item.latest.timestamp)
-  item.latest.durationMs?.let { pieces += formatTaskDuration(it.milliseconds) }
+  pieces += activity.activityId.take(8)
+  pieces += formatInstant(activity.latest.timestamp)
+  activity.duration?.let { pieces += "duration ${formatTaskDuration(it)}" }
   return pieces.joinToString("  •  ")
 }
 
-/**
- * One-line default summary of the activity's outcome: question counts plus the
- * `done` flag for question batches, the capability answer for remaining-in-phase,
- * the produced title, or the carried error/progress.
- *
- * The headline is derived from the whole activity, not just its newest row: a
- * generation task writes lifecycle rows (`TaskRunner`) *and* interaction-detail
- * rows (`LoggingPlanningEngine`) under the same [EngineActivityEvent.activityId],
- * and only the detail rows carry the produced questions/[EngineActivityEvent.generationPayload].
- */
-private fun summaryLine(item: ActivityLogItem): String {
-  val terminal = item.terminal
-  val type = terminal?.eventType ?: item.latest.eventType
-  val outcome = when (type) {
-    EngineActivityEventType.Succeeded -> {
-      buildString {
-        when (item.kind) {
-          TaskKind.InitialQuestions,
-          TaskKind.FollowUpQuestions,
-          -> {
-            val count = item.totalQuestions
-            append(
-              when {
-                count == 0 -> "no questions"
-                count == 1 -> "1 question"
-                else -> "$count questions"
-              }
-            )
-            item.detailPayload?.let { payload ->
-              if (payload.startsWith("done=")) append(" — $payload") else append(" — $payload")
-            }
-          }
-
-          TaskKind.RemainingInPhase -> append(
-            "can produce more: ${terminal?.result ?: item.detailPayload ?: "?"}"
-          )
-
-          TaskKind.TitleRecommendation -> append(
-            "title: ${item.detailPayload ?: terminal?.result?.toString() ?: "?"}"
-          )
-
-          TaskKind.SynopsisRewrite,
-          TaskKind.AutoArchive,
-          -> append(item.detailPayload ?: terminal?.result?.toString() ?: "done")
-
-          null -> append(item.detailPayload ?: item.latest.parameters ?: "done")
-        }
-      }
-    }
-
-    EngineActivityEventType.Failed,
-    EngineActivityEventType.Cancelled,
-    -> "Error: ${terminal?.error ?: item.latest.error ?: "unknown"}"
-
-    EngineActivityEventType.Created,
-    EngineActivityEventType.Progress,
-    -> {
-      val params = item.latest.parameters
-      val progressLine = item.latest.progress?.let { " — ${(it * 100).toInt()}%" } ?: ""
-      params?.let { "started: $it$progressLine" } ?: "in progress$progressLine"
-    }
-  }
-  return outcome.normalizeDisplay()
-}
-
 @Composable
-private fun summaryColor(eventType: EngineActivityEventType): Color =
-  when (eventType) {
-    EngineActivityEventType.Failed,
-    EngineActivityEventType.Cancelled,
-    -> MaterialTheme.colorScheme.error
+private fun summaryColor(hasError: Boolean): Color =
+  if (hasError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
 
-    EngineActivityEventType.Succeeded -> MaterialTheme.colorScheme.primary
-    EngineActivityEventType.Created,
-    EngineActivityEventType.Progress,
-    -> MaterialTheme.colorScheme.onSurface
-  }
-
-/** One full history event: type chip, time, duration and every populated payload field. */
+/** One immutable log row: timestamp and full text, prompt rows verbatim. */
 @Composable
-private fun EventDetailRow(event: EngineActivityEvent) {
+private fun EntryRow(entry: LogEntry) {
   var showFull by remember { mutableStateOf(false) }
+  val isVerbose = entry.log.startsWith("prompt:") || entry.log.startsWith("response:")
+  val valueColor = when {
+    entry.log.startsWith("failed:") || entry.log.startsWith("error:") || entry.log == "cancelled" -> {
+      MaterialTheme.colorScheme.error
+    }
+    isVerbose -> MaterialTheme.colorScheme.onSurface
+    else -> MaterialTheme.colorScheme.onSurfaceVariant
+  }
   Column {
     Row(verticalAlignment = Alignment.CenterVertically) {
-      EventTypeChip(eventType = event.eventType)
-      Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
       Text(
-        text = formatInstant(event.timestamp),
+        text = formatInstant(entry.timestamp),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
-      event.durationMs?.let {
-        Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
-        Text(
-          text = formatTaskDuration(it.milliseconds),
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-      if (event.hasFullDetail()) {
-        Spacer(modifier = Modifier.weight(1f))
+      Spacer(modifier = Modifier.weight(1f))
+      if (entry.log.length > 400) {
         IconButton(onClick = { showFull = true }) {
           Icon(
             imageVector = Icons.Default.Info,
-            contentDescription = "Show full event details",
+            contentDescription = "Show full entry",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
           )
         }
       }
     }
     Spacer(modifier = Modifier.height(Dimens.TightGap))
-    val labels = mutableListOf<Pair<String, String>>()
-    event.progress?.let { labels += "progress" to "${(it * 100).toInt()}%" }
-    event.result?.let { labels += "result" to it.toString() }
-    event.error?.let { labels += "error" to it }
-    event.promptUsed?.let { labels += "prompt" to it }
-    event.parameters?.let { labels += "params" to it }
-    event.generationPayload?.let { labels += "payload" to it }
-    event.suggestedQuestions?.let { labels += "questions" to it }
-    labels.forEach { (label, value) ->
-      LabeledValueRow(label = label, value = value, verbose = label == "prompt")
-    }
+    Text(
+      text = entry.log,
+      style = MaterialTheme.typography.bodySmall,
+      color = valueColor,
+      maxLines = if (isVerbose) 12 else 6,
+      overflow = TextOverflow.Ellipsis,
+    )
   }
   if (showFull) {
-    FullEventDialog(event = event, onDismiss = { showFull = false })
+    FullEntryDialog(entry = entry, onDismiss = { showFull = false })
   }
 }
 
-/** Whether a detail row has payload worth opening the full-read dialog for. */
-private fun EngineActivityEvent.hasFullDetail(): Boolean =
-  promptUsed != null || parameters != null || generationPayload != null || suggestedQuestions != null
-
-/** Modal with every populated field of [event], rendered in full (no truncation). */
+/** Modal with the full text of [entry], rendered untruncated. */
 @Composable
-private fun FullEventDialog(
-  event: EngineActivityEvent,
+private fun FullEntryDialog(
+  entry: LogEntry,
   onDismiss: () -> Unit,
 ) {
   AlertDialog(
     onDismissRequest = onDismiss,
-    title = { Text("Full event") },
+    title = { Text("Full entry") },
     text = {
       Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
       ) {
-        FullFieldRow(label = "event", value = event.eventType.name)
-        FullFieldRow(label = "time", value = formatInstant(event.timestamp))
-        event.durationMs?.let { FullFieldRow(label = "duration", value = formatTaskDuration(it.milliseconds)) }
-        event.progress?.let { FullFieldRow(label = "progress", value = "${(it * 100).toInt()}%") }
-        event.result?.let { FullFieldRow(label = "result", value = it.toString()) }
-        event.error?.let { FullFieldRow(label = "error", value = it) }
-        event.promptUsed?.let { FullFieldRow(label = "prompt", value = it) }
-        event.parameters?.let { FullFieldRow(label = "params", value = it) }
-        event.generationPayload?.let { FullFieldRow(label = "payload", value = it) }
-        event.suggestedQuestions?.let { FullFieldRow(label = "questions", value = it) }
+        Text(
+          text = entry.log,
+          style = MaterialTheme.typography.bodySmall,
+        )
       }
     },
     confirmButton = {
@@ -403,118 +286,16 @@ private fun FullEventDialog(
   )
 }
 
-/** One label+value pair rendered completely, for the full-read dialog. */
+/** Small rounded chip for an activity's producer, tinted red on failure. */
 @Composable
-private fun FullFieldRow(
+private fun SourceChip(
   label: String,
-  value: String,
+  hasError: Boolean,
 ) {
-  Column {
-    Text(
-      text = label,
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Text(
-      text = value,
-      style = MaterialTheme.typography.bodySmall,
-    )
-  }
-}
-
-/** A child `Lookup` tool call: label, arguments, result, per-call latency. */
-@Composable
-private fun ToolCallRow(event: EngineActivityEvent) {
-  Column(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clip(BadgeShape)
-      .background(MaterialTheme.colorScheme.surfaceVariant),
-  ) {
-    Row(
-      modifier = Modifier.padding(Dimens.PillHorizontalPadding, Dimens.PillVerticalPadding),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Text(
-        text = toolName(event),
-        modifier = Modifier.weight(1f),
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-      event.durationMs?.let {
-        Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
-        Text(
-          text = formatTaskDuration(it.milliseconds),
-          style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-    }
-    event.error?.let { error ->
-      Text(
-        text = "error: $error",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.error,
-        modifier = Modifier.padding(horizontal = Dimens.PillHorizontalPadding),
-      )
-    }
-    event.generationPayload?.let { result ->
-      LabeledValueRow(
-        label = "result",
-        value = result,
-        horizontalPadding = Dimens.PillHorizontalPadding,
-      )
-    }
-    event.parameters?.let { arguments ->
-      LabeledValueRow(
-        label = "args",
-        value = arguments,
-        horizontalPadding = Dimens.PillHorizontalPadding,
-      )
-    }
-  }
-}
-
-@Composable
-private fun LabeledValueRow(
-  label: String,
-  value: String,
-  horizontalPadding: Dp = 0.dp,
-  verbose: Boolean = false,
-) {
-  Column(modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding)) {
-    Text(
-      text = label,
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Text(
-      text = value,
-      style = MaterialTheme.typography.bodySmall,
-      maxLines = if (verbose) 12 else 6,
-      overflow = TextOverflow.Ellipsis,
-    )
-    Spacer(modifier = Modifier.height(Dimens.TightGap))
-  }
-}
-
-/** Small rounded chip for an event lifecycle stage, colored by its semantics. */
-@Composable
-private fun EventTypeChip(eventType: EngineActivityEventType) {
-  val (container, content) = when (eventType) {
-    EngineActivityEventType.Succeeded -> {
-      MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
-    }
-    EngineActivityEventType.Failed,
-    EngineActivityEventType.Cancelled,
-    -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-    EngineActivityEventType.Progress -> {
-      MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-    }
-    EngineActivityEventType.Created -> {
-      MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-    }
+  val (container, content) = if (hasError) {
+    MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+  } else {
+    MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
   }
   Surface(
     color = container,
@@ -522,7 +303,7 @@ private fun EventTypeChip(eventType: EngineActivityEventType) {
     shape = BadgeShape,
   ) {
     Text(
-      text = eventType.name,
+      text = label,
       style = MaterialTheme.typography.labelSmall,
       modifier = Modifier.padding(
         horizontal = Dimens.PillHorizontalPadding,
@@ -532,29 +313,9 @@ private fun EventTypeChip(eventType: EngineActivityEventType) {
   }
 }
 
-private fun toolLabel(category: LogCategory?): String {
-  if (category == LogCategory.Lookup) return "Tool call"
-  return category?.name ?: "Activity"
-}
-
-/** The tool name for a Lookup row, best-effort from its parameters. */
-private fun toolName(event: EngineActivityEvent): String {
-  val params = event.parameters ?: return "lookup"
-  // Parameters are recorded as "name=..., args=..." (or free text) by future
-  // tool-calling engines; fall back to the raw parameters when no name crops up.
-  val after = params.substringAfter("name=", missingDelimiterValue = "")
-  if (after.isNotEmpty()) {
-    val end = after.indexOfFirst { it == ',' || it == '&' || it == ';' }
-    return if (end == -1) after.trim() else after.take(end).trim()
-  }
-  return params.take(40)
-}
-
 private fun formatInstant(instant: Instant): String {
   val iso = instant.toString()
   val date = iso.substringBefore('T')
   val time = iso.substringAfter('T').substringBefore('.')
   return "$date $time"
 }
-
-private fun String.normalizeDisplay(): String = replace(Regex("\\s+"), " ").trim()

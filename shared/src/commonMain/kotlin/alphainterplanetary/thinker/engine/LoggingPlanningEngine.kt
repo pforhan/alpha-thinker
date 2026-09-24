@@ -1,56 +1,47 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.EngineActivityEvent
-import alphainterplanetary.thinker.activitylog.EngineActivityEventType
-import alphainterplanetary.thinker.activitylog.EngineActivityLog
+import alphainterplanetary.thinker.activitylog.ActivityLog
 import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogEntry
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
-import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.util.now
-import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
 
 /**
- * The interaction-detail writer half of the engine activity log (ENG-DESIGN.md
- * schema item 4, write path): it decorates a [PlanningEngine] and records a
- * `Created` event with the call's inputs, then a terminal success/failure event
- * with the produced payload and duration — all grouped under the caller's
- * [PlanningEngine activityId] (a generation task id), so they join the
- * `TaskRunner`'s lifecycle rows for the same activity.
- *
- * This is the DI seam future tool-calling engines extend too: a child tool call
- * is recorded as a separate `Lookup` activity whose [EngineActivityEvent.parentActivityId]
- * points back at the requesting inference's id.
+ * The interaction-detail writer half of the app-wide activity log (ENG-DESIGN.md
+ * schema item 4, write path): it decorates a [PlanningEngine] and appends an
+ * input row (the rendered prompt, or a compact `input:` summary when the
+ * delegate doesn't render prompts), then a terminal `response:`/`error:`/
+ * `cancelled` row with the produced payload — both grouped under the caller's
+ * [PlanningEngine activityId] (a generation task id), where they join the
+ * `TaskRunner`'s `TaskRun` rows for the same activity. The [LogCategory] is
+ * chosen per interaction and [LogSource] reflects whichever engine actually ran.
  */
 class LoggingPlanningEngine(
   private val delegate: PlanningEngine,
-  private val log: EngineActivityLog,
+  private val log: ActivityLog,
 ) : PlanningEngine {
 
-  override val logCategory: LogCategory
-    get() = delegate.logCategory
+  override val source: LogSource
+    get() = delegate.source
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
-    val created = baseEvent(
-      kind = TaskKind.TitleRecommendation,
+    append(
+      category = LogCategory.TitleRecommendation,
       activityId = activityId,
-      parameters = "synopsis=$synopsis",
-      promptUsed = (delegate as? PromptRenderer)?.titlePrompt(synopsis),
+      text = input((delegate as? PromptRenderer)?.titlePrompt(synopsis)) { "input: synopsis=$synopsis" },
     )
-    log.append(created)
-    val start = TimeSource.Monotonic.markNow()
     return try {
       val title = delegate.recommendTitle(synopsis, activityId)
-      finish(created, start, generationPayload = title)
+      append(category = LogCategory.TitleRecommendation, activityId = activityId, text = "response: $title")
       title
     } catch (e: CancellationException) {
-      finish(created, start, error = "cancelled")
+      append(category = LogCategory.TitleRecommendation, activityId = activityId, text = "cancelled")
       throw e
     } catch (e: Exception) {
-      finish(created, start, error = e.message ?: e.toString())
+      append(category = LogCategory.TitleRecommendation, activityId = activityId, text = error(e))
       throw e
     }
   }
@@ -62,24 +53,26 @@ class LoggingPlanningEngine(
     phase: Phase,
     activityId: String,
   ): QuestionBatch {
-    val created = baseEvent(
-      kind = TaskKind.InitialQuestions,
+    append(
+      category = LogCategory.QuestionGeneration,
       activityId = activityId,
-      roundId = roundId,
-      parameters = "title=$editableTitle, phase=$phase, synopsis=$synopsis",
-      promptUsed = (delegate as? PromptRenderer)?.initialQuestionsPrompt(editableTitle, synopsis, phase),
+      text = input((delegate as? PromptRenderer)?.initialQuestionsPrompt(editableTitle, synopsis, phase)) {
+        "input: phase=$phase, synopsis=$synopsis"
+      },
     )
-    log.append(created)
-    val start = TimeSource.Monotonic.markNow()
     return try {
       val batch = delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase, activityId)
-      finish(created, start, suggestedQuestions = texts(batch.questions), generationPayload = "done=${batch.done}")
+      append(
+        category = LogCategory.QuestionGeneration,
+        activityId = activityId,
+        text = "response: ${batchResponse(batch)}",
+      )
       batch
     } catch (e: CancellationException) {
-      finish(created, start, error = "cancelled")
+      append(category = LogCategory.QuestionGeneration, activityId = activityId, text = "cancelled")
       throw e
     } catch (e: Exception) {
-      finish(created, start, error = e.message ?: e.toString())
+      append(category = LogCategory.QuestionGeneration, activityId = activityId, text = error(e))
       throw e
     }
   }
@@ -91,26 +84,28 @@ class LoggingPlanningEngine(
     phase: Phase,
     activityId: String,
   ): QuestionBatch {
-    val created = baseEvent(
-      kind = TaskKind.FollowUpQuestions,
+    append(
+      category = LogCategory.QuestionGeneration,
       activityId = activityId,
-      roundId = roundId,
-      parameters = "phase=$phase, previousQuestions=${previousQuestions.size}",
-      promptUsed = (delegate as? PromptRenderer)?.followUpQuestionsPrompt(synopsis, previousQuestions, phase),
+      text = input((delegate as? PromptRenderer)?.followUpQuestionsPrompt(synopsis, previousQuestions, phase)) {
+        "input: phase=$phase, previous questions=${previousQuestions.size}"
+      },
     )
-    log.append(created)
-    val start = TimeSource.Monotonic.markNow()
     return try {
       val batch = delegate.generateFollowUpQuestions(
         synopsis, previousQuestions, roundId, phase, activityId
       )
-      finish(created, start, suggestedQuestions = texts(batch.questions), generationPayload = "done=${batch.done}")
+      append(
+        category = LogCategory.QuestionGeneration,
+        activityId = activityId,
+        text = "response: ${batchResponse(batch)}",
+      )
       batch
     } catch (e: CancellationException) {
-      finish(created, start, error = "cancelled")
+      append(category = LogCategory.QuestionGeneration, activityId = activityId, text = "cancelled")
       throw e
     } catch (e: Exception) {
-      finish(created, start, error = e.message ?: e.toString())
+      append(category = LogCategory.QuestionGeneration, activityId = activityId, text = error(e))
       throw e
     }
   }
@@ -121,66 +116,53 @@ class LoggingPlanningEngine(
     phase: Phase,
     activityId: String,
   ): Boolean {
-    val created = baseEvent(
-      kind = TaskKind.RemainingInPhase,
+    append(
+      category = LogCategory.CapabilityCheck,
       activityId = activityId,
-      parameters = "phase=$phase, previousQuestions=${previousQuestions.size}",
+      text = "input: phase=$phase, previous questions=${previousQuestions.size}",
     )
-    log.append(created)
-    val start = TimeSource.Monotonic.markNow()
     return try {
       val can = delegate.canProduceMoreInPhase(synopsis, previousQuestions, phase, activityId)
-      finish(created, start, generationPayload = can.toString())
+      append(category = LogCategory.CapabilityCheck, activityId = activityId, text = "response: canProduceMore=$can")
       can
     } catch (e: CancellationException) {
-      finish(created, start, error = "cancelled")
+      append(category = LogCategory.CapabilityCheck, activityId = activityId, text = "cancelled")
       throw e
     } catch (e: Exception) {
-      finish(created, start, error = e.message ?: e.toString())
+      append(category = LogCategory.CapabilityCheck, activityId = activityId, text = error(e))
       throw e
     }
   }
 
-  private fun baseEvent(
-    kind: TaskKind,
-    activityId: String,
-    roundId: String? = null,
-    parameters: String,
-    promptUsed: String? = null,
-  ): EngineActivityEvent = EngineActivityEvent(
-    activityId = activityId,
-    roundId = roundId,
-    kind = kind,
-    logCategory = this.logCategory,
-    eventType = EngineActivityEventType.Created,
-    parameters = parameters,
-    promptUsed = promptUsed,
-    timestamp = now(),
-  )
+  private fun input(prompt: String?, fallback: () -> String): String =
+    if (prompt != null) "prompt: $prompt" else fallback()
 
-  private suspend fun finish(
-    created: EngineActivityEvent,
-    start: TimeMark,
-    error: String? = null,
-    generationPayload: String? = null,
-    suggestedQuestions: String? = null,
+  private fun error(e: Exception): String = "error: ${e.message ?: e.toString()}"
+
+  private fun batchResponse(batch: QuestionBatch): String = buildString {
+    val count = batch.questions.size
+    append(if (count == 1) "1 question" else "$count questions")
+    append(", done=${batch.done}")
+    batch.questions.forEach { question ->
+      append("\n• ")
+      append(question.text)
+    }
+  }
+
+  private suspend fun append(
+    category: LogCategory,
+    activityId: String,
+    text: String,
   ) {
     log.append(
-      created.copy(
-        eventId = null,
-        eventType = if (error == null) {
-          EngineActivityEventType.Succeeded
-        } else {
-          EngineActivityEventType.Failed
-        },
-        error = error,
-        generationPayload = generationPayload,
-        suggestedQuestions = suggestedQuestions,
-        durationMs = start.elapsedNow().inWholeMilliseconds,
+      LogEntry(
+        projectId = null,
+        activityId = activityId,
+        category = category,
+        source = this.source,
+        log = text,
         timestamp = now(),
       )
     )
   }
-
-  private fun texts(questions: List<Question>): String = Json.encodeToString(questions.map { it.text })
 }

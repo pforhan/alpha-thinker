@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.QuestionBatch
@@ -151,7 +151,7 @@ class ProjectRepositoryTest {
   @Test
   fun `createProject keeps the shell when initial generation fails`() = runTest {
     val failing = object : PlanningEngine {
-      override val logCategory: LogCategory = LogCategory.Hardcoded
+      override val source: LogSource = LogSource.Lite
 
       override suspend fun recommendTitle(synopsis: String, activityId: String): String = "Title"
 
