@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.activitylog.LogActivity
 import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.viewmodel.ActivityLogItem
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
 import alphainterplanetary.thinker.util.formatTaskDuration
 import androidx.compose.animation.AnimatedVisibility
@@ -120,8 +121,8 @@ fun ActivityLogScreen(
           .padding(paddingValues),
         verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
       ) {
-        items(items, key = { it.activityId }) { item ->
-          ActivityLogCard(activity = item)
+        items(items, key = { it.activity.activityId }) { item ->
+          ActivityLogCard(item = item)
         }
       }
     }
@@ -135,7 +136,8 @@ fun ActivityLogScreen(
  * the audit (IMPLEMENTATION-PLAN.md line 228) works off the collapsed view.
  */
 @Composable
-private fun ActivityLogCard(activity: LogActivity) {
+private fun ActivityLogCard(item: ActivityLogItem) {
+  val activity = item.activity
   var expanded by remember { mutableStateOf(false) }
 
   Card(
@@ -164,7 +166,7 @@ private fun ActivityLogCard(activity: LogActivity) {
           }
           Spacer(modifier = Modifier.height(Dimens.TightGap))
           Text(
-            text = secondaryLine(activity),
+            text = secondaryLine(activity, item.projectLabel),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
@@ -201,10 +203,11 @@ private fun ActivityLogCard(activity: LogActivity) {
   }
 }
 
-/** Compact "activityId • source • time [• duration]" line. */
-private fun secondaryLine(activity: LogActivity): String {
+/** Compact "project • time [• duration]" line; the project title is resolved
+ * at display time (deleted projects fall back to their id). */
+private fun secondaryLine(activity: LogActivity, projectLabel: String?): String {
   val pieces = mutableListOf<String>()
-  pieces += activity.activityId.take(8)
+  projectLabel?.let { pieces += it }
   pieces += formatInstant(activity.latest.timestamp)
   activity.duration?.let { pieces += "duration ${formatTaskDuration(it)}" }
   return pieces.joinToString("  •  ")

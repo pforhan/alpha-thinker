@@ -72,7 +72,7 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
       }
 
       AppRoute.ActivityLog -> {
-        val vm = remember { ActivityLogViewModel(appComponent.activityLog, appComponent.appScope) }
+        val vm = remember { ActivityLogViewModel(appComponent.activityLog, appComponent.projectRepository, appComponent.appScope) }
         ActivityLogScreen(
           viewModel = vm,
           onBack = { route = AppRoute.Settings },

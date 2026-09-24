@@ -25,6 +25,10 @@ class LogActivity private constructor(
   val category: LogCategory
     get() = entries.first().category
 
+  /** The activity's project — the first populated project id across its rows, if any. */
+  val projectId: String?
+    get() = entries.firstNotNullOfOrNull { it.projectId }
+
   /** The first populated source across the activity's rows. */
   val source: LogSource?
     get() = entries.firstNotNullOfOrNull { it.source }

@@ -119,6 +119,19 @@ class LogActivityTest {
   }
 
   @Test
+  fun `projectId is the first populated project id across the rows`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      ).map { it.copy(projectId = "p1") }
+    ).single()
+
+    assertEquals("p1", activity.projectId)
+    assertNull(titleActivity(listOf(entry(1, "task-1", "capability notice", LogCategory.Info, LogSource.App))).single().projectId)
+  }
+
+  @Test
   fun `category is the activity's shared category`() {
     val activity = titleActivity(
       listOf(
