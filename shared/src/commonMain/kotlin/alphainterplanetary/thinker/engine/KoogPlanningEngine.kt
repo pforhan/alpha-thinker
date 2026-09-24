@@ -30,10 +30,25 @@ import kotlin.time.Instant
  */
 class KoogPlanningEngine(
   private val backend: PlanningBackend,
-) : PlanningEngine {
+) : PlanningEngine, PromptRenderer {
 
   override val logCategory: LogCategory
     get() = backend.logCategory
+
+  override fun titlePrompt(synopsis: String): String =
+    render(TitleSystemPrompt, titleUserPrompt(synopsis))
+
+  override fun initialQuestionsPrompt(
+    editableTitle: String,
+    synopsis: String,
+    phase: Phase,
+  ): String = render(QuestionsSystemPrompt, initialUserPrompt(editableTitle, synopsis, phase))
+
+  override fun followUpQuestionsPrompt(
+    synopsis: String,
+    previousQuestions: List<Question>,
+    phase: Phase,
+  ): String = render(QuestionsSystemPrompt, followUpUserPrompt(synopsis, phase, previousQuestions.map { it.text }))
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     val text = ask(PromptRecommendTitle) {
@@ -84,6 +99,9 @@ class KoogPlanningEngine(
     phase: Phase,
     activityId: String,
   ): Boolean = true
+
+  private fun render(system: String, user: String): String =
+    "SYSTEM\n$system\n\nUSER\n$user"
 
   private suspend fun ask(promptId: String, content: PromptBuilder.() -> Unit): String {
     val assistant = try {

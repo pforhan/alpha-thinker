@@ -69,6 +69,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 fun SettingsScreen(
   appComponent: AppComponent,
   onBack: () -> Unit,
+  onOpenActivityLog: () -> Unit = {},
 ) {
   val viewModel = remember {
     SettingsViewModel(
@@ -168,6 +169,13 @@ fun SettingsScreen(
           "complete, and one with very long text in every field to stress-test the layout.",
         isLoading = uiState == SettingsUiState.Generating,
         onClick = { viewModel.generateSampleProjects() },
+      )
+      ToolItem(
+        title = "Activity Log",
+        description = "View the append-only engine activity log: generation tasks, planning-engine interactions, tool calls and diagnostics.",
+        isLoading = false,
+        buttonLabel = "Open",
+        onClick = { onOpenActivityLog() },
       )
       when (val state = uiState) {
         SettingsUiState.Idle, SettingsUiState.Generating -> {
@@ -542,6 +550,7 @@ private fun ToolItem(
   title: String,
   description: String,
   isLoading: Boolean,
+  buttonLabel: String = "Generate",
   onClick: () -> Unit,
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
@@ -566,7 +575,7 @@ private fun ToolItem(
       )
       Spacer(modifier = Modifier.height(Dimens.SectionGap))
       Button(onClick = onClick, enabled = !isLoading) {
-        Text(text = if (isLoading) "Generating..." else "Generate")
+        Text(text = if (isLoading) "Generating..." else buttonLabel)
       }
     }
   }

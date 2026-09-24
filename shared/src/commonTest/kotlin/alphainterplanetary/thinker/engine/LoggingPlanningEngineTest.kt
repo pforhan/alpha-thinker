@@ -122,6 +122,45 @@ class LoggingPlanningEngineTest {
   }
 
   @Test
+  fun `records the full prompt on detail rows when the delegate renders prompts`() = runTest {
+    val delegate = FakePlanningEngine().let { engine ->
+      object : PlanningEngine by engine, PromptRenderer {
+        override fun titlePrompt(synopsis: String): String =
+          "SYSTEM\nTitle system\n\nUSER\n$synopsis"
+
+        override fun initialQuestionsPrompt(
+          editableTitle: String,
+          synopsis: String,
+          phase: Phase,
+        ): String = "SYSTEM\nQuestions system\n\nUSER\n$editableTitle / $synopsis / ${phase.label}"
+
+        override fun followUpQuestionsPrompt(
+          synopsis: String,
+          previousQuestions: List<Question>,
+          phase: Phase,
+        ): String = "SYSTEM\nQuestions system\n\nUSER\n$synopsis"
+      }
+    }
+    val log = RecordingActivityLog()
+    val engine = LoggingPlanningEngine(delegate = delegate, log = log)
+
+    engine.recommendTitle("Build a rocketship", activityId = "task-6")
+
+    val created = log.events.first()
+    assertEquals("SYSTEM\nTitle system\n\nUSER\nBuild a rocketship", created.promptUsed)
+  }
+
+  @Test
+  fun `leaves prompt unused to a non-rendering delegate null`() = runTest {
+    val log = RecordingActivityLog()
+    val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
+
+    engine.recommendTitle("Build a rocketship", activityId = "task-7")
+
+    assertNull(log.events.first().promptUsed)
+  }
+
+  @Test
   fun `a throwing engine records a failed detail row and still propagates`() = runTest {
     val log = RecordingActivityLog()
     val engine = LoggingPlanningEngine(delegate = ThrowingEngine(), log = log)

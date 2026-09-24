@@ -2,11 +2,13 @@ package alphainterplanetary.thinker.ui.navigation
 
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.ui.components.GenerationTaskBar
+import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
 import alphainterplanetary.thinker.ui.screens.ProjectDetailScreen
 import alphainterplanetary.thinker.ui.screens.ProjectListScreen
 import alphainterplanetary.thinker.ui.screens.SettingsScreen
 import alphainterplanetary.thinker.ui.screens.TaskManagerScreen
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -65,6 +67,15 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
         SettingsScreen(
           appComponent = appComponent,
           onBack = { route = AppRoute.ProjectList },
+          onOpenActivityLog = { route = AppRoute.ActivityLog },
+        )
+      }
+
+      AppRoute.ActivityLog -> {
+        val vm = remember { ActivityLogViewModel(appComponent.engineActivityLog, appComponent.appScope) }
+        ActivityLogScreen(
+          viewModel = vm,
+          onBack = { route = AppRoute.Settings },
         )
       }
     }
@@ -88,5 +99,6 @@ internal sealed class AppRoute {
   object ProjectList : AppRoute()
   object TaskManager : AppRoute()
   object Settings : AppRoute()
+  object ActivityLog : AppRoute()
   data class ProjectDetail(val projectId: String) : AppRoute()
 }

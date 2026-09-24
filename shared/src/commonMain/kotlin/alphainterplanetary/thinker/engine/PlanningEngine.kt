@@ -82,3 +82,27 @@ interface PlanningEngine {
 
   class AnalysisFailure(override val message: String) : Exception(message)
 }
+
+/**
+ * Engines that can render the exact prompt text they send the backend for each
+ * planning interaction. The `LoggingPlanningEngine` decorator asks its delegate
+ * for this text and records it as [EngineActivityEvent.promptUsed] on the
+ * detail `Created` row, so the Activity Log viewer can show the full prompt
+ * that produced a result (or produced nothing, "why has it stopped"); engines
+ * that don't render prompts (the hardcoded Lite engine) simply skip it.
+ */
+interface PromptRenderer {
+  fun titlePrompt(synopsis: String): String
+
+  fun initialQuestionsPrompt(
+    editableTitle: String,
+    synopsis: String,
+    phase: Phase,
+  ): String
+
+  fun followUpQuestionsPrompt(
+    synopsis: String,
+    previousQuestions: List<Question>,
+    phase: Phase,
+  ): String
+}

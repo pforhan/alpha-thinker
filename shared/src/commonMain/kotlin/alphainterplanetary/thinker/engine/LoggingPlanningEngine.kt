@@ -38,6 +38,7 @@ class LoggingPlanningEngine(
       kind = TaskKind.TitleRecommendation,
       activityId = activityId,
       parameters = "synopsis=$synopsis",
+      promptUsed = (delegate as? PromptRenderer)?.titlePrompt(synopsis),
     )
     log.append(created)
     val start = TimeSource.Monotonic.markNow()
@@ -66,6 +67,7 @@ class LoggingPlanningEngine(
       activityId = activityId,
       roundId = roundId,
       parameters = "title=$editableTitle, phase=$phase, synopsis=$synopsis",
+      promptUsed = (delegate as? PromptRenderer)?.initialQuestionsPrompt(editableTitle, synopsis, phase),
     )
     log.append(created)
     val start = TimeSource.Monotonic.markNow()
@@ -94,6 +96,7 @@ class LoggingPlanningEngine(
       activityId = activityId,
       roundId = roundId,
       parameters = "phase=$phase, previousQuestions=${previousQuestions.size}",
+      promptUsed = (delegate as? PromptRenderer)?.followUpQuestionsPrompt(synopsis, previousQuestions, phase),
     )
     log.append(created)
     val start = TimeSource.Monotonic.markNow()
@@ -143,6 +146,7 @@ class LoggingPlanningEngine(
     activityId: String,
     roundId: String? = null,
     parameters: String,
+    promptUsed: String? = null,
   ): EngineActivityEvent = EngineActivityEvent(
     activityId = activityId,
     roundId = roundId,
@@ -150,6 +154,7 @@ class LoggingPlanningEngine(
     logCategory = this.logCategory,
     eventType = EngineActivityEventType.Created,
     parameters = parameters,
+    promptUsed = promptUsed,
     timestamp = now(),
   )
 
