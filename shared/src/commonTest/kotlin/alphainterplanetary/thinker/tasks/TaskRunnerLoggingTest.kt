@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.tasks
 
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.testutil.RecordingActivityLog
+import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -13,8 +13,8 @@ class TaskRunnerLoggingTest {
 
   @Test
   fun `a successful task appends started then succeeded rows`() = runTest {
-    val log = RecordingActivityLog()
-    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
+    val log = RecordingActivityLogger()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
 
     val task = runner.enqueue("p1", TaskKind.InitialQuestions) {}
 
@@ -41,8 +41,8 @@ class TaskRunnerLoggingTest {
 
   @Test
   fun `a failing task appends a failed row with its error`() = runTest {
-    val log = RecordingActivityLog()
-    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
+    val log = RecordingActivityLogger()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
 
     val task = runner.enqueue("p1", TaskKind.FollowUpQuestions) {
       error("model exploded")
@@ -57,8 +57,8 @@ class TaskRunnerLoggingTest {
 
   @Test
   fun `setProgress updates the live task without adding a log row`() = runTest {
-    val log = RecordingActivityLog()
-    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
+    val log = RecordingActivityLogger()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
 
     runner.enqueue("p1", TaskKind.SynopsisRewrite) { taskId ->
       runner.setProgress(taskId, 0.5f)
@@ -76,8 +76,8 @@ class TaskRunnerLoggingTest {
 
   @Test
   fun `enqueueResult rides the boolean answer on the succeeded row`() = runTest {
-    val log = RecordingActivityLog()
-    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
+    val log = RecordingActivityLogger()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
 
     runner.enqueueResult("p1", TaskKind.RemainingInPhase) { true }
 
@@ -88,8 +88,8 @@ class TaskRunnerLoggingTest {
 
   @Test
   fun `a cancelled task terminates the activity instead of leaving it live`() = runTest {
-    val log = RecordingActivityLog()
-    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLog = log)
+    val log = RecordingActivityLogger()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
 
     runner.enqueue("p1", TaskKind.InitialQuestions) {
       throw kotlin.coroutines.cancellation.CancellationException("stop")

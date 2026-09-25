@@ -1,17 +1,17 @@
 package alphainterplanetary.thinker.testutil
 
-import alphainterplanetary.thinker.activitylog.ActivityLog
+import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.LogEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlin.time.Instant
 
 /**
- * In-memory [ActivityLog] for tests: every [append] lands in [entries] in
+ * In-memory [ActivityLogger] for tests: every [append] lands in [entries] in
  * order, and the derived read models fold over that list the way the Room
  * implementation folds the table.
  */
-class RecordingActivityLog : ActivityLog {
+class RecordingActivityLogger : ActivityLogger {
   val entries: MutableList<LogEntry> = mutableListOf()
 
   override suspend fun append(entry: LogEntry) {

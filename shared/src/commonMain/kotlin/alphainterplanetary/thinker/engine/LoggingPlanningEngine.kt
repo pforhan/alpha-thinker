@@ -1,8 +1,8 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.ActivityLog
+import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.LogCategory
-import alphainterplanetary.thinker.activitylog.LogingContext
+import alphainterplanetary.thinker.activitylog.LogContext
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
@@ -11,16 +11,16 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * The interaction-detail writer half of the app-wide activity log (ENG-DESIGN.md
  * schema item 4, write path): it decorates a [PlanningEngine] and, through a
- * [LogingContext] scoped to the caller's activity id, appends an input row (the
+ * [LogContext] scoped to the caller's activity id, appends an input row (the
  * rendered prompt, or a compact `input:` summary when the delegate doesn't
- * render prompts), then a terminal `response:`/`error:`/`cancelled` row with
+ * render prompts), then a terminal `response:`/`failed:`/`cancelled` row with
  * the produced payload — joining the [TaskRunner]'s `TaskRun` lifecycle rows for
  * the same activity. The [LogCategory] is chosen per interaction and [LogSource]
  * reflects whichever engine actually ran.
  */
 class LoggingPlanningEngine(
   private val delegate: PlanningEngine,
-  private val log: ActivityLog,
+  private val log: ActivityLogger,
 ) : PlanningEngine {
 
   override val source: LogSource
@@ -37,7 +37,7 @@ class LoggingPlanningEngine(
       context.closeCancelled()
       throw e
     } catch (e: Exception) {
-      context.error(e.message ?: e.toString())
+      context.closeFailed(e.message ?: e.toString())
       throw e
     }
   }
@@ -63,7 +63,7 @@ class LoggingPlanningEngine(
       context.closeCancelled()
       throw e
     } catch (e: Exception) {
-      context.error(e.message ?: e.toString())
+      context.closeFailed(e.message ?: e.toString())
       throw e
     }
   }
@@ -91,7 +91,7 @@ class LoggingPlanningEngine(
       context.closeCancelled()
       throw e
     } catch (e: Exception) {
-      context.error(e.message ?: e.toString())
+      context.closeFailed(e.message ?: e.toString())
       throw e
     }
   }
@@ -112,13 +112,13 @@ class LoggingPlanningEngine(
       context.closeCancelled()
       throw e
     } catch (e: Exception) {
-      context.error(e.message ?: e.toString())
+      context.closeFailed(e.message ?: e.toString())
       throw e
     }
   }
 
   /** A rendered prompt rows as `prompt:` verbatim; otherwise a compact `input:` summary. */
-  private suspend fun filePrompt(context: LogingContext, prompt: String?, fallback: String) {
+  private suspend fun filePrompt(context: LogContext, prompt: String?, fallback: String) {
     if (prompt != null) context.prompt(prompt) else context.input(fallback)
   }
 

@@ -6,7 +6,7 @@ import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
-import alphainterplanetary.thinker.testutil.RecordingActivityLog
+import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -18,7 +18,7 @@ class LoggingPlanningEngineTest {
 
   @Test
   fun `recommendation records input then response rows under the activity id`() = runTest {
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
 
     val title = engine.recommendTitle("Build a rocketship", activityId = "task-1")
@@ -42,7 +42,7 @@ class LoggingPlanningEngineTest {
     val delegate = FakePlanningEngine()
     delegate.initialQuestions += question("first")
     delegate.initialQuestions += question("second")
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
     val questions = engine.generateInitialQuestions(
@@ -66,7 +66,7 @@ class LoggingPlanningEngineTest {
   fun `can produce more in phase records the capability answer`() = runTest {
     val delegate = FakePlanningEngine()
     delegate.canProduceMore = true
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
     val can = engine.canProduceMoreInPhase(
@@ -86,7 +86,7 @@ class LoggingPlanningEngineTest {
   fun `follow-up questions record the done signal in the response row`() = runTest {
     val delegate = FakePlanningEngine()
     delegate.followUpDone = true
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
     engine.generateFollowUpQuestions(
@@ -106,7 +106,7 @@ class LoggingPlanningEngineTest {
   fun `records the delegated engine's source on detail rows`() = runTest {
     val delegate = FakePlanningEngine()
     delegate.source = LogSource.RemoteLLM
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
     engine.recommendTitle("Build a rocketship", activityId = "task-5")
@@ -134,7 +134,7 @@ class LoggingPlanningEngineTest {
         ): String = "SYSTEM\nQuestions system\n\nUSER\n$synopsis"
       }
     }
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
     engine.recommendTitle("Build a rocketship", activityId = "task-6")
@@ -147,7 +147,7 @@ class LoggingPlanningEngineTest {
 
   @Test
   fun `leaves prompt unused null to a non-rendering delegate`() = runTest {
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
 
     engine.recommendTitle("Build a rocketship", activityId = "task-7")
@@ -156,8 +156,8 @@ class LoggingPlanningEngineTest {
   }
 
   @Test
-  fun `a throwing engine records an error row and still propagates`() = runTest {
-    val log = RecordingActivityLog()
+  fun `a throwing engine records a failed row and still propagates`() = runTest {
+    val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = ThrowingEngine(), log = log)
 
     try {
@@ -176,7 +176,7 @@ class LoggingPlanningEngineTest {
     val terminal = log.entries.last()
     assertEquals(LogCategory.QuestionGeneration, terminal.category)
     assertEquals("task-4", terminal.activityId)
-    assertEquals("error: model exploded", terminal.log)
+    assertEquals("failed: model exploded", terminal.log)
   }
 
   private fun question(text: String): Question =

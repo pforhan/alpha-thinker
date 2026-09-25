@@ -4,23 +4,23 @@ import alphainterplanetary.thinker.util.now
 
 /**
  * A scoped writer for the rows of one activity in the app-wide log. Obtained
- * from [ActivityLog.context] with the activity's fixed sibling fields
+ * from [ActivityLogger.context] with the activity's fixed sibling fields
  * ([activityId], [category], [source], [projectId]) and filed once; callers
  * phrase only the content and the row is rendered under the right [LogMarkers]
  * prefix here — so a sequence filed across several calls ("started" →
  * interaction rows → one terminal row) can't drift from what the read model
- * ([LogActivity]) parses.
+ * ([ActivityRecord]) parses.
  *
  * Lifecycle: an activity opens with [started] (or just interaction rows for a
  * standalone detail), then any number of [input]/[prompt]/[response] rows,
- * then exactly one terminal row ([closeSucceeded]/[closeFailed]/[error]/[closeCancelled]).
+ * then exactly one terminal row ([closeSucceeded]/[closeFailed]/[closeCancelled]).
  * The first terminal method closes the context; a later append fails fast with
  * [IllegalStateException] instead of silently writing a malformed activity.
  * Writers may also create a fresh context per launch — the guard only fires on
  * a genuine post-outcome write, not on a reused name.
  */
-class LogingContext internal constructor(
-  private val log: ActivityLog,
+class LogContext internal constructor(
+  private val log: ActivityLogger,
   val activityId: String,
   val category: LogCategory,
   val source: LogSource?,
@@ -35,7 +35,11 @@ class LogingContext internal constructor(
   suspend fun closeSucceeded(detail: String? = null) =
     terminal(if (detail != null) "${LogMarkers.Succeeded}: $detail" else LogMarkers.Succeeded)
 
-  /** A failure terminal row rendering `failed: $message`. */
+  /**
+   * A failure terminal row rendering `failed: $message` — the single failure
+   * marker (previously a separate `error:` variant; the read model treats the
+   * two rows identically, so there's only one writer path).
+   */
   suspend fun closeFailed(message: String) = terminal("${LogMarkers.Failed} $message")
 
   /** A cancellation terminal row (`cancelled`). */
@@ -49,9 +53,6 @@ class LogingContext internal constructor(
 
   /** A `response:` detail row (the engine's produced outcome). */
   suspend fun response(text: String) = file("${LogMarkers.Response} $text")
-
-  /** An `error:` terminal row for an interaction raised its own failure. */
-  suspend fun closeError(message: String) = terminal("${LogMarkers.Error} $message")
 
   /** Files a row verbatim — the escape hatch for text that has no marker. */
   suspend fun append(text: String) = file(text)

@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.di
 
-import alphainterplanetary.thinker.activitylog.ActivityLog
-import alphainterplanetary.thinker.activitylog.RoomActivityLog
+import alphainterplanetary.thinker.activitylog.ActivityLogger
+import alphainterplanetary.thinker.activitylog.RoomActivityLogger
 import alphainterplanetary.thinker.database.ActivityDatabase
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getActivityDatabase
@@ -40,7 +40,7 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   abstract val taskRunner: TaskRunner
 
-  abstract val activityLog: ActivityLog
+  abstract val activityLogger: ActivityLogger
 
   abstract val appScope: CoroutineScope
 
@@ -59,24 +59,24 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   @AppScope
   @Provides
-  fun providesActivityLog(
+  fun providesActivityLogger(
     database: ActivityDatabase,
     storage: Storage,
     scope: CoroutineScope,
-  ): ActivityLog = RoomActivityLog(database, storage, scope)
+  ): ActivityLogger = RoomActivityLogger(database, storage, scope)
 
   @AppScope
   @Provides
   fun providesTaskRunner(
     scope: CoroutineScope,
-    activityLog: ActivityLog,
-  ): TaskRunner = TaskRunner(scope, activityLog)
+    activityLogger: ActivityLogger,
+  ): TaskRunner = TaskRunner(scope, activityLogger)
 
   @AppScope
   @Provides
   fun providesEngineSelector(
     settingsRepository: SettingsRepository,
-    activityLog: ActivityLog,
+    activityLogger: ActivityLogger,
   ): PlanningEngineSelector {
     val liteEngine = HardcodedPlanningEngine()
 
@@ -103,7 +103,7 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
             liteEngine = liteEngine,
             koogEngines = koogEngines,
           ),
-          log = activityLog,
+          log = activityLogger,
         ),
         config = settingsRepository.engineDelay,
       )

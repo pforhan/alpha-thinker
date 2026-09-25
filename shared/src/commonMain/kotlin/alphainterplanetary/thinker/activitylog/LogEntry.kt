@@ -55,9 +55,9 @@ enum class LogSource(val label: String) {
 
 /**
  * The stable text markers that synchronize log writers and the read model. A
- * row's [LogEntry.log] carries one of these prefixes so [LogActivity] can tell
+ * row's [LogEntry.log] carries one of these prefixes so [ActivityRecord] can tell
  * a lifecycle opening from an outcome and an outcome from an interaction row
- * without parsing free prose. Writers file rows through [LogingContext] (which
+ * without parsing free prose. Writers file rows through [LogContext] (which
  * renders these markers) or — for standalone rows that don't belong to a
  * lifecycle — build them around [LogEntry.companion]-style factories; the
  * reader never invents its own expectations. Keep the markers and their reader
@@ -84,9 +84,6 @@ object LogMarkers {
 
   /** The engine's produced outcome, e.g. `response: canProduceMore=false`. */
   const val Response = "response:"
-
-  /** A failure row raised by an engine/interaction, e.g. `error: connection`. */
-  const val Error = "error:"
 }
 
 /**
@@ -100,7 +97,7 @@ object LogMarkers {
  * and its response share an id; rows without one stand alone. [log] is free
  * text carrying whatever the row records (a prompt, a response, an error, a
  * result, a note) under one of the [LogMarkers] prefixes that the read model
- * ([LogActivity]) parses to derive summaries and outcomes.
+ * ([ActivityRecord]) parses to derive summaries and outcomes.
  */
 data class LogEntry(
   /** Autoincrement primary key; null until persisted. */

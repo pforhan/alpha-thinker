@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.activitylog.ActivityLog
-import alphainterplanetary.thinker.activitylog.LogActivity
+import alphainterplanetary.thinker.activitylog.ActivityLogger
+import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.repository.ProjectRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
  * is null for rows not tied to a project (app-wide tool/app entries).
  */
 data class ActivityLogItem(
-  val activity: LogActivity,
+  val activity: ActivityRecord,
   val projectLabel: String?,
 )
 
@@ -39,7 +39,7 @@ data class ActivityLogItem(
  * confirmation dialog.
  */
 class ActivityLogViewModel(
-  private val log: ActivityLog,
+  private val activityLogger: ActivityLogger,
   private val repository: ProjectRepository,
   scope: CoroutineScope,
 ) {
@@ -50,9 +50,9 @@ class ActivityLogViewModel(
 
   /** Per-activity rows grouped by [LogEntry.activityId], newest activity first. */
   val items: StateFlow<List<ActivityLogItem>> =
-    log.entries()
+    activityLogger.entries()
       .map { entries ->
-        LogActivity.groupByActivity(entries).map { activity ->
+        ActivityRecord.groupByActivity(entries).map { activity ->
           ActivityLogItem(
             activity = activity,
             projectLabel = activity.projectId?.let { titleFor(it) },
@@ -72,7 +72,7 @@ class ActivityLogViewModel(
   /** Wipes the entire log (append-only store; nothing else is touched). */
   fun clear() {
     vmScope.launch {
-      log.clear()
+      activityLogger.clear()
     }
   }
 }

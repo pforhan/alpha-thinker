@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
-class ActivityLogTest {
+class RoomActivityLoggerTest {
 
   private fun inMemory(): ActivityDatabase =
     getActivityDatabase(Room.inMemoryDatabaseBuilder<ActivityDatabase>().setDriver(BundledSQLiteDriver()))
@@ -42,7 +42,7 @@ class ActivityLogTest {
     db: ActivityDatabase,
     storage: FakeStorage = FakeStorage(),
     scope: CoroutineScope,
-  ): RoomActivityLog = RoomActivityLog(
+  ): RoomActivityLogger = RoomActivityLogger(
     database = db,
     storage = storage,
     scope = scope,
@@ -52,7 +52,7 @@ class ActivityLogTest {
   @Test
   fun `startup sweep prunes the whole log at the persisted retention window`() = runTest {
     val storage = FakeStorage().apply {
-      settings[SettingsKey.ActivityLogRetentionDays.storageKey] = "30"
+      settings[SettingsKey.ActivityLoggerRetentionDays.storageKey] = "30"
     }
     val db = inMemory()
     val dao = db.logDao()
@@ -96,7 +96,7 @@ class ActivityLogTest {
     dao.append(Entry("a2", "response: title", LogCategory.TitleRecommendation, timestamp = now + 2.days))
 
     val roomLog = log(db, scope = CoroutineScope(coroutineContext))
-    val grouped = LogActivity.groupByActivity(roomLog.entries().let { it.first() })
+    val grouped = ActivityRecord.groupByActivity(roomLog.entries().let { it.first() })
 
     assertEquals(listOf("a2", "a1"), grouped.map { it.activityId })
     assertEquals("Recommended title: title", grouped.first().summary)

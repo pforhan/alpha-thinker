@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.tasks
 
-import alphainterplanetary.thinker.activitylog.ActivityLog
+import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.util.now
@@ -40,7 +40,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * Parallelism is safe across projects and for read-only checks like
  * [TaskKind.RemainingInPhase].
  *
- * When an [ActivityLog] is injected, each lifecycle transition is appended as
+ * When an [ActivityLogger] is injected, each lifecycle transition is appended as
  * an immutable [LogEntry] via a [LogContext] scoped to the task's [activityId]
  * (`TaskRun` category, `TaskRunner` source, the task's project): a "started:"
  * row when the body begins and a terminal
@@ -52,7 +52,7 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class TaskRunner(
   private val scope: CoroutineScope,
-  private val activityLog: ActivityLog? = null,
+  private val activityLogger: ActivityLogger? = null,
 ) {
   private val _tasks = MutableStateFlow<List<GenerationTask>>(emptyList())
 
@@ -133,7 +133,7 @@ class TaskRunner(
     produce: suspend (taskId: String) -> Boolean?,
   ): GenerationTask {
     _tasks.update { it + task }
-    val logContext = activityLog?.context(
+    val logContext = activityLogger?.context(
       activityId = task.id,
       category = LogCategory.TaskRun,
       source = LogSource.TaskRunner,

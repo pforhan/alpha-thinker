@@ -95,7 +95,7 @@ private fun NavGraph(
         )
       }
       composable(Screen.ActivityLog.route) {
-        val vm = remember { ActivityLogViewModel(appComponent.activityLog, appComponent.projectRepository, appComponent.appScope) }
+        val vm = remember { ActivityLogViewModel(appComponent.activityLogger, appComponent.projectRepository, appComponent.appScope) }
         ActivityLogScreen(
           viewModel = vm,
           onBack = { navController.popBackStack() },

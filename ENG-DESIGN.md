@@ -69,7 +69,7 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
         in history) so old versions can be viewed/restored by making a new
         version.)
 
-4. **ActivityLog** (renamed and simplified from `EngineActivity`) — a **flat,
+4. **ActivityLogger** (the store; renamed and simplified from `EngineActivity`) — a **flat,
     append-only journal**, one table (`log_events`) in its own
     `ActivityDatabase` (a separate Room database file: independent growth,
     pruning, and migration, and a wholesale "Clear log" wipe can never touch
@@ -97,11 +97,11 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     *   `log` (String — the durable text: lifecycle rows read
         `started:`/`succeeded`/`failed: <msg>`/`cancelled`; interaction rows
         read `prompt:` (full rendered prompt) or `input:` plus a terminal
-        `response:`/`error:` row. The bylines namespace its free-form text the
+        `response:`/`failed:` row. The bylines namespace its free-form text the
         way the old typed per-event payload columns did.)
     *   `timestamp` (Timestamp)
 
-    **Read models are derived, never stored.** `LogActivity.groupByActivity()`
+    **Read models are derived, never stored.** `ActivityRecord.groupByActivity()`
     groups rows by `activityId` (newest activity first) and synthesizes, per
     activity, a one-line `summary` (the last `response:`/terminal row, else the
     newest row), a `source`, a failure flag (`hasError`), and an elapsed
@@ -116,7 +116,7 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     **`LoggingPlanningEngine` decorator** — wrapping whichever engine is
     active, exactly as `SlowDownPlanningEngine` wraps
     `HardcodedPlanningEngine` — appends the interaction detail (an `input:` or
-    full `prompt:` row, then a terminal `response:` or `error:` row). The task
+    full `prompt:` row, then a terminal `response:` or `failed:` row). The task
     body passes its `taskId` into the engine call as `activityId` (the
     `PlanningEngine` methods carry a required `activityId: String` with no
     defaults, so every call is attributed to its originating generation task by
@@ -137,7 +137,7 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     `GenerationTask`, so the System/Debug workspace (PRD 5.5: LLM Interaction
     Log + Task Manager) reads one append-only table. `TaskRunner` still
     reads/writes its in-memory StateFlow today; the derived
-    `LogActivity.groupByActivity()` read model powers the Activity Log viewer
+    `ActivityRecord.groupByActivity()` read model powers the Activity Log viewer
     (Phase 3). The engine-family naming collision this removes (item 4's old
     `engine` enum vs the `LogCategory` type) is why the engines report
     `LogSource` on the log.

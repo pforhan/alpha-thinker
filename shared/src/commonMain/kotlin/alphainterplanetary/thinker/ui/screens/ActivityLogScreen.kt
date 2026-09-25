@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.ui.screens
 
-import alphainterplanetary.thinker.activitylog.LogActivity
+import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
@@ -205,7 +205,7 @@ private fun ActivityLogCard(item: ActivityLogItem) {
 
 /** Compact "project • time [• duration]" line; the project title is resolved
  * at display time (deleted projects fall back to their id). */
-private fun secondaryLine(activity: LogActivity, projectLabel: String?): String {
+private fun secondaryLine(activity: ActivityRecord, projectLabel: String?): String {
   val pieces = mutableListOf<String>()
   projectLabel?.let { pieces += it }
   pieces += formatInstant(activity.latest.timestamp)
@@ -223,7 +223,7 @@ private fun EntryRow(entry: LogEntry) {
   var showFull by remember { mutableStateOf(false) }
   val isVerbose = entry.log.startsWith("prompt:") || entry.log.startsWith("response:")
   val valueColor = when {
-    entry.log.startsWith("failed:") || entry.log.startsWith("error:") || entry.log == "cancelled" -> {
+    entry.log.startsWith("failed:") || entry.log == "cancelled" -> {
       MaterialTheme.colorScheme.error
     }
     isVerbose -> MaterialTheme.colorScheme.onSurface

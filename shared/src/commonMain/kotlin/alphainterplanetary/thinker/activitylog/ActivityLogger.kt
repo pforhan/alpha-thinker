@@ -15,17 +15,17 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 /**
- * The app-scoped handle on the app-wide activity log (ENG-DESIGN.md schema
- * item 4). Writers append [LogEntry]s; nothing here edits a row, so the log is
- * immutable history. Read models (per-activity grouping, project filters) are
- * derived ([LogActivity]) for each consumer.
+ * The app-scoped writer handle on the app-wide activity log (ENG-DESIGN.md
+ * schema item 4). Writers append [LogEntry]s; nothing here edits a row, so the
+ * log is immutable history. Read models (per-activity grouping, project
+ * filters) are derived ([ActivityRecord]) for each consumer.
  */
-interface ActivityLog {
+interface ActivityLogger {
   /** Appends one immutable log row (no-op on write failure — the log never throws). */
   suspend fun append(entry: LogEntry)
 
   /**
-   * A scoped writer for one activity's rows (see [LogingContext]): carries the
+   * A scoped writer for one activity's rows (see [LogContext]): carries the
    * fixed [activityId]/[category]/[source]/[projectId] and files each row under
    * the [LogMarkers] prefix the read model parses, so a writer appending a
    * sequence ("started" → interaction rows → one terminal row) never repeats
@@ -36,7 +36,7 @@ interface ActivityLog {
     category: LogCategory,
     source: LogSource?,
     projectId: String? = null,
-  ): LogingContext = LogingContext(this, activityId, category, source, projectId)
+  ): LogContext = LogContext(this, activityId, category, source, projectId)
 
   /** All rows in append order (drives the Activity Log viewer). */
   fun entries(): Flow<List<LogEntry>>
@@ -45,7 +45,7 @@ interface ActivityLog {
   suspend fun entriesForProject(projectId: String): List<LogEntry>
 
   /**
-   * Row-age retention sweep ([SettingsKey.ActivityLogRetentionDays] default
+   * Row-age retention sweep ([SettingsKey.ActivityLoggerRetentionDays] default
    * 7): deletes rows older than the window regardless of activity state.
    * Returns the number of rows deleted.
    */
@@ -56,16 +56,16 @@ interface ActivityLog {
 }
 
 /**
- * Room-backed [ActivityLog] over the standalone [ActivityDatabase]. On
+ * Room-backed [ActivityLogger] over the standalone [ActivityDatabase]. On
  * construction it runs one startup sweep on [scope]: a row-age TTL prune at
- * the persisted [SettingsKey.ActivityLogRetentionDays] (default 7 days).
+ * the persisted [SettingsKey.ActivityLoggerRetentionDays] (default 7 days).
  */
-class RoomActivityLog(
+class RoomActivityLogger(
   private val database: ActivityDatabase,
   private val storage: Storage,
   private val scope: CoroutineScope,
   private val runStartupSweep: Boolean = true,
-) : ActivityLog {
+) : ActivityLogger {
   private val dao: LogDao = database.logDao()
 
   init {
@@ -101,7 +101,7 @@ class RoomActivityLog(
   }
 
   private suspend fun defaultRetentionDays(): Int {
-    val stored = storage.getSetting(SettingsKey.ActivityLogRetentionDays, "")
+    val stored = storage.getSetting(SettingsKey.ActivityLoggerRetentionDays, "")
     return stored.toIntOrNull()?.takeIf { it >= 1 } ?: DefaultRetentionDays
   }
 

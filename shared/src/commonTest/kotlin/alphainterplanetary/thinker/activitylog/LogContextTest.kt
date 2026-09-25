@@ -1,17 +1,17 @@
 package alphainterplanetary.thinker.activitylog
 
-import alphainterplanetary.thinker.testutil.RecordingActivityLog
+import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class LogingContextTest {
+class LogContextTest {
 
   @Test
   fun `rows carry the context's siblings and marker formatting`() = runTest {
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val context = log.context(
       activityId = "task-1",
       category = LogCategory.TaskRun,
@@ -34,21 +34,21 @@ class LogingContextTest {
   }
 
   @Test
-  fun `input prompt response and error rows render their markers`() = runTest {
-    val log = RecordingActivityLog()
+  fun `input prompt response and failure rows render their markers`() = runTest {
+    val log = RecordingActivityLogger()
     val context = log.context("task-2", LogCategory.QuestionGeneration, LogSource.Lite)
 
     context.input("phase=ScopeGoals, synopsis=S")
     context.prompt("SYSTEM\nTitle system")
     context.response("3 questions, done=false")
-    context.error("model exploded")
+    context.closeFailed("model exploded")
 
     assertEquals(
       listOf(
         "input: phase=ScopeGoals, synopsis=S",
         "prompt: SYSTEM\nTitle system",
         "response: 3 questions, done=false",
-        "error: model exploded",
+        "failed: model exploded",
       ),
       log.entries.map { it.log },
     )
@@ -56,7 +56,7 @@ class LogingContextTest {
 
   @Test
   fun `a write after a terminal row fails fast`() = runTest {
-    val log = RecordingActivityLog()
+    val log = RecordingActivityLogger()
     val context = log.context("task-3", LogCategory.TaskRun, LogSource.TaskRunner)
 
     context.closeSucceeded()
@@ -69,7 +69,7 @@ class LogingContextTest {
     }
   }
 
-  private fun assertCommon(entry: LogEntry, context: LogingContext) {
+  private fun assertCommon(entry: LogEntry, context: LogContext) {
     assertEquals(context.activityId, entry.activityId)
     assertEquals(context.projectId, entry.projectId)
     assertEquals(context.category, entry.category)

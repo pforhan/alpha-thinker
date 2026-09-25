@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
-class LogActivityTest {
+class ActivityRecordTest {
 
   private fun entry(
     id: Long,
@@ -28,8 +28,8 @@ class LogActivityTest {
   )
 
   /** A title-recommendation activity: input, then a produced title. */
-  private fun titleActivity(entries: List<LogEntry>): List<LogActivity> =
-    LogActivity.groupByActivity(entries)
+  private fun titleActivity(entries: List<LogEntry>): List<ActivityRecord> =
+    ActivityRecord.groupByActivity(entries)
 
   @Test
   fun `groups rows by activity id ordering newest first`() {
@@ -104,12 +104,9 @@ class LogActivityTest {
   }
 
   @Test
-  fun `hasError flags failed error and cancelled rows`() {
+  fun `hasError flags failed and cancelled rows`() {
     val failed = titleActivity(listOf(entry(1, "task-1", "failed: model exploded"))).single()
     assertTrue(failed.hasError)
-
-    val errorRow = titleActivity(listOf(entry(1, "task-1", "error: boom"))).single()
-    assertTrue(errorRow.hasError)
 
     val cancelled = titleActivity(listOf(entry(1, "task-1", "cancelled"))).single()
     assertTrue(cancelled.hasError)
@@ -217,7 +214,7 @@ class LogActivityTest {
       listOf(
         entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
         entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
-        entry(3, "task-1", "error: model exploded", LogCategory.QuestionGeneration),
+        entry(3, "task-1", "failed: model exploded", LogCategory.QuestionGeneration),
         entry(4, "task-1", "failed: model exploded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()

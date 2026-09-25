@@ -12,9 +12,9 @@ import kotlin.time.Duration
  * [groupByActivity]); the "interesting bits" — category, source, a synthesized
  * summary, an elapsed duration, whether anything failed — are derived here so
  * the view stays a thin projection over the raw log. Rows are parsed through
- * the [LogMarkers] conventions the writers ([LogingContext], [TaskRunner]) file.
+ * the [LogMarkers] conventions the writers ([LogContext], [TaskRunner]) file.
  */
-class LogActivity private constructor(
+class ActivityRecord private constructor(
   val activityId: String,
   val entries: List<LogEntry>,
 ) {
@@ -46,7 +46,7 @@ class LogActivity private constructor(
       return (stamps.max() - stamps.min()).takeIf { it > Duration.ZERO }
     }
 
-  /** Whether any row failed or was cancelled (`failed:`/`error:`/`cancelled`). */
+  /** Whether any row failed or was cancelled (`failed:`/`cancelled`). */
   val hasError: Boolean
     get() = entries.any { it.isFailureLine() }
 
@@ -111,9 +111,7 @@ class LogActivity private constructor(
     return when {
       line.log == LogMarkers.Cancelled -> if (subject != null) "$subject cancelled" else line.log
       else -> {
-        val message = line.log
-          .removePrefix("${LogMarkers.Failed} ")
-          .removePrefix("${LogMarkers.Error} ")
+        val message = line.log.removePrefix("${LogMarkers.Failed} ")
         if (subject != null) "$subject failed: $message" else line.log
       }
     }
@@ -165,14 +163,14 @@ class LogActivity private constructor(
      * first. Entries without an activity id become single-row activities (keyed
      * by their own id) so they still surface as individual log lines.
      */
-    fun groupByActivity(entries: List<LogEntry>): List<LogActivity> {
+    fun groupByActivity(entries: List<LogEntry>): List<ActivityRecord> {
       val grouped = LinkedHashMap<String, MutableList<LogEntry>>()
       entries.forEach { entry ->
         val key = entry.activityId ?: "line:${entry.id ?: standaloneKey(entries, entry)}"
         grouped.getOrPut(key) { mutableListOf() }.add(entry)
       }
       return grouped
-        .map { (key, rows) -> LogActivity(key, rows.sortedBy { it.id ?: 0L }) }
+        .map { (key, rows) -> ActivityRecord(key, rows.sortedBy { it.id ?: 0L }) }
         .sortedByDescending { it.latest.timestamp }
     }
 
@@ -190,7 +188,6 @@ private val RESPONSE_PREFIXES = listOf(
   LogMarkers.Succeeded,
   LogMarkers.Failed,
   LogMarkers.Cancelled,
-  LogMarkers.Error,
 )
 
 /** A row that reads as an outcome: a response or a terminal marker. */
@@ -200,7 +197,6 @@ private fun LogEntry.isResponseLine(): Boolean =
 /** A row that reads as a failure or cancellation. */
 private fun LogEntry.isFailureLine(): Boolean =
   log.startsWith(LogMarkers.Failed) ||
-    log.startsWith(LogMarkers.Error) ||
     log == LogMarkers.Cancelled
 
 /** An engine-produced detail row (`response: …`), not a lifecycle terminal. */
