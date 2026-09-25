@@ -105,4 +105,10 @@ interface PromptRenderer {
     previousQuestions: List<Question>,
     phase: Phase,
   ): String
+
+  fun capabilityPrompt(
+    synopsis: String,
+    previousQuestions: List<Question>,
+    phase: Phase,
+  ): String
 }

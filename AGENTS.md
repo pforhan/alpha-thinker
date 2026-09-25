@@ -11,7 +11,10 @@ architecture details and the full design specification.
 
 ## Validating changes
 
-Confirm code and test changes with `./gradlew :shared:allTests`.
+Confirm code and test changes with `./gradlew :shared:allTests`. Always prefer
+this shared test target over platform-specific targets. When working specifically
+in a target module such as `androidApp`, `desktopApp`, or `iosApp`, use that
+module's appropriate test target instead.
 
 Phase-color palettes (in `PhaseTheme.kt`) can be validated without a build via
 `tools/palette.py`: `verify` checks every palette against the same WCAG AA and
@@ -36,6 +39,10 @@ The Kotlin codebase follows these formatting conventions:
   the opening expression (see the SQL migration chaining in
   `AppDatabase.kt`).
 - **Newlines:** End files with a trailing newline.
+- **Function style:** Prefer expression functions when the function is short
+  and its result is clear.
+- **Reuse types:** Avoid introducing a new class when an existing class is an
+  obvious close match; reuse or extend the existing type when appropriate.
 
 When in doubt, match the surrounding code styles.
 
@@ -61,12 +68,6 @@ Rules:
 - Keep the theme's palette and scale cohesive: the rest of the app should
   only ever read the theme, never redefine it.
 
-## Deferred / Roadmap
+## Roadmap
 
 IMPLEMENTATION-PLAN.md contains the project roadmap.  Always confirm before acting on an item that's not next in the roadmap.
-
-- **Lookup / Web Search (Edge):** Optional agentic research for the LLM via
-  Koog so it can fetch facts and web results as needed. Gated by an app-wide
-  setting shared with the LLM on/off toggle. See ENG-DESIGN.md research and
-  IMPLEMENTATION-PLAN.md Phase 3.
-

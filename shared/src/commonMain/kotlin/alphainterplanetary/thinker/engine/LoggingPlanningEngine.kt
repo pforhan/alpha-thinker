@@ -103,10 +103,15 @@ class LoggingPlanningEngine(
     activityId: String,
   ): Boolean {
     val context = log.context(activityId, LogCategory.CapabilityCheck, source)
-    context.input("phase=$phase, previous questions=${previousQuestions.size}")
+    filePrompt(
+      context,
+      (delegate as? PromptRenderer)?.capabilityPrompt(synopsis, previousQuestions, phase),
+      "phase=$phase, previous questions=${previousQuestions.size}",
+    )
     return try {
       val can = delegate.canProduceMoreInPhase(synopsis, previousQuestions, phase, activityId)
-      context.response("canProduceMore=$can")
+      val label = phase.label
+      context.response("canProduceMore=$can, phase=$label")
       can
     } catch (e: CancellationException) {
       context.closeCancelled()

@@ -50,6 +50,12 @@ class KoogPlanningEngine(
     phase: Phase,
   ): String = render(QuestionsSystemPrompt, followUpUserPrompt(synopsis, phase, previousQuestions.map { it.text }))
 
+  override fun capabilityPrompt(
+    synopsis: String,
+    previousQuestions: List<Question>,
+    phase: Phase,
+  ): String = render(CapabilitySystemPrompt, capabilityUserPrompt(synopsis, phase, previousQuestions.map { it.text }))
+
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     val text = ask(PromptRecommendTitle) {
       system(TitleSystemPrompt)
@@ -177,6 +183,10 @@ class KoogPlanningEngine(
       "in the current planning phase. Do not ask about things already covered. Reply with only " +
       "valid JSON of the form {\"questions\":[{\"text\":\"...\"}]}, one object per question."
 
+    const val CapabilitySystemPrompt = "You are a project-planning assistant that runs a guided " +
+      "planning interview. Decide whether you could still propose a fresh, distinct question for " +
+      "the current planning phase. Reply with only the word true or false."
+
     val questionJson: Json = Json {
       ignoreUnknownKeys = true
       coerceInputValues = true
@@ -203,6 +213,19 @@ class KoogPlanningEngine(
         previousQuestions.joinToString("\n") { "- $it" }.ifEmpty { "(none)" } + "\n\n" +
         "Propose exactly $DraftCount new questions for this phase. Do not repeat any question " +
         "already asked."
+
+    fun capabilityUserPrompt(
+      synopsis: String,
+      phase: Phase,
+      previousQuestions: List<String>,
+    ): String =
+      "Continuing a planning interview for the project described below.\n" +
+      "Phase: ${phase.label} — ${phase.description}\n" +
+      "Project synopsis:\n$synopsis\n\n" +
+      "These questions were already asked and may contain answers:\n" +
+      previousQuestions.joinToString("\n") { "- $it" }.ifEmpty { "(none)" } + "\n\n" +
+      "Could you still propose another new question for this phase, without repeating any " +
+      "already asked?"
   }
 }
 

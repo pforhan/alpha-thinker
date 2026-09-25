@@ -146,11 +146,11 @@ class ActivityRecordTest {
       listOf(
         entry(1, "task-1", "started: RemainingInPhase", LogCategory.TaskRun, LogSource.TaskRunner),
         entry(2, "task-1", "input: phase=ScopeGoals, previous questions=10", LogCategory.CapabilityCheck),
-        entry(3, "task-1", "response: canProduceMore=false", LogCategory.CapabilityCheck),
+        entry(3, "task-1", "response: canProduceMore=false, phase=Scope & Goals", LogCategory.CapabilityCheck),
         entry(4, "task-1", "succeeded: result=false", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
-    assertEquals("No more questions available in phase", noMore.summary)
+    assertEquals("No more questions available in phase (Scope & Goals)", noMore.summary)
 
     val stillOpen = titleActivity(
       listOf(

@@ -64,11 +64,12 @@ class ActivityRecord private constructor(
     get() {
       failureHeadline()?.let { return it }
 
-      capabilityAnswer()?.let { can ->
-        return if (can) {
-          "More questions available in phase"
+      capability()?.let { answer ->
+        val suffix = answer.phase?.let { " ($it)" }.orEmpty()
+        return if (answer.can) {
+          "More questions available in phase$suffix"
         } else {
-          "No more questions available in phase"
+          "No more questions available in phase$suffix"
         }
       }
 
@@ -117,14 +118,31 @@ class ActivityRecord private constructor(
     }
   }
 
-  /** The last capability answer (a `response: canProduceMore=…` or `succeeded: result=…` row). */
-  private fun capabilityAnswer(): Boolean? =
-    entries.lastOrNull { row ->
+  /** A parsed capability row: its boolean answer plus the phase label, when the row names one. */
+  private data class CapabilityAnswer(
+    val can: Boolean,
+    val phase: String?,
+  )
+
+  /**
+   * The last capability answer (a `response: canProduceMore=…` or
+   * `succeeded: result=…` row), with the phase label when any candidate row
+   * carried it (the lifecycle `succeeded` row never does — the detail
+   * `response` row does).
+   */
+  private fun capability(): CapabilityAnswer? {
+    val rows = entries.filter { row ->
       row.isDetailResponse() && row.log.startsWith("${LogMarkers.Response} canProduceMore=") ||
         row.isSucceededRow() && row.log.startsWith("${LogMarkers.Succeeded}: result=")
-    }?.log
-      ?.substringAfterLast("=")
-      ?.toBooleanStrictOrNull()
+    }
+    val can = capabilityRegex
+      .find(rows.lastOrNull()?.log ?: return null)
+      ?.groupValues
+      ?.get(1)
+      ?.toBooleanStrictOrNull() ?: return null
+    val phase = rows.firstNotNullOfOrNull { row -> phaseInRegex.find(row.log)?.groupValues?.get(1) }
+    return CapabilityAnswer(can, phase)
+  }
 
   /** The last outcome row (a response or terminal marker), for the fallback headline. */
   private fun lastResponseLine(): LogEntry? = entries.lastOrNull { it.isResponseLine() }
@@ -227,3 +245,9 @@ private fun batchSummary(count: Int, flavor: String): String = when {
 }
 
 private val batchCountRegex = Regex("""(\d+) questions?""")
+
+/** Extracts the boolean from a capability row, e.g. `canProduceMore=true, phase=Scope & Goals`. */
+private val capabilityRegex = Regex("""(?:canProduceMore|result)=(true|false)""")
+
+/** Extracts the phase label trailing a capability row, e.g. the `Scope & Goals` in `phase=Scope & Goals`. */
+private val phaseInRegex = Regex("""phase=(.+)""")

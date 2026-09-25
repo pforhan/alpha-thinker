@@ -63,7 +63,7 @@ class LoggingPlanningEngineTest {
   }
 
   @Test
-  fun `can produce more in phase records the capability answer`() = runTest {
+  fun `can produce more in phase records the capability answer with the phase label`() = runTest {
     val delegate = FakePlanningEngine()
     delegate.canProduceMore = true
     val log = RecordingActivityLogger()
@@ -79,7 +79,25 @@ class LoggingPlanningEngineTest {
     assertTrue(can)
     val terminal = log.entries.last()
     assertEquals(LogCategory.CapabilityCheck, terminal.category)
-    assertEquals("response: canProduceMore=true", terminal.log)
+    assertEquals("response: canProduceMore=true, phase=Scope & Goals", terminal.log)
+    assertEquals(2, log.entries.size, "input + response, nothing else")
+    assertTrue(log.entries.first().log.startsWith("input: phase=ScopeGoals"))
+  }
+
+  @Test
+  fun `can produce more in phase records the full prompt when the delegate renders prompts`() = runTest {
+    val delegate = PromptRenderingEngine()
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = delegate, log = log)
+
+    engine.canProduceMoreInPhase(
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "task-8",
+    )
+
+    assertEquals("prompt: SYSTEM\nCapability system\n\nUSER\nS / Scope & Goals", log.entries.first().log)
   }
 
   @Test
@@ -116,26 +134,8 @@ class LoggingPlanningEngineTest {
 
   @Test
   fun `records the full prompt when the delegate renders prompts`() = runTest {
-    val delegate = FakePlanningEngine().let { engine ->
-      object : PlanningEngine by engine, PromptRenderer {
-        override fun titlePrompt(synopsis: String): String =
-          "SYSTEM\nTitle system\n\nUSER\n$synopsis"
-
-        override fun initialQuestionsPrompt(
-          editableTitle: String,
-          synopsis: String,
-          phase: Phase,
-        ): String = "SYSTEM\nQuestions system\n\nUSER\n$editableTitle / $synopsis / ${phase.label}"
-
-        override fun followUpQuestionsPrompt(
-          synopsis: String,
-          previousQuestions: List<Question>,
-          phase: Phase,
-        ): String = "SYSTEM\nQuestions system\n\nUSER\n$synopsis"
-      }
-    }
     val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = delegate, log = log)
+    val engine = LoggingPlanningEngine(delegate = PromptRenderingEngine(), log = log)
 
     engine.recommendTitle("Build a rocketship", activityId = "task-6")
 
@@ -181,6 +181,29 @@ class LoggingPlanningEngineTest {
 
   private fun question(text: String): Question =
     Question(id = text, text = text, timestamp = now(), roundId = "r1")
+
+  private class PromptRenderingEngine : PlanningEngine by FakePlanningEngine(), PromptRenderer {
+    override fun titlePrompt(synopsis: String): String =
+      "SYSTEM\nTitle system\n\nUSER\n$synopsis"
+
+    override fun initialQuestionsPrompt(
+      editableTitle: String,
+      synopsis: String,
+      phase: Phase,
+    ): String = "SYSTEM\nQuestions system\n\nUSER\n$editableTitle / $synopsis / ${phase.label}"
+
+    override fun followUpQuestionsPrompt(
+      synopsis: String,
+      previousQuestions: List<Question>,
+      phase: Phase,
+    ): String = "SYSTEM\nQuestions system\n\nUSER\n$synopsis"
+
+    override fun capabilityPrompt(
+      synopsis: String,
+      previousQuestions: List<Question>,
+      phase: Phase,
+    ): String = "SYSTEM\nCapability system\n\nUSER\n$synopsis / ${phase.label}"
+  }
 
   private class ThrowingEngine : PlanningEngine {
     override val source: LogSource = LogSource.Lite
