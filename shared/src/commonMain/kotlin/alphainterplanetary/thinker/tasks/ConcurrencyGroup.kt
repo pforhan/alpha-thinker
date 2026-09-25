@@ -11,7 +11,7 @@ package alphainterplanetary.thinker.tasks
  * explicit group to [TaskRunner.enqueue] when a body competes for a different
  * resource (e.g. a remote HTTP lookup).
  */
-enum class TaskGroup(val concurrency: Int) {
+enum class ConcurrencyGroup(val concurrency: Int) {
   /** The local planning engine — one shared resource, so strictly serial. */
   Engine(concurrency = 1),
 

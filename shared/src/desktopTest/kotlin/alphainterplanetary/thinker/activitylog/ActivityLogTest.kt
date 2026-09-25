@@ -99,7 +99,7 @@ class ActivityLogTest {
     val grouped = LogActivity.groupByActivity(roomLog.entries().let { it.first() })
 
     assertEquals(listOf("a2", "a1"), grouped.map { it.activityId })
-    assertEquals("response: title", grouped.first().summary)
+    assertEquals("Recommended title: title", grouped.first().summary)
   }
 
   @Test

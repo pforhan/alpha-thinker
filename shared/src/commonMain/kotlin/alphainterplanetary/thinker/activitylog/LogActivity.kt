@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.activitylog
 
+import alphainterplanetary.thinker.tasks.TaskKind
 import kotlin.time.Duration
-import kotlin.time.Instant
 
 /**
  * One logical activity from the log: the [LogEntry] rows sharing an
@@ -11,7 +11,8 @@ import kotlin.time.Instant
  * This is the read model the viewer builds from (see
  * [groupByActivity]); the "interesting bits" — category, source, a synthesized
  * summary, an elapsed duration, whether anything failed — are derived here so
- * the view stays a thin projection over the raw log.
+ * the view stays a thin projection over the raw log. Rows are parsed through
+ * the [LogMarkers] conventions the writers ([LogingContext], [TaskRunner]) file.
  */
 class LogActivity private constructor(
   val activityId: String,
@@ -50,12 +51,113 @@ class LogActivity private constructor(
     get() = entries.any { it.isFailureLine() }
 
   /**
-   * One-line summary of the activity's outcome: the last response/terminal
-   * row's text, or the newest row's text when no response surfaced (a plain or
-   * in-progress activity).
+   * A human one-line summary of the activity's outcome, synthesized from the
+   * rows: a terminal failure headlines with its topic ("Initial question
+   * generation failed: model exploded"), a known interaction reads as a canned
+   * message ("No more questions available in phase", "Generated 4 follow-up
+   * questions", "Recommended title: Rocketship"), and anything unrecognized
+   * falls back to the last response/terminal row's text — or the newest row
+   * when no response surfaced (a plain or in-progress activity). The expanded
+   * rows stay verbatim; only this headline is reworded.
    */
   val summary: String
-    get() = entries.lastOrNull { it.isResponseLine() }?.log ?: latest.log
+    get() {
+      failureHeadline()?.let { return it }
+
+      capabilityAnswer()?.let { can ->
+        return if (can) {
+          "More questions available in phase"
+        } else {
+          "No more questions available in phase"
+        }
+      }
+
+      val kind = taskKind()
+      if (kind?.isGeneration == true) {
+        batchCount()?.let { count ->
+          val flavor = if (kind == TaskKind.InitialQuestions) "initial " else "follow-up "
+          return batchSummary(count, flavor)
+        }
+      } else if (category == LogCategory.QuestionGeneration) {
+        batchCount()?.let { count -> return batchSummary(count, "") }
+      }
+
+      titleSummary()?.let { return it }
+
+      if (kind != null && succeededRow() != null) {
+        return "${kind.activityLabel()} succeeded"
+      }
+
+      return lastResponseLine()?.log ?: latest.log
+    }
+
+  /** The question count a batch `response:` row reports (`N questions`), if any. */
+  private fun batchCount(): Int? {
+    val count = batchCountRegex
+      .find(entries.lastOrNull { it.isDetailResponse() }?.log.orEmpty())
+      ?.groupValues
+      ?.get(1)
+      ?.toIntOrNull() ?: return null
+    return count
+  }
+
+  /**
+   * The last terminal failure/cancellation as a headline — the topic's phrase
+   * when known, the raw line otherwise.
+   */
+  private fun failureHeadline(): String? {
+    val line = entries.lastOrNull { it.isFailureLine() } ?: return null
+    val subject = taskKind()?.activityLabel()
+    return when {
+      line.log == LogMarkers.Cancelled -> if (subject != null) "$subject cancelled" else line.log
+      else -> {
+        val message = line.log
+          .removePrefix("${LogMarkers.Failed} ")
+          .removePrefix("${LogMarkers.Error} ")
+        if (subject != null) "$subject failed: $message" else line.log
+      }
+    }
+  }
+
+  /** The last capability answer (a `response: canProduceMore=…` or `succeeded: result=…` row). */
+  private fun capabilityAnswer(): Boolean? =
+    entries.lastOrNull { row ->
+      row.isDetailResponse() && row.log.startsWith("${LogMarkers.Response} canProduceMore=") ||
+        row.isSucceededRow() && row.log.startsWith("${LogMarkers.Succeeded}: result=")
+    }?.log
+      ?.substringAfterLast("=")
+      ?.toBooleanStrictOrNull()
+
+  /** The last outcome row (a response or terminal marker), for the fallback headline. */
+  private fun lastResponseLine(): LogEntry? = entries.lastOrNull { it.isResponseLine() }
+
+  /** The last success terminal row, when the activity resolved cleanly. */
+  private fun succeededRow(): LogEntry? = entries.lastOrNull { it.isSucceededRow() }
+
+  /**
+   * The kind of task this activity carries, parsed from its `started:` lifecycle
+   * row; null when the activity has no lifecycle rows (a standalone detail).
+   */
+  private fun taskKind(): TaskKind? {
+    val label = entries.firstNotNullOfOrNull { row ->
+      if (row.log.startsWith(LogMarkers.Started)) row.log.substringAfter(LogMarkers.Started).trim() else null
+    } ?: return null
+    return TaskKind.entries.firstOrNull { it.name == label }
+  }
+
+  /** A title recommendation headline from the activity's `response:` row, if any. */
+  private fun titleSummary(): String? {
+    val isTitleActivity = taskKind() == TaskKind.TitleRecommendation ||
+      category == LogCategory.TitleRecommendation
+    if (!isTitleActivity) return null
+    val text = entries.lastOrNull { it.isDetailResponse() }
+      ?.log
+      ?.substringAfter(LogMarkers.Response)
+      ?.trim()
+      .orEmpty()
+    if (text.isEmpty()) return null
+    return "Recommended title: $text"
+  }
 
   companion object {
     /**
@@ -83,7 +185,13 @@ class LogActivity private constructor(
   }
 }
 
-private val RESPONSE_PREFIXES = listOf("response:", "succeeded", "failed:", "cancelled", "error:")
+private val RESPONSE_PREFIXES = listOf(
+  LogMarkers.Response,
+  LogMarkers.Succeeded,
+  LogMarkers.Failed,
+  LogMarkers.Cancelled,
+  LogMarkers.Error,
+)
 
 /** A row that reads as an outcome: a response or a terminal marker. */
 private fun LogEntry.isResponseLine(): Boolean =
@@ -91,4 +199,35 @@ private fun LogEntry.isResponseLine(): Boolean =
 
 /** A row that reads as a failure or cancellation. */
 private fun LogEntry.isFailureLine(): Boolean =
-  log.startsWith("failed:") || log.startsWith("error:") || log == "cancelled"
+  log.startsWith(LogMarkers.Failed) ||
+    log.startsWith(LogMarkers.Error) ||
+    log == LogMarkers.Cancelled
+
+/** An engine-produced detail row (`response: …`), not a lifecycle terminal. */
+private fun LogEntry.isDetailResponse(): Boolean = log.startsWith(LogMarkers.Response)
+
+/** A plain success terminal row (`succeeded` or `succeeded: …`). */
+private fun LogEntry.isSucceededRow(): Boolean =
+  log == LogMarkers.Succeeded || log.startsWith("${LogMarkers.Succeeded}:")
+
+private val TaskKind.isGeneration: Boolean
+  get() = this == TaskKind.InitialQuestions || this == TaskKind.FollowUpQuestions
+
+/** Human phrase for the kind, used in failure/success headlines. */
+private fun TaskKind.activityLabel(): String = when (this) {
+  TaskKind.InitialQuestions -> "Initial question generation"
+  TaskKind.FollowUpQuestions -> "Follow-up question generation"
+  TaskKind.TitleRecommendation -> "Title recommendation"
+  TaskKind.RemainingInPhase -> "Phase capacity check"
+  TaskKind.SynopsisRewrite -> "Synopsis rewrite"
+  TaskKind.AutoArchive -> "Auto-archive"
+}
+
+/** Canned summary for a produced batch, e.g. "Generated 3 initial questions". */
+private fun batchSummary(count: Int, flavor: String): String = when {
+  count == 0 -> "No further ${flavor}questions generated"
+  count == 1 -> "Generated 1 ${flavor}question"
+  else -> "Generated $count ${flavor}questions"
+}
+
+private val batchCountRegex = Regex("""(\d+) questions?""")

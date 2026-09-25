@@ -45,7 +45,7 @@ class LogActivityTest {
     assertEquals(listOf("task-2", "task-1"), activity.map { it.activityId })
     val task1 = activity.single { it.activityId == "task-1" }
     assertEquals(listOf(1L, 2L), task1.entries.map { it.id })
-    assertEquals("response: Rocketship", task1.summary)
+    assertEquals("Recommended title: Rocketship", task1.summary)
   }
 
   @Test
@@ -74,7 +74,7 @@ class LogActivityTest {
       )
     ).single()
 
-    assertEquals("response: Revised title", activity.summary)
+    assertEquals("Recommended title: Revised title", activity.summary)
   }
 
   @Test
@@ -141,5 +141,99 @@ class LogActivityTest {
     ).single()
 
     assertEquals(LogCategory.TitleRecommendation, activity.category)
+  }
+
+  @Test
+  fun `remaining-in-phase answers summarize the phase capacity`() {
+    val noMore = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: RemainingInPhase", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "input: phase=ScopeGoals, previous questions=10", LogCategory.CapabilityCheck),
+        entry(3, "task-1", "response: canProduceMore=false", LogCategory.CapabilityCheck),
+        entry(4, "task-1", "succeeded: result=false", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+    assertEquals("No more questions available in phase", noMore.summary)
+
+    val stillOpen = titleActivity(
+      listOf(
+        entry(1, "task-2", "started: RemainingInPhase", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-2", "succeeded: result=true", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+    assertEquals("More questions available in phase", stillOpen.summary)
+  }
+
+  @Test
+  fun `initial batches summarize the produced count`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
+        entry(
+          3,
+          "task-1",
+          "response: 3 questions, done=false\n• first\n• second\n• third",
+          LogCategory.QuestionGeneration,
+        ),
+        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Generated 3 initial questions", activity.summary)
+  }
+
+  @Test
+  fun `an exhausted follow-up batch summarizes the no-further signal`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: FollowUpQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "input: phase=ExecutionPlan, previous questions=12", LogCategory.QuestionGeneration),
+        entry(3, "task-1", "response: 0 questions, done=true", LogCategory.QuestionGeneration),
+        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("No further follow-up questions generated", activity.summary)
+  }
+
+  @Test
+  fun `a title recommendation summarizes the recommended title`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: TitleRecommendation", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "input: synopsis=Build a rocketship", LogCategory.TitleRecommendation),
+        entry(3, "task-1", "response: Rocketship", LogCategory.TitleRecommendation),
+        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Recommended title: Rocketship", activity.summary)
+  }
+
+  @Test
+  fun `a failing generation headlines with its topic`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
+        entry(3, "task-1", "error: model exploded", LogCategory.QuestionGeneration),
+        entry(4, "task-1", "failed: model exploded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Initial question generation failed: model exploded", activity.summary)
+  }
+
+  @Test
+  fun `a task lifecycle with no engine rows wraps the kind`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Initial question generation succeeded", activity.summary)
   }
 }

@@ -64,22 +64,22 @@ class TaskRunnerTest {
   @Test
   fun `existing kinds default to the serial engine group`() {
     assertEquals(
-      TaskGroup.Engine,
+      ConcurrencyGroup.Engine,
       TaskKind.entries.map { it.group }.distinct().single(),
     )
     assertEquals(
       listOf(1, 4),
-      listOf(TaskGroup.Engine.concurrency, TaskGroup.Remote.concurrency),
+      listOf(ConcurrencyGroup.Engine.concurrency, ConcurrencyGroup.Remote.concurrency),
     )
   }
 
   @Test
   fun `remote-group tasks across projects run concurrently`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val a = runner.enqueue("p1", TaskKind.SynopsisRewrite, group = TaskGroup.Remote) {
+    val a = runner.enqueue("p1", TaskKind.SynopsisRewrite, group = ConcurrencyGroup.Remote) {
       delay(1_000)
     }
-    val b = runner.enqueue("p2", TaskKind.FollowUpQuestions, group = TaskGroup.Remote) {
+    val b = runner.enqueue("p2", TaskKind.FollowUpQuestions, group = ConcurrencyGroup.Remote) {
       delay(1_000)
     }
 
@@ -119,7 +119,7 @@ class TaskRunnerTest {
     val engine = runner.enqueue("p1", TaskKind.InitialQuestions) {
       delay(1_000)
     }
-    val remote = runner.enqueue("p1", TaskKind.FollowUpQuestions, group = TaskGroup.Remote) {
+    val remote = runner.enqueue("p1", TaskKind.FollowUpQuestions, group = ConcurrencyGroup.Remote) {
       delay(500)
     }
 

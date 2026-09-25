@@ -24,6 +24,20 @@ interface ActivityLog {
   /** Appends one immutable log row (no-op on write failure — the log never throws). */
   suspend fun append(entry: LogEntry)
 
+  /**
+   * A scoped writer for one activity's rows (see [LogingContext]): carries the
+   * fixed [activityId]/[category]/[source]/[projectId] and files each row under
+   * the [LogMarkers] prefix the read model parses, so a writer appending a
+   * sequence ("started" → interaction rows → one terminal row) never repeats
+   * the sibling fields or hand-builds a `log` string.
+   */
+  fun context(
+    activityId: String,
+    category: LogCategory,
+    source: LogSource?,
+    projectId: String? = null,
+  ): LogingContext = LogingContext(this, activityId, category, source, projectId)
+
   /** All rows in append order (drives the Activity Log viewer). */
   fun entries(): Flow<List<LogEntry>>
 

@@ -2,7 +2,6 @@ package alphainterplanetary.thinker.tasks
 
 import alphainterplanetary.thinker.activitylog.ActivityLog
 import alphainterplanetary.thinker.activitylog.LogCategory
-import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
@@ -27,7 +26,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * owns the injected, app-lifetime [scope]; bodies are cancellable like any
  * launched coroutine.
  *
- * Bodies are scheduled by **resource group** ([TaskGroup], defaulting to the
+ * Bodies are scheduled by **resource group** ([ConcurrencyGroup], defaulting to the
  * task's [TaskKind.group]): engine work is a single shared resource and
  * serializes (limit 1, FIFO in enqueue order), while remote groups run with
  * bounded parallelism. Grouping is a scheduling policy, not a fixed property
@@ -42,8 +41,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * [TaskKind.RemainingInPhase].
  *
  * When an [ActivityLog] is injected, each lifecycle transition is appended as
- * an immutable [LogEntry] with `activityId = taskId` and `source = TaskRunner`:
- * a `TaskRun` "started:" row when the body begins and a terminal
+ * an immutable [LogEntry] via a [LogContext] scoped to the task's [activityId]
+ * (`TaskRun` category, `TaskRunner` source, the task's project): a "started:"
+ * row when the body begins and a terminal
  * `succeeded`/`failed: <msg>`/`cancelled` row when it resolves. Appends happen
  * synchronously inside the task coroutine, so a task's log rows are always in
  * transition order and no extra coroutines are kept alive. The body receives
@@ -56,8 +56,8 @@ class TaskRunner(
 ) {
   private val _tasks = MutableStateFlow<List<GenerationTask>>(emptyList())
 
-  /** Per-resource concurrency gate; see [TaskGroup]. */
-  private val groupGates: Map<TaskGroup, Gate> = TaskGroup.entries.associateWith { Gate(it.concurrency) }
+  /** Per-resource concurrency gate; see [ConcurrencyGroup]. */
+  private val groupGates: Map<ConcurrencyGroup, Gate> = ConcurrencyGroup.entries.associateWith { Gate(it.concurrency) }
 
   /** Guards the [projectGuards] map so lookups are safe on any dispatcher. */
   private val projectGuardsLock = Mutex()
@@ -83,7 +83,7 @@ class TaskRunner(
   fun enqueue(
     projectId: String,
     kind: TaskKind,
-    group: TaskGroup = kind.group,
+    group: ConcurrencyGroup = kind.group,
     body: suspend (taskId: String) -> Unit,
   ): GenerationTask {
     val task = newTask(projectId, kind, group)
@@ -101,7 +101,7 @@ class TaskRunner(
   fun enqueueResult(
     projectId: String,
     kind: TaskKind,
-    group: TaskGroup = kind.group,
+    group: ConcurrencyGroup = kind.group,
     body: suspend (taskId: String) -> Boolean,
   ): GenerationTask {
     val task = newTask(projectId, kind, group)
@@ -111,7 +111,7 @@ class TaskRunner(
   private fun newTask(
     projectId: String,
     kind: TaskKind,
-    group: TaskGroup,
+    group: ConcurrencyGroup,
   ): GenerationTask =
     GenerationTask(
       id = randomUUID(),
@@ -133,17 +133,14 @@ class TaskRunner(
     produce: suspend (taskId: String) -> Boolean?,
   ): GenerationTask {
     _tasks.update { it + task }
+    val logContext = activityLog?.context(
+      activityId = task.id,
+      category = LogCategory.TaskRun,
+      source = LogSource.TaskRunner,
+      projectId = task.projectId,
+    )
     scope.launch {
-      logAppend(
-        LogEntry(
-          activityId = task.id,
-          projectId = task.projectId,
-          category = LogCategory.TaskRun,
-          source = LogSource.TaskRunner,
-          log = "started: ${task.kind.name}",
-          timestamp = task.createdAt,
-        )
-      )
+      logContext?.started(task.kind.name)
       val guard = projectGuard(task.projectId)
       val groupGate = groupGates.getValue(task.group)
       guard.withLock {
@@ -182,16 +179,11 @@ class TaskRunner(
           }
           // The body may have streamed progress via [setProgress]; the durable
           // log keeps just the terminal row (transient ticks are UI-only).
-          logAppend(
-            LogEntry(
-              activityId = task.id,
-              projectId = task.projectId,
-              category = LogCategory.TaskRun,
-              source = LogSource.TaskRunner,
-              log = terminalLog(cancelled, failure, result),
-              timestamp = finishedAt,
-            )
-          )
+          when {
+            cancelled -> logContext?.closeCancelled()
+            failure != null -> logContext?.closeFailed(failure)
+            else -> logContext?.closeSucceeded(detail = if (result != null) "result=$result" else null)
+          }
           // Fold any progress/error published via [setProgress] into the terminal
           // state instead of clobbering it with a stale local read.
           _tasks.update { list -> list.replace(terminal(list.first { it.id == task.id })) }
@@ -206,24 +198,6 @@ class TaskRunner(
     _tasks.update { list ->
       list.map { task -> if (task.id == taskId) task.copy(progress = progress) else task }
     }
-  }
-
-  /** Appends one lifecycle row for the durable log (no-op without an injected log). */
-  private suspend fun logAppend(entry: LogEntry) {
-    activityLog?.let { log ->
-      runCatching { log.append(entry) }
-    }
-  }
-
-  /** One-line terminal row for the durable log. */
-  private fun terminalLog(
-    cancelled: Boolean,
-    failure: String?,
-    result: Boolean?,
-  ): String = when {
-    cancelled -> "cancelled"
-    failure != null -> "failed: $failure"
-    else -> if (result != null) "succeeded: result=$result" else "succeeded"
   }
 }
 
