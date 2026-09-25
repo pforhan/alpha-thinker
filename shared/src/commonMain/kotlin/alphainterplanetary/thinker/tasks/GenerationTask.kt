@@ -15,9 +15,6 @@ enum class TaskKind {
   /** Recommending an editable title from the synopsis when the user didn't type one. */
   TitleRecommendation,
 
-  /** Asking the engine whether the current phase's pool can still produce questions. */
-  RemainingInPhase,
-
   /** Rewriting the project synopsis / title from the accumulated answers. */
   SynopsisRewrite,
 
@@ -35,7 +32,6 @@ enum class TaskKind {
       InitialQuestions,
       FollowUpQuestions,
       TitleRecommendation,
-      RemainingInPhase,
       SynopsisRewrite,
       AutoArchive,
       -> ConcurrencyGroup.Engine
@@ -67,8 +63,6 @@ data class GenerationTask(
   val progress: Float? = null,
   /** Set when [status] is [TaskStatus.Failed]. */
   val error: String? = null,
-  /** Result of a boolean-answering task, e.g. [TaskKind.RemainingInPhase] remaining-in-phase. */
-  val result: Boolean? = null,
   val createdAt: Instant,
   val startedAt: Instant? = null,
   val finishedAt: Instant? = null,

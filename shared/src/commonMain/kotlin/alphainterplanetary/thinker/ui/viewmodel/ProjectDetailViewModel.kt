@@ -93,11 +93,12 @@ class ProjectDetailViewModel(
         if (loaded == null) {
           _uiState.value = ProjectDetailUiState.Error("Failed to load project: project not found")
         } else {
-          // Availability is cached (no engine call here); a stale check is
-          // enqueued as a task and this reloads once it lands.
-          val canGenerate = repository.canGenerateMoreInPhase(id)
-          _uiState.value = ProjectDetailUiState.Success(loaded, canGenerate)
-          repository.ensureFreshRemainingInPhase(id)
+          // Availability is a fact about the project's newest round, so it
+          // needs no engine call and can't go stale within a session.
+          _uiState.value = ProjectDetailUiState.Success(
+            project = loaded,
+            canGenerateMoreInPhase = !loaded.currentPhaseExhausted,
+          )
         }
       } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
@@ -162,18 +163,21 @@ class ProjectDetailViewModel(
   }
 
   private fun persistOrder(reordered: Project) {
-    _uiState.value = successPreservingAvailability(reordered)
+    _uiState.value = successFor(reordered)
     vmScope.launch {
       repository.saveQuestionOrder(reordered.id, reordered.questionOrderIds)
     }
   }
 
-  /** A [ProjectDetailUiState.Success] that keeps the previously-computed remaining-in-phase flag. */
-  private fun successPreservingAvailability(project: Project): ProjectDetailUiState.Success =
+  /**
+   * A [ProjectDetailUiState.Success] for a locally-edited project; availability
+   * is re-derived from the project's own rounds rather than carried over, so an
+   * optimistic edit can never contradict the round it came from.
+   */
+  private fun successFor(project: Project): ProjectDetailUiState.Success =
     ProjectDetailUiState.Success(
       project = project,
-      canGenerateMoreInPhase = (_uiState.value as? ProjectDetailUiState.Success)
-        ?.canGenerateMoreInPhase ?: false,
+      canGenerateMoreInPhase = !project.currentPhaseExhausted,
     )
 
   fun saveAnswer(projectId: String, questionId: String, text: String, completed: Boolean) {
@@ -192,13 +196,13 @@ class ProjectDetailViewModel(
         }
       )
       beginUndoable(current, "Answer deleted")
-      _uiState.value = successPreservingAvailability(optimistic)
+      _uiState.value = successFor(optimistic)
 
       vmScope.launch {
         try {
           repository.saveAnswer(projectId, questionId, text, completed)
         } catch (e: Exception) {
-          _uiState.value = successPreservingAvailability(current)
+          _uiState.value = successFor(current)
           clearUndoable()
           _uiState.value = ProjectDetailUiState.Error(
             "Failed to save answer: ${e.message ?: "Unknown error"}"
@@ -229,13 +233,13 @@ class ProjectDetailViewModel(
     )
 
     beginUndoable(snapshot, "Question ignored")
-    _uiState.value = successPreservingAvailability(optimistic)
+    _uiState.value = successFor(optimistic)
 
     vmScope.launch {
       try {
         repository.ignoreQuestion(projectId, questionId)
       } catch (e: Exception) {
-        _uiState.value = successPreservingAvailability(snapshot)
+        _uiState.value = successFor(snapshot)
         clearUndoable()
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to ignore question: ${e.message ?: "Unknown error"}"
@@ -253,13 +257,13 @@ class ProjectDetailViewModel(
     )
 
     beginUndoable(snapshot, "Question restored")
-    _uiState.value = successPreservingAvailability(optimistic)
+    _uiState.value = successFor(optimistic)
 
     vmScope.launch {
       try {
         repository.unignoreQuestion(projectId, questionId)
       } catch (e: Exception) {
-        _uiState.value = successPreservingAvailability(snapshot)
+        _uiState.value = successFor(snapshot)
         clearUndoable()
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to unignore question: ${e.message ?: "Unknown error"}"
@@ -288,7 +292,7 @@ class ProjectDetailViewModel(
       try {
         val project = repository.updateProject(id, title, synopsis, mode)
         if (project != null) {
-          _uiState.value = successPreservingAvailability(project)
+          _uiState.value = successFor(project)
         }
       } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(

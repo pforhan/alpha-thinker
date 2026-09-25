@@ -31,9 +31,8 @@ class LogContext internal constructor(
   /** A lifecycle opening row, e.g. `started: InitialQuestions`. */
   suspend fun started(label: String) = file("${LogMarkers.Started} $label")
 
-  /** A success terminal row; [detail] renders as `succeeded: $detail`. */
-  suspend fun closeSucceeded(detail: String? = null) =
-    terminal(if (detail != null) "${LogMarkers.Succeeded}: $detail" else LogMarkers.Succeeded)
+  /** A success terminal row (`succeeded`). */
+  suspend fun closeSucceeded() = terminal(LogMarkers.Succeeded)
 
   /**
    * A failure terminal row rendering `failed: $message` — the single failure

@@ -20,7 +20,7 @@ class LogContextTest {
     )
 
     context.started("InitialQuestions")
-    context.closeSucceeded("result=true")
+    context.closeSucceeded()
 
     assertEquals(2, log.entries.size)
     val started = log.entries[0]

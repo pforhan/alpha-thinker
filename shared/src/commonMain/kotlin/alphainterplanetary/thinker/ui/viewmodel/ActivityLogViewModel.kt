@@ -29,9 +29,8 @@ data class ActivityLogItem(
  * Exposes each activity as an [ActivityLogItem] (the clumped rows for one activity
  * id, with a synthesized summary and derived duration) ordered newest-first, so
  * the viewer can audit why a backend LLM stopped offering questions (see
- * IMPLEMENTATION-PLAN.md line 228): a `RemainingInPhase` task that answered
- * `false`, a `FollowUpQuestions` batch that produced nothing yet marked `done`,
- * or a failed/cancelled generation task with its error. The owning project's
+ * IMPLEMENTATION-PLAN.md line 228): a `FollowUpQuestions` batch that produced
+ * nothing yet marked `done`, or a failed/cancelled generation task with its error. The owning project's
  * title is looked up from the [ProjectRepository] at collection time (never
  * pinned in the log), so renames stay current.
  *

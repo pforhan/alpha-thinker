@@ -160,37 +160,6 @@ class KoogPlanningEngineTest {
   }
 
   @Test
-  fun `canProduceMoreInPhase always permits fresh questions`() = runTest {
-    val engine = engine(FakeClient(provider, ""))
-
-    val can = engine.canProduceMoreInPhase(
-      synopsis = "S",
-      previousQuestions = emptyList(),
-      phase = BuiltInPhase.Design,
-      activityId = "t1",
-    )
-
-    assertTrue(can)
-  }
-
-  @Test
-  fun `capability prompt includes the phase and already asked questions`() {
-    val engine = engine(FakeClient(provider, ""))
-    val previous = listOf(question("Already asked"), question("Also asked"))
-
-    val prompt = engine.capabilityPrompt(
-      synopsis = "S",
-      previousQuestions = previous,
-      phase = BuiltInPhase.ScopeGoals,
-    )
-
-    assertTrue(prompt.contains("Scope & Goals"))
-    assertTrue(prompt.contains("Already asked"))
-    assertTrue(prompt.contains("Also asked"))
-    assertTrue(prompt.contains("SYSTEM"))
-  }
-
-  @Test
   fun `an executor failure surfaces as an analysis failure`() = runTest {
     val engine = engine(ThrowingClient(provider))
 

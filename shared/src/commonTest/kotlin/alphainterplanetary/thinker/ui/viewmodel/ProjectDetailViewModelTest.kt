@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.tasks.TaskKind
@@ -23,6 +24,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -202,23 +204,53 @@ class ProjectDetailViewModelTest {
   // ---------- can generate more / advance to phase ----------
 
   @Test
-  fun `Success exposes whether the generator can produce more questions`() = runTest {
-    val generator = FakePlanningEngine().apply { canProduceMore = true }
-    withViewModel(FakeStorage(mutableMapOf("p1" to project())), generator) { context ->
+  fun `Success reports more questions available until a round latches Exhausted`() = runTest {
+    val open = project().copy(
+      rounds = listOf(
+        round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals, outcome = RoundOutcome.MoreAvailable),
+      )
+    )
+    withViewModel(FakeStorage(mutableMapOf("p1" to open))) { context ->
       val vm = context.vm
       vm.loadProject("p1")
       testScheduler.advanceUntilIdle()
 
-      val state = vm.uiState.value as ProjectDetailUiState.Success
-      assertTrue(state.canGenerateMoreInPhase)
+      assertTrue((vm.uiState.value as ProjectDetailUiState.Success).canGenerateMoreInPhase)
     }
 
-    withViewModel(FakeStorage(mutableMapOf("p1" to project())), FakePlanningEngine()) { context ->
+    val exhausted = open.copy(
+      rounds = listOf(
+        round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals, outcome = RoundOutcome.Exhausted),
+      )
+    )
+    withViewModel(FakeStorage(mutableMapOf("p1" to exhausted))) { context ->
       val vm = context.vm
       vm.loadProject("p1")
       testScheduler.advanceUntilIdle()
 
-      assertTrue(!(vm.uiState.value as ProjectDetailUiState.Success).canGenerateMoreInPhase)
+      assertFalse((vm.uiState.value as ProjectDetailUiState.Success).canGenerateMoreInPhase)
+    }
+  }
+
+  @Test
+  fun `a round that could not produce anything new keeps more questions available`() = runTest {
+    val failed = project().copy(
+      rounds = listOf(
+        round(
+          id = "r1",
+          projectId = "p1",
+          phase = BuiltInPhase.ScopeGoals,
+          outcome = RoundOutcome.Failed,
+          outcomeDetail = "no new questions",
+        ),
+      )
+    )
+    withViewModel(FakeStorage(mutableMapOf("p1" to failed))) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+
+      assertTrue((vm.uiState.value as ProjectDetailUiState.Success).canGenerateMoreInPhase)
     }
   }
 
@@ -348,13 +380,12 @@ class ProjectDetailViewModelTest {
         listOf(
           TaskKind.TitleRecommendation,
           TaskKind.InitialQuestions,
-          TaskKind.RemainingInPhase,
         ),
         active.map { it.kind },
       )
       assertTrue(
         active.all { it.status == TaskStatus.Succeeded },
-        "the title, the batch, and the remaining-in-phase check all complete",
+        "the title and the batch both complete",
       )
     }
   }
@@ -364,7 +395,6 @@ class ProjectDetailViewModelTest {
   @Test
   fun `generateMoreQuestions runs on the task runner and reloads when it completes`() = runTest {
     val fake = FakePlanningEngine().apply {
-      canProduceMore = true
       followUpQuestions += question("n1", "Fresh?")
     }
     withViewModel(
@@ -396,7 +426,6 @@ class ProjectDetailViewModelTest {
   fun `entering a project with an extant running task reconnects and reloads on completion`() =
     runTest {
       val fake = FakePlanningEngine().apply {
-        canProduceMore = true
         followUpQuestions += question("n1", "Fresh?")
       }
       withViewModel(
@@ -404,9 +433,6 @@ class ProjectDetailViewModelTest {
         generator = slowFollowUpGenerator(fake, holdSeconds = 5),
       ) { context ->
         val vm = context.vm
-        // Availability gates the affordance; establish it before generating.
-        context.repository.ensureFreshRemainingInPhase("p1")
-        testScheduler.advanceUntilIdle()
         // A generation task is already in flight before the screen enters.
         context.repository.generateMoreQuestions("p1")
         testScheduler.runCurrent()

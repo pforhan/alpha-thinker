@@ -57,14 +57,14 @@ import kotlin.time.Instant
  *
  * Each card is one activity (the [LogEntry] rows sharing an
  * [LogEntry.activityId]): its collapsed headline summarizes the outcome (a
- * question count + `done` flag, a capability answer, a produced title, or an
- * error), and tapping expands the full ordered rows with timestamps.
- *
- * This addresses IMPLEMENTATION-PLAN.md line 228 and the "why has the backend
- * stopped offering questions" audit: a `RemainingInPhase` activity whose answer
- * is `false`, a `FollowUpQuestions` batch that produced zero questions but
- * marked `done`, or a failed/cancelled generation task with its error message
- * all read directly off the collapsed row.
+  * question count + `done` flag, a produced title, or an
+  * error), and tapping expands the full ordered rows with timestamps.
+  *
+  * This addresses IMPLEMENTATION-PLAN.md line 228 and the "why has the backend
+  * stopped offering questions" audit: a `FollowUpQuestions` batch that produced
+  * zero questions but
+  * marked `done`, or a failed/cancelled generation task with its error message
+  * all read directly off the collapsed row.
  *
  * It is read-only; the delete action wipes the whole log (no confirmation) and
  * nothing else is mutated.

@@ -8,7 +8,6 @@ enum class EngineInteraction(val label: String) {
   RecommendTitle("Recommend title"),
   InitialQuestions("Initial questions"),
   FollowUpQuestions("Follow-up questions"),
-  RemainingInPhase("Remaining in phase"),
 }
 
 /**

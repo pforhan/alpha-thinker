@@ -21,11 +21,16 @@ data class QuestionBatch(
 
 /**
  * The unified contract for the engine that produces planning content — initial
- * and follow-up question rounds, recommended titles, and phase-exhaustion
- * checks. A [PlanningEngine] is invoked statelessly with the project context
- * it needs, so the same call shape works across every backend: a local edge
- * LLM, a remote HTTP/cloud model, or the hardcoded Lite fallback
- * ([HardcodedPlanningEngine]).
+ * and follow-up question rounds and recommended titles. A [PlanningEngine] is
+ * invoked statelessly with the project context it needs, so the same call shape
+ * works across every backend: a local edge LLM, a remote HTTP/cloud model, or
+ * the hardcoded Lite fallback ([HardcodedPlanningEngine]).
+ *
+ * Phase exhaustion is not asked of the engine: it is answered by the explicit
+ * [QuestionBatch.done] each batch already carries, which the repository latches
+ * onto the round it generated (see `RoundOutcome`). A speculative capability
+ * probe could only ever say "yes" for an LLM backend, and a wrong "no" would
+ * strand a phase, so there is no such call here.
  *
  * Each interaction is intended to be recorded on the engine activity log (see
  * ENG-DESIGN.md "Core Data Schema") so the System/Debug workspace can show what
@@ -62,24 +67,6 @@ interface PlanningEngine {
     activityId: String,
   ): QuestionBatch
 
-  /**
-   * Whether the engine could still produce questions for [phase] without
-   * repeating [previousQuestions] (which spans the whole project). A boolean
-   * capability answer, deliberately not a count: a remote LLM backend cannot
-   * number its unasked pool precisely, so it answers the question it *can*
-   * answer truthfully ("could you still produce a fresh question for this
-   * phase?") — and that same answer always permits "yes". A `false` answer
-   * means the phase is exhausted, so "Get more questions" affordances disable
-   * themselves instead of firing a no-op generation round.
-   */
-  @Throws(AnalysisFailure::class, CancellationException::class)
-  suspend fun canProduceMoreInPhase(
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-    activityId: String,
-  ): Boolean
-
   class AnalysisFailure(override val message: String) : Exception(message)
 }
 
@@ -101,12 +88,6 @@ interface PromptRenderer {
   ): String
 
   fun followUpQuestionsPrompt(
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-  ): String
-
-  fun capabilityPrompt(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,

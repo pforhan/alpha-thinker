@@ -3,22 +3,21 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
+import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
+import alphainterplanetary.thinker.engine.QuestionBatch
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.Phase
-import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import me.tatarka.inject.annotations.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Instant
 
 @AppScope
@@ -100,6 +99,14 @@ class ProjectRepository @Inject constructor(
    * dedupe against everything already asked in the project, shuffle, and
    * persist as a task on the [taskRunner] so the caller returns immediately and
    * the UI can surface progress (and navigate away freely) while it runs.
+   *
+   * The batch's [QuestionBatch.done] is latched onto the round as its
+   * [RoundOutcome], which is what the "Get more questions" affordances read
+   * (see `Project.currentPhaseExhausted`) — a phase is exhausted only because
+   * a generation said so, never because a capability probe guessed. A batch
+   * that yields nothing while claiming more is available is a dead end, not a
+   * success: it latches [RoundOutcome.Failed] and fails the task so the
+   * affordance stays available and the failure is visible and retryable.
    */
   private fun enqueueQuestionGeneration(
     projectId: String,
@@ -110,37 +117,73 @@ class ProjectRepository @Inject constructor(
     taskRunner.enqueue(projectId, kind) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
-      val generated = when (kind) {
-        TaskKind.InitialQuestions -> engine.generateInitialQuestions(
-          editableTitle = reloaded.editableTitle,
-          synopsis = reloaded.synopsis,
-          roundId = round.id,
-          phase = round.phase,
-          activityId = taskId,
-        )
+      val generated = try {
+        when (kind) {
+          TaskKind.InitialQuestions -> engine.generateInitialQuestions(
+            editableTitle = reloaded.editableTitle,
+            synopsis = reloaded.synopsis,
+            roundId = round.id,
+            phase = round.phase,
+            activityId = taskId,
+          )
 
-        TaskKind.FollowUpQuestions -> engine.generateFollowUpQuestions(
-          synopsis = reloaded.synopsis,
-          previousQuestions = reloaded.questions,
-          roundId = round.id,
-          phase = round.phase,
-          activityId = taskId,
-        )
+          TaskKind.FollowUpQuestions -> engine.generateFollowUpQuestions(
+            synopsis = reloaded.synopsis,
+            previousQuestions = reloaded.questions,
+            roundId = round.id,
+            phase = round.phase,
+            activityId = taskId,
+          )
 
-        else -> return@enqueue
+          else -> return@enqueue
+        }
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        // Record why the round came up empty before the task fails, so the UI
+        // can explain itself on the next read.
+        recordOutcome(reloaded, round.id, RoundOutcome.Failed, e.message ?: e.toString())
+        throw e
       }
       val fresh = generated.questions
         .filterNot { newQuestion -> reloaded.questions.any { it.text == newQuestion.text } }
         .shuffled()
-      if (generated.done) {
-        _remainingInPhase.update { it + (projectId to false) }
+      val outcome = when {
+        // The engine's explicit stop condition wins even when it answered with
+        // questions, so the phase reads exhausted either way.
+        generated.done -> RoundOutcome.Exhausted
+        fresh.isEmpty() -> RoundOutcome.Failed
+        else -> RoundOutcome.MoreAvailable
       }
-      if (fresh.isEmpty()) return@enqueue
-      val updated = reloaded.copy(
-        questions = reloaded.questions + fresh,
-        updatedAt = now(),
+      storage.saveProject(
+        reloaded.copy(
+          questions = reloaded.questions + fresh,
+          rounds = reloaded.rounds.map { if (it.id == round.id) it.withOutcome(outcome) else it },
+          updatedAt = now(),
+        )
       )
-      storage.saveProject(updated)
+      if (outcome == RoundOutcome.Failed) throw PlanningEngine.AnalysisFailure(NoNewQuestionsMessage)
+    }
+  }
+
+  /**
+   * Latches [outcome] onto one round of [project] and persists the project,
+   * best-effort: used on the engine-failure path, where the original failure
+   * must still reach the task.
+   */
+  private suspend fun recordOutcome(
+    project: Project,
+    roundId: String,
+    outcome: RoundOutcome,
+    detail: String? = null,
+  ) {
+    runCatching {
+      storage.saveProject(
+        project.copy(
+          rounds = project.rounds.map { if (it.id == roundId) it.withOutcome(outcome, detail) else it },
+          updatedAt = now(),
+        )
+      )
     }
   }
 
@@ -258,13 +301,14 @@ class ProjectRepository @Inject constructor(
   /**
    * Opens a new [RoundOrigin.UserRequested] round in the project's current
    * phase and enqueues its follow-up generation as a task, returning
-   * immediately with the round in place. When the phase's pool is exhausted
-   * no round is opened and the project is returned untouched — the "Get more
-   * questions" affordance gates on [canGenerateMoreInPhase] to reach here.
+   * immediately with the round in place. When the phase is exhausted (its
+   * newest round latched `RoundOutcome.Exhausted`) no round is opened and the
+   * project is returned untouched; the "Get more questions" affordance gates on
+   * the same derived answer to reach here.
    */
   suspend fun generateMoreQuestions(projectId: String): Project? {
     val project = storage.getProject(projectId) ?: return null
-    if (_remainingInPhase.value[projectId] != true) return project
+    if (project.currentPhaseExhausted) return project
     val now = now()
     val round = nextRound(project, RoundOrigin.UserRequested, now)
     val updated = project.copy(
@@ -275,82 +319,6 @@ class ProjectRepository @Inject constructor(
     storage.saveProject(updated)
     enqueueQuestionGeneration(project.id, round.id, TaskKind.FollowUpQuestions)
     return updated
-  }
-
-  /**
-   * Whether the current phase's pool can still produce questions ("does anything
-   * remain in phase"), per project, recorded by [enqueueRemainingInPhaseCheck]
-   * and read by [canGenerateMoreInPhase]. Kept on the repository so the answer
-   * is shared by every consumer and never triggers an engine call of its own.
-   */
-  private val _remainingInPhase = MutableStateFlow<Map<String, Boolean>>(emptyMap())
-
-  val remainingInPhase: StateFlow<Map<String, Boolean>> = _remainingInPhase.asStateFlow()
-
-  /**
-   * Whether the current phase's pool still has questions the engine could
-   * produce, from the last [enqueueRemainingInPhaseCheck] — never blocks on the
-   * engine itself. Unknown projects answer "no", gating the generate-more
-   * affordances until a check lands.
-   */
-  suspend fun canGenerateMoreInPhase(projectId: String): Boolean {
-    val project = storage.getProject(projectId) ?: return false
-    return _remainingInPhase.value[projectId] ?: false
-  }
-
-  /**
-   * Runs one [TaskKind.RemainingInPhase] check as a task: asks the engine
-   * whether the current phase could still produce questions and records the
-   * capability answer on [remainingInPhase]. Returns the queued task; the
-   * result also rides on the terminal task's [GenerationTask.result].
-   */
-  fun enqueueRemainingInPhaseCheck(projectId: String): GenerationTask {
-    val engine = engineSelector.selectedEngine()
-    return taskRunner.enqueueResult(projectId, TaskKind.RemainingInPhase) { taskId ->
-      val project = storage.getProject(projectId)
-      val can = if (project == null) {
-        false
-      } else {
-        engine.canProduceMoreInPhase(
-          synopsis = project.synopsis,
-          previousQuestions = project.questions,
-          phase = project.currentPhase,
-          activityId = taskId,
-        )
-      }
-      _remainingInPhase.update { it + (projectId to can) }
-      can
-    }
-  }
-
-  /**
-   * Runs a fresh [TaskKind.RemainingInPhase] check only when the cached answer
-   * is stale. Skipped while a check is already active for the project and when
-   * the last completed check was enqueued after every question-generating task
-   * (only generated questions change the remaining count), so opening a project
-   * or answered questions never re-asks the engine. Engine-group tasks (and
-   * same-project tasks generally) run serially in enqueue order ([TaskGroup]),
-   * so the enqueue order in [TaskRunner.tasks] is also the completion order and
-   * the comparison is stable across clock granularities. Returns the task when
-   * one was enqueued, null when the cached result is fresh.
-   */
-  fun ensureFreshRemainingInPhase(projectId: String): GenerationTask? {
-    val projectTasks = taskRunner.tasks.value.filter { it.projectId == projectId }
-    if (projectTasks.any { it.kind == TaskKind.RemainingInPhase && it.isActive }) return null
-
-    val lastCheckIndex = projectTasks.indexOfLast {
-      it.isFinished && it.kind == TaskKind.RemainingInPhase
-    }
-    if (lastCheckIndex == -1) return enqueueRemainingInPhaseCheck(projectId)
-
-    val lastMutationIndex = projectTasks.indexOfLast {
-      it.isFinished && (it.kind == TaskKind.InitialQuestions || it.kind == TaskKind.FollowUpQuestions)
-    }
-    return if (lastMutationIndex > lastCheckIndex) {
-      enqueueRemainingInPhaseCheck(projectId)
-    } else {
-      null
-    }
   }
 
   /**
@@ -471,5 +439,16 @@ class ProjectRepository @Inject constructor(
       appendLine(answerBlock)
       appendLine()
     }
+  }
+
+  private companion object {
+    /**
+     * Why a generation that produced nothing new is reported as a failure:
+     * user-facing on the task row, and the round's [RoundOutcome.Failed]
+     * detail. An engine that returns an empty batch (or only questions already
+     * asked) while claiming more is available is a dead end, not a success.
+     */
+    const val NoNewQuestionsMessage =
+      "The planner came back with no new questions for this phase. Try again."
   }
 }

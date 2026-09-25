@@ -6,6 +6,7 @@ import androidx.room3.ForeignKey
 import androidx.room3.Index
 import androidx.room3.PrimaryKey
 import androidx.room3.Relation
+import alphainterplanetary.thinker.model.RoundOutcome
 
 @Entity(tableName = "projects")
 data class ProjectEntity(
@@ -67,6 +68,8 @@ data class RoundEntity(
   val origin: String,
   val startedAt: Long,
   val completedAt: Long? = null,
+  val outcome: String = RoundOutcome.Pending.name,
+  val outcomeDetail: String? = null,
 )
 
 @Entity(

@@ -35,7 +35,7 @@ class GenerationTaskBarTest {
     )
     assertEquals(
       "Checking for more questions…",
-      activeTaskSummary(listOf(task(kind = TaskKind.RemainingInPhase, status = TaskStatus.Queued))),
+      activeTaskSummary(listOf(task(kind = TaskKind.InitialQuestions, status = TaskStatus.Queued))),
     )
   }
 

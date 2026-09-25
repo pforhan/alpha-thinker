@@ -16,9 +16,6 @@ enum class LogCategory(val label: String) {
   /** Recommending an editable title from a synopsis. */
   TitleRecommendation("Title recommendation"),
 
-  /** Asking whether a phase can still produce questions. */
-  CapabilityCheck("Capability check"),
-
   /** A tool / web-search / fetch call. */
   Lookup("Lookup"),
 
@@ -67,7 +64,7 @@ object LogMarkers {
   /** A lifecycle opening, e.g. `started: InitialQuestions`. */
   const val Started = "started:"
 
-  /** A success terminal, e.g. `succeeded` or `succeeded: result=true`. */
+  /** A success terminal, e.g. `succeeded`. */
   const val Succeeded = "succeeded"
 
   /** A failure terminal carrying a message, e.g. `failed: model exploded`. */

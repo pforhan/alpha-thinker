@@ -74,7 +74,7 @@ class SlowDownPlanningEngineTest {
           secondsByInteraction = mapOf(
             EngineInteraction.InitialQuestions to 2,
             EngineInteraction.FollowUpQuestions to 5,
-            EngineInteraction.RemainingInPhase to 30,
+            
           ),
         ),
       ),
@@ -83,7 +83,7 @@ class SlowDownPlanningEngineTest {
     val job = launch {
       generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
       generator.generateFollowUpQuestions("synopsis", emptyList(), "r2", BuiltInPhase.ScopeGoals, activityId = "test-activity")
-      generator.canProduceMoreInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals, activityId = "test-activity")
+       BuiltInPhase.ScopeGoals, activityId = "test-activity")
     }
     testScheduler.runCurrent()
     assertEquals(0, delegate.totalCalls())

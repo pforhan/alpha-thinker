@@ -15,7 +15,6 @@ enum class SettingsKey(val storageKey: String) {
   EngineRecommendTitleDelay("engine-delay-recommend-title"),
   EngineInitialQuestionsDelay("engine-delay-initial-questions"),
   EngineFollowUpQuestionsDelay("engine-delay-follow-up-questions"),
-  EngineRemainingInPhaseDelay("engine-delay-remaining-in-phase"),
   ActivityLoggerRetentionDays("activity-log-retention-days"),
   RemoteLlmBaseUrl("remote-llm-base-url"),
   RemoteLlmApiKey("remote-llm-api-key"),

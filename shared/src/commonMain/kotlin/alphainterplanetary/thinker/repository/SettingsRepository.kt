@@ -218,7 +218,6 @@ class SettingsRepository @Inject constructor(
       EngineInteraction.RecommendTitle -> SettingsKey.EngineRecommendTitleDelay
       EngineInteraction.InitialQuestions -> SettingsKey.EngineInitialQuestionsDelay
       EngineInteraction.FollowUpQuestions -> SettingsKey.EngineFollowUpQuestionsDelay
-      EngineInteraction.RemainingInPhase -> SettingsKey.EngineRemainingInPhaseDelay
     }
 
   companion object {

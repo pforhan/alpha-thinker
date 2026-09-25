@@ -38,7 +38,7 @@ class ActivityRecordTest {
       listOf(
         entry(1, "task-1", "input: synopsis=Build a rocketship", LogCategory.TitleRecommendation, timestamp = old),
         entry(2, "task-1", "response: Rocketship", LogCategory.TitleRecommendation, timestamp = old),
-        entry(3, "task-2", "started: RemainingInPhase", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = now()),
+        
       )
     )
 
@@ -144,9 +144,9 @@ class ActivityRecordTest {
   fun `remaining-in-phase answers summarize the phase capacity`() {
     val noMore = titleActivity(
       listOf(
-        entry(1, "task-1", "started: RemainingInPhase", LogCategory.TaskRun, LogSource.TaskRunner),
+        
         entry(2, "task-1", "input: phase=ScopeGoals, previous questions=10", LogCategory.CapabilityCheck),
-        entry(3, "task-1", "response: canProduceMore=false, phase=Scope & Goals", LogCategory.CapabilityCheck),
+        
         entry(4, "task-1", "succeeded: result=false", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
@@ -154,7 +154,7 @@ class ActivityRecordTest {
 
     val stillOpen = titleActivity(
       listOf(
-        entry(1, "task-2", "started: RemainingInPhase", LogCategory.TaskRun, LogSource.TaskRunner),
+        
         entry(2, "task-2", "succeeded: result=true", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()

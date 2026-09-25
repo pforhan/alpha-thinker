@@ -75,18 +75,6 @@ class TaskRunnerLoggingTest {
   }
 
   @Test
-  fun `enqueueResult rides the boolean answer on the succeeded row`() = runTest {
-    val log = RecordingActivityLogger()
-    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
-
-    runner.enqueueResult("p1", TaskKind.RemainingInPhase) { true }
-
-    testScheduler.advanceUntilIdle()
-
-    assertEquals(listOf("started: RemainingInPhase", "succeeded: result=true"), log.entries.map { it.log })
-  }
-
-  @Test
   fun `a cancelled task terminates the activity instead of leaving it live`() = runTest {
     val log = RecordingActivityLogger()
     val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)

@@ -51,17 +51,6 @@ class SlowDownPlanningEngine(
     return delegate.generateFollowUpQuestions(synopsis, previousQuestions, roundId, phase, activityId)
   }
 
-  override suspend fun canProduceMoreInPhase(
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-    activityId: String,
-  ): Boolean {
-    println("SlowDownPlanningEngine.canProduceMoreInPhase()")
-    maybeDelay(EngineInteraction.RemainingInPhase)
-    return delegate.canProduceMoreInPhase(synopsis, previousQuestions, phase, activityId)
-  }
-
   private suspend fun maybeDelay(interaction: EngineInteraction) {
     config.value.durationFor(interaction)?.let { duration ->
       delay(duration)

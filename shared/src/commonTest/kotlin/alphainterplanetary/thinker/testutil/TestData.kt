@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.tasks.GenerationTask
@@ -64,6 +65,8 @@ fun round(
   origin: RoundOrigin = RoundOrigin.Initial,
   startedAt: Instant = defaultTestInstant,
   completedAt: Instant? = null,
+  outcome: RoundOutcome = RoundOutcome.Pending,
+  outcomeDetail: String? = null,
 ): Round = Round(
   id = id,
   projectId = projectId,
@@ -72,6 +75,8 @@ fun round(
   origin = origin,
   startedAt = startedAt,
   completedAt = completedAt,
+  outcome = outcome,
+  outcomeDetail = outcomeDetail,
 )
 
 fun answeredQuestion(id: String): Question =

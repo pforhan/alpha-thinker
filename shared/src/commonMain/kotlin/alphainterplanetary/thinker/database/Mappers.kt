@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.time.Instant
 
@@ -83,6 +84,8 @@ fun Round.toEntity() = RoundEntity(
   origin = origin.name,
   startedAt = startedAt.toEpochMilliseconds(),
   completedAt = completedAt?.toEpochMilliseconds(),
+  outcome = outcome.name,
+  outcomeDetail = outcomeDetail,
 )
 
 fun RoundEntity.toDomainModel() = Round(
@@ -93,4 +96,6 @@ fun RoundEntity.toDomainModel() = Round(
   origin = RoundOrigin.valueOf(origin),
   startedAt = Instant.fromEpochMilliseconds(startedAt),
   completedAt = completedAt?.let { Instant.fromEpochMilliseconds(it) },
+  outcome = RoundOutcome.valueOf(outcome),
+  outcomeDetail = outcomeDetail,
 )

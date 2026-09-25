@@ -58,6 +58,27 @@ data class Project(
   val currentPhaseRounds: List<Round>
     get() = rounds.filter { it.phase == currentPhase }
 
+  /** The newest round in the current phase — the one carrying its latest generation answer. */
+  val currentPhaseLatestRound: Round?
+    get() = currentPhaseRounds.maxByOrNull { it.roundNumber }
+
+  /**
+   * Whether the current phase has nothing more to give: its newest round
+   * reported [RoundOutcome.Exhausted]. Derived from storage rather than cached
+   * per session, so it survives restarts, and a phase opened afresh (advancing
+   * on, or revisiting an exhausted one) resets it by starting a new round. A
+   * [RoundOutcome.Failed] attempt is a dead end, not exhaustion — the phase
+   * stays open so the user can retry.
+   */
+  val currentPhaseExhausted: Boolean
+    get() = currentPhaseLatestRound?.outcome == RoundOutcome.Exhausted
+
+  /** Why the current phase's newest attempt failed, when it did. */
+  val currentPhaseFailure: String?
+    get() = currentPhaseLatestRound
+      ?.takeIf { it.outcome == RoundOutcome.Failed }
+      ?.outcomeDetail
+
   /** Questions asked while the current planning phase was in progress. */
   val currentPhaseQuestions: List<Question>
     get() {

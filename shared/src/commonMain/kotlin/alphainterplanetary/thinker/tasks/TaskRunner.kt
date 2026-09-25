@@ -37,8 +37,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * On top of the group limit, tasks for the **same project never run
  * concurrently**: task bodies re-read and re-persist the whole `Project`
  * aggregate, so two writers for one project would clobber each other's write.
- * Parallelism is safe across projects and for read-only checks like
- * [TaskKind.RemainingInPhase].
+ * Parallelism is safe across projects; within one project every task rewrites
+ * the whole `Project` aggregate, so they stay serialized.
  *
  * When an [ActivityLogger] is injected, each lifecycle transition is appended as
  * an immutable [LogEntry] via a [LogContext] scoped to the task's [activityId]
@@ -87,32 +87,10 @@ class TaskRunner(
     body: suspend (taskId: String) -> Unit,
   ): GenerationTask {
     val task = newTask(projectId, kind, group)
-    return launchTask(task) {
-      body(it)
-      null
-    }
-  }
-
-  /**
-   * Like [enqueue], but the body answers a question (e.g. "can the engine
-   * still produce questions?") and its result is folded into the terminal
-   * task's [GenerationTask.result].
-   */
-  fun enqueueResult(
-    projectId: String,
-    kind: TaskKind,
-    group: ConcurrencyGroup = kind.group,
-    body: suspend (taskId: String) -> Boolean,
-  ): GenerationTask {
-    val task = newTask(projectId, kind, group)
     return launchTask(task) { body(it) }
   }
 
-  private fun newTask(
-    projectId: String,
-    kind: TaskKind,
-    group: ConcurrencyGroup,
-  ): GenerationTask =
+  private fun newTask(projectId: String, kind: TaskKind, group: ConcurrencyGroup): GenerationTask =
     GenerationTask(
       id = randomUUID(),
       projectId = projectId,
@@ -130,7 +108,7 @@ class TaskRunner(
 
   private fun launchTask(
     task: GenerationTask,
-    produce: suspend (taskId: String) -> Boolean?,
+    produce: suspend (taskId: String) -> Unit,
   ): GenerationTask {
     _tasks.update { it + task }
     val logContext = activityLogger?.context(
@@ -153,9 +131,8 @@ class TaskRunner(
           )
           var cancelled = false
           var failure: String? = null
-          var result: Boolean? = null
           try {
-            result = produce(task.id)
+            produce(task.id)
           } catch (e: CancellationException) {
             cancelled = true
           } catch (e: Exception) {
@@ -175,14 +152,14 @@ class TaskRunner(
           val terminal: (GenerationTask) -> GenerationTask = when {
             cancelled -> { t -> t.asFailed(finishedAt, "Task cancelled") }
             failure != null -> { t -> t.asFailed(finishedAt, failure) }
-            else -> { t -> t.asSucceeded(finishedAt).copy(result = result) }
+            else -> { t -> t.asSucceeded(finishedAt) }
           }
           // The body may have streamed progress via [setProgress]; the durable
           // log keeps just the terminal row (transient ticks are UI-only).
           when {
             cancelled -> logContext?.closeCancelled()
             failure != null -> logContext?.closeFailed(failure)
-            else -> logContext?.closeSucceeded(detail = if (result != null) "result=$result" else null)
+            else -> logContext?.closeSucceeded()
           }
           // Fold any progress/error published via [setProgress] into the terminal
           // state instead of clobbering it with a stale local read.

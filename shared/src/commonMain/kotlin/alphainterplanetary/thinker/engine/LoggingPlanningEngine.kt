@@ -96,32 +96,6 @@ class LoggingPlanningEngine(
     }
   }
 
-  override suspend fun canProduceMoreInPhase(
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-    activityId: String,
-  ): Boolean {
-    val context = log.context(activityId, LogCategory.CapabilityCheck, source)
-    filePrompt(
-      context,
-      (delegate as? PromptRenderer)?.capabilityPrompt(synopsis, previousQuestions, phase),
-      "phase=$phase, previous questions=${previousQuestions.size}",
-    )
-    return try {
-      val can = delegate.canProduceMoreInPhase(synopsis, previousQuestions, phase, activityId)
-      val label = phase.label
-      context.response("canProduceMore=$can, phase=$label")
-      can
-    } catch (e: CancellationException) {
-      context.closeCancelled()
-      throw e
-    } catch (e: Exception) {
-      context.closeFailed(e.message ?: e.toString())
-      throw e
-    }
-  }
-
   /** A rendered prompt rows as `prompt:` verbatim; otherwise a compact `input:` summary. */
   private suspend fun filePrompt(context: LogContext, prompt: String?, fallback: String) {
     if (prompt != null) context.prompt(prompt) else context.input(fallback)

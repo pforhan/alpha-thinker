@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 
 @Database(
   entities = [ProjectEntity::class, QuestionEntity::class, AnswerEntity::class, RoundEntity::class, SettingsEntity::class],
-  version = 9,
+  version = 10,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -25,6 +25,13 @@ expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
   override fun initialize(): AppDatabase
 }
 
+/**
+ * The app's Room database. Schema changes bump [version] and rely on
+ * [fallbackToDestructiveMigration] rather than a hand-written `Migration`: a
+ * migration body receives a per-target `SQLiteConnection` (JVM exposes a plain
+ * `prepare`, web a suspending one), which this shared `commonMain` builder
+ * cannot express, so an upgrade rebuilds the local database.
+ */
 fun getRoomDatabase(builder: RoomDatabase.Builder<AppDatabase>): AppDatabase {
   return builder
     .fallbackToDestructiveMigration()

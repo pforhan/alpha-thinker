@@ -63,44 +63,6 @@ class LoggingPlanningEngineTest {
   }
 
   @Test
-  fun `can produce more in phase records the capability answer with the phase label`() = runTest {
-    val delegate = FakePlanningEngine()
-    delegate.canProduceMore = true
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = delegate, log = log)
-
-    val can = engine.canProduceMoreInPhase(
-      synopsis = "S",
-      previousQuestions = emptyList(),
-      phase = BuiltInPhase.ScopeGoals,
-      activityId = "task-3",
-    )
-
-    assertTrue(can)
-    val terminal = log.entries.last()
-    assertEquals(LogCategory.CapabilityCheck, terminal.category)
-    assertEquals("response: canProduceMore=true, phase=Scope & Goals", terminal.log)
-    assertEquals(2, log.entries.size, "input + response, nothing else")
-    assertTrue(log.entries.first().log.startsWith("input: phase=ScopeGoals"))
-  }
-
-  @Test
-  fun `can produce more in phase records the full prompt when the delegate renders prompts`() = runTest {
-    val delegate = PromptRenderingEngine()
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = delegate, log = log)
-
-    engine.canProduceMoreInPhase(
-      synopsis = "S",
-      previousQuestions = emptyList(),
-      phase = BuiltInPhase.ScopeGoals,
-      activityId = "task-8",
-    )
-
-    assertEquals("prompt: SYSTEM\nCapability system\n\nUSER\nS / Scope & Goals", log.entries.first().log)
-  }
-
-  @Test
   fun `follow-up questions record the done signal in the response row`() = runTest {
     val delegate = FakePlanningEngine()
     delegate.followUpDone = true
@@ -197,12 +159,6 @@ class LoggingPlanningEngineTest {
       previousQuestions: List<Question>,
       phase: Phase,
     ): String = "SYSTEM\nQuestions system\n\nUSER\n$synopsis"
-
-    override fun capabilityPrompt(
-      synopsis: String,
-      previousQuestions: List<Question>,
-      phase: Phase,
-    ): String = "SYSTEM\nCapability system\n\nUSER\n$synopsis / ${phase.label}"
   }
 
   private class ThrowingEngine : PlanningEngine {
@@ -226,12 +182,5 @@ class LoggingPlanningEngineTest {
       phase: Phase,
       activityId: String,
     ): QuestionBatch = throw PlanningEngine.AnalysisFailure("model exploded")
-
-    override suspend fun canProduceMoreInPhase(
-      synopsis: String,
-      previousQuestions: List<Question>,
-      phase: Phase,
-      activityId: String,
-    ): Boolean = throw PlanningEngine.AnalysisFailure("model exploded")
   }
 }

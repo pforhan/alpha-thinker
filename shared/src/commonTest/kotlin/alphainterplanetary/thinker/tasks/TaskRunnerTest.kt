@@ -33,7 +33,6 @@ class TaskRunnerTest {
     assertNotNull(done.startedAt)
     assertNotNull(done.finishedAt)
     assertTrue(done.isFinished)
-    assertNull(done.result, "plain enqueue carries no boolean answer")
     assertTrue(bodyRan)
   }
 
@@ -131,21 +130,6 @@ class TaskRunnerTest {
     testScheduler.advanceUntilIdle()
 
     assertTrue(runner.tasks.value.all { it.isFinished })
-  }
-
-  @Test
-  fun `enqueueResult folds the boolean answer into the terminal task`() = runTest {
-    val runner = TaskRunner(CoroutineScope(coroutineContext))
-
-    runner.enqueueResult("p1", TaskKind.RemainingInPhase) { true }
-
-    testScheduler.advanceUntilIdle()
-
-    val done = runner.tasks.value.single()
-    assertEquals(TaskStatus.Succeeded, done.status)
-    assertNotNull(done.startedAt)
-    assertNotNull(done.finishedAt)
-    assertEquals(true, done.result)
   }
 
   @Test

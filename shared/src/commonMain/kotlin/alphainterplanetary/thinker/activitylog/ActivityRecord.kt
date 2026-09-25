@@ -54,24 +54,15 @@ class ActivityRecord private constructor(
    * A human one-line summary of the activity's outcome, synthesized from the
    * rows: a terminal failure headlines with its topic ("Initial question
    * generation failed: model exploded"), a known interaction reads as a canned
-   * message ("No more questions available in phase", "Generated 4 follow-up
-   * questions", "Recommended title: Rocketship"), and anything unrecognized
-   * falls back to the last response/terminal row's text — or the newest row
-   * when no response surfaced (a plain or in-progress activity). The expanded
-   * rows stay verbatim; only this headline is reworded.
+   * message ("Generated 4 follow-up questions", "Recommended title:
+   * Rocketship"), and anything unrecognized falls back to the last
+   * response/terminal row's text — or the newest row when no response surfaced
+   * (a plain or in-progress activity). The expanded rows stay verbatim; only
+   * this headline is reworded.
    */
   val summary: String
     get() {
       failureHeadline()?.let { return it }
-
-      capability()?.let { answer ->
-        val suffix = answer.phase?.let { " ($it)" }.orEmpty()
-        return if (answer.can) {
-          "More questions available in phase$suffix"
-        } else {
-          "No more questions available in phase$suffix"
-        }
-      }
 
       val kind = taskKind()
       if (kind?.isGeneration == true) {
@@ -116,32 +107,6 @@ class ActivityRecord private constructor(
         if (subject != null) "$subject failed: $message" else line.log
       }
     }
-  }
-
-  /** A parsed capability row: its boolean answer plus the phase label, when the row names one. */
-  private data class CapabilityAnswer(
-    val can: Boolean,
-    val phase: String?,
-  )
-
-  /**
-   * The last capability answer (a `response: canProduceMore=…` or
-   * `succeeded: result=…` row), with the phase label when any candidate row
-   * carried it (the lifecycle `succeeded` row never does — the detail
-   * `response` row does).
-   */
-  private fun capability(): CapabilityAnswer? {
-    val rows = entries.filter { row ->
-      row.isDetailResponse() && row.log.startsWith("${LogMarkers.Response} canProduceMore=") ||
-        row.isSucceededRow() && row.log.startsWith("${LogMarkers.Succeeded}: result=")
-    }
-    val can = capabilityRegex
-      .find(rows.lastOrNull()?.log ?: return null)
-      ?.groupValues
-      ?.get(1)
-      ?.toBooleanStrictOrNull() ?: return null
-    val phase = rows.firstNotNullOfOrNull { row -> phaseInRegex.find(row.log)?.groupValues?.get(1) }
-    return CapabilityAnswer(can, phase)
   }
 
   /** The last outcome row (a response or terminal marker), for the fallback headline. */
@@ -232,7 +197,6 @@ private fun TaskKind.activityLabel(): String = when (this) {
   TaskKind.InitialQuestions -> "Initial question generation"
   TaskKind.FollowUpQuestions -> "Follow-up question generation"
   TaskKind.TitleRecommendation -> "Title recommendation"
-  TaskKind.RemainingInPhase -> "Phase capacity check"
   TaskKind.SynopsisRewrite -> "Synopsis rewrite"
   TaskKind.AutoArchive -> "Auto-archive"
 }
@@ -245,9 +209,3 @@ private fun batchSummary(count: Int, flavor: String): String = when {
 }
 
 private val batchCountRegex = Regex("""(\d+) questions?""")
-
-/** Extracts the boolean from a capability row, e.g. `canProduceMore=true, phase=Scope & Goals`. */
-private val capabilityRegex = Regex("""(?:canProduceMore|result)=(true|false)""")
-
-/** Extracts the phase label trailing a capability row, e.g. the `Scope & Goals` in `phase=Scope & Goals`. */
-private val phaseInRegex = Regex("""phase=(.+)""")

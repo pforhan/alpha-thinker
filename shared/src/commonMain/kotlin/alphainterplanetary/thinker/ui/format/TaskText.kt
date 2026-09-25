@@ -13,7 +13,6 @@ val TaskKind.title: String
     TaskKind.InitialQuestions -> "Initial questions"
     TaskKind.FollowUpQuestions -> "Follow-up questions"
     TaskKind.TitleRecommendation -> "Title recommendation"
-    TaskKind.RemainingInPhase -> "Questions remaining"
     TaskKind.SynopsisRewrite -> "Synopsis rewrite"
     TaskKind.AutoArchive -> "Auto-archive"
   }
@@ -24,7 +23,6 @@ val TaskKind.progressLabel: String
     TaskKind.InitialQuestions -> "Creating questions"
     TaskKind.FollowUpQuestions -> "Generating questions"
     TaskKind.TitleRecommendation -> "Generating title"
-    TaskKind.RemainingInPhase -> "Checking for more questions"
     TaskKind.SynopsisRewrite -> "Rewriting synopsis"
     TaskKind.AutoArchive -> "Reviewing answers"
   }

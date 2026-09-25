@@ -262,51 +262,54 @@ class HardcodedPlanningEngineTest {
     assertEquals(first.questions.map { it.text }, second.questions.map { it.text })
   }
 
-  // ---------- canProduceMoreInPhase ----------
+  // ---------- done is the pool's exhaustion signal ----------
 
   @Test
-  fun `canProduceMoreInPhase is true before anything has been asked`() = runTest {
-    assertTrue(
-      generator.canProduceMoreInPhase("synopsis", emptyList(), BuiltInPhase.ScopeGoals, activityId = "test-activity"),
-    )
+  fun `done is false while the phase pool still has unasked questions`() = runTest {
+    val first = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+
+    assertFalse(first.done)
+    assertTrue(first.questions.isNotEmpty())
+    assertTrue(poolOf(BuiltInPhase.ScopeGoals).size > first.questions.size)
   }
 
   @Test
-  fun `canProduceMoreInPhase counts only the phase's own pool texts not yet asked`() = runTest {
-    val initial = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.ScopeGoals, activityId = "test-activity")
-
-    val canProduceMore = generator.canProduceMoreInPhase(
-      "synopsis",
-      initial.questions,
-      BuiltInPhase.ScopeGoals,
-      activityId = "test-activity",
-    )
-
-    assertEquals(poolOf(BuiltInPhase.ScopeGoals).size > initial.questions.size, canProduceMore)
-  }
-
-  @Test
-  fun `canProduceMoreInPhase ignores questions asked in other phases`() = runTest {
+  fun `done is true once the phase pool is exhausted, regardless of the phase asked in`() = runTest {
     val research = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research, activityId = "test-activity")
+    assertFalse(research.done)
 
-    val scopeCanProduceMore = generator.canProduceMoreInPhase(
+    // A batch that drains ValidationPlan ends the phase, even though the engine
+    // was asked about ScopeGoals and the caller mixes in another phase's history.
+    val asked = poolOf(BuiltInPhase.ValidationPlan)
+      .mapIndexed { index, text -> question(id = "q$index", text = text) } + research.questions
+    val batch = generator.generateFollowUpQuestions(
       "synopsis",
-      research.questions,
-      BuiltInPhase.ScopeGoals,
+      asked,
+      "ctx",
+      BuiltInPhase.ValidationPlan,
       activityId = "test-activity",
     )
 
-    assertTrue(scopeCanProduceMore)
+    assertTrue(batch.done)
+    assertEquals(emptyList(), batch.questions)
   }
 
   @Test
-  fun `canProduceMoreInPhase is false once the phase pool is exhausted`() = runTest {
-    val asked = poolOf(BuiltInPhase.ValidationPlan)
-      .mapIndexed { index, text -> question(id = "q$index", text = text) }
+  fun `a batch that drains the pool mid-phase is done while still answering`() = runTest {
+    val pool = poolOf(BuiltInPhase.ValidationPlan)
+    // Leave exactly one question unasked; the batch that hands it over ends the phase.
+    val asked = pool.dropLast(1).mapIndexed { index, text -> question(id = "q$index", text = text) }
 
-    assertFalse(
-      generator.canProduceMoreInPhase("synopsis", asked, BuiltInPhase.ValidationPlan, activityId = "test-activity"),
+    val batch = generator.generateFollowUpQuestions(
+      "synopsis",
+      asked,
+      "ctx",
+      BuiltInPhase.ValidationPlan,
+      activityId = "test-activity",
     )
+
+    assertTrue(batch.done)
+    assertEquals(listOf(pool.last()), batch.questions.map { it.text })
   }
 
   // ---------- pool partition ----------

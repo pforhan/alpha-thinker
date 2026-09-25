@@ -8,14 +8,14 @@ import alphainterplanetary.thinker.phases.Phase
 
 class FakePlanningEngine : PlanningEngine {
   var recommendedTitle: String = "Recommended"
-  var canProduceMore: Boolean = false
   var initialDone: Boolean = false
   var followUpDone: Boolean = false
+  /** Thrown from question generation when set (a [kotlinx.coroutines.CancellationException] to simulate cancellation). */
+  var generationFailure: Throwable? = null
   val initialQuestions: MutableList<Question> = mutableListOf()
   val followUpQuestions: MutableList<Question> = mutableListOf()
   var initialCalls: MutableList<InitialCall> = mutableListOf()
   var followUpCalls: MutableList<FollowUpCall> = mutableListOf()
-  var canProduceMoreCalls: MutableList<CanProduceMoreCall> = mutableListOf()
 
   override var source: LogSource = LogSource.Lite
 
@@ -29,6 +29,7 @@ class FakePlanningEngine : PlanningEngine {
     activityId: String,
   ): QuestionBatch {
     initialCalls += InitialCall(editableTitle, synopsis, roundId, phase)
+    generationFailure?.let { throw it }
     return QuestionBatch(initialQuestions, initialDone)
   }
 
@@ -40,17 +41,8 @@ class FakePlanningEngine : PlanningEngine {
     activityId: String,
   ): QuestionBatch {
     followUpCalls += FollowUpCall(synopsis, previousQuestions, roundId, phase)
+    generationFailure?.let { throw it }
     return QuestionBatch(followUpQuestions, followUpDone)
-  }
-
-  override suspend fun canProduceMoreInPhase(
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-    activityId: String,
-  ): Boolean {
-    canProduceMoreCalls += CanProduceMoreCall(synopsis, previousQuestions, phase)
-    return canProduceMore
   }
 
   data class InitialCall(
@@ -64,12 +56,6 @@ class FakePlanningEngine : PlanningEngine {
     val synopsis: String,
     val previousQuestions: List<Question>,
     val roundId: String,
-    val phase: Phase,
-  )
-
-  data class CanProduceMoreCall(
-    val synopsis: String,
-    val previousQuestions: List<Question>,
     val phase: Phase,
   )
 }

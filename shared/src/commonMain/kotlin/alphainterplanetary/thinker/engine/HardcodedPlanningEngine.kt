@@ -67,13 +67,6 @@ class HardcodedPlanningEngine @Inject constructor(
     )
   }
 
-  override suspend fun canProduceMoreInPhase(
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-    activityId: String,
-  ): Boolean = remainingPool(phase, previousQuestions).isNotEmpty()
-
   /** The phase's pool texts not yet asked in the project, in pool priority order. */
   private fun remainingPool(phase: Phase, previousQuestions: List<Question>): List<String> {
     val askedTexts = previousQuestions.map { it.text }.toSet()
