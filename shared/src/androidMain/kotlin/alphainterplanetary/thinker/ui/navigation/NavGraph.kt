@@ -56,7 +56,9 @@ private fun NavGraph(
   val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
   val chrome = rememberAppChromeState(
     appComponent = appComponent,
-    onOpenActivityLog = { navController.navigate(Screen.ActivityLog.route) },
+    onOpenActivityLog = {
+      navController.navigate(Screen.ActivityLog.route) { launchSingleTop = true }
+    },
     onOpenTaskManager = {
       navController.navigate(Screen.TaskManager.route) { launchSingleTop = true }
     },
