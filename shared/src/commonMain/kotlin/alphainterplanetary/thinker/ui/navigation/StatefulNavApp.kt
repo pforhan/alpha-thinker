@@ -6,7 +6,6 @@ import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
 import alphainterplanetary.thinker.ui.screens.ProjectDetailScreen
 import alphainterplanetary.thinker.ui.screens.ProjectListScreen
-import alphainterplanetary.thinker.ui.screens.SettingsScreen
 import alphainterplanetary.thinker.ui.screens.TaskManagerScreen
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
@@ -57,7 +56,6 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
           chrome = chrome,
           onProjectClick = { route = AppRoute.ProjectDetail(it.id) },
           onProjectCreated = { route = AppRoute.ProjectDetail(it.id) },
-          onTaskManagerClick = { route = AppRoute.TaskManager },
         )
       }
 
@@ -78,20 +76,14 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
         )
       }
 
-      AppRoute.Settings -> {
-        SettingsScreen(
-          appComponent = appComponent,
-          chrome = chrome,
-          onBack = { route = AppRoute.ProjectList },
-        )
-      }
-
       AppRoute.ActivityLog -> {
         val vm = remember { ActivityLogViewModel(appComponent.activityLogger, appComponent.projectRepository, appComponent.appScope) }
         ActivityLogScreen(
           viewModel = vm,
           chrome = chrome,
-          onBack = { route = AppRoute.Settings },
+          // The log is reached from the flyout now, so it goes back to where
+          // the flyout was opened rather than to a settings screen.
+          onBack = { route = AppRoute.ProjectList },
         )
       }
     }
@@ -116,7 +108,6 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
 internal sealed class AppRoute {
   object ProjectList : AppRoute()
   object TaskManager : AppRoute()
-  object Settings : AppRoute()
   object ActivityLog : AppRoute()
   data class ProjectDetail(val projectId: String) : AppRoute()
 }

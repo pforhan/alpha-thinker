@@ -6,7 +6,6 @@ import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
 import alphainterplanetary.thinker.ui.screens.ProjectDetailScreen
 import alphainterplanetary.thinker.ui.screens.ProjectListScreen
-import alphainterplanetary.thinker.ui.screens.SettingsScreen
 import alphainterplanetary.thinker.ui.screens.TaskManagerScreen
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
 import alphainterplanetary.thinker.ui.theme.Dimens
@@ -35,7 +34,6 @@ import androidx.navigation.compose.rememberNavController
 sealed class Screen(val route: String) {
   object ProjectList : Screen("project_list")
   object TaskManager : Screen("task_manager")
-  object Settings : Screen("settings")
   object ActivityLog : Screen("activity_log")
   object ProjectDetail : Screen("project_detail/{projectId}") {
     fun createRoute(projectId: String) = "project_detail/$projectId"
@@ -85,22 +83,10 @@ private fun NavGraph(
           onProjectCreated = { project ->
             navController.navigate(Screen.ProjectDetail.createRoute(project.id))
           },
-          onTaskManagerClick = {
-            navController.navigate(Screen.TaskManager.route) {
-              launchSingleTop = true
-            }
-          },
         )
       }
       composable(Screen.TaskManager.route) {
         TaskManagerScreen(
-          appComponent = appComponent,
-          chrome = chrome,
-          onBack = { navController.popBackStack() },
-        )
-      }
-      composable(Screen.Settings.route) {
-        SettingsScreen(
           appComponent = appComponent,
           chrome = chrome,
           onBack = { navController.popBackStack() },

@@ -71,7 +71,6 @@ fun ProjectListScreen(
   chrome: AppChromeState,
   onProjectClick: (Project) -> Unit,
   onProjectCreated: (Project) -> Unit,
-  onTaskManagerClick: () -> Unit,
 ) {
   var showCreateDialog by remember { mutableStateOf(false) }
   var projectToDelete by remember { mutableStateOf<Project?>(null) }
