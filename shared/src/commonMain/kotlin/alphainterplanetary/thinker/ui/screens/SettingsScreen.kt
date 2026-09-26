@@ -6,7 +6,7 @@ import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.chrome.DelayControlItem
 import alphainterplanetary.thinker.ui.chrome.EngineModeOption
-import alphainterplanetary.thinker.ui.chrome.RemoteConnectionItem
+import alphainterplanetary.thinker.ui.chrome.RemoteConnectionFields
 import alphainterplanetary.thinker.ui.chrome.ThemeOption
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
@@ -114,16 +114,18 @@ fun SettingsScreen(
           selected = engineMode == mode,
           selectable = mode.available(),
           onClick = { viewModel.selectEngineMode(mode) },
-        )
-      }
-      if (engineMode == EngineMode.Remote) {
-        RemoteConnectionItem(
-          baseUrl = remoteLlmBaseUrl,
-          apiKey = remoteLlmApiKey,
-          model = remoteLlmModel,
-          onBaseUrlChange = viewModel::setRemoteLlmBaseUrl,
-          onApiKeyChange = viewModel::setRemoteLlmApiKey,
-          onModelChange = viewModel::setRemoteLlmModel,
+          content = {
+            if (mode == EngineMode.Remote) {
+              RemoteConnectionFields(
+                baseUrl = remoteLlmBaseUrl,
+                apiKey = remoteLlmApiKey,
+                model = remoteLlmModel,
+                onBaseUrlChange = viewModel::setRemoteLlmBaseUrl,
+                onApiKeyChange = viewModel::setRemoteLlmApiKey,
+                onModelChange = viewModel::setRemoteLlmModel,
+              )
+            }
+          },
         )
       }
       Text(

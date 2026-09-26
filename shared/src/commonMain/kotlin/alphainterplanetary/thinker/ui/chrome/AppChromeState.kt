@@ -8,6 +8,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,14 +31,8 @@ enum class ChromeSheet {
    */
   Status,
 
-  /** The phase-color theme picker. */
-  PhaseColors,
-
-  /** The planning-backend picker, plus the remote connection when it's picked. */
+  /** The planning-backend picker, with the remote connection nested in it. */
   Intelligence,
-
-  /** The Task-Manager testing controls (artificial engine delay). */
-  Testing,
 }
 
 /**
@@ -138,4 +133,18 @@ fun rememberAppChromeState(
     chrome.onOpenTaskManager = onOpenTaskManager
   }
   return chrome
+}
+
+/**
+ * The status the chrome displays right now: the selected engine and the remote
+ * connection settings, run through the pure [engineStatus] derivation. Collected
+ * here rather than passed in, so every screen's header reads the same status
+ * from the same hoisted ViewModel.
+ */
+@Composable
+fun AppChromeState.engineStatus(): EngineStatus {
+  val mode by settings.engineMode.collectAsState()
+  val baseUrl by settings.remoteLlmBaseUrl.collectAsState()
+  val model by settings.remoteLlmModel.collectAsState()
+  return remember(mode, baseUrl, model) { engineStatus(mode, baseUrl, model) }
 }

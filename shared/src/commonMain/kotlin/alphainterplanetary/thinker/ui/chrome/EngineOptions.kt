@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,9 +25,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 /**
- * One selectable planning backend in the "Intelligence" section: names and
- * describes the mode, marks the selected one, and gates unavailable backends
- * off (only Lite is shipped today — the LLM backends land in Phase 3).
+ * One selectable planning backend: names and describes the mode, marks the
+ * selected one, and gates unavailable backends off (only Lite and Remote are
+ * selectable today — the on-device backends land later).
+ *
+ * [content] renders inside the same card, below the header, so a mode's own
+ * settings can live with it: the Remote card nests its connection fields rather
+ * than floating them in a separate card of their own. A filled endpoint under an
+ * engine that was not selected read as a live remote connection when the app
+ * would not make one.
  */
 @Composable
 internal fun EngineModeOption(
@@ -34,6 +41,7 @@ internal fun EngineModeOption(
   selected: Boolean,
   selectable: Boolean,
   onClick: () -> Unit,
+  content: @Composable ColumnScope.() -> Unit = {},
 ) {
   Card(
     onClick = onClick,
@@ -72,18 +80,22 @@ internal fun EngineModeOption(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
+      content()
     }
   }
 }
 
 /**
- * The Remote backend's connection settings: any OpenAI-compatible endpoint,
- * its API key (empty for a local Ollama), and the model name. Shown while
- * [EngineMode.Remote] is the selected backend; changes take effect from the
- * next planning interaction.
+ * The Remote backend's connection settings: any OpenAI-compatible endpoint, its
+ * API key (empty for a local Ollama), and the model name. Renders as bare fields
+ * because its caller already supplies the card — the Remote engine card nests it
+ * rather than sitting beside it.
+ *
+ * Changes take effect from the next planning interaction: the remote backend
+ * rebuilds its client when these values change, with no restart.
  */
 @Composable
-internal fun RemoteConnectionItem(
+internal fun RemoteConnectionFields(
   baseUrl: String,
   apiKey: String,
   model: String,
@@ -91,48 +103,41 @@ internal fun RemoteConnectionItem(
   onApiKeyChange: (String) -> Unit,
   onModelChange: (String) -> Unit,
 ) {
-  Card(modifier = Modifier.fillMaxWidth()) {
-    Column(modifier = Modifier.padding(Dimens.CardPadding)) {
-      Text(
-        text = "Remote connection",
-        style = MaterialTheme.typography.titleSmall,
-      )
-      Spacer(modifier = Modifier.height(Dimens.TightGap))
-      Text(
-        text = "Defaults to a local Ollama install; a trailing /v1 endpoint " +
-          "root (as Ollama's docs print) works too.",
-        style = MaterialTheme.typography.bodyMedium,
-      )
-      Spacer(modifier = Modifier.height(Dimens.ContentGap))
-      OutlinedTextField(
-        value = baseUrl,
-        onValueChange = onBaseUrlChange,
-        label = { Text("Base URL") },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        isError = baseUrl.isBlank(),
-      )
-      Spacer(modifier = Modifier.height(Dimens.ContentGap))
-      OutlinedTextField(
-        value = apiKey,
-        onValueChange = onApiKeyChange,
-        label = { Text("API key") },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        supportingText = {
-          Text("Leave empty for a local Ollama that needs no key.")
-        },
-      )
-      Spacer(modifier = Modifier.height(Dimens.ContentGap))
-      OutlinedTextField(
-        value = model,
-        onValueChange = onModelChange,
-        label = { Text("Model") },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        isError = model.isBlank(),
-      )
-    }
-  }
+  Spacer(modifier = Modifier.height(Dimens.SectionGap))
+  Text(
+    text = "Defaults to a local Ollama install; a trailing /v1 endpoint " +
+      "root (as Ollama's docs print) works too.",
+    style = MaterialTheme.typography.bodySmall,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
+  Spacer(modifier = Modifier.height(Dimens.ContentGap))
+  OutlinedTextField(
+    value = baseUrl,
+    onValueChange = onBaseUrlChange,
+    label = { Text("Base URL") },
+    modifier = Modifier.fillMaxWidth(),
+    singleLine = true,
+    isError = baseUrl.isBlank(),
+  )
+  Spacer(modifier = Modifier.height(Dimens.ContentGap))
+  OutlinedTextField(
+    value = apiKey,
+    onValueChange = onApiKeyChange,
+    label = { Text("API key") },
+    modifier = Modifier.fillMaxWidth(),
+    singleLine = true,
+    visualTransformation = PasswordVisualTransformation(),
+    supportingText = {
+      Text("Leave empty for a local Ollama that needs no key.")
+    },
+  )
+  Spacer(modifier = Modifier.height(Dimens.ContentGap))
+  OutlinedTextField(
+    value = model,
+    onValueChange = onModelChange,
+    label = { Text("Model") },
+    modifier = Modifier.fillMaxWidth(),
+    singleLine = true,
+    isError = model.isBlank(),
+  )
 }

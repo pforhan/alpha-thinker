@@ -96,8 +96,8 @@ private fun StatusPillRow(
 
 @Composable
 private fun StatusPill(slot: CapabilityStatus) {
-  val container = slot.containerColor()
-  val content = slot.contentColor()
+  val container = slot.state.containerColor()
+  val content = slot.state.onContainerColor()
   Box(
     modifier = Modifier
       .clip(BadgeShape)
@@ -144,22 +144,6 @@ private fun CompactStatusButton(
     )
   }
 }
-
-@Composable
-private fun CapabilityStatus.containerColor(): Color =
-  when (state) {
-    CapabilityState.Active -> MaterialTheme.colorScheme.secondaryContainer
-    CapabilityState.Incomplete -> MaterialTheme.colorScheme.errorContainer
-    CapabilityState.Unused -> MaterialTheme.colorScheme.surfaceContainerHighest
-  }
-
-@Composable
-private fun CapabilityStatus.contentColor(): Color =
-  when (state) {
-    CapabilityState.Active -> MaterialTheme.colorScheme.onSecondaryContainer
-    CapabilityState.Incomplete -> MaterialTheme.colorScheme.onErrorContainer
-    CapabilityState.Unused -> MaterialTheme.colorScheme.onSurfaceVariant
-  }
 
 @Composable
 private fun EngineStatus.dotColor(): Color =

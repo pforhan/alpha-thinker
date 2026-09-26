@@ -38,6 +38,8 @@ fun AppScaffold(
   floatingActionButton: @Composable () -> Unit = {},
   content: @Composable (PaddingValues) -> Unit,
 ) {
+  val status = chrome.engineStatus()
+
   Scaffold(
     modifier = modifier,
     topBar = {
@@ -50,11 +52,23 @@ fun AppScaffold(
             }
           }
         },
-        actions = { actions() },
+        actions = {
+          // Ahead of the screen's own actions: the status is the one thing every
+          // screen shares, so it sits in the same place on all of them.
+          StatusCluster(
+            status = status,
+            onClick = { chrome.openSheet(ChromeSheet.Status) },
+          )
+          actions()
+        },
       )
     },
     snackbarHost = { SnackbarHost(chrome.snackbarHostState) },
     floatingActionButton = floatingActionButton,
     content = content,
   )
+
+  // A sibling of the Scaffold rather than a child: the sheet is an overlay, and
+  // the navigation root's Box is what stacks the two.
+  ChromeSheetHost(chrome = chrome)
 }
