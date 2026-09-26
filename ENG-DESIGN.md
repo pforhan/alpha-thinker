@@ -331,17 +331,31 @@ RAG/embeddings, and tracing. The `PlanningEngine` interface is unchanged; a
 **Engine modes** (a persisted setting; the active engine reports its producer
 as `LogSource` on each activity-log row):
 
-| Mode | Backend | `LogSource` |
-|---|---|---|
-| Lite (default) | `HardcodedPlanningEngine` (unchanged) | `Lite` |
-| On-device | `OnDeviceLLMClient` — hand-rolled Koog `LLMClient` | `LocalLLM` |
-| Remote | Koog `OpenAILLMClient` / `OllamaClient` | `RemoteLLM` |
-| Downloaded | Koog `LiteRTLLMClient` (Android) + own JVM adapter (desktop) | `LocalLLM` |
+| Mode | Backend | `LogSource` | Capabilities |
+|---|---|---|---|
+| Lite (default) | `HardcodedPlanningEngine` (unchanged) | `Lite` | — |
+| On-device | `OnDeviceLLMClient` — hand-rolled Koog `LLMClient` | `LocalLLM` | LLM |
+| Remote | Koog `OpenAILLMClient` / `OllamaClient` | `RemoteLLM` | Network, LLM |
+| Downloaded | Koog `LiteRTLLMClient` (Android) + own JVM adapter (desktop) | `LocalLLM` | LLM |
 
-**Fallback:** any LLM backend that raises `AnalysisFailure` (or is unavailable /
-disabled) delegates transparently to Lite via a `FallbackPlanningEngine`-style
-wrapper around the Koog layer — the original resilience decision, tracked
-as IMPLEMENTATION-PLAN.md Phase 3 "Fallback Mechanism".
+**Capabilities** (`engine/EngineCapabilities.kt`, `EngineMode.capabilities`) are
+what each mode *will do*, and the header's status cluster renders them as one
+pill per slot — Network, LLM, Tools — with an unused slot muted. They are a
+projection of the selected mode, never a probe of the device: there is
+deliberately no connectivity detection and no per-capability toggle, because a
+switch the mode can override is a second source of truth that can disagree with
+what actually runs. Tools is unused by every mode until the agentic-lookup work
+lands.
+
+**Fallback:** any LLM backend that raises `AnalysisFailure` delegates
+transparently to Lite via a `FallbackPlanningEngine`-style wrapper around the
+Koog layer — the original resilience decision, tracked as
+IMPLEMENTATION-PLAN.md Phase 3 "Fallback Mechanism". A mode with no engine bound
+at all (an on-device backend whose runtime reports unavailable) **throws**
+instead of falling back: `resolveSelectedEngine` picks the mode or fails, so a
+Remote choice with no endpoint cannot quietly run Lite behind a header that still
+reads "Remote". Availability is a *selection-time* gate (`EngineMode.available()`,
+which greys the card in the picker), not a runtime fallback.
 
 **System on-device client (hand-rolled).** The system-model path is a thin,
 in-repo Koog `LLMClient`: an Android actual over ML Kit GenAI
