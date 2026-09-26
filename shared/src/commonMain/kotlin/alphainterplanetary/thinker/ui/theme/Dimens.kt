@@ -33,6 +33,14 @@ object Dimens {
   val ModeBarVerticalPadding = 8.dp
   val OutlineStroke = 1.dp
 
+  // Header engine-status cluster: the pill row collapses to a single status
+  // button before the title would be squeezed, so the collapse point reserves
+  // this much for the title.
+  val StatusPillGap = 6.dp
+  val StatusDotSize = 10.dp
+  val StatusDotInset = 12.dp
+  val HeaderTitleReserve = 96.dp
+
   // Phase badge / pill
   val BadgeSize = 28.dp
   val PillHorizontalPadding = 12.dp
