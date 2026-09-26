@@ -146,27 +146,9 @@ fun SettingsScreen(
         buttonLabel = "Open",
         onClick = chrome.onOpenActivityLog,
       )
-      when (val state = uiState) {
-        SettingsUiState.Idle, SettingsUiState.Generating -> {
-          Unit
-        }
-
-        is SettingsUiState.Success -> {
-          Text(
-            text = state.message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-          )
-        }
-
-        is SettingsUiState.Error -> {
-          Text(
-            text = state.message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-          )
-        }
-      }
+      // The generator's result is reported through the app-wide snackbar now
+      // (the flyout consumes it, since the header is composed on every screen),
+      // so it is not also printed inline here.
       Text(
         text = "Testing",
         style = MaterialTheme.typography.titleMedium,

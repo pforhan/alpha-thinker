@@ -73,6 +73,16 @@ class SettingsViewModel(
   private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Idle)
   val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
+  /**
+   * Clears a finished tool result once it has been reported. Without this the
+   * same message would never be emitted twice: generating the same number of
+   * sample projects twice produces the same [SettingsUiState.Success], and a
+   * collector keyed on the state would not see the second one.
+   */
+  fun consumeUiState() {
+    _uiState.value = SettingsUiState.Idle
+  }
+
   fun generateSampleProjects() {
     _uiState.value = SettingsUiState.Generating
     scope.launch {

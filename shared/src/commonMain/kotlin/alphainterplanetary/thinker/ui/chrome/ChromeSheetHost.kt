@@ -48,7 +48,11 @@ internal fun ChromeSheetHost(chrome: AppChromeState) {
           )
         }
 
+        ChromeSheet.PhaseColors -> PhaseColorsSheetContent(chrome = chrome)
+
         ChromeSheet.Intelligence -> IntelligenceSheetContent(chrome = chrome)
+
+        ChromeSheet.Testing -> TestingSheetContent(chrome = chrome)
       }
     }
   }
@@ -82,5 +86,7 @@ private fun ChromeSheetFrame(
 internal val ChromeSheet.title: String
   get() = when (this) {
     ChromeSheet.Status -> "Status"
+    ChromeSheet.PhaseColors -> "Phase colors"
     ChromeSheet.Intelligence -> "Intelligence"
+    ChromeSheet.Testing -> "Testing"
   }

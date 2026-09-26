@@ -60,6 +60,9 @@ fun AppScaffold(
             onClick = { chrome.openSheet(ChromeSheet.Status) },
           )
           actions()
+          // Last, so the chrome's own controls read as the bar's trailing edge
+          // on every screen rather than shifting around per screen.
+          SettingsFlyoutButton(chrome = chrome)
         },
       )
     },

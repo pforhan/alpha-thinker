@@ -31,8 +31,14 @@ enum class ChromeSheet {
    */
   Status,
 
+  /** The phase-color theme picker. */
+  PhaseColors,
+
   /** The planning-backend picker, with the remote connection nested in it. */
   Intelligence,
+
+  /** The Task-Manager testing controls (artificial engine delay). */
+  Testing,
 }
 
 /**
