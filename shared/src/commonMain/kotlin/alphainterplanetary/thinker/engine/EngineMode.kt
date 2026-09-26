@@ -18,8 +18,8 @@ enum class EngineMode(
 ) {
   Lite(
     key = "lite",
-    label = "Lite",
-    description = "Built-in question library. No network or device models — always available.",
+    label = "Offline",
+    description = "Built-in question library. Runs entirely on this device — no network, no language model.",
     logSource = LogSource.Lite,
   ),
   OnDevice(
