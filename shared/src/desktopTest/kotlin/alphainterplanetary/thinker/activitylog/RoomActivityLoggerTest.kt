@@ -103,6 +103,48 @@ class RoomActivityLoggerTest {
   }
 
   @Test
+  fun `latestActivity returns the newest activity with its error flag`() = runTest {
+    val db = inMemory()
+    val dao = db.logDao()
+    val now = Instant.fromEpochMilliseconds(10_000_000_000)
+    dao.append(Entry("a1", "response: done", timestamp = now))
+    dao.append(Entry("a2", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = now + 1.days))
+    dao.append(Entry("a2", "failed: model exploded", timestamp = now + 1.days))
+
+    val latest = log(db, scope = CoroutineScope(coroutineContext)).latestActivity().first()
+
+    assertEquals("a2", latest?.activityId)
+    assertTrue(latest?.hasError == true)
+    assertEquals("Initial question generation failed: model exploded", latest?.summary)
+  }
+
+  @Test
+  fun `latestActivity folds only the most recent rows`() = runTest {
+    val db = inMemory()
+    val dao = db.logDao()
+    val now = Instant.fromEpochMilliseconds(10_000_000_000)
+    // An older activity buried under the row limit, then a newer one.
+    repeat(ActivityLogger.RecentActivityRowLimit) {
+      dao.append(Entry("old", "response: buried", timestamp = now))
+    }
+    dao.append(Entry("new", "response: fresh", LogCategory.TitleRecommendation, timestamp = now + 1.days))
+
+    val latest = log(db, scope = CoroutineScope(coroutineContext)).latestActivity().first()
+
+    assertEquals("new", latest?.activityId)
+    assertEquals("Recommended title: fresh", latest?.summary)
+  }
+
+  @Test
+  fun `latestActivity is null on an empty log`() = runTest {
+    val db = inMemory()
+
+    val latest = log(db, scope = CoroutineScope(coroutineContext)).latestActivity().first()
+
+    assertEquals(null, latest)
+  }
+
+  @Test
   fun `clear wipes the whole log`() = runTest {
     val db = inMemory()
     val dao = db.logDao()

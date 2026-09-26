@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
+import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -19,6 +20,9 @@ class RecordingActivityLogger : ActivityLogger {
   }
 
   override fun entries(): Flow<List<LogEntry>> = flowOf(entries.toList())
+
+  override fun latestActivity(): Flow<ActivityRecord?> =
+    flowOf(ActivityRecord.groupByActivity(entries).firstOrNull())
 
   override suspend fun entriesForProject(projectId: String): List<LogEntry> =
     entries.filter { it.projectId == projectId }

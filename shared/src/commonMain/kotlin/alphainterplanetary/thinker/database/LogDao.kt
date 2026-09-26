@@ -22,6 +22,15 @@ interface LogDao {
   @Query("SELECT * FROM log_events ORDER BY id ASC")
   fun observeAll(): Flow<List<LogEntryEntity>>
 
+  /**
+   * The newest [limit] rows, newest first — the bounded read behind
+   * [alphainterplanetary.thinker.activitylog.ActivityLogger.latestActivity], so
+   * a status surface can show the latest activity without collecting the whole
+   * retained log.
+   */
+  @Query("SELECT * FROM log_events ORDER BY id DESC LIMIT :limit")
+  fun observeRecent(limit: Int): Flow<List<LogEntryEntity>>
+
   @Query("SELECT * FROM log_events WHERE projectId = :projectId ORDER BY id ASC")
   suspend fun allForProject(projectId: String): List<LogEntryEntity>
 

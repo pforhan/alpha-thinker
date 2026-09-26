@@ -41,6 +41,17 @@ interface ActivityLogger {
   /** All rows in append order (drives the Activity Log viewer). */
   fun entries(): Flow<List<LogEntry>>
 
+  /**
+   * The most recent activity, or null on an empty log — the cheap status read
+   * (an app-wide header showing [ActivityRecord.summary] / [ActivityRecord.hasError])
+   * that must not pay for [entries]' full-table read on every emission.
+   *
+   * Implementations read a bounded tail of the log ([RecentActivityRowLimit]
+   * rows) and fold it, so an in-progress activity whose rows straddle the
+   * boundary may summarize from its newest rows only.
+   */
+  fun latestActivity(): Flow<ActivityRecord?>
+
   /** All rows for one project, in append order (a project-scoped view). */
   suspend fun entriesForProject(projectId: String): List<LogEntry>
 
@@ -53,6 +64,16 @@ interface ActivityLogger {
 
   /** Manual "Clear log" — wipes the activity log wholesale, nothing else. */
   suspend fun clear()
+
+  companion object {
+    /**
+     * How many trailing rows [latestActivity] folds: generous enough that an
+     * activity's interaction rows arrive together (a generation activity files
+     * a prompt and a response), and small enough that a status surface never
+     * pays for the whole retained log.
+     */
+    const val RecentActivityRowLimit: Int = 50
+  }
 }
 
 /**
@@ -87,6 +108,10 @@ class RoomActivityLogger(
 
   override fun entries(): Flow<List<LogEntry>> =
     dao.observeAll().map { entities -> entities.map { it.toEntry() } }
+
+  override fun latestActivity(): Flow<ActivityRecord?> =
+    dao.observeRecent(ActivityLogger.RecentActivityRowLimit)
+      .map { entities -> ActivityRecord.groupByActivity(entities.map { it.toEntry() }).firstOrNull() }
 
   override suspend fun entriesForProject(projectId: String): List<LogEntry> =
     dao.allForProject(projectId).map { it.toEntry() }
