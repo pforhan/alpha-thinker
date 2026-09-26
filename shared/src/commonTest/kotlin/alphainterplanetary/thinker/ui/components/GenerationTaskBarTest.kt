@@ -34,8 +34,12 @@ class GenerationTaskBarTest {
       activeTaskSummary(listOf(task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Running))),
     )
     assertEquals(
-      "Checking for more questions…",
-      activeTaskSummary(listOf(task(kind = TaskKind.InitialQuestions, status = TaskStatus.Queued))),
+      "Rewriting synopsis…",
+      activeTaskSummary(listOf(task(kind = TaskKind.SynopsisRewrite, status = TaskStatus.Queued))),
+    )
+    assertEquals(
+      "Reviewing answers…",
+      activeTaskSummary(listOf(task(kind = TaskKind.AutoArchive, status = TaskStatus.Running))),
     )
   }
 

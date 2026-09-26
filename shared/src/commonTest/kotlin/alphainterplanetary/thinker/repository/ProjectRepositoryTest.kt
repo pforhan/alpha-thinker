@@ -42,7 +42,7 @@ class ProjectRepositoryTest {
     generator: PlanningEngine = FakePlanningEngine(),
     runner: TaskRunner = TaskRunner(CoroutineScope(coroutineContext)),
   ): ProjectRepository =
-    ProjectRepository(storage, PlanningEngineSelector { generator }, runner)
+    ProjectRepository(storage, { generator }, runner)
 
   // ---------- createProject ----------
 
@@ -200,7 +200,7 @@ class ProjectRepositoryTest {
       var current: PlanningEngine = enqueued
       val runner = TaskRunner(CoroutineScope(coroutineContext))
       val storage = FakeStorage()
-      val repository = ProjectRepository(storage, PlanningEngineSelector { current }, runner)
+      val repository = ProjectRepository(storage, { current }, runner)
 
       // createProject enqueues the title + initial batch under `current` (enqueued).
       val project = repository.createProject("My synopsis")
@@ -315,8 +315,6 @@ class ProjectRepositoryTest {
       createdAt = now,
       updatedAt = now,
     )
-    val repository = repo()
-
     val unanswered = project.unansweredQuestions
 
     assertEquals(listOf("open", "draft"), unanswered.map { it.id })
@@ -639,7 +637,7 @@ class ProjectRepositoryTest {
         followUpQuestions += question("f1")
       }
       val storage = FakeStorage(
-        mutableMapOf("p1" to phaseProject(BuiltInPhase.Design, round("r1", phase = BuiltInPhase.Design)))
+        mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
       )
       val repository = repo(storage = storage, generator = generator)
 
@@ -670,7 +668,6 @@ class ProjectRepositoryTest {
     val storage = FakeStorage(
       mutableMapOf(
         "p1" to phaseProject(
-          phase = BuiltInPhase.ScopeGoals,
           round = round(id = "r1", phase = BuiltInPhase.ScopeGoals, outcome = RoundOutcome.Exhausted),
         )
       )
@@ -693,10 +690,10 @@ class ProjectRepositoryTest {
     FakeStorage(mutableMapOf(project.id to project))
 
   /**
-   * A project sitting in [phase] after one round that already produced
-   * [q1], so follow-up generation has a round to latch its outcome onto.
+   * A project whose only round is [round], which already produced `q1`, so
+   * follow-up generation has a round to latch its outcome onto.
    */
-  private fun phaseProject(phase: BuiltInPhase, round: Round): Project = Project(
+  private fun phaseProject(round: Round): Project = Project(
     id = "p1",
     synopsis = "s",
     editableTitle = "t",
@@ -714,7 +711,7 @@ class ProjectRepositoryTest {
       followUpDone = false
     }
     val storage = FakeStorage(
-      mutableMapOf("p1" to phaseProject(BuiltInPhase.Design, round("r1", phase = BuiltInPhase.Design)))
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
     )
     val repository = repo(storage = storage, generator = generator)
 
@@ -738,7 +735,7 @@ class ProjectRepositoryTest {
       followUpDone = true
     }
     val storage = FakeStorage(
-      mutableMapOf("p1" to phaseProject(BuiltInPhase.Design, round("r1", phase = BuiltInPhase.Design)))
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
     )
     val repository = repo(storage = storage, generator = generator)
 
@@ -757,10 +754,10 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `an empty batch with done true latches Exhausted, not Failed`() = runTest {
+  fun `an empty batch with done true latches Exhausted and not Failed`() = runTest {
     val generator = FakePlanningEngine().apply { followUpDone = true }
     val storage = FakeStorage(
-      mutableMapOf("p1" to phaseProject(BuiltInPhase.Design, round("r1", phase = BuiltInPhase.Design)))
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
     )
     val repository = repo(storage = storage, generator = generator)
 
@@ -777,7 +774,7 @@ class ProjectRepositoryTest {
   fun `an empty batch with done false fails the task and keeps the phase retryable`() = runTest {
     val generator = FakePlanningEngine()
     val storage = FakeStorage(
-      mutableMapOf("p1" to phaseProject(BuiltInPhase.Design, round("r1", phase = BuiltInPhase.Design)))
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
     )
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     val repository = repo(storage = storage, generator = generator, runner = runner)
@@ -799,12 +796,12 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `a batch of only already-asked questions with done false is a failure, not a no-op`() = runTest {
+  fun `a batch of only already-asked questions with done false fails rather than quietly adding nothing`() = runTest {
     val generator = FakePlanningEngine().apply {
       followUpQuestions += question("q1")
     }
     val storage = FakeStorage(
-      mutableMapOf("p1" to phaseProject(BuiltInPhase.Design, round("r1", phase = BuiltInPhase.Design)))
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
     )
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     val repository = repo(storage = storage, generator = generator, runner = runner)
@@ -827,7 +824,7 @@ class ProjectRepositoryTest {
       generationFailure = PlanningEngine.AnalysisFailure("the model refused")
     }
     val storage = FakeStorage(
-      mutableMapOf("p1" to phaseProject(BuiltInPhase.Design, round("r1", phase = BuiltInPhase.Design)))
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
     )
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     val repository = repo(storage = storage, generator = generator, runner = runner)
@@ -851,7 +848,7 @@ class ProjectRepositoryTest {
       generationFailure = CancellationException("cancelled")
     }
     val storage = FakeStorage(
-      mutableMapOf("p1" to phaseProject(BuiltInPhase.Design, round("r1", phase = BuiltInPhase.Design)))
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
     )
     val repository = repo(storage = storage, generator = generator)
 
@@ -868,11 +865,10 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `the newest round in the phase decides exhaustion, and only that round`() = runTest {
+  fun `the newest round in the phase decides exhaustion and nothing older overrides it`() = runTest {
     val storage = FakeStorage(
       mutableMapOf(
         "p1" to phaseProject(
-          phase = BuiltInPhase.Design,
           round = round(id = "r1", phase = BuiltInPhase.Design, roundNumber = 1, outcome = RoundOutcome.Exhausted),
         ).copy(
           rounds = listOf(
@@ -894,7 +890,7 @@ class ProjectRepositoryTest {
     // The newest round is the failed one, so the phase is open again.
     val persisted = assertNotNull(storage.getProject("p1"))
     assertFalse(persisted.currentPhaseExhausted)
-    assertEquals("boom", persisted.currentPhaseFailure?.detail)
+    assertEquals("boom", persisted.currentPhaseFailure)
     assertNotNull(repository.generateMoreQuestions("p1"))
   }
 
@@ -915,7 +911,7 @@ class ProjectRepositoryTest {
               roundNumber = 1,
               outcome = RoundOutcome.Exhausted,
             ),
-            round(id = "r2", phase = BuiltInPhase.Design, roundNumber = 1, origin = RoundOrigin.Initial),
+            round(id = "r2", phase = BuiltInPhase.Design, roundNumber = 2, origin = RoundOrigin.Initial),
           ),
           createdAt = now,
           updatedAt = now,
@@ -972,7 +968,7 @@ class ProjectRepositoryTest {
         initialQuestions += question("n2", "After?")
       }
       val storage = storageWith(
-        phaseProject(BuiltInPhase.ScopeGoals, round(id = "r1", phase = BuiltInPhase.ScopeGoals))
+        phaseProject(round(id = "r1", phase = BuiltInPhase.ScopeGoals))
           .copy(questions = listOf(question("q1")))
       )
       val repository = repo(storage = storage, generator = generator)

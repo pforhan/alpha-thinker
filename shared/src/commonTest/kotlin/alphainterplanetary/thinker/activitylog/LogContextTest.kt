@@ -28,7 +28,7 @@ class LogContextTest {
     assertCommon(started, context)
 
     val terminal = log.entries[1]
-    assertEquals("succeeded: result=true", terminal.log)
+    assertEquals("succeeded", terminal.log)
     assertCommon(terminal, context)
     assertTrue(terminal.timestamp >= started.timestamp)
   }

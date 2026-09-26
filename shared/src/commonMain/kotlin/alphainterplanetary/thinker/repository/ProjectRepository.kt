@@ -148,21 +148,31 @@ class ProjectRepository @Inject constructor(
       val fresh = generated.questions
         .filterNot { newQuestion -> reloaded.questions.any { it.text == newQuestion.text } }
         .shuffled()
+      // A batch that came back empty (or only with questions already asked) while
+      // claiming more are available is a dead end, not a success, so the round
+      // records why and the task fails instead of quietly landing nothing.
+      val noNewQuestions = fresh.isEmpty() && !generated.done
       val outcome = when {
         // The engine's explicit stop condition wins even when it answered with
         // questions, so the phase reads exhausted either way.
         generated.done -> RoundOutcome.Exhausted
-        fresh.isEmpty() -> RoundOutcome.Failed
+        noNewQuestions -> RoundOutcome.Failed
         else -> RoundOutcome.MoreAvailable
       }
       storage.saveProject(
         reloaded.copy(
           questions = reloaded.questions + fresh,
-          rounds = reloaded.rounds.map { if (it.id == round.id) it.withOutcome(outcome) else it },
+          rounds = reloaded.rounds.map {
+            if (it.id == round.id) {
+              it.withOutcome(outcome, NoNewQuestionsMessage.takeIf { _ -> noNewQuestions })
+            } else {
+              it
+            }
+          },
           updatedAt = now(),
         )
       )
-      if (outcome == RoundOutcome.Failed) throw PlanningEngine.AnalysisFailure(NoNewQuestionsMessage)
+      if (noNewQuestions) throw PlanningEngine.AnalysisFailure(NoNewQuestionsMessage)
     }
   }
 

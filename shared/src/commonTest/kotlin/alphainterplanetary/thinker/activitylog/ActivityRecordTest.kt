@@ -34,11 +34,13 @@ class ActivityRecordTest {
   @Test
   fun `groups rows by activity id ordering newest first`() {
     val old = now() - 10.days
+    val newer = now() - 2.days
     val activity = titleActivity(
       listOf(
         entry(1, "task-1", "input: synopsis=Build a rocketship", LogCategory.TitleRecommendation, timestamp = old),
         entry(2, "task-1", "response: Rocketship", LogCategory.TitleRecommendation, timestamp = old),
-        
+        entry(3, "task-2", "input: synopsis=Build a rocketship", LogCategory.TitleRecommendation, timestamp = newer),
+        entry(4, "task-2", "response: Rocketship", LogCategory.TitleRecommendation, timestamp = newer),
       )
     )
 
@@ -138,27 +140,6 @@ class ActivityRecordTest {
     ).single()
 
     assertEquals(LogCategory.TitleRecommendation, activity.category)
-  }
-
-  @Test
-  fun `remaining-in-phase answers summarize the phase capacity`() {
-    val noMore = titleActivity(
-      listOf(
-        
-        entry(2, "task-1", "input: phase=ScopeGoals, previous questions=10", LogCategory.CapabilityCheck),
-        
-        entry(4, "task-1", "succeeded: result=false", LogCategory.TaskRun, LogSource.TaskRunner),
-      )
-    ).single()
-    assertEquals("No more questions available in phase (Scope & Goals)", noMore.summary)
-
-    val stillOpen = titleActivity(
-      listOf(
-        
-        entry(2, "task-2", "succeeded: result=true", LogCategory.TaskRun, LogSource.TaskRunner),
-      )
-    ).single()
-    assertEquals("More questions available in phase", stillOpen.summary)
   }
 
   @Test

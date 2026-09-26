@@ -74,7 +74,6 @@ class SlowDownPlanningEngineTest {
           secondsByInteraction = mapOf(
             EngineInteraction.InitialQuestions to 2,
             EngineInteraction.FollowUpQuestions to 5,
-            
           ),
         ),
       ),
@@ -83,7 +82,6 @@ class SlowDownPlanningEngineTest {
     val job = launch {
       generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
       generator.generateFollowUpQuestions("synopsis", emptyList(), "r2", BuiltInPhase.ScopeGoals, activityId = "test-activity")
-       BuiltInPhase.ScopeGoals, activityId = "test-activity")
     }
     testScheduler.runCurrent()
     assertEquals(0, delegate.totalCalls())
@@ -92,16 +90,9 @@ class SlowDownPlanningEngineTest {
     testScheduler.runCurrent()
     assertEquals(1, delegate.initialCalls)
     assertEquals(0, delegate.followUpCalls)
-    assertEquals(0, delegate.remainingCalls)
-
     testScheduler.advanceTimeBy(5_000)
     testScheduler.runCurrent()
     assertEquals(1, delegate.followUpCalls)
-    assertEquals(0, delegate.remainingCalls)
-
-    testScheduler.advanceTimeBy(30_000)
-    testScheduler.runCurrent()
-    assertEquals(1, delegate.remainingCalls)
 
     job.join()
   }
@@ -168,9 +159,8 @@ private class TrackingPlanningEngine(
   var titleCalls: Int = 0
   var initialCalls: Int = 0
   var followUpCalls: Int = 0
-  var remainingCalls: Int = 0
 
-  fun totalCalls(): Int = titleCalls + initialCalls + followUpCalls + remainingCalls
+  fun totalCalls(): Int = titleCalls + initialCalls + followUpCalls
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     titleCalls++
@@ -197,15 +187,5 @@ private class TrackingPlanningEngine(
   ): QuestionBatch {
     followUpCalls++
     return QuestionBatch(emptyList(), done = true)
-  }
-
-  override suspend fun canProduceMoreInPhase(
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-    activityId: String,
-  ): Boolean {
-    remainingCalls++
-    return false
   }
 }

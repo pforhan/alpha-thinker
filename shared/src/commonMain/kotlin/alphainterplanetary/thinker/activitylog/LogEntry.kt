@@ -79,7 +79,7 @@ object LogMarkers {
   /** A rendered prompt, verbatim. */
   const val Prompt = "prompt:"
 
-  /** The engine's produced outcome, e.g. `response: canProduceMore=false`. */
+  /** The engine's produced outcome, e.g. `response: 2 questions, done=false`. */
   const val Response = "response:"
 }
 

@@ -262,7 +262,6 @@ class SettingsRepositoryTest {
     assertEquals(5, config.secondsByInteraction[EngineInteraction.RecommendTitle])
     assertEquals(30, config.secondsByInteraction[EngineInteraction.InitialQuestions])
     assertEquals(2, config.secondsByInteraction[EngineInteraction.FollowUpQuestions])
-    assertEquals(2, config.secondsByInteraction[EngineInteraction.RemainingInPhase])
   }
 
   @Test

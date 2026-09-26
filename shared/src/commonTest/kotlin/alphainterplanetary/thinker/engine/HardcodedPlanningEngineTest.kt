@@ -274,7 +274,7 @@ class HardcodedPlanningEngineTest {
   }
 
   @Test
-  fun `done is true once the phase pool is exhausted, regardless of the phase asked in`() = runTest {
+  fun `done is true once the phase pool is exhausted even when other phases were asked in`() = runTest {
     val research = generator.generateInitialQuestions("title", "synopsis", "ctx", BuiltInPhase.Research, activityId = "test-activity")
     assertFalse(research.done)
 

@@ -368,7 +368,9 @@ class ProjectDetailViewModelTest {
 
   @Test
   fun `tasks exposes the current project's generation tasks`() = runTest {
-    val generator = FakePlanningEngine()
+    val generator = FakePlanningEngine().apply {
+      initialQuestions += question("q1", "What?")
+    }
     withViewModel(generator = generator) { context ->
       val vm = context.vm
       val created = context.repository.createProject("My synopsis")
