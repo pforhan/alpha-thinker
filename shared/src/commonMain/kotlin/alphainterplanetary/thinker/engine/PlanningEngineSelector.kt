@@ -19,22 +19,25 @@ fun interface PlanningEngineSelector {
 }
 
 /**
- * The pure selection policy: maps a chosen [EngineMode], gated by [llmEnabled],
- * to the engine that should run. [EngineMode.Lite] carries no model dependency
- * and is always available; any other mode must name a configured Koog engine,
- * and throws when none is bound so an unconfigured backend fails loudly instead
- * of silently falling back to another mode.
+ * The pure selection policy: maps the chosen [EngineMode] to the engine that
+ * should run. [EngineMode.Lite] carries no model dependency and is always
+ * available; any other mode must name a configured Koog engine, and throws when
+ * none is bound so an unconfigured backend fails loudly instead of silently
+ * falling back to another mode.
+ *
+ * The mode is the only gate: there is no separate "LLM enabled" flag that could
+ * force Lite behind a mode still reading as Remote, so what the status chrome
+ * shows about the selected mode is what actually runs.
  *
  * Stateless with respect to time: it is the caller's job to freeze the result
  * into a task ([PlanningEngineSelector]).
  */
 fun resolveSelectedEngine(
   selectedMode: EngineMode,
-  llmEnabled: Boolean,
   liteEngine: PlanningEngine,
   koogEngines: Map<EngineMode, PlanningEngine>,
 ): PlanningEngine =
-  if (!llmEnabled || selectedMode == EngineMode.Lite) {
+  if (selectedMode == EngineMode.Lite) {
     liteEngine
   } else {
     koogEngines[selectedMode]

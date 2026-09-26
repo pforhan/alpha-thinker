@@ -10,7 +10,6 @@ import alphainterplanetary.thinker.model.Project
 enum class SettingsKey(val storageKey: String) {
   PhaseTheme("phase-theme"),
   EngineMode("engine-mode"),
-  LlmEnabled("llm-enabled"),
   SlowDownPlanningEngine("slow-down-planning-engine"),
   EngineRecommendTitleDelay("engine-delay-recommend-title"),
   EngineInitialQuestionsDelay("engine-delay-initial-questions"),

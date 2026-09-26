@@ -38,13 +38,6 @@ class SettingsViewModel(
     settingsRepository.setEngineMode(mode)
   }
 
-  /** Whether the planning LLM is allowed to run. */
-  val llmEnabled: StateFlow<Boolean> = settingsRepository.llmEnabled
-
-  fun setLlmEnabled(enabled: Boolean) {
-    settingsRepository.setLlmEnabled(enabled)
-  }
-
   /** The OpenAI-compatible endpoint the Remote backend connects to. */
   val remoteLlmBaseUrl: StateFlow<String> = settingsRepository.remoteLlmBaseUrl
 

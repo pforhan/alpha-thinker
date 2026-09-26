@@ -89,23 +89,6 @@ class SettingsViewModelTest {
   }
 
   @Test
-  fun `llmEnabled starts on`() = runTest {
-    val vm = viewModel()
-
-    assertEquals(true, vm.llmEnabled.value)
-  }
-
-  @Test
-  fun `setLlmEnabled updates the exposed toggle`() = runTest {
-    val vm = viewModel()
-
-    vm.setLlmEnabled(false)
-    testScheduler.advanceUntilIdle()
-
-    assertEquals(false, vm.llmEnabled.value)
-  }
-
-  @Test
   fun `engineDelay starts disabled with default delays`() = runTest {
     val vm = viewModel()
 

@@ -13,18 +13,11 @@ class PlanningEngineSelectionTest {
 
   private fun resolve(
     mode: EngineMode = EngineMode.Remote,
-    llmEnabled: Boolean = true,
   ): PlanningEngine = resolveSelectedEngine(
     selectedMode = mode,
-    llmEnabled = llmEnabled,
     liteEngine = lite,
     koogEngines = mapOf(EngineMode.Remote to remote),
   )
-
-  @Test
-  fun `LLM off resolves the lite engine regardless of the selected mode`() {
-    assertSame(lite, resolve(mode = EngineMode.Remote, llmEnabled = false))
-  }
 
   @Test
   fun `Lite mode resolves the lite engine`() {

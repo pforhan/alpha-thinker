@@ -39,10 +39,6 @@ class SettingsRepository @Inject constructor(
   private val _engineMode = MutableStateFlow(EngineMode.Default)
   val engineMode: StateFlow<EngineMode> = _engineMode.asStateFlow()
 
-  /** Whether the planning LLM may run at all; when off, Lite is used. */
-  private val _llmEnabled = MutableStateFlow(true)
-  val llmEnabled: StateFlow<Boolean> = _llmEnabled.asStateFlow()
-
   /** The OpenAI-compatible endpoint the Remote backend talks to. */
   private val _remoteLlmBaseUrl = MutableStateFlow(DefaultRemoteLlmBaseUrl)
   val remoteLlmBaseUrl: StateFlow<String> = _remoteLlmBaseUrl.asStateFlow()
@@ -77,14 +73,6 @@ class SettingsRepository @Inject constructor(
       // different mode, so a startup load never clobbers their selection.
       if (_engineMode.value == EngineMode.Default) {
         _engineMode.value = loaded
-      }
-    }
-    scope.launch {
-      val enabled = storage.getSetting(SettingsKey.LlmEnabled, "true").toBoolean()
-      // Only apply the persisted value while the user hasn't already flipped the
-      // toggle off this session, so a startup load never clobbers their choice.
-      if (_llmEnabled.value && !enabled) {
-        _llmEnabled.value = enabled
       }
     }
     scope.launch {
@@ -144,15 +132,6 @@ class SettingsRepository @Inject constructor(
     _engineMode.value = mode
     scope.launch {
       storage.saveSetting(SettingsKey.EngineMode, mode.key)
-    }
-  }
-
-  /** Turns the planning LLM on or off; when off, planning falls back to Lite. */
-  fun setLlmEnabled(enabled: Boolean) {
-    if (enabled == _llmEnabled.value) return
-    _llmEnabled.value = enabled
-    scope.launch {
-      storage.saveSetting(SettingsKey.LlmEnabled, enabled.toString())
     }
   }
 

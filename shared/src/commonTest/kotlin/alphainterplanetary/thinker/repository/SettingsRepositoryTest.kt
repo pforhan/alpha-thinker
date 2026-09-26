@@ -123,47 +123,6 @@ class SettingsRepositoryTest {
     assertEquals(EngineMode.Default, repo.engineMode.value)
   }
 
-  @Test
-  fun `llmEnabled starts on before the saved value loads`() = runTest {
-    val repo = repository()
-
-    assertEquals(true, repo.llmEnabled.value)
-  }
-
-  @Test
-  fun `llmEnabled loads the persisted toggle at startup`() = runTest {
-    val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.LlmEnabled, "false")
-
-    val repo = repository(storage)
-    testScheduler.advanceUntilIdle()
-
-    assertEquals(false, repo.llmEnabled.value)
-  }
-
-  @Test
-  fun `setLlmEnabled updates state and persists the choice`() = runTest {
-    val storage = FakeStorage()
-    val repo = repository(storage)
-
-    repo.setLlmEnabled(false)
-    testScheduler.advanceUntilIdle()
-
-    assertEquals(false, repo.llmEnabled.value)
-    assertEquals("false", storage.settings[SettingsKey.LlmEnabled.storageKey])
-  }
-
-  @Test
-  fun `setLlmEnabled ignores the already-set value`() = runTest {
-    val storage = FakeStorage()
-    val repo = repository(storage)
-
-    repo.setLlmEnabled(true)
-
-    assertEquals(true, repo.llmEnabled.value)
-    assertEquals(null, storage.settings[SettingsKey.LlmEnabled.storageKey])
-  }
-
   // ---------- remote LLM connection ----------
 
   @Test

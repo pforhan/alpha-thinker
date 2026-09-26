@@ -99,7 +99,6 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
         delegate = LoggingPlanningEngine(
           delegate = resolveSelectedEngine(
             selectedMode = settingsRepository.engineMode.value,
-            llmEnabled = settingsRepository.llmEnabled.value,
             liteEngine = liteEngine,
             koogEngines = koogEngines,
           ),
