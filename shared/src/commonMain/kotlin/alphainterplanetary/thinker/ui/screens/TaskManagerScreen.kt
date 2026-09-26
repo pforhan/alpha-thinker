@@ -6,6 +6,8 @@ import alphainterplanetary.thinker.ui.format.durationText
 import alphainterplanetary.thinker.ui.format.title
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.TaskManagerRow
+import alphainterplanetary.thinker.ui.chrome.AppChromeState
+import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.viewmodel.TaskManagerViewModel
 import alphainterplanetary.thinker.util.now
 import androidx.compose.foundation.layout.Arrangement
@@ -20,16 +22,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +47,7 @@ import kotlin.time.Instant
 @Composable
 fun TaskManagerScreen(
   appComponent: AppComponent,
+  chrome: AppChromeState,
   onBack: () -> Unit,
 ) {
   val viewModel = remember {
@@ -65,17 +65,10 @@ fun TaskManagerScreen(
   val hasActiveTasks = rows.any { it.task.isActive }
   val at = rememberTickerNow(hasActiveTasks)
 
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text("Task Manager") },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-          }
-        }
-      )
-    }
+  AppScaffold(
+    title = { Text("Task Manager") },
+    chrome = chrome,
+    onBack = onBack,
   ) { paddingValues ->
     if (rows.isEmpty()) {
       Column(

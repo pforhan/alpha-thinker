@@ -5,6 +5,8 @@ import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogItem
+import alphainterplanetary.thinker.ui.chrome.AppChromeState
+import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
 import alphainterplanetary.thinker.util.formatTaskDuration
 import androidx.compose.animation.AnimatedVisibility
@@ -22,7 +24,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Delete
@@ -34,11 +35,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -73,24 +72,18 @@ import kotlin.time.Instant
 @Composable
 fun ActivityLogScreen(
   viewModel: ActivityLogViewModel,
+  chrome: AppChromeState,
   onBack: () -> Unit,
 ) {
   val items by viewModel.items.collectAsState()
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text("Activity Log") },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-          }
-        },
-        actions = {
-          IconButton(onClick = viewModel::clear) {
-            Icon(Icons.Default.Delete, contentDescription = "Clear log")
-          }
-        },
-      )
+  AppScaffold(
+    title = { Text("Activity Log") },
+    chrome = chrome,
+    onBack = onBack,
+    actions = {
+      IconButton(onClick = viewModel::clear) {
+        Icon(Icons.Default.Delete, contentDescription = "Clear log")
+      }
     },
   ) { paddingValues ->
     if (items.isEmpty()) {

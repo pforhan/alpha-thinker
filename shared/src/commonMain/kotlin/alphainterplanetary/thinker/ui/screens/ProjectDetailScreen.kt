@@ -8,6 +8,8 @@ import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.phaseStats
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.tasks.TaskKind
+import alphainterplanetary.thinker.ui.chrome.AppChromeState
+import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
@@ -71,15 +73,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -107,6 +105,7 @@ private const val SubtleCheckDurationMs = 1000
 @Composable
 fun ProjectDetailScreen(
   appComponent: AppComponent,
+  chrome: AppChromeState,
   projectId: String,
   onBack: () -> Unit,
 ) {
@@ -142,12 +141,10 @@ fun ProjectDetailScreen(
   var showPhaseAdvanceDialog by remember { mutableStateOf(false) }
   var selectedQuestion by remember { mutableStateOf<Question?>(null) }
 
-  val snackbarHostState = remember { SnackbarHostState() }
-
   LaunchedEffect(pendingUndo) {
     val undo = pendingUndo ?: return@LaunchedEffect
-    val result = snackbarHostState.showSnackbar(
-      message = undo.message,
+    val result = chrome.showMessage(
+      text = undo.message,
       actionLabel = "Undo",
       duration = SnackbarDuration.Long,
     )
@@ -165,9 +162,8 @@ fun ProjectDetailScreen(
     }
   }
 
-  Scaffold(
-    snackbarHost = { SnackbarHost(snackbarHostState) },
-    topBar = {
+  AppScaffold(
+    title = {
       val title = when (val ui = uiState) {
         ProjectDetailUiState.Loading -> "Loading..."
         is ProjectDetailUiState.Success -> {
@@ -179,26 +175,19 @@ fun ProjectDetailScreen(
         }
         is ProjectDetailUiState.Error -> "Error"
       }
-      TopAppBar(
-        title = {
-          Text(
-            text = title.normalizeWhitespace(),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-          )
-        },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-          }
-        },
-        actions = {
-          IconButton(onClick = { showEditDialog = true }) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit Project")
-          }
-        }
+      Text(
+        text = title.normalizeWhitespace(),
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
       )
-    }
+    },
+    chrome = chrome,
+    onBack = onBack,
+    actions = {
+      IconButton(onClick = { showEditDialog = true }) {
+        Icon(Icons.Default.Edit, contentDescription = "Edit Project")
+      }
+    },
   ) { paddingValues ->
     when (val ui = uiState) {
       ProjectDetailUiState.Loading -> {

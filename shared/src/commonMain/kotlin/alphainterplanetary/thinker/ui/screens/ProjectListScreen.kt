@@ -4,6 +4,8 @@ import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskKind
+import alphainterplanetary.thinker.ui.chrome.AppChromeState
+import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.SwipeAction
@@ -31,7 +33,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -42,11 +43,9 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -69,9 +68,9 @@ import androidx.compose.ui.text.style.TextOverflow
 @Composable
 fun ProjectListScreen(
   appComponent: AppComponent,
+  chrome: AppChromeState,
   onProjectClick: (Project) -> Unit,
   onProjectCreated: (Project) -> Unit,
-  onSettingsClick: () -> Unit,
   onTaskManagerClick: () -> Unit,
 ) {
   var showCreateDialog by remember { mutableStateOf(false) }
@@ -107,17 +106,9 @@ fun ProjectListScreen(
     }
   }
 
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text("Alpha Thinker") },
-        actions = {
-          IconButton(onClick = onSettingsClick) {
-            Icon(Icons.Filled.Settings, contentDescription = "Settings")
-          }
-        }
-      )
-    },
+  AppScaffold(
+    title = { Text("Alpha Thinker") },
+    chrome = chrome,
     floatingActionButton = {
       FloatingActionButton(onClick = { showCreateDialog = true }) {
         Icon(Icons.Default.Add, contentDescription = "Add Project")

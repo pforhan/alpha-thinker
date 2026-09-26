@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.navigation
 
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.ui.chrome.rememberAppChromeState
 import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
 import alphainterplanetary.thinker.ui.screens.ProjectDetailScreen
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,15 +37,26 @@ public expect fun NavApp(appComponent: AppComponent)
 internal fun StatefulNavApp(appComponent: AppComponent) {
   var route by remember { mutableStateOf<AppRoute>(AppRoute.ProjectList) }
   val current = route
+  val chrome = rememberAppChromeState(
+    appComponent = appComponent,
+    onOpenActivityLog = { route = AppRoute.ActivityLog },
+    onOpenTaskManager = { route = AppRoute.TaskManager },
+  )
+
+  // A settings sheet belongs to the screen that opened it; navigating away
+  // dismisses it rather than stranding it over the new screen.
+  LaunchedEffect(current) {
+    chrome.closeSheet()
+  }
 
   Box(modifier = Modifier.fillMaxSize()) {
     when (current) {
       AppRoute.ProjectList -> {
         ProjectListScreen(
           appComponent = appComponent,
+          chrome = chrome,
           onProjectClick = { route = AppRoute.ProjectDetail(it.id) },
           onProjectCreated = { route = AppRoute.ProjectDetail(it.id) },
-          onSettingsClick = { route = AppRoute.Settings },
           onTaskManagerClick = { route = AppRoute.TaskManager },
         )
       }
@@ -51,6 +64,7 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
       is AppRoute.ProjectDetail -> {
         ProjectDetailScreen(
           appComponent = appComponent,
+          chrome = chrome,
           projectId = current.projectId,
           onBack = { route = AppRoute.ProjectList },
         )
@@ -59,6 +73,7 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
       AppRoute.TaskManager -> {
         TaskManagerScreen(
           appComponent = appComponent,
+          chrome = chrome,
           onBack = { route = AppRoute.ProjectList },
         )
       }
@@ -66,8 +81,8 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
       AppRoute.Settings -> {
         SettingsScreen(
           appComponent = appComponent,
+          chrome = chrome,
           onBack = { route = AppRoute.ProjectList },
-          onOpenActivityLog = { route = AppRoute.ActivityLog },
         )
       }
 
@@ -75,12 +90,15 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
         val vm = remember { ActivityLogViewModel(appComponent.activityLogger, appComponent.projectRepository, appComponent.appScope) }
         ActivityLogScreen(
           viewModel = vm,
+          chrome = chrome,
           onBack = { route = AppRoute.Settings },
         )
       }
     }
 
-    if (current != AppRoute.TaskManager) {
+    // The floating task bar would sit on top of a settings sheet's content, so
+    // it yields while one is open.
+    if (current != AppRoute.TaskManager && !chrome.isSheetOpen) {
       GenerationTaskBar(
         taskRunner = appComponent.taskRunner,
         onTaskManagerClick = { route = AppRoute.TaskManager },

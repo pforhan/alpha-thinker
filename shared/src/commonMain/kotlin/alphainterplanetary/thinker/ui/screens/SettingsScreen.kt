@@ -5,6 +5,8 @@ import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.ui.chrome.AppChromeState
+import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.DarkColorScheme
@@ -32,7 +34,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -40,13 +41,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -68,8 +66,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 @Composable
 fun SettingsScreen(
   appComponent: AppComponent,
+  chrome: AppChromeState,
   onBack: () -> Unit,
-  onOpenActivityLog: () -> Unit = {},
 ) {
   val viewModel = remember {
     SettingsViewModel(
@@ -81,7 +79,6 @@ fun SettingsScreen(
   val uiState by viewModel.uiState.collectAsState()
   val phaseTheme by viewModel.phaseTheme.collectAsState()
   val engineMode by viewModel.engineMode.collectAsState()
-  val llmEnabled by viewModel.llmEnabled.collectAsState()
   val remoteLlmBaseUrl by viewModel.remoteLlmBaseUrl.collectAsState()
   val remoteLlmApiKey by viewModel.remoteLlmApiKey.collectAsState()
   val remoteLlmModel by viewModel.remoteLlmModel.collectAsState()
@@ -102,17 +99,10 @@ fun SettingsScreen(
     previousDelayEnabled = engineDelay.enabled
   }
 
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text("Settings") },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-          }
-        }
-      )
-    }
+  AppScaffold(
+    title = { Text("Settings") },
+    chrome = chrome,
+    onBack = onBack,
   ) { paddingValues ->
     Column(
       modifier = Modifier
@@ -136,10 +126,6 @@ fun SettingsScreen(
       Text(
         text = "Intelligence",
         style = MaterialTheme.typography.titleMedium,
-      )
-      IntelligenceLlmToggleItem(
-        enabled = llmEnabled,
-        onEnabledChange = { viewModel.setLlmEnabled(it) },
       )
       EngineMode.entries.forEach { mode ->
         EngineModeOption(
@@ -175,7 +161,7 @@ fun SettingsScreen(
         description = "View the activity log: generation tasks, planning-engine interactions, tool calls and diagnostics.",
         isLoading = false,
         buttonLabel = "Open",
-        onClick = { onOpenActivityLog() },
+        onClick = chrome.onOpenActivityLog,
       )
       when (val state = uiState) {
         SettingsUiState.Idle, SettingsUiState.Generating -> {
@@ -301,41 +287,6 @@ private fun ThemePreviewRow(
           Spacer(modifier = Modifier.width(Dimens.ThemeSwatchGap))
         }
         PhaseBadge(phase = phase)
-      }
-    }
-  }
-}
-
-/**
- * The master LLM switch for the "Intelligence" section: while on, LLM
- * backends may generate planning content; while off, the built-in Lite engine
- * runs instead (per PRD the toggle sits alongside the future lookup/search one).
- */
-@Composable
-private fun IntelligenceLlmToggleItem(
-  enabled: Boolean,
-  onEnabledChange: (Boolean) -> Unit,
-) {
-  Card(modifier = Modifier.fillMaxWidth()) {
-    Column(modifier = Modifier.padding(Dimens.CardPadding)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "Use the planning LLM",
-            style = MaterialTheme.typography.titleSmall,
-          )
-          Spacer(modifier = Modifier.height(Dimens.TightGap))
-          Text(
-            text = "Lets Alpha Thinker generate titles and questions with a language model. " +
-              "When off, the built-in Lite engine runs instead.",
-            style = MaterialTheme.typography.bodyMedium,
-          )
-        }
-        Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
-        Switch(
-          checked = enabled,
-          onCheckedChange = onEnabledChange,
-        )
       }
     }
   }
