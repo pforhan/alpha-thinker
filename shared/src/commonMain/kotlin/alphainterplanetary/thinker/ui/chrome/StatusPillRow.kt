@@ -3,16 +3,20 @@ package alphainterplanetary.thinker.ui.chrome
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
  * The capability pills, in the stable slot order, with no tap target of their
@@ -23,6 +27,11 @@ import androidx.compose.material3.Text
  * than one place, so they live here rather than inside the header: the flyout
  * showing its own copy of the same three states as text is exactly how a status
  * display starts disagreeing with itself.
+ *
+ * The row announces itself as one sentence (see [EngineStatus.summary]). The
+ * glyphs are shapes, not words, so without this a screen reader would read the
+ * pills as a bare "Network, LLM, Tools" and never hear whether any of them is
+ * in use; folding it in here also spares every caller from repeating it.
  */
 @Composable
 internal fun StatusPillRow(
@@ -30,7 +39,9 @@ internal fun StatusPillRow(
   modifier: Modifier = Modifier,
 ) {
   Row(
-    modifier = modifier,
+    modifier = modifier.semantics(mergeDescendants = true) {
+      contentDescription = status.summary()
+    },
     horizontalArrangement = Arrangement.spacedBy(Dimens.StatusPillGap),
     verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -41,28 +52,41 @@ internal fun StatusPillRow(
 }
 
 /**
- * One capability's pill: its name on a container colored by state. A state the
- * mode does not have renders muted rather than disappearing, so the slots never
- * shift as the engine changes.
+ * One capability's pill: its name on a fill colored by state, behind the glyph
+ * that says the same thing without relying on color. A state the mode does not
+ * have renders outlined rather than disappearing, so the slots never shift as
+ * the engine changes.
  */
 @Composable
 internal fun StatusPill(
   slot: CapabilityStatus,
   modifier: Modifier = Modifier,
 ) {
-  Box(
+  val content = slot.state.onContainerColor()
+  Row(
     modifier = modifier
       .clip(BadgeShape)
       .background(slot.state.containerColor())
+      // Transparent for a filled state, so the outline is a single call site
+      // rather than a branch in every state that draws a pill.
+      .border(Dimens.OutlineStroke, slot.state.borderColor(), BadgeShape)
       .padding(
-        horizontal = Dimens.PillHorizontalPadding,
+        horizontal = Dimens.StatusPillHorizontalPadding,
         vertical = Dimens.PillVerticalPadding,
       ),
+    horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+    verticalAlignment = Alignment.CenterVertically,
   ) {
+    Icon(
+      imageVector = slot.state.glyph(),
+      contentDescription = null,
+      tint = content,
+      modifier = Modifier.size(Dimens.IconSizeSmall),
+    )
     Text(
       text = slot.capability.displayName(),
       style = MaterialTheme.typography.labelSmall,
-      color = slot.state.onContainerColor(),
+      color = content,
     )
   }
 }

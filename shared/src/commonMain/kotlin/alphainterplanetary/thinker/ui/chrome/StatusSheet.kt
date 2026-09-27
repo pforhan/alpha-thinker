@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 
 /**
  * The status detail behind the header's status cluster: the engine that will
@@ -57,9 +63,7 @@ internal fun StatusSheetContent(
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    status.slots.forEach { slot ->
-      CapabilityRow(slot = slot)
-    }
+    CapabilityList(status = status)
 
     if (latestActivity != null) {
       Spacer(modifier = Modifier.height(Dimens.TightGap))
@@ -87,28 +91,105 @@ internal fun StatusSheetContent(
 }
 
 /**
- * One capability: its name, whether the app will use it, and the value behind
- * that (the endpoint, the model).
+ * The sheet's capability rows, as one measured unit: the pill column is reserved
+ * as wide as the broadest pill, so every value starts on the same rule, and the
+ * value column takes whatever is left.
+ *
+ * The shared width is the reason this is a [SubcomposeLayout] rather than three
+ * rows in a `Column`. Measured independently, each row would size the column to
+ * *its own* pill — "LLM" is much narrower than "Network" — and the values would
+ * start at three different x positions, which is the raggedness the columns
+ * exist to remove. Same measure-then-lay-out shape as [StatusCluster] and
+ * `QuestionViewModeBar`, which need a width before they can lay out.
  */
 @Composable
-private fun CapabilityRow(slot: CapabilityStatus) {
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    verticalAlignment = Alignment.Top,
-  ) {
-    Column(modifier = Modifier.weight(1f)) {
-      Text(
-        text = slot.capability.displayName(),
-        style = MaterialTheme.typography.titleSmall,
-      )
-      Spacer(modifier = Modifier.height(Dimens.TightGap))
-      Text(
-        text = slot.state.readout(),
-        style = MaterialTheme.typography.bodySmall,
-        color = slot.state.readoutColor(),
-      )
+private fun CapabilityList(
+  status: EngineStatus,
+  modifier: Modifier = Modifier,
+) {
+  SubcomposeLayout(modifier = modifier) { constraints ->
+    // Measured unconstrained first: each pill is subcomposed only to learn the
+    // width it wants, which is the width every pill is then drawn at.
+    val pillWidth = status.slots
+      .map { slot ->
+        val pill = subcompose("pill-${slot.capability}") { StatusPill(slot = slot) }
+        pill.first().measure(Constraints()).width
+      }
+      .max()
+    val pillWidthDp = pillWidth.toDp()
+    val gap = Dimens.SectionGap.roundToPx()
+
+    val rowConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+    val rows = status.slots.map { slot ->
+      val row = subcompose("row-${slot.capability}") {
+        CapabilityRow(slot = slot, pillWidth = pillWidthDp)
+      }
+      row.first().measure(rowConstraints)
     }
-    Spacer(modifier = Modifier.width(Dimens.ContentGap))
+
+    // Each row was measured with these constraints already, so clamping the
+    // totals against them is all the fitting this needs.
+    val width = rows.maxOf { it.width }
+      .coerceIn(constraints.minWidth, constraints.maxWidth)
+    val height = (rows.sumOf { it.height } + gap * (rows.size - 1))
+      .coerceIn(constraints.minHeight, constraints.maxHeight)
+    layout(width, height) {
+      var y = 0
+      rows.forEach { row ->
+        row.place(0, y)
+        y += row.height + gap
+      }
+    }
+  }
+}
+
+/**
+ * One capability in two columns: the header's own pill for its name and state,
+ * and its configured value (the endpoint, the model) filling the rest of the row.
+ *
+ * The row renders [StatusPill] rather than a second, wider version of it, so
+ * the sheet and the header cannot drift apart — a capability that looks live in
+ * one and gray in the other is the exact problem this item exists to prevent.
+ * The value sits off the pill, on the sheet's own surface, because it is not
+ * part of the capability's state: only a fill's own ink is contrast-checked
+ * against it, so `onSurfaceVariant` is safe here and not on the accent's
+ * container.
+ *
+ * [pillWidth] reserves the shared column the values align to, but the pill
+ * inside it keeps its own width and is pushed to the column's right edge. The
+ * pills therefore do not match each other and their left edges are ragged — the
+ * alternative, stretching every pill to the column, makes a chip that means
+ * "in use" as wide as the longest capability name and reads as a bar rather than
+ * a flag. The ragged edge is the cheaper trade: the values below them are what
+ * the eye scans down.
+ *
+ * There is also no prose for the state. [CapabilityStatus.displayDetail] already
+ * says "Not used" or "Not set up" whenever there is no value to show, so a
+ * subtitle repeating it was two renderings of one fact, and the states it did
+ * not repeat are exactly the ones the pill's fill and glyph already carry. The
+ * row merges its semantics into the same sentence [StatusPillRow] announces, so
+ * the state is still spoken.
+ */
+@Composable
+private fun CapabilityRow(
+  slot: CapabilityStatus,
+  pillWidth: Dp,
+) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .semantics(mergeDescendants = true) {
+        contentDescription = slot.sentence()
+      },
+    horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Box(
+      modifier = Modifier.width(pillWidth),
+      contentAlignment = Alignment.CenterEnd,
+    ) {
+      StatusPill(slot = slot)
+    }
     Text(
       text = slot.displayDetail(),
       style = MaterialTheme.typography.bodyMedium,

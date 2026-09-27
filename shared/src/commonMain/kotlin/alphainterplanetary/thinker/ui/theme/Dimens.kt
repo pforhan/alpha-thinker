@@ -35,8 +35,11 @@ object Dimens {
 
   // Header engine-status cluster: the pill row collapses to a single status
   // button before the title would be squeezed, so the collapse point reserves
-  // this much for the title.
+  // this much for the title. The pills carry a leading state glyph, so their
+  // horizontal padding is tighter than the phase pill's — three of them share
+  // one actions slot, and inside the flyout's menu item as well.
   val StatusPillGap = 6.dp
+  val StatusPillHorizontalPadding = 8.dp
   val StatusDotSize = 10.dp
   val StatusDotInset = 12.dp
   val HeaderTitleReserve = 96.dp

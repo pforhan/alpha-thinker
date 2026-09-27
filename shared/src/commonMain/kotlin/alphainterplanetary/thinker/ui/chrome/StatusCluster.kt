@@ -1,10 +1,10 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.theme.PhaseStyles
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -19,8 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
 
 /**
@@ -55,15 +53,12 @@ fun StatusCluster(
     val wide = pillsWidth + reserve <= constraints.maxWidth
     val placeable = subcompose(if (wide) "wide" else "compact") {
       if (wide) {
-        // One tap target for the whole row, described as one sentence: three
-        // separately labeled pills would read as three unrelated toggles.
+        // One tap target for the whole row, described as one sentence by
+        // [StatusPillRow] itself: three separately labeled pills would read as
+        // three unrelated toggles.
         StatusPillRow(
           status = status,
-          modifier = Modifier
-            .clickable(onClick = onClick)
-            .semantics(mergeDescendants = true) {
-              contentDescription = status.summary()
-            },
+          modifier = Modifier.clickable(onClick = onClick),
         )
       } else {
         CompactStatusButton(status = status, onClick = onClick)
@@ -106,10 +101,16 @@ private fun CompactStatusButton(
   }
 }
 
+/**
+ * The collapsed row's dot: the same [StatusVisuals] mapping the wide form's
+ * pills use, so collapsing the cluster does not change what the color means —
+ * a `primary` dot here would read as a different state from a theme-accent
+ * pill one resize away.
+ */
 @Composable
 private fun EngineStatus.dotColor(): Color =
   when {
     needsAttention -> MaterialTheme.colorScheme.error
-    slots.any { it.state == CapabilityState.Active } -> MaterialTheme.colorScheme.primary
+    slots.any { it.state == CapabilityState.Active } -> PhaseStyles.accent().container
     else -> MaterialTheme.colorScheme.onSurfaceVariant
   }
