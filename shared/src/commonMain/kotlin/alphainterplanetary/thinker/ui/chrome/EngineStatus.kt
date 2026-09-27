@@ -2,7 +2,6 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineMode
-import alphainterplanetary.thinker.engine.capabilities
 
 /** How a header slot is rendering, from the active mode's capabilities alone. */
 enum class CapabilityState {

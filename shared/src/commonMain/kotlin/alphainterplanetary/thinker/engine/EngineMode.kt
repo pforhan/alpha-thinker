@@ -15,30 +15,45 @@ enum class EngineMode(
   val label: String,
   val description: String,
   val logSource: LogSource,
+  /**
+   * The capabilities implied by choosing this mode. [EngineMode.Lite] runs the
+   * built-in question library entirely on device, so it has none; the LLM modes
+   * all run a model locally; only [EngineMode.Remote] egresses, because it talks
+   * to a cloud or localhost endpoint.
+   *
+   * [EngineCapability.Tools] is absent from every mode until the agentic-lookup
+   * work lands a tool registry — at which point a Koog backend can report its own
+   * capability rather than this static mapping.
+   */
+  val capabilities: Set<EngineCapability>,
 ) {
   Lite(
     key = "lite",
     label = "Offline",
     description = "Built-in question library. Runs entirely on this device — no network, no language model.",
     logSource = LogSource.Lite,
+    emptySet(),
   ),
   OnDevice(
     key = "on-device",
     label = "On device",
     description = "System models (Gemini Nano / Apple Foundation) running locally.",
     logSource = LogSource.LocalLLM,
+    setOf(EngineCapability.Llm),
   ),
   Remote(
     key = "remote",
     label = "Remote",
     description = "A cloud or localhost endpoint (OpenAI-compatible / Ollama).",
     logSource = LogSource.RemoteLLM,
+    setOf(EngineCapability.Network, EngineCapability.Llm),
   ),
   Downloaded(
     key = "downloaded",
     label = "Downloaded",
     description = "An in-process model installed on this device (LiteRT-LM).",
     logSource = LogSource.LocalLLM,
+    setOf(EngineCapability.Llm),
   ),
   ;
 
