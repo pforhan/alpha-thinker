@@ -1,9 +1,12 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineCapability
+import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.SettingsUiState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Tune
@@ -79,36 +82,25 @@ internal fun SettingsFlyoutButton(
       expanded = expanded,
       onDismissRequest = { expanded = false },
     ) {
-      // Status: the same slots the header pills show, so the flyout and the
-      // header cannot disagree about what is in use. Read-only — every row opens
-      // the Status sheet, which is where the detail lives.
-      EngineCapability.entries.forEach { capability ->
-        val slot = status.slot(capability)
-        FlyoutRow(
-          title = capability.displayName(),
-          value = slot.displayDetail(),
-          onClick = {
-            expanded = false
-            chrome.openSheet(ChromeSheet.Status)
-          },
-        )
-      }
-
-      HorizontalDivider()
+      // Intelligence, with the engine's capabilities rendered as the same pills
+      // the header shows rather than as three rows of prose. Title and pills are
+      // one tap target: they answer the same question, so splitting them into a
+      // status entry and a separate Intelligence row made the user read the same
+      // sentence twice and tap twice to reach the engine.
+      IntelligenceFlyoutRow(
+        status = status,
+        engineLabel = engineMode.label,
+        onClick = {
+          expanded = false
+          chrome.openSheet(ChromeSheet.Status)
+        },
+      )
       FlyoutRow(
         title = "Phase colors",
         value = phaseTheme.label,
         onClick = {
           expanded = false
           chrome.openSheet(ChromeSheet.PhaseColors)
-        },
-      )
-      FlyoutRow(
-        title = "Intelligence",
-        value = engineMode.label,
-        onClick = {
-          expanded = false
-          chrome.openSheet(ChromeSheet.Intelligence)
         },
       )
       FlyoutRow(
@@ -173,6 +165,49 @@ internal fun SettingsFlyoutButton(
       },
     )
   }
+}
+
+/**
+ * The Intelligence item: the selected engine, the capability pills beneath it,
+ * and one tap target for both — the status popup, which is where the detail and
+ * the engine picker both live. It reuses [StatusPillRow], so the flyout cannot
+ * drift from the header's rendering of the same three states.
+ */
+@Composable
+private fun IntelligenceFlyoutRow(
+  status: EngineStatus,
+  engineLabel: String,
+  onClick: () -> Unit,
+) {
+  DropdownMenuItem(
+    text = {
+      Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            text = "Intelligence",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+          )
+          Text(
+            text = engineLabel,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
+        Spacer(modifier = Modifier.height(Dimens.TightGap))
+        StatusPillRow(status = status)
+      }
+    },
+    trailingIcon = {
+      Icon(
+        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+        contentDescription = null,
+      )
+    },
+    onClick = onClick,
+  )
 }
 
 /** One flyout row: title, current value, and the chevron that says it opens more. */

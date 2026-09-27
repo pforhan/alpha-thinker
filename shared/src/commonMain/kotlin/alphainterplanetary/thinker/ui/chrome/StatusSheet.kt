@@ -28,9 +28,11 @@ import androidx.compose.ui.text.style.TextOverflow
  * The status detail behind the header's status cluster: the engine that will
  * run, what it will and will not do, and how the last activity went.
  *
- * It is read-only on purpose. The one control that can change any of this — the
- * engine picker — lives in the [ChromeSheet.Intelligence] sheet, one row away, so
- * the cluster and the flyout's rows cannot each grow a switch the other lacks.
+ * It is read-only on purpose, and it is also the only route to it: the flyout's
+ * Intelligence item and the header's cluster both point here rather than each
+ * rendering the status themselves. The one control that can change any of this —
+ * the engine picker — lives in the [ChromeSheet.Intelligence] sheet, one row away,
+ * so no second surface grows a switch this one lacks.
  */
 @Composable
 internal fun StatusSheetContent(

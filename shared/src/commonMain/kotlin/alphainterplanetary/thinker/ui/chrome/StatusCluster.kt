@@ -1,10 +1,8 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -15,7 +13,6 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +44,6 @@ fun StatusCluster(
 ) {
   SubcomposeLayout(modifier = modifier) { constraints ->
     val reserve = Dimens.HeaderTitleReserve.roundToPx()
-    val gap = Dimens.StatusPillGap.roundToPx()
 
     // Measured unconstrained first: the wide form is only worth subcomposing if
     // it would actually fit.
@@ -59,12 +55,15 @@ fun StatusCluster(
     val wide = pillsWidth + reserve <= constraints.maxWidth
     val placeable = subcompose(if (wide) "wide" else "compact") {
       if (wide) {
+        // One tap target for the whole row, described as one sentence: three
+        // separately labeled pills would read as three unrelated toggles.
         StatusPillRow(
           status = status,
-          onClick = onClick,
-          modifier = Modifier.semantics(mergeDescendants = true) {
-            contentDescription = status.summary()
-          },
+          modifier = Modifier
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {
+              contentDescription = status.summary()
+            },
         )
       } else {
         CompactStatusButton(status = status, onClick = onClick)
@@ -74,44 +73,6 @@ fun StatusCluster(
     layout(placeable.width, placeable.height) {
       placeable.place(0, 0)
     }
-  }
-}
-
-@Composable
-private fun StatusPillRow(
-  status: EngineStatus,
-  onClick: (() -> Unit)? = null,
-  modifier: Modifier = Modifier,
-) {
-  Row(
-    modifier = if (onClick == null) modifier else modifier.clickable(onClick = onClick),
-    horizontalArrangement = Arrangement.spacedBy(Dimens.StatusPillGap),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    status.slots.forEach { slot ->
-      StatusPill(slot = slot)
-    }
-  }
-}
-
-@Composable
-private fun StatusPill(slot: CapabilityStatus) {
-  val container = slot.state.containerColor()
-  val content = slot.state.onContainerColor()
-  Box(
-    modifier = Modifier
-      .clip(BadgeShape)
-      .background(container)
-      .padding(
-        horizontal = Dimens.PillHorizontalPadding,
-        vertical = Dimens.PillVerticalPadding,
-      ),
-  ) {
-    Text(
-      text = slot.capability.displayName(),
-      style = MaterialTheme.typography.labelSmall,
-      color = content,
-    )
   }
 }
 
