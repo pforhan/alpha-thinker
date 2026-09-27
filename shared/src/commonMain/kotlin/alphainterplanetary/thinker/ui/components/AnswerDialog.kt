@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.ui.components
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.theme.Dimens
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,16 +11,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.window.DialogProperties
 
 enum class AnswerDialogResult {
   Submitted,
@@ -41,15 +42,21 @@ enum class AnswerDialogResult {
 }
 
 /**
- * Answer dialog built around a simple "text + completed" model:
+ * Answer dialog built around a simple "text + a choice of where it lands" model.
  *
  * - The field is prefilled with the committed answer or the draft text.
- * - "Completed" is only ever set by the "Marked as complete" switch; edits
- *   never implicitly demote a committed answer or complete a draft.
- * - Submit and tapping off save with the same rules: blank text clears the
- *   draft or deletes the answer; text stores a draft (switch off) or a
- *   committed answer (switch on). Cancel discards any changes. Ignored
- *   questions are not editable and just dismiss.
+ * - "Save Draft" and "Save Answer" are the whole decision, spelled out as the
+ *   button you press. There is no switch to remember to flip, so an edit can't
+ *   quietly land in the state opposite the one you meant.
+ * - Blank text is a clear either way: it drops the draft, or unpoints a
+ *   committed answer, which is also what "Delete Answer" does.
+ * - The two save buttons are the only paths that write. Tapping outside does
+ *   nothing at all, and Cancel (or ESC) discards, so a stray gesture can
+ *   neither commit an edit nor wipe an existing answer.
+ * - An ignored question is read-only: the field is disabled, since there's no
+ *   point writing a new answer for a question you skipped. What it already has
+ *   is still yours to clear, though — "Delete Answer" shows whenever there's a
+ *   committed answer or a draft, ignored or not.
  * - The question's phase is always shown as a pill below the question text,
  *   above the answer field.
  */
@@ -62,14 +69,18 @@ fun AnswerDialog(
 ) {
   val initialText = question.currentAnswer?.text ?: question.draftText ?: ""
   var answerText by remember { mutableStateOf(initialText) }
-  var completed by remember { mutableStateOf(question.isAnswered) }
   val focusRequester = remember { FocusRequester() }
+
+  // Anything to clear: a committed answer, a draft, or — ignoring a question
+  // doesn't freeze it — both. Deliberately not gated on the question being
+  // active, since the point of the button is to undo what a question carries.
+  val hasAnswer = question.currentAnswer != null || !question.draftText.isNullOrBlank()
 
   LaunchedEffect(Unit) {
     focusRequester.requestFocus()
   }
 
-  fun submit() {
+  fun save(completed: Boolean) {
     val trimmed = answerText.trim()
     onResult(
       when {
@@ -81,16 +92,13 @@ fun AnswerDialog(
     )
   }
 
-  fun close() {
-    if (question.isIgnored) {
-      onDismiss()
-    } else {
-      submit()
-    }
-  }
-
   AlertDialog(
-    onDismissRequest = { close() },
+    // The two save buttons are the only things that write. Tapping outside does
+    // nothing at all, and the dismiss request that still gets through (ESC on
+    // desktop) is a plain discard rather than a save, so an answer can neither
+    // be committed nor wiped by a stray gesture.
+    onDismissRequest = { onDismiss() },
+    properties = DialogProperties(dismissOnClickOutside = false),
     title = {
       Column {
         ScrollableOverflowText(
@@ -136,7 +144,7 @@ fun AnswerDialog(
             maxLines = 8,
           )
 
-          if (answerText.isNotEmpty()) {
+          if (answerText.isNotEmpty() && !question.isIgnored) {
             IconButton(
               onClick = { answerText = "" },
               modifier = Modifier
@@ -151,25 +159,7 @@ fun AnswerDialog(
           }
         }
 
-        if (!question.isIgnored) {
-          Spacer(modifier = Modifier.height(Dimens.ContentGap))
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-          ) {
-            Switch(
-              checked = completed,
-              onCheckedChange = { completed = it },
-            )
-            Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
-            Text(
-              text = "Marked as complete",
-              style = MaterialTheme.typography.bodyMedium,
-            )
-          }
-        }
-
-        if (question.isAnswered && !question.isIgnored) {
+        if (hasAnswer) {
           Spacer(modifier = Modifier.height(Dimens.ContentGap))
           HorizontalDivider()
           Spacer(modifier = Modifier.height(Dimens.TightGap))
@@ -185,11 +175,19 @@ fun AnswerDialog(
       }
     },
     confirmButton = {
-      TextButton(
-        onClick = { submit() },
-        enabled = !question.isIgnored,
-      ) {
-        Text("Submit")
+      Row(horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap)) {
+        TextButton(
+          onClick = { save(completed = false) },
+          enabled = !question.isIgnored,
+        ) {
+          Text("Save Draft")
+        }
+        Button(
+          onClick = { save(completed = true) },
+          enabled = !question.isIgnored,
+        ) {
+          Text("Save Answer")
+        }
       }
     },
     dismissButton = {
