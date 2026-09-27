@@ -13,49 +13,43 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
-@Composable
-public expect fun NavApp(appComponent: AppComponent)
-
 /**
- * Stack-based navigation shared by every non-Android target. Android uses
- * Jetpack Navigation instead (see androidMain/NavGraph.kt).
+ * The app's one navigation root, on every target.
  *
- * The set of screens rendered here mirrors the destinations declared in
- * androidMain/NavGraph.kt. When adding or renaming a screen, update BOTH this
- * file and NavGraph.kt so the platforms stay in sync.
+ * It reads the top of the back stack and renders that route, and every way out —
+ * a screen's back arrow, the flyout's Tools rows, a sheet's close glyph, the
+ * platform's own back event — goes through the same stack, so where "back" lands
+ * is one decision in one place. Settings sheets are stack entries too, so back
+ * closes a sheet before it leaves a screen.
+ *
+ * This replaced a hand-rolled single-slot route variable (every non-Android
+ * target) *and* a Jetpack Navigation graph (Android), which between them meant
+ * two roots to keep in step and a real stack on only one platform. Adding a
+ * destination now means adding a branch here and nothing else.
  */
 @Composable
-internal fun StatefulNavApp(appComponent: AppComponent) {
-  var route by remember { mutableStateOf<AppRoute>(AppRoute.ProjectList) }
-  val current = route
-  val chrome = rememberAppChromeState(
-    appComponent = appComponent,
-    onOpenActivityLog = { route = AppRoute.ActivityLog },
-    onOpenTaskManager = { route = AppRoute.TaskManager },
-  )
+internal fun NavApp(appComponent: AppComponent) {
+  val chrome = rememberAppChromeState(appComponent)
+  val route = chrome.route
 
-  // A settings sheet belongs to the screen that opened it; navigating away
-  // dismisses it rather than stranding it over the new screen.
-  LaunchedEffect(current) {
-    chrome.closeSheet()
-  }
+  // Hardware/gesture back pops the same stack the app bar's arrow does, so a
+  // back gesture closes a sheet when one is up and otherwise returns to the
+  // screen the current one was opened from. Disabled at the root, where there is
+  // nothing to pop, so the platform's own leave-the-app behavior still runs.
+  PlatformBackHandler(enabled = chrome.canGoBack) { chrome.goBack() }
 
   Box(modifier = Modifier.fillMaxSize()) {
-    when (current) {
+    when (route) {
       AppRoute.ProjectList -> {
         ProjectListScreen(
           appComponent = appComponent,
           chrome = chrome,
-          onProjectClick = { route = AppRoute.ProjectDetail(it.id) },
-          onProjectCreated = { route = AppRoute.ProjectDetail(it.id) },
+          onProjectClick = { chrome.navigate(AppRoute.ProjectDetail(it.id)) },
+          onProjectCreated = { chrome.navigate(AppRoute.ProjectDetail(it.id)) },
         )
       }
 
@@ -63,8 +57,8 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
         ProjectDetailScreen(
           appComponent = appComponent,
           chrome = chrome,
-          projectId = current.projectId,
-          onBack = { route = AppRoute.ProjectList },
+          projectId = route.projectId,
+          onBack = { chrome.goBack() },
         )
       }
 
@@ -72,7 +66,7 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
         TaskManagerScreen(
           appComponent = appComponent,
           chrome = chrome,
-          onBack = { route = AppRoute.ProjectList },
+          onBack = { chrome.goBack() },
         )
       }
 
@@ -81,19 +75,17 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
         ActivityLogScreen(
           viewModel = vm,
           chrome = chrome,
-          // The log is reached from the flyout now, so it goes back to where
-          // the flyout was opened rather than to a settings screen.
-          onBack = { route = AppRoute.ProjectList },
+          onBack = { chrome.goBack() },
         )
       }
     }
 
     // The floating task bar would sit on top of a settings sheet's content, so
     // it yields while one is open.
-    if (current != AppRoute.TaskManager && !chrome.isSheetOpen) {
+    if (route != AppRoute.TaskManager && !chrome.isSheetOpen) {
       GenerationTaskBar(
         taskRunner = appComponent.taskRunner,
-        onTaskManagerClick = { route = AppRoute.TaskManager },
+        onTaskManagerClick = { chrome.navigate(AppRoute.TaskManager) },
         modifier = Modifier
           .align(Alignment.BottomCenter)
           .padding(
@@ -103,11 +95,4 @@ internal fun StatefulNavApp(appComponent: AppComponent) {
       )
     }
   }
-}
-
-internal sealed class AppRoute {
-  object ProjectList : AppRoute()
-  object TaskManager : AppRoute()
-  object ActivityLog : AppRoute()
-  data class ProjectDetail(val projectId: String) : AppRoute()
 }

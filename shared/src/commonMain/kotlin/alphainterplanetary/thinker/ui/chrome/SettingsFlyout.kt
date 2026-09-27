@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
+import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.SettingsUiState
 import androidx.compose.foundation.layout.Box
@@ -117,14 +118,14 @@ internal fun SettingsFlyoutButton(
         title = "Activity Log",
         onClick = {
           expanded = false
-          chrome.onOpenActivityLog()
+          chrome.navigate(AppRoute.ActivityLog)
         },
       )
       FlyoutRow(
         title = "Task Manager",
         onClick = {
           expanded = false
-          chrome.onOpenTaskManager()
+          chrome.navigate(AppRoute.TaskManager)
         },
       )
       FlyoutRow(

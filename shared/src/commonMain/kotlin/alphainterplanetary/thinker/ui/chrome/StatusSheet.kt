@@ -40,8 +40,9 @@ import androidx.compose.ui.unit.Dp
  * so no second surface grows a switch this one lacks.
  *
  * The last-activity row is the one thing here that navigates, and it leaves
- * rather than opens: the Activity Log is a full screen, and the sheet over it
- * would be a sheet over a sheet.
+ * rather than opens: the Activity Log is a full screen, so it replaces the sheet
+ * rather than stacking on it — leaving this sheet up over a screen that is no
+ * longer underneath it would strand it.
  */
 @Composable
 internal fun StatusSheetContent(

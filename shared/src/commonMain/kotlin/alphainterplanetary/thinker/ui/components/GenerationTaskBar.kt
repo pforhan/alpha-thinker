@@ -29,7 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
  * A floating bar pinned to the bottom of a screen while any generation task
  * is active: an indeterminate spinner, a summary of what is being produced,
  * and a tap-through to the Task Manager. Mounted once per navigation root so
- * every screen sees it (see StatefulNavApp / NavGraph).
+ * every screen sees it (see NavApp).
  */
 @Composable
 fun GenerationTaskBar(

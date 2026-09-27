@@ -113,7 +113,9 @@ kotlin {
 
     androidMain.dependencies {
       implementation(libs.sqlite.bundled)
-      implementation(libs.androidx.navigation.compose)
+      // For BackHandler only: Android's back event is the one platform back
+      // affordance, and it used to arrive for free with Jetpack Navigation.
+      implementation(libs.androidx.activity.compose)
     }
 
     jsMain.dependencies {
