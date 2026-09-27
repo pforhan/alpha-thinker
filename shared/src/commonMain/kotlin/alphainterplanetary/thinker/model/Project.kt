@@ -124,4 +124,14 @@ data class Project(
     if (toMove.isEmpty()) return this
     return copy(questions = questions.filterNot { it.id in ids } + toMove)
   }
+
+  /**
+   * A copy with [roundId] replaced by whatever [transform] makes of it — the
+   * seam for latching a generation outcome onto a round without every caller
+   * re-spelling the "map the list, match on id, leave the rest alone" loop.
+   * `updatedAt` is the caller's to stamp, since only the caller knows whether
+   * the write is part of a larger change to the aggregate.
+   */
+  fun withRoundOutcome(roundId: String, transform: (Round) -> Round): Project =
+    copy(rounds = rounds.map { if (it.id == roundId) transform(it) else it })
 }

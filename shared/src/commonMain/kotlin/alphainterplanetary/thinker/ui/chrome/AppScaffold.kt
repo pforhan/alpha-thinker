@@ -22,6 +22,9 @@ import androidx.compose.ui.Modifier
  * A screen supplies only what is specific to it: its [title] slot, an optional
  * [onBack] (null on the root screen, which then has no navigation icon), any
  * [actions] of its own, a [floatingActionButton] if it has one, and its content.
+ * The bar's order is fixed — navigation icon, title, the screen's actions, the
+ * status cluster, the flyout button — so the chrome's controls are the trailing
+ * edge on every screen.
  *
  * The snackbar host is the chrome's ([AppChromeState.snackbarHostState]), not the
  * screen's, so an app has exactly one snackbar and a message outlives the screen
@@ -54,8 +57,9 @@ fun AppScaffold(
         },
         actions = {
           actions()
-          // Ahead of the screen's own actions: the status is the one thing every
-          // screen shares, so it sits in the same place on all of them.
+          // After the screen's own actions and immediately before the flyout,
+          // so the status always lands in the same spot next to the settings
+          // button rather than shifting around per screen.
           StatusCluster(
             status = status,
             onClick = { chrome.openSheet(ChromeSheet.Status) },

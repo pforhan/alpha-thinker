@@ -32,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.unit.dp
 
 enum class AnswerDialogResult {
   Submitted,
@@ -134,7 +133,7 @@ fun AnswerDialog(
               .fillMaxWidth()
               .focusRequester(focusRequester),
             minLines = 3,
-            maxLines = 8
+            maxLines = 8,
           )
 
           if (answerText.isNotEmpty()) {
@@ -142,12 +141,12 @@ fun AnswerDialog(
               onClick = { answerText = "" },
               modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 12.dp, end = 2.dp)
+                .padding(
+                  top = Dimens.FieldOverlayInsetTop,
+                  end = Dimens.FieldOverlayInsetEnd,
+                )
             ) {
-              Icon(
-                Icons.Default.Clear,
-                contentDescription = "Clear answer"
-              )
+              Icon(Icons.Default.Clear, contentDescription = "Clear answer")
             }
           }
         }

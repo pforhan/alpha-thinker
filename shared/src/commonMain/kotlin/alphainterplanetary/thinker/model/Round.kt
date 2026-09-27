@@ -50,6 +50,12 @@ enum class RoundOutcome {
  * Rounds are the on-disk unit of wrap-up: resolving the round's questions and
  * wrapping it up closes this round ([complete]) and opens the first round of a
  * new phase. The stored [phase] is what the current planning phase is read from.
+ *
+ * Outcome transitions go through the [withMoreAvailable], [withExhausted], and
+ * [withFailed] mutators rather than ad-hoc [copy] calls, so the outcome and its
+ * [outcomeDetail] can't drift apart (see the [init] guard). Each transition
+ * stamps the pair as a unit, which also means moving off a failed outcome clears
+ * the detail it carried.
  */
 data class Round(
   val id: String,
@@ -77,11 +83,26 @@ data class Round(
 
   fun complete(at: Instant): Round = copy(completedAt = at)
 
-  fun withPending(): Round = withOutcome(RoundOutcome.Pending)
-  fun withMoreAvailable(): Round = withOutcome(RoundOutcome.MoreAvailable)
-  fun withExhausted(): Round = withOutcome(RoundOutcome.Exhausted)
-  fun withFailed(detail: String): Round = withOutcome(RoundOutcome.Failed, detail)
+  fun withPending(): Round = copy(outcome = RoundOutcome.Pending)
 
-  private fun withOutcome(outcome: RoundOutcome, detail: String? = null): Round =
-    copy(outcome = outcome, outcomeDetail = detail)
+  /** The batch landed with fresh questions and the engine can still produce more. */
+  fun withMoreAvailable(): Round = copy(outcome = RoundOutcome.MoreAvailable)
+
+  /**
+   * The engine reported `QuestionBatch.done`: this phase has nothing more. The
+   * round is left in place as the record that generation ran and stopped.
+   */
+  fun withExhausted(): Round = copy(outcome = RoundOutcome.Exhausted)
+
+  /**
+   * The attempt produced nothing usable, for [detail] — the reason surfaced to
+   * the user, so it must say something. Deliberately not exhaustion: the phase
+   * stays open so the user can retry.
+   */
+  fun withFailed(detail: String): Round {
+    require(detail.isNotBlank()) {
+      "Round $id cannot fail without a reason; pass the user-facing detail"
+    }
+    return copy(outcome = RoundOutcome.Failed, outcomeDetail = detail)
+  }
 }

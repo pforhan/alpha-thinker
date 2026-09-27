@@ -59,6 +59,13 @@ object Dimens {
   val ActionRowVerticalPadding = 12.dp
   val ButtonHorizontalPadding = 8.dp
 
+  // A control overlaid on a text field's top-right corner. A text field centers
+  // its trailing icon vertically, which reads wrong on a multi-line field, so
+  // the clear affordance is overlaid instead — these insets keep it off the
+  // field's outline and clear of the floated label.
+  val FieldOverlayInsetTop = 12.dp
+  val FieldOverlayInsetEnd = 2.dp
+
   // Swipe actions
   val SwipeActionPadding = 20.dp
 

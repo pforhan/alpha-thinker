@@ -141,17 +141,13 @@ class ProjectRepository @Inject constructor(
         throw e
       } catch (e: Exception) {
         // Record why the round came up empty before the task fails, so the UI
-        // can explain itself on the next read.
+        // can explain itself on the next read. Best-effort, and deliberately so:
+        // the engine's own failure is the one that has to reach the task, so a
+        // failed write here must not replace it with a storage error.
+        val detail = e.message?.takeIf { it.isNotBlank() } ?: e.toString()
         runCatching {
-          this@ProjectRepository.storage.saveProject(
-            reloaded.copy(
-              rounds = reloaded.rounds.map {
-                if (it.id == round.id) it.withFailed(
-                  e.message ?: e.toString()
-                ) else it
-              },
-              updatedAt = now(),
-            )
+          storage.saveProject(
+            reloaded.withRoundOutcome(round.id) { it.withFailed(detail) }.copy(updatedAt = now())
           )
         }
         throw e
@@ -164,23 +160,20 @@ class ProjectRepository @Inject constructor(
       // records why and the task fails instead of quietly landing nothing.
       val noNewQuestions = fresh.isEmpty() && !generated.done
       storage.saveProject(
-        reloaded.copy(
-          questions = reloaded.questions + fresh,
-          rounds = reloaded.rounds.map {
-            if (it.id == round.id) {
-              when {
-                // The engine's explicit stop condition wins even when it answered with
-                // questions, so the phase reads exhausted either way.
-                generated.done -> it.withExhausted()
-                noNewQuestions -> it.withFailed(NoNewQuestionsMessage)
-                else -> it.withMoreAvailable()
-              }
-            } else {
-              it
+        reloaded
+          .withRoundOutcome(round.id) { current ->
+            when {
+              // The engine's explicit stop condition wins even when it answered
+              // with questions, so the phase reads exhausted either way.
+              generated.done -> current.withExhausted()
+              noNewQuestions -> current.withFailed(NoNewQuestionsMessage)
+              else -> current.withMoreAvailable()
             }
-          },
-          updatedAt = now(),
-        )
+          }
+          .copy(
+            questions = reloaded.questions + fresh,
+            updatedAt = now(),
+          )
       )
       if (noNewQuestions) throw PlanningEngine.AnalysisFailure(NoNewQuestionsMessage)
     }
