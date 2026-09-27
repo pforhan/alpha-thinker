@@ -53,13 +53,13 @@ fun AppScaffold(
           }
         },
         actions = {
+          actions()
           // Ahead of the screen's own actions: the status is the one thing every
           // screen shares, so it sits in the same place on all of them.
           StatusCluster(
             status = status,
             onClick = { chrome.openSheet(ChromeSheet.Status) },
           )
-          actions()
           // Last, so the chrome's own controls read as the bar's trailing edge
           // on every screen rather than shifting around per screen.
           SettingsFlyoutButton(chrome = chrome)

@@ -3,11 +3,13 @@ package alphainterplanetary.thinker.ui.components
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.theme.Dimens
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -30,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.unit.dp
 
 enum class AnswerDialogResult {
   Submitted,
@@ -121,24 +124,33 @@ fun AnswerDialog(
           Spacer(modifier = Modifier.height(Dimens.SectionGap))
         }
 
-        OutlinedTextField(
-          value = answerText,
-          onValueChange = { answerText = it },
-          enabled = !question.isIgnored,
-          label = { Text("Answer") },
-          trailingIcon = {
-            if (answerText.isNotEmpty()) {
-              IconButton(onClick = { answerText = "" }) {
-                Icon(Icons.Default.Clear, contentDescription = "Clear answer")
-              }
+        Box {
+          OutlinedTextField(
+            value = answerText,
+            onValueChange = { answerText = it },
+            enabled = !question.isIgnored,
+            label = { Text("Answer") },
+            modifier = Modifier
+              .fillMaxWidth()
+              .focusRequester(focusRequester),
+            minLines = 3,
+            maxLines = 8
+          )
+
+          if (answerText.isNotEmpty()) {
+            IconButton(
+              onClick = { answerText = "" },
+              modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 12.dp, end = 2.dp)
+            ) {
+              Icon(
+                Icons.Default.Clear,
+                contentDescription = "Clear answer"
+              )
             }
-          },
-          modifier = Modifier
-            .fillMaxWidth()
-            .focusRequester(focusRequester),
-          minLines = 3,
-          maxLines = 8,
-        )
+          }
+        }
 
         if (!question.isIgnored) {
           Spacer(modifier = Modifier.height(Dimens.ContentGap))

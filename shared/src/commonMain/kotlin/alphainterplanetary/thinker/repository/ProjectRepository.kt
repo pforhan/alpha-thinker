@@ -142,7 +142,18 @@ class ProjectRepository @Inject constructor(
       } catch (e: Exception) {
         // Record why the round came up empty before the task fails, so the UI
         // can explain itself on the next read.
-        recordOutcome(reloaded, round.id, RoundOutcome.Failed, e.message ?: e.toString())
+        runCatching {
+          this@ProjectRepository.storage.saveProject(
+            reloaded.copy(
+              rounds = reloaded.rounds.map {
+                if (it.id == round.id) it.withFailed(
+                  e.message ?: e.toString()
+                ) else it
+              },
+              updatedAt = now(),
+            )
+          )
+        }
         throw e
       }
       val fresh = generated.questions
@@ -152,19 +163,18 @@ class ProjectRepository @Inject constructor(
       // claiming more are available is a dead end, not a success, so the round
       // records why and the task fails instead of quietly landing nothing.
       val noNewQuestions = fresh.isEmpty() && !generated.done
-      val outcome = when {
-        // The engine's explicit stop condition wins even when it answered with
-        // questions, so the phase reads exhausted either way.
-        generated.done -> RoundOutcome.Exhausted
-        noNewQuestions -> RoundOutcome.Failed
-        else -> RoundOutcome.MoreAvailable
-      }
       storage.saveProject(
         reloaded.copy(
           questions = reloaded.questions + fresh,
           rounds = reloaded.rounds.map {
             if (it.id == round.id) {
-              it.withOutcome(outcome, NoNewQuestionsMessage.takeIf { _ -> noNewQuestions })
+              when {
+                // The engine's explicit stop condition wins even when it answered with
+                // questions, so the phase reads exhausted either way.
+                generated.done -> it.withExhausted()
+                noNewQuestions -> it.withFailed(NoNewQuestionsMessage)
+                else -> it.withMoreAvailable()
+              }
             } else {
               it
             }
@@ -173,27 +183,6 @@ class ProjectRepository @Inject constructor(
         )
       )
       if (noNewQuestions) throw PlanningEngine.AnalysisFailure(NoNewQuestionsMessage)
-    }
-  }
-
-  /**
-   * Latches [outcome] onto one round of [project] and persists the project,
-   * best-effort: used on the engine-failure path, where the original failure
-   * must still reach the task.
-   */
-  private suspend fun recordOutcome(
-    project: Project,
-    roundId: String,
-    outcome: RoundOutcome,
-    detail: String? = null,
-  ) {
-    runCatching {
-      storage.saveProject(
-        project.copy(
-          rounds = project.rounds.map { if (it.id == roundId) it.withOutcome(outcome, detail) else it },
-          updatedAt = now(),
-        )
-      )
     }
   }
 

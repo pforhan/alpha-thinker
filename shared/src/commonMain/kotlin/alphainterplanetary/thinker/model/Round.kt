@@ -77,6 +77,11 @@ data class Round(
 
   fun complete(at: Instant): Round = copy(completedAt = at)
 
-  fun withOutcome(outcome: RoundOutcome, detail: String? = null): Round =
+  fun withPending(): Round = withOutcome(RoundOutcome.Pending)
+  fun withMoreAvailable(): Round = withOutcome(RoundOutcome.MoreAvailable)
+  fun withExhausted(): Round = withOutcome(RoundOutcome.Exhausted)
+  fun withFailed(detail: String): Round = withOutcome(RoundOutcome.Failed, detail)
+
+  private fun withOutcome(outcome: RoundOutcome, detail: String? = null): Round =
     copy(outcome = outcome, outcomeDetail = detail)
 }
