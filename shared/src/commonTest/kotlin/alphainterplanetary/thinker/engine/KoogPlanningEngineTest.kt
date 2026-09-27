@@ -28,7 +28,7 @@ class KoogPlanningEngineTest {
   private val model = LLModel(provider, "fake-model")
 
   private fun engine(client: LLMClient): KoogPlanningEngine {
-    val backend = object : PlanningBackend {
+    val backend = object : KoogPlanningBackend {
       override val executor: PromptExecutor = MultiLLMPromptExecutor(client)
       override val model: LLModel = this@KoogPlanningEngineTest.model
       override val source: LogSource = LogSource.RemoteLLM

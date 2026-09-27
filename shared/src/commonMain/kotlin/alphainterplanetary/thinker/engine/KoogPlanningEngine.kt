@@ -29,7 +29,7 @@ import kotlin.time.Instant
  * LLM's "nothing more to produce" signal.
  */
 class KoogPlanningEngine(
-  private val backend: PlanningBackend,
+  private val backend: KoogPlanningBackend,
 ) : PlanningEngine, PromptRenderer {
 
   override val source: LogSource

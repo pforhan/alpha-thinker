@@ -9,7 +9,7 @@ import alphainterplanetary.thinker.activitylog.LogSource
  * along with the [LogSource] an engine built over it reports on the activity
  * log (local edge vs remote/cloud).
  */
-interface PlanningBackend {
+interface KoogPlanningBackend {
   val executor: PromptExecutor
   val model: LLModel
   val source: LogSource

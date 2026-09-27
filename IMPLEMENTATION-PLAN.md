@@ -258,8 +258,7 @@ Model and UI work for the round/phase concept — guided wrap-up "what's next?" 
 - [x] AnswerDialog: clear answer affordance should be in the top-right.
 - [x] Round -- use builder / helper methods to better insure proper usage (especially regarding failure and outcomeDetail); replace withOutcome with dedicated methods for each outcome.
 - [x] AnswerDialog: consider moving from completed toggle to a second submit button (Save Draft vs Save? or something better). Remove tap-off ability.
-- [ ] General - Project title limited to 30 characters seems like a bad idea.  Maybe remove that and just ellipsize on one line
-- [ ] Koog-specific interfaces and such should live in a dedicated package and/or have their own naming structure.  Example: PlanningBackend is koog-only 
+- [x] Koog-specific interfaces and such should have their own naming structure. Example: PlanningBackend is koog-only 
 - [ ] Make a real backstack so leaving activity log returns to last screen.  Support popups as well if possible
 - [ ] settings flows should have return buttons that go back to their originating views.  These can even have close buttons instead of drag handles, and placed in the top right.
 - [ ] ProjectDetailScreen -- empty state can be weird if no questions generated for a round.  Don't show "move to next phase" unless there's questions in the phase.
@@ -297,6 +296,7 @@ Model and UI work for the round/phase concept — guided wrap-up "what's next?" 
 - [ ] (deferred, this is difficult and only a small subset of very new devices support it) **`OnDeviceLLMClient` (system on-device models, hand-rolled):** Koog `LLMClient` — Android actual over ML Kit GenAI (AICore / Gemini Nano), iOS actual via a Swift `SystemPromptApi` bridge into Apple Foundation Models; availability status (`Available / Downloadable / Downloading / Unavailable`) drives the picker. Requires Xcode 26 / Swift 6.2 / iOS 26 SDK; verify on real hardware only.
 
 ## Phase 5: Refinement & UX
+- [ ] General - Project title limited to 30 characters seems like a bad idea.  Maybe remove that and just ellipsize on one line
 - [ ] move theme selection to its own screen or popup.  Consider multiple columns if there's space.
 - [ ] create a user guide for the app -- markdown is fine, consider user-guide folder to contain markdown and any assets.
 - [ ] set up github pages for the user guide

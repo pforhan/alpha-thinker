@@ -13,7 +13,7 @@ import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.repository.SettingsRepository
 
 /**
- * The [PlanningBackend] for [EngineMode.Remote]: a Koog OpenAI-compatible
+ * The [KoogPlanningBackend] for [EngineMode.Remote]: a Koog OpenAI-compatible
  * client pointed at whichever endpoint, API key, and model the user has
  * configured in [SettingsRepository].
  *
@@ -30,10 +30,10 @@ import alphainterplanetary.thinker.repository.SettingsRepository
  * `.../v1` root (as Ollama's docs print) is stripped to avoid doubled
  * segments.
  */
-class RemotePlanningBackend(
+class RemoteKoogPlanningBackend(
   private val settings: SettingsRepository,
   private val httpClientFactory: KoogHttpClient.Factory = KtorKoogHttpClient.Factory(),
-) : PlanningBackend {
+) : KoogPlanningBackend {
 
   override val source: LogSource = LogSource.RemoteLLM
 

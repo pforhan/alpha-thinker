@@ -5,7 +5,7 @@ import ai.koog.prompt.llm.LLModel
 import alphainterplanetary.thinker.activitylog.LogSource
 
 /**
- * A [PlanningBackend] bound to a single [EngineMode]: it serves the backend
+ * A [KoogPlanningBackend] bound to a single [EngineMode]: it serves the backend
  * wired for that mode and throws when the mode has none, so a misconfigured
  * engine fails loudly instead of silently borrowing a different backend.
  *
@@ -16,10 +16,10 @@ import alphainterplanetary.thinker.activitylog.LogSource
  * The bound [EngineMode] also drives the [source] an engine over this backend
  * reports on the activity log.
  */
-class DynamicPlanningBackend(
+class DynamicKoogPlanningBackend(
   private val mode: EngineMode,
-  private val backends: Map<EngineMode, PlanningBackend>,
-) : PlanningBackend {
+  private val backends: Map<EngineMode, KoogPlanningBackend>,
+) : KoogPlanningBackend {
 
   override val source: LogSource
     get() = mode.logSource
@@ -30,6 +30,6 @@ class DynamicPlanningBackend(
   override val model: LLModel
     get() = backend().model
 
-  private fun backend(): PlanningBackend =
+  private fun backend(): KoogPlanningBackend =
     backends[mode] ?: throw IllegalStateException("No backend bound for engine mode $mode")
 }

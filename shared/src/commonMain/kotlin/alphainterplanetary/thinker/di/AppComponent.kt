@@ -7,13 +7,13 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getActivityDatabase
 import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
-import alphainterplanetary.thinker.engine.DynamicPlanningBackend
+import alphainterplanetary.thinker.engine.DynamicKoogPlanningBackend
 import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.engine.HardcodedPlanningEngine
 import alphainterplanetary.thinker.engine.KoogPlanningEngine
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
-import alphainterplanetary.thinker.engine.RemotePlanningBackend
+import alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
 import alphainterplanetary.thinker.engine.resolveSelectedEngine
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -86,11 +86,11 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
     // selection into a task: a queued task keeps the engine it was created
     // under even if the user changes modes before it runs.
     val koogBackends = mapOf(
-      EngineMode.Remote to RemotePlanningBackend(settingsRepository),
+      EngineMode.Remote to RemoteKoogPlanningBackend(settingsRepository),
     )
     val koogEngines = mapOf(
       EngineMode.Remote to KoogPlanningEngine(
-        DynamicPlanningBackend(EngineMode.Remote, koogBackends),
+        DynamicKoogPlanningBackend(EngineMode.Remote, koogBackends),
       ),
     )
 

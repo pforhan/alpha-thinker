@@ -64,7 +64,7 @@ data class EngineStatus(
  * [remoteBaseUrl] and [remoteModel] are the raw settings values, and only
  * [EngineMode.Remote] reads them. The base URL is shown as configured rather
  * than re-normalized here: the `/v1` strip in
- * [alphainterplanetary.thinker.engine.RemotePlanningBackend] is the one rule for
+ * [alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend] is the one rule for
  * that, and a second copy here would be free to drift from it.
  */
 fun engineStatus(

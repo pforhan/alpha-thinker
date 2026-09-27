@@ -17,14 +17,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-class RemotePlanningBackendTest {
+class RemoteKoogPlanningBackendTest {
 
   private fun TestScope.repository(storage: FakeStorage = FakeStorage()): SettingsRepository =
     SettingsRepository(storage, CoroutineScope(coroutineContext))
 
   @Test
   fun `defaults expose the Ollama model over the OpenAI provider`() = runTest {
-    val backend = RemotePlanningBackend(repository(), RecordingFactory())
+    val backend = RemoteKoogPlanningBackend(repository(), RecordingFactory())
 
     assertEquals("llama3.2:latest", backend.model.id)
     assertEquals(LLMProvider.OpenAI, backend.model.provider)
@@ -37,7 +37,7 @@ class RemotePlanningBackendTest {
     val repo = repository()
     repo.setRemoteLlmBaseUrl("http://localhost:11434/v1")
     val factory = RecordingFactory()
-    val backend = RemotePlanningBackend(repo, factory)
+    val backend = RemoteKoogPlanningBackend(repo, factory)
 
     backend.executor
 
@@ -48,7 +48,7 @@ class RemotePlanningBackendTest {
   fun `the same connection settings reuse the built client`() = runTest {
     val repo = repository()
     val factory = RecordingFactory()
-    val backend = RemotePlanningBackend(repo, factory)
+    val backend = RemoteKoogPlanningBackend(repo, factory)
 
     backend.executor
     backend.model
@@ -61,7 +61,7 @@ class RemotePlanningBackendTest {
   fun `changing the api key rebuilds the client with the new Bearer token`() = runTest {
     val repo = repository()
     val factory = RecordingFactory()
-    val backend = RemotePlanningBackend(repo, factory)
+    val backend = RemoteKoogPlanningBackend(repo, factory)
 
     backend.executor
     assertEquals(1, factory.creations.size)
@@ -76,7 +76,7 @@ class RemotePlanningBackendTest {
   @Test
   fun `changing the model advertises the new model id`() = runTest {
     val repo = repository()
-    val backend = RemotePlanningBackend(repo, RecordingFactory())
+    val backend = RemoteKoogPlanningBackend(repo, RecordingFactory())
 
     assertEquals("llama3.2:latest", backend.model.id)
 
@@ -89,7 +89,7 @@ class RemotePlanningBackendTest {
   fun `changing the base url rebuilds the client at the new origin`() = runTest {
     val repo = repository()
     val factory = RecordingFactory()
-    val backend = RemotePlanningBackend(repo, factory)
+    val backend = RemoteKoogPlanningBackend(repo, factory)
 
     backend.executor
 
