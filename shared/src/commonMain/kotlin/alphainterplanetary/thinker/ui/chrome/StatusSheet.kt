@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -39,12 +38,17 @@ import androidx.compose.ui.unit.Dp
  * rendering the status themselves. The one control that can change any of this —
  * the engine picker — lives in the [ChromeSheet.Intelligence] sheet, one row away,
  * so no second surface grows a switch this one lacks.
+ *
+ * The last-activity row is the one thing here that navigates, and it leaves
+ * rather than opens: the Activity Log is a full screen, and the sheet over it
+ * would be a sheet over a sheet.
  */
 @Composable
 internal fun StatusSheetContent(
   status: EngineStatus,
   latestActivity: ActivityRecord?,
   onOpenIntelligence: () -> Unit,
+  onOpenActivityLog: () -> Unit,
 ) {
   Column(
     modifier = Modifier
@@ -66,19 +70,10 @@ internal fun StatusSheetContent(
     CapabilityList(status = status)
 
     if (latestActivity != null) {
-      Spacer(modifier = Modifier.height(Dimens.TightGap))
       HorizontalDivider()
-      Spacer(modifier = Modifier.height(Dimens.TightGap))
-      Text(
-        // The one place the header says how the last run *went* rather than what
-        // is configured, so a fully set-up mode that still failed is not hidden.
-        text = "Last activity: ${latestActivity.summary}",
-        style = MaterialTheme.typography.bodyMedium,
-        color = if (latestActivity.hasError) {
-          MaterialTheme.colorScheme.error
-        } else {
-          MaterialTheme.colorScheme.onSurfaceVariant
-        },
+      LastActivityRow(
+        latestActivity = latestActivity,
+        onClick = onOpenActivityLog,
       )
     }
 
@@ -86,6 +81,51 @@ internal fun StatusSheetContent(
     SheetLinkRow(
       title = "Change engine…",
       onClick = onOpenIntelligence,
+    )
+  }
+}
+
+/**
+ * The last activity as a way into the Activity Log: the sentence the sheet
+ * already showed, now tappable, with the same chevron the other rows carry so it
+ * reads as a destination rather than a label.
+ *
+ * It keeps the wrapped sentence instead of becoming a [SheetLinkRow] with the
+ * summary as its trailing value, because a failure headline is the one text
+ * here that carries its explanation ("Initial question generation failed: …")
+ * and a link row's value is single-line by construction — the part of the sheet
+ * that explains a failure would be the part that got truncated. The tint
+ * therefore stays on the whole sentence rather than on a value slot.
+ */
+@Composable
+private fun LastActivityRow(
+  latestActivity: ActivityRecord,
+  onClick: () -> Unit,
+) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onClick)
+      .padding(vertical = Dimens.ActionRowVerticalPadding),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Text(
+      // The one place the header says how the last run *went* rather than what
+      // is configured, so a fully set-up mode that still failed is not hidden.
+      text = "Last activity: ${latestActivity.summary}",
+      style = MaterialTheme.typography.bodyMedium,
+      color = if (latestActivity.hasError) {
+        MaterialTheme.colorScheme.error
+      } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+      },
+      modifier = Modifier.weight(1f),
+    )
+    Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
+    Icon(
+      imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+      contentDescription = null,
+      tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
   }
 }

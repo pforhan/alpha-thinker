@@ -45,6 +45,7 @@ internal fun ChromeSheetHost(chrome: AppChromeState) {
             status = status,
             latestActivity = activity,
             onOpenIntelligence = { chrome.openSheet(ChromeSheet.Intelligence) },
+            onOpenActivityLog = { chrome.onOpenActivityLog() },
           )
         }
 
