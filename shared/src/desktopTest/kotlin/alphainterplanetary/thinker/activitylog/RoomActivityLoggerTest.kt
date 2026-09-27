@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
@@ -96,7 +97,7 @@ class RoomActivityLoggerTest {
     dao.append(Entry("a2", "response: title", LogCategory.TitleRecommendation, timestamp = now + 2.days))
 
     val roomLog = log(db, scope = CoroutineScope(coroutineContext))
-    val grouped = ActivityRecord.groupByActivity(roomLog.entries().let { it.first() })
+    val grouped = ActivityRecord.groupByActivity(roomLog.entries().first())
 
     assertEquals(listOf("a2", "a1"), grouped.map { it.activityId })
     assertEquals("Recommended title: title", grouped.first().summary)
@@ -113,9 +114,10 @@ class RoomActivityLoggerTest {
 
     val latest = log(db, scope = CoroutineScope(coroutineContext)).latestActivity().first()
 
-    assertEquals("a2", latest?.activityId)
-    assertTrue(latest?.hasError == true)
-    assertEquals("Initial question generation failed: model exploded", latest?.summary)
+    assertNotNull(latest)
+    assertEquals("a2", latest.activityId)
+    assertEquals(latest.hasError, true)
+    assertEquals("Initial question generation failed: model exploded", latest.summary)
   }
 
   @Test

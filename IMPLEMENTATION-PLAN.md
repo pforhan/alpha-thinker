@@ -260,7 +260,7 @@ Model and UI work for the round/phase concept — guided wrap-up "what's next?" 
 - [x] AnswerDialog: consider moving from completed toggle to a second submit button (Save Draft vs Save? or something better). Remove tap-off ability.
 - [x] Koog-specific interfaces and such should have their own naming structure. Example: PlanningBackend is koog-only 
 - [ ] Make a real backstack so leaving activity log returns to last screen.  Support popups as well if possible
-- [ ] settings flows should have return buttons that go back to their originating views.  These can even have close buttons instead of drag handles, and placed in the top right.
+- [ ] settings flows should have return buttons that go back to their originating views.  These should be close or back glyphs instead of drag handles.
 - [ ] ProjectDetailScreen -- empty state can be weird if no questions generated for a round.  Don't show "move to next phase" unless there's questions in the phase.
 - [ ] ProjectDetailScreen -- not much indication of what to do if no questions get generated when clicking "Get more questions" -- seems like we should have a pop-up or hide the button etc.
 - [ ] **Fallback Mechanism:** recreate `FallbackPlanningEngine` or equivalent — on `AnalysisFailure` (or backend unavailable / LLM disabled) delegate to `HardcodedPlanningEngine` and record `LogSource.Lite` in the log.
