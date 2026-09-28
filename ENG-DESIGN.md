@@ -296,13 +296,36 @@ observable background task.
   result (e.g., new questions appended). The UI observes task completion and
   reloads the affected project.
 - `PlanningEngine` is invoked statelessly with the project context it
-  needs: initial generation gets `synopsis` + the generated `editableTitle`;
-  follow-up generation gets the project's questions (completed answers via
-  `Question.currentAnswer`, skipped ones via `Question.isIgnored`). The same
-  call shape works for the hardcoded stand-in and a real LLM alike.
-  (Implementors of the `PlanningEngine` interface: `HardcodedPlanningEngine`
-  today; a `KoogPlanningEngine` over the Koog `LLMClient`/executor seam in Phase
-  3, which hosts the on-device, remote, and downloaded-model backends.)
+  needs: initial generation gets `synopsis` + the generated `editableTitle`,
+  plus — when a wrap-up advances to a new phase — the questions already asked
+  in prior phases; follow-up generation gets the project's questions (completed
+  answers via `Question.currentAnswer`, drafts via `draftText`, skipped ones via
+  `Question.isIgnored`). The same call shape works for the hardcoded stand-in
+  and a real LLM alike. (Implementors of the `PlanningEngine` interface:
+  `HardcodedPlanningEngine` today; a `KoogPlanningEngine` over the Koog
+  `LLMClient`/executor seam in Phase 3, which hosts the on-device, remote, and
+  downloaded-model backends.)
+
+**Planning context & the token budget:**
+
+An LLM backend only produces tailored rounds if the prompt carries what the
+user has already written, so both question interactions receive the project's
+Q&A as `previousQuestions` (initial after a wrap-up advance; follow-up always).
+`KoogPlanningEngine` renders each prior question with its state — committed
+answers as `Q:… / A:…`, drafts marked `Draft:`, ignored questions marked
+skipped, unanswered marked not-yet-answered — so the model reads the transcript,
+not a bare question list. Because edge-model context windows are small and
+answers can run long, a shared `PlanningContext` helper renders the transcript
+and estimates its tokens (a chars/words heuristic, ~1 token ≈ 4 chars) against a
+configurable budget. Over budget, it trims by dropping answers while keeping
+question text, phase by phase from the earliest (resolved from each question's
+round; the current phase's answers are never dropped), and the repository hands
+the engine the already-trimmed list — the engine stays budget-ignorant, and the
+same decision is available to the UI. This renderer is the phase-grouped Q&A
+source the Markdown export rewrite (IMPLEMENTATION-PLAN.md item 283) should
+reuse, so one transcript serves both the prompts and the exported plan. A
+near-limit interactive choice (keep everything / trim / ask the LLM to summarize
+earlier answers — the last a new engine interaction) is parked as a refinement.
 
 **Roadmap / deferred:**
 

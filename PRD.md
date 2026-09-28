@@ -12,7 +12,7 @@ Both Editions share the same general UI, but differ in source of question materi
 
 ### 2.1 Alpha Thinker Edge
 - **Feature Set**: Full iterative synthesis using a local edge-LLM.
-- **Intelligence**: Automatically generates tailored questions and suggested answers based on the specific project synopsis and history. Includes any global questions added by the user.
+- **Intelligence**: Automatically generates tailored questions and suggested answers based on the specific project synopsis and history. Includes any global questions added by the user. Every round is grounded in the project's accumulated Q&A — committed answers, drafts, and ignored marks — so questions sharpen as the plan fills in; 4.3 bounds that context for edge models.
 - **Automation**: LLM-driven question archiving and synopsis updates.
 
 ### 2.2 Alpha Thinker Lite
@@ -57,7 +57,7 @@ Both Editions share the same general UI, but differ in source of question materi
 
 ### 4.3 LLM Integration (Alpha Thinker Edge Only)
 - Generate a set of tailored initial questions based on the project synopsis.
-- Generate follow-up questions based on the project's current state and previous answerss.
+- Generate initial and follow-up questions grounded in the project's accumulated Q&A (committed answers, drafts, and ignored questions), not just the synopsis — a wrap-up advancing to a new phase seeds that phase's first round with everything already written. When the accumulated context exceeds a configurable token budget, answers from the earliest phases are dropped (question text retained; the current phase's answers are never cut) to stay within the model's window. Planned refinement (IMPLEMENTATION-PLAN.md Phase 3.5): a near-limit choice to keep everything, drop early answers, or ask the LLM to summarize earlier phases.
 - Optional lookup and web search capabilities, invoked by the LLM as needed (e.g., via agentic tools such as Koog) rather than always-on.
 - Lookup and web search are reported to the user as a **capability** of the selected engine, not as a switch of their own: the header shows one read-only pill per capability (Network, LLM, Tools) and the Tools pill stays muted until an engine actually offers the tools. A per-capability on/off control is deliberately not planned — a switch the engine selection can override is a second source of truth, and it is not a security boundary (airplane mode is).
 
