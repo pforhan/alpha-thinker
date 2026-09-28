@@ -70,6 +70,19 @@ class SettingsViewModel(
     settingsRepository.setEngineDelay(interaction, seconds)
   }
 
+  /**
+   * The newest failure activity already raised for the user, and the write that
+   * records one. Hoisted here with the rest of the settings because the chrome
+   * reaches persistence only through this ViewModel; nothing in the settings UI
+   * reads it, and it is listed with the others rather than promoted to a
+   * top-level screen concern precisely because it is not one.
+   */
+  val announcedFailureActivityId: StateFlow<String?> = settingsRepository.announcedFailureActivityId
+
+  fun markFailureAnnounced(activityId: String) {
+    settingsRepository.markFailureAnnounced(activityId)
+  }
+
   private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Idle)
   val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 

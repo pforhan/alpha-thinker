@@ -38,6 +38,20 @@ enum class TaskKind {
     }
 }
 
+/**
+ * Whether this kind produces a batch of questions, as opposed to the other
+ * planning interactions (recommending a title, rewriting the synopsis, reviewing
+ * answers). Question batches are the ones whose result is latched onto a round
+ * as a [alphainterplanetary.thinker.model.RoundOutcome], so this is also the
+ * distinction the failure surface uses to tell "no questions arrived" from
+ * "something else didn't arrive".
+ */
+val TaskKind.isQuestionGeneration: Boolean
+  get() = when (this) {
+    TaskKind.InitialQuestions, TaskKind.FollowUpQuestions -> true
+    TaskKind.TitleRecommendation, TaskKind.SynopsisRewrite, TaskKind.AutoArchive -> false
+  }
+
 enum class TaskStatus {
   Queued,
   Running,

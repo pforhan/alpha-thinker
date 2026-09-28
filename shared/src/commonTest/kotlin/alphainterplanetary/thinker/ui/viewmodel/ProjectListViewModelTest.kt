@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
@@ -90,6 +91,20 @@ class ProjectListViewModelTest {
       testScheduler.advanceUntilIdle()
 
       assertEquals(0, (vm.uiState.value as ProjectListUiState.Success).projects.size)
+    }
+  }
+
+  @Test
+  fun `tasks exposes finished tasks so the list can mark failures`() = runTest {
+    withViewModel { vm ->
+      vm.createProject("My synopsis", title = null)
+      testScheduler.advanceUntilIdle()
+
+      // The list chip marks a failure, so finished tasks have to reach the screen
+      // too — an active-only feed could never show one.
+      assertTrue(
+        vm.tasks.value.any { it.kind == TaskKind.TitleRecommendation && it.isFinished },
+      )
     }
   }
 

@@ -42,7 +42,9 @@ import androidx.compose.ui.unit.Dp
  * The last-activity row is the one thing here that navigates, and it leaves
  * rather than opens: the Activity Log is a full screen, so it replaces the sheet
  * rather than stacking on it — leaving this sheet up over a screen that is no
- * longer underneath it would strand it.
+ * longer underneath it would strand it. It names the engine that ran the
+ * activity it reports (see [lastActivityLabel]), which need not be the engine
+ * above it.
  */
 @Composable
 internal fun StatusSheetContent(
@@ -87,6 +89,27 @@ internal fun StatusSheetContent(
 }
 
 /**
+ * The last-activity row's sentence: which engine ran it, then how it went.
+ *
+ * The engine is named because this row is the one claim on the sheet that is not
+ * about the engine the picker currently has selected — the activity is whatever
+ * ran last, app-wide. An unlabelled row therefore read as a statement about the
+ * selected engine after a switch, which is the one reading it is wrong about.
+ * Naming the engine makes the row say what it actually knows, which is also
+ * cheaper than a per-engine query: filtering would blank the row immediately
+ * after a switch, discarding the "the engine you just left failed" context, and
+ * the Activity Log is already the per-engine history this row links to.
+ */
+internal fun lastActivityLabel(activity: ActivityRecord): String {
+  val engine = activity.source?.label
+  return if (engine != null) {
+    "Last $engine activity: ${activity.summary}"
+  } else {
+    "Last activity: ${activity.summary}"
+  }
+}
+
+/**
  * The last activity as a way into the Activity Log: the sentence the sheet
  * already showed, now tappable, with the same chevron the other rows carry so it
  * reads as a destination rather than a label.
@@ -113,7 +136,7 @@ private fun LastActivityRow(
     Text(
       // The one place the header says how the last run *went* rather than what
       // is configured, so a fully set-up mode that still failed is not hidden.
-      text = "Last activity: ${latestActivity.summary}",
+      text = lastActivityLabel(latestActivity),
       style = MaterialTheme.typography.bodyMedium,
       color = if (latestActivity.hasError) {
         MaterialTheme.colorScheme.error

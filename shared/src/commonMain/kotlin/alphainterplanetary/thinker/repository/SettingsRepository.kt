@@ -54,6 +54,17 @@ class SettingsRepository @Inject constructor(
   private val _engineDelay = MutableStateFlow(EngineDelayConfig.Default)
   val engineDelay: StateFlow<EngineDelayConfig> = _engineDelay.asStateFlow()
 
+  /**
+   * The newest failure activity already raised for the user, or null when none
+   * has been. It is the one setting that is written by the UI rather than chosen
+   * in it, and it is the memory of "they have already been told" that
+   * `AppChromeState.announceFailures` compares against — a string setting rather
+   * than a column on the project, because the thing being remembered is a log
+   * activity, not a state of the project.
+   */
+  private val _announcedFailureActivityId = MutableStateFlow<String?>(null)
+  val announcedFailureActivityId: StateFlow<String?> = _announcedFailureActivityId.asStateFlow()
+
   init {
     scope.launch {
       val loaded = storage.getSetting(SettingsKey.PhaseTheme, PhaseTheme.Default.key)
@@ -114,6 +125,15 @@ class SettingsRepository @Inject constructor(
             }
           },
         )
+      }
+    }
+    scope.launch {
+      // The last failure reported before this launch, so a restart resumes the
+      // session's history of what has been shown rather than re-announcing the
+      // newest failure in the log. Absent (or an empty write) means nothing yet.
+      val id = storage.getSetting(SettingsKey.AnnouncedFailureActivityId, "")
+      if (id.isNotEmpty()) {
+        _announcedFailureActivityId.value = id
       }
     }
   }
@@ -182,6 +202,19 @@ class SettingsRepository @Inject constructor(
     }
     scope.launch {
       storage.saveSetting(interaction.settingsKey, seconds.toString())
+    }
+  }
+
+  /**
+   * Records [activityId] as the failure the user has just been shown, so the
+   * same one is never raised again. Written unconditionally rather than on
+   * change only: the value is an announcement ledger, so a repeated id is
+   * harmless and skipping the write would be the only saving.
+   */
+  fun markFailureAnnounced(activityId: String) {
+    _announcedFailureActivityId.value = activityId
+    scope.launch {
+      storage.saveSetting(SettingsKey.AnnouncedFailureActivityId, activityId)
     }
   }
 

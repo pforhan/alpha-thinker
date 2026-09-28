@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.navigation
 
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.ui.chrome.announceFailures
 import alphainterplanetary.thinker.ui.chrome.rememberAppChromeState
 import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
@@ -30,11 +31,20 @@ import androidx.compose.ui.Modifier
  * target) *and* a Jetpack Navigation graph (Android), which between them meant
  * two roots to keep in step and a real stack on only one platform. Adding a
  * destination now means adding a branch here and nothing else.
+ *
+ * It is also where a generation failure is announced, because being the only
+ * always-composed screen is exactly the property an announcement needs: see
+ * `AppChromeState.announceFailures`.
  */
 @Composable
 internal fun NavApp(appComponent: AppComponent) {
   val chrome = rememberAppChromeState(appComponent)
   val route = chrome.route
+
+  // Failures are announced from here rather than from the screen they happen on:
+  // the nav root is the one place that outlives every screen, so a failure is
+  // raised once per activity no matter how often its project is re-entered.
+  chrome.announceFailures()
 
   // Hardware/gesture back pops the same stack the app bar's arrow does, so a
   // back gesture closes a sheet when one is up and otherwise returns to the

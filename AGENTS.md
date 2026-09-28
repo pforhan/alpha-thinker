@@ -70,4 +70,7 @@ Rules:
 
 ## Roadmap
 
-IMPLEMENTATION-PLAN.md contains the project roadmap.  Always confirm before acting on an item that's not next in the roadmap.
+IMPLEMENTATION-PLAN.md contains the project roadmap.  If you mark a row 
+completed and with to add a note, you may add no more than two sentences 
+of summary text to it. Unless directed by the user, do not rewrite the
+original statement.

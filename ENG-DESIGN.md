@@ -10,7 +10,7 @@ This document outlines the technical investigations and design decisions require
 ### Key Decisions
 - **Layered Architecture:** The UI layer (Compose Multiplatform) remains "logic-free," acting as a presentation layer that observes the KMP engine. Complex business logic and data management reside within the KMP layer.
 - **Inference Engine:** Adopted **Koog** (`ai.koog:koog-agents`) as the LLM abstraction and agent layer, with a **selectable inference backend per engine mode** (see "LLM Inference Layer" below): system on-device models (Gemini Nano via ML Kit GenAI; Apple Foundation Models via a Swift bridge) through a **hand-rolled Koog `LLMClient`**, remote cloud / OpenAI-compatible / Ollama through Koog's shipped clients, and downloaded local models through **Google's LiteRT-LM** (in-process; a JVM adapter on desktop). Llamatik (llama.cpp KMP) was investigated as an alternative and is reserved as a fallback if the LiteRT-LM desktop path stalls.
-- **Resilience & Fallback:** If the LLM inference fails (e.g., due to resource constraints or malformed output), the app will transparently fall back to the **Alpha Thinker Lite** implementation using the hardcoded seed questions.
+- **Resilience & Recovery:** If the LLM inference fails (e.g., due to resource constraints or malformed output), the app **surfaces the failure and lets the user choose**: retry, switch to the **Alpha Thinker Lite** engine, or pick another engine. Nothing silently switches engines behind the user's back — see "Recovery" under "LLM Inference Layer".
 - **State Management:** UI state follows Compose Multiplatform conventions, with ViewModels exposing `StateFlow` state.
 - **Unified UX:** The visual styling and user interface will remain consistent across both the Lite and Edge editions.
 - **Data Persistence:** For the development phase, complex schema migrations will be ignored.
@@ -347,15 +347,85 @@ switch the mode can override is a second source of truth that can disagree with
 what actually runs. Tools is unused by every mode until the agentic-lookup work
 lands.
 
-**Fallback:** any LLM backend that raises `AnalysisFailure` delegates
-transparently to Lite via a `FallbackPlanningEngine`-style wrapper around the
-Koog layer — the original resilience decision, tracked as
-IMPLEMENTATION-PLAN.md Phase 3 "Fallback Mechanism". A mode with no engine bound
-at all (an on-device backend whose runtime reports unavailable) **throws**
-instead of falling back: `resolveSelectedEngine` picks the mode or fails, so a
-Remote choice with no endpoint cannot quietly run Lite behind a header that still
-reads "Remote". Availability is a *selection-time* gate (`EngineMode.available()`,
-which greys the card in the picker), not a runtime fallback.
+**Recovery (user-driven, not automatic).** A backend that raises
+`AnalysisFailure` — or answers with an empty batch while claiming more is
+available — **surfaces the failure** rather than quietly producing something
+else. Nothing wraps the Koog layer to delegate to Lite: a hardcoded fallback
+would mean content from a different engine than the one the header reports, so
+the user is the one who changes engines. The **Status sheet** is where a failure
+is read: its last-activity row already headlines a failed run with the engine's
+own words ("Initial question generation failed: …") in error tint, with **Change
+engine…** — and therefore the picker — directly below, and the app raises that
+sheet when the failure lands rather than making the user go looking for it. A
+failure reported only where the user thinks to look is not reported. A failure
+*dialog* was considered and dropped: it would have been the second rendering of
+a message the sheet already owns, in a modal the user has to dismiss before
+reaching the retry.
+
+**Raising a failure is keyed on the activity, not the project.**
+`AppChromeState.announceFailures()` lives at the nav root — the one
+always-composed screen, and the only state that outlives a project screen — and
+raises the sheet when the log's newest *failed* activity is one the user has not
+been shown. The policy is the pure `shouldAnnounceFailure(latest,
+announcedActivityId, sheetIsOpen, currentProjectId)`: a failure only, not already
+announced, no sheet up, and belonging to the project on screen (a projectless
+capability failure has no project to match and interrupts wherever the user is).
+The consumed id is persisted as `SettingsKey.AnnouncedFailureActivityId`, so
+"already told" survives navigation *and* relaunch.
+
+This replaced a per-screen `LaunchedEffect` on a problem derived from project
+state, which had the two defects this keying removes. It **re-raised on every
+re-entry**: a failed round is durable (`RoundOutcome.Failed` + `outcomeDetail`)
+while the memory of having raised it was composition-scoped, so leaving and
+returning to a still-broken project popped the sheet again — most visibly after
+switching engines and not rerunning anything, though the engine change was
+incidental; any re-entry did it. And it could show **one activity while
+describing another**: the decision came from the project's failure state while
+the sheet's text came from an app-wide log tail that knows neither the project
+nor the engine. Keying the announcement on the activity the sheet is about to
+show makes the two the same fact by construction. Because the latest activity is
+app-wide, the row is labelled with the engine that ran it (`lastActivityLabel`:
+"Last Lite activity: …") — it need not be the engine the picker is on, and
+saying which one it was is cheaper and more useful than filtering the log by
+engine, which would blank the row right after a switch and discard the "the
+engine you just left failed" context. The Activity Log is already the per-engine
+history that row links to.
+
+A skipped failure is deliberately **not** consumed: a failure that arrives while
+a sheet is up, or for a project the user is not in, stays pending until the sheet
+closes or that project is opened, and is otherwise superseded by a newer one, so
+nothing is ever announced long after the fact. Where a skipped failure goes
+instead is the surface that suits the context — a tappable chip on the Project
+List, the header's error dot anywhere else. So the app has one rule with three
+answers rather than one popup plus three silent places.
+
+What the base UI adds is only what an app-agnostic sheet cannot do, since the
+sheet has no project. The questions retry is the unanswered empty state's
+existing **Get more questions** — a `Failed` round is not `Exhausted`, so the
+phase stays open and the button *is* the retry. The one gap was the title, so a
+project with no title and nothing in flight gets a **refresh glyph** beside Edit
+that re-runs the recommendation. Both read off state those screens already hold
+(blank title, an in-flight task, an empty phase): no derived failure object in a
+ViewModel, no new field, no lookup. The chip's label comes from
+`generationProblemKind(project, tasks)`, the one pure derivation behind the chip
+and the title glyph; it yields a *kind* and no message, because the engine's own
+words belong to the activity log and a second copy here would be a second thing
+to keep in sync. It is the *standing fact that a retry is owed* — deliberately
+independent of the announcement ledger, so a project that has been told about
+its failure still shows its chip. A failure clears as soon as there is nothing
+to act on: work in flight, a title the project has since gained, or a phase whose
+newest round came back with questions. Question failures already persist on the
+round (`RoundOutcome.Failed` + `outcomeDetail`, read back through
+`Project.currentPhaseFailure`), so they survive a restart; the task list is
+in-memory, so a title failure is only as durable as the session — which is fine
+now that the announcement it feeds is an activity id rather than a project field.
+
+A mode with no engine bound at all (an on-device backend whose runtime reports
+unavailable) **throws** for the same reason: `resolveSelectedEngine` picks the
+mode or fails, so a Remote choice with no endpoint cannot quietly run Lite behind
+a header that still reads "Remote". Availability is a *selection-time* gate
+(`EngineMode.available()`, which greys the card in the picker), not a runtime
+fallback.
 
 **System on-device client (hand-rolled).** The system-model path is a thin,
 in-repo Koog `LLMClient`: an Android actual over ML Kit GenAI

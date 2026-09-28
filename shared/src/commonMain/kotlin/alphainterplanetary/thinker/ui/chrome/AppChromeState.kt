@@ -9,6 +9,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -63,9 +64,10 @@ enum class ChromeSheet {
  * the screen that opened it.
  *
  * It carries the one piece of live data the header reflects, the latest
- * activity, so the status dot can react to a failure. That flow is
- * `WhileSubscribed`, so an app that never opens the status surface never
- * collects from the log.
+ * activity, so the status dot can react to a failure and so the failure can be
+ * raised against the sheet that explains it (see [announceFailures]). That flow
+ * is `WhileSubscribed`; the nav root subscribes for the life of the app, which
+ * is what lets a failure be announced wherever it happens to be noticed.
  */
 @Stable
 class AppChromeState internal constructor(
@@ -182,4 +184,76 @@ fun AppChromeState.engineStatus(): EngineStatus {
   val baseUrl by settings.remoteLlmBaseUrl.collectAsState()
   val model by settings.remoteLlmModel.collectAsState()
   return remember(mode, baseUrl, model) { engineStatus(mode, baseUrl, model) }
+}
+
+/**
+ * Whether [latest] is a failure the user still has to be told about — the whole
+ * rule for when a failure interrupts, kept as a pure function so the policy is
+ * testable without a composition and cannot drift between the three places it
+ * would otherwise be re-derived.
+ *
+ * The four conditions, in the order they are cheapest to reject:
+ * - a failure only. A success is the header dot's business, not a sheet's.
+ * - not already announced ([announcedActivityId] is the consumed id). This is
+ *   what makes re-entering an errored project quiet: the announcement is keyed
+ *   on the activity that will be shown, so a failure is raised once however many
+ *   times its project is opened, and the ledger persists across launches.
+ * - no sheet up already. Skipping leaves the failure unconsumed, so it is still
+ *   pending once the sheet closes.
+ * - the failure belongs to where the user is. A projectless activity (a bare
+ *   capability failure) or the project currently open qualifies; one belonging
+ *   to some other project does not, because the user cannot act on it from
+ *   here and the Project List already offers it as a chip. The Activity Log and
+ *   Task Manager match no project, so a background failure never interrupts
+ *   them either.
+ *
+ * Not consuming a skipped failure is deliberate: a later, newer failure simply
+ * supersedes it, so nothing is ever announced long after the fact.
+ */
+internal fun shouldAnnounceFailure(
+  latest: ActivityRecord?,
+  announcedActivityId: String?,
+  sheetIsOpen: Boolean,
+  currentProjectId: String?,
+): Boolean {
+  if (latest == null || !latest.hasError) return false
+  if (latest.activityId == announcedActivityId) return false
+  if (sheetIsOpen) return false
+  val failedProjectId = latest.projectId
+  return failedProjectId == null || failedProjectId == currentProjectId
+}
+
+/**
+ * Raises the [ChromeSheet.Status] sheet on a generation failure, once per
+ * failure, app-wide. Called by the nav root — the one place that outlives every
+ * screen — because the failure is a fact about the log rather than about the
+ * screen the user happens to be on, and a screen-local raise re-runs on every
+ * re-entry of a project that is still broken.
+ *
+ * The decision itself is [shouldAnnounceFailure]; this only supplies it, and
+ * consumes the id it acts on so the next emission of the *same* failure — the
+ * effect below re-runs on route and sheet changes — finds nothing to do.
+ *
+ * Keyed on the activity id, the project, and whether a sheet is up, so all three
+ * ways a decision can become answerable re-evaluate it: the failure arriving,
+ * the user navigating to (or away from) its project, and a sheet closing over a
+ * failure that was skipped while it was open. The announced id is deliberately
+ * not a key — it is an output, and keying on it would re-run the effect on the
+ * write that the effect itself made.
+ */
+@Composable
+internal fun AppChromeState.announceFailures() {
+  val latestActivity by latestActivity.collectAsState()
+  val announcedActivityId by settings.announcedFailureActivityId.collectAsState()
+  val currentProjectId = (route as? AppRoute.ProjectDetail)?.projectId
+  val sheetIsOpen = isSheetOpen
+
+  LaunchedEffect(latestActivity?.activityId, currentProjectId, sheetIsOpen) {
+    val activity = latestActivity ?: return@LaunchedEffect
+    if (!shouldAnnounceFailure(activity, announcedActivityId, sheetIsOpen, currentProjectId)) {
+      return@LaunchedEffect
+    }
+    settings.markFailureAnnounced(activity.activityId)
+    openSheet(ChromeSheet.Status)
+  }
 }

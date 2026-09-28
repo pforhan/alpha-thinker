@@ -29,14 +29,19 @@ class ProjectListViewModel(
   private val _uiState = MutableStateFlow<ProjectListUiState>(ProjectListUiState.Loading)
   val uiState: StateFlow<ProjectListUiState> = _uiState.asStateFlow()
 
-  /** Live non-terminal tasks, so the list can show "generating…" chips and a Task Manager FAB. */
-  private val _activeTasks = MutableStateFlow<List<GenerationTask>>(emptyList())
-  val activeTasks: StateFlow<List<GenerationTask>> = _activeTasks.asStateFlow()
+  /**
+   * Every generation task the app has run, so the list can show "generating…"
+   * chips for the live ones *and* a failure marker for a project whose
+   * generation came up empty (the failure is what the user acts on, and the
+   * list is where they are when it happens).
+   */
+  private val _tasks = MutableStateFlow<List<GenerationTask>>(emptyList())
+  val tasks: StateFlow<List<GenerationTask>> = _tasks.asStateFlow()
 
   init {
     vmScope.launch {
       taskRunner.tasks.collect { current ->
-        _activeTasks.value = current.filter { it.isActive }
+        _tasks.value = current
       }
     }
   }

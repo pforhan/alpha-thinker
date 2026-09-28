@@ -395,6 +395,48 @@ class ProjectDetailViewModelTest {
   // ---------- in-flight generation is surfaced ----------
 
   @Test
+  fun `retryTitle re-runs the recommendation for a project that never got one`() = runTest {
+    val fake = FakePlanningEngine().apply { recommendedTitle = "Second Try" }
+    val untitled = Project(
+      id = "p1",
+      synopsis = "synopsis",
+      editableTitle = "",
+      status = "Draft",
+      questions = emptyList(),
+      createdAt = testInstant,
+      updatedAt = testInstant,
+    )
+    withViewModel(
+      storage = FakeStorage(mutableMapOf("p1" to untitled)),
+      generator = SlowDownPlanningEngine(
+        delegate = fake,
+        config = MutableStateFlow(
+          EngineDelayConfig(
+            enabled = true,
+            secondsByInteraction = mapOf(EngineInteraction.RecommendTitle to 5),
+          )
+        ),
+      ),
+    ) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+
+      vm.retryTitle("p1")
+      testScheduler.runCurrent()
+      assertTrue(
+        vm.tasks.value.any { it.kind == TaskKind.TitleRecommendation && !it.isFinished },
+        "the retry is an ordinary generation task, so the screen shows it as in flight",
+      )
+
+      testScheduler.advanceUntilIdle()
+
+      val state = vm.uiState.value as ProjectDetailUiState.Success
+      assertEquals("Second Try", state.project.editableTitle)
+    }
+  }
+
+  @Test
   fun `generateMoreQuestions runs on the task runner and reloads when it completes`() = runTest {
     val fake = FakePlanningEngine().apply {
       followUpQuestions += question("n1", "Fresh?")

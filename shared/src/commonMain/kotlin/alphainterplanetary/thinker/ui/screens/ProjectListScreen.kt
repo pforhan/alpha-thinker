@@ -6,11 +6,16 @@ import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
+import alphainterplanetary.thinker.ui.chrome.ChromeSheet
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
+import alphainterplanetary.thinker.ui.components.GenerationProblemKind
+import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.SwipeAction
 import alphainterplanetary.thinker.ui.components.SwipeActionStyle
 import alphainterplanetary.thinker.ui.components.SwipeableCard
+import alphainterplanetary.thinker.ui.components.generationProblemKind
+import alphainterplanetary.thinker.ui.components.headline
 import alphainterplanetary.thinker.ui.format.progressLabel
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.PhaseStyles
@@ -18,6 +23,7 @@ import alphainterplanetary.thinker.ui.viewmodel.ProjectListUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListViewModel
 import alphainterplanetary.thinker.util.normalizeWhitespace
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,12 +33,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -94,8 +102,22 @@ fun ProjectListScreen(
 
   val uiState by viewModel.uiState.collectAsState()
   val createdProject by viewModel.createdProject.collectAsState()
-  val activeTasks by viewModel.activeTasks.collectAsState()
-  val activeTasksByProject = remember(activeTasks) { activeTasks.groupBy { it.projectId } }
+  val tasks by viewModel.tasks.collectAsState()
+  val activeTasksByProject = remember(tasks) {
+    tasks.filter { it.isActive }.groupBy { it.projectId }
+  }
+  // A failure is worth a marker on the card: the list is where the user is when
+  // generation comes up empty, and a project with no questions and no
+  // explanation just looks idle. The marker is the route to the engine status
+  // sheet, which is where the engine's own explanation of the failure lives —
+  // the retry stays on the project itself, so nothing about the engine reaches
+  // into a project.
+  val problemsByProject = remember(tasks, uiState) {
+    (uiState as? ProjectListUiState.Success)
+      ?.projects
+      ?.associate { project -> project.id to generationProblemKind(project, tasks) }
+      .orEmpty()
+  }
 
   LaunchedEffect(createdProject) {
     val project = createdProject
@@ -124,6 +146,8 @@ fun ProjectListScreen(
           ProjectListSuccess(
             projects = ui.projects,
             activeTasksByProject = activeTasksByProject,
+            problemsByProject = problemsByProject,
+            onOpenEngineStatus = { chrome.openSheet(ChromeSheet.Status) },
             pendingDeletionId = projectToDelete?.id,
             deletingId = deletingId,
             onProjectClick = onProjectClick,
@@ -202,6 +226,9 @@ private fun ProjectListEmpty(onCreateClick: () -> Unit) {
 private fun ProjectListItem(
   project: Project,
   activeTaskKinds: List<TaskKind>,
+  /** The generation failure to mark, or null when there is nothing to act on. */
+  problem: GenerationProblemKind?,
+  onOpenEngineStatus: () -> Unit,
   pendingDeletionId: String?,
   deletingId: String?,
   onClick: () -> Unit,
@@ -279,7 +306,13 @@ private fun ProjectListItem(
             val titleGenerating = project.editableTitle.isBlank() &&
               activeTaskKinds.contains(TaskKind.TitleRecommendation)
             Text(
-              text = if (titleGenerating) "Generating title…" else project.editableTitle.normalizeWhitespace(),
+              // A title that never landed would otherwise render the card blank;
+              // the marker below carries the reason and the detail screen the fix.
+              text = if (titleGenerating) {
+                "Generating title…"
+              } else {
+                project.editableTitle.normalizeWhitespace().ifBlank { UntitledProjectLabel }
+              },
               modifier = Modifier.weight(1f),
               style = MaterialTheme.typography.titleMedium,
               maxLines = 1,
@@ -297,6 +330,9 @@ private fun ProjectListItem(
           Spacer(modifier = Modifier.height(Dimens.ContentGap))
           if (activeTaskKinds.isNotEmpty()) {
             ActiveTaskChip(kinds = activeTaskKinds)
+            Spacer(modifier = Modifier.height(Dimens.ContentGap))
+          } else if (problem != null) {
+            GenerationProblemChip(kind = problem, onClick = onOpenEngineStatus)
             Spacer(modifier = Modifier.height(Dimens.ContentGap))
           }
           Row(verticalAlignment = Alignment.CenterVertically) {
@@ -324,9 +360,12 @@ private fun ProjectListItem(
 private fun ProjectListSuccess(
   projects: List<Project>,
   activeTasksByProject: Map<String, List<GenerationTask>>,
+  /** Per-project generation failures, absent where the project is fine. */
+  problemsByProject: Map<String, GenerationProblemKind?>,
   pendingDeletionId: String?,
   deletingId: String?,
   onProjectClick: (Project) -> Unit,
+  onOpenEngineStatus: () -> Unit,
   onCreateClick: () -> Unit,
   onDeleteProject: (Project) -> Unit,
   onDeleteConfirmed: (Project) -> Unit,
@@ -342,6 +381,8 @@ private fun ProjectListSuccess(
         ProjectListItem(
           project = project,
           activeTaskKinds = activeTasksByProject[project.id].orEmpty().map { it.kind },
+          problem = problemsByProject[project.id],
+          onOpenEngineStatus = onOpenEngineStatus,
           pendingDeletionId = pendingDeletionId,
           deletingId = deletingId,
           onClick = { onProjectClick(project) },
@@ -374,6 +415,35 @@ private fun ActiveTaskChip(kinds: List<TaskKind>) {
       text = label,
       style = MaterialTheme.typography.labelSmall,
       color = MaterialTheme.colorScheme.primary,
+    )
+  }
+}
+
+@Composable
+private fun GenerationProblemChip(kind: GenerationProblemKind, onClick: () -> Unit) {
+  // Tappable into the engine status sheet, which is where the engine's account of
+  // the failure is — and one row from the picker. The card's own tap target still
+  // opens the project, where the retry lives, so the marker and the card lead to
+  // two different places by design: this one explains, that one fixes.
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier = Modifier
+      .clip(MaterialTheme.shapes.small)
+      .clickable(onClick = onClick),
+  ) {
+    Icon(
+      imageVector = Icons.Default.Warning,
+      contentDescription = null,
+      tint = MaterialTheme.colorScheme.error,
+      modifier = Modifier.size(Dimens.ProgressIndicatorSize),
+    )
+    Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
+    Text(
+      text = kind.headline,
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.error,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
     )
   }
 }

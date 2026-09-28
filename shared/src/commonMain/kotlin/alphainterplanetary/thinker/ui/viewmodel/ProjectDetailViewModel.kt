@@ -135,6 +135,15 @@ class ProjectDetailViewModel(
     }
   }
 
+  /**
+   * Re-runs the title recommendation for a project that never got one. Like
+   * question generation it is a task, not a blocking call, so there is nothing to
+   * await: the project reloads when the task lands (see the task collector).
+   */
+  fun retryTitle(projectId: String) {
+    repository.recommendTitle(projectId)
+  }
+
   fun advanceToPhase(projectId: String, phase: Phase) {
     vmScope.launch {
       try {

@@ -24,6 +24,7 @@ import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
 import alphainterplanetary.thinker.ui.components.ScrollableOverflowText
 import alphainterplanetary.thinker.ui.components.SwipeableCard
+import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.LocalExtendedColors
 import alphainterplanetary.thinker.ui.theme.PhaseStyles
@@ -63,6 +64,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -136,6 +138,16 @@ fun ProjectDetailScreen(
   val generationActive = activeTasksLabel != null
   val titleGenerating = tasks.any { it.isActive && it.kind == TaskKind.TitleRecommendation }
 
+  // The title has a retry affordance of its own because nothing else on this
+  // screen could ask for one: the question list's "Get more questions" covers a
+  // missing batch, but an untitled project has no list to retry from. Read off
+  // the state already here — blank title, nothing in flight — rather than from a
+  // derived failure, so it also covers a title that came back empty.
+  val untitled = (uiState as? ProjectDetailUiState.Success)
+    ?.project
+    ?.editableTitle
+    ?.isBlank() == true
+
   var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
   var showPhaseAdvanceDialog by remember { mutableStateOf(false) }
@@ -170,7 +182,7 @@ fun ProjectDetailScreen(
           if (titleGenerating && ui.project.editableTitle.isBlank()) {
             "Generating title…"
           } else {
-            ui.project.editableTitle
+            ui.project.editableTitle.ifBlank { UntitledProjectLabel }
           }
         }
         is ProjectDetailUiState.Error -> "Error"
@@ -184,6 +196,13 @@ fun ProjectDetailScreen(
     chrome = chrome,
     onBack = onBack,
     actions = {
+      // Only while the project has no title and nothing is producing one: once a
+      // title lands (or a retry is running) the action has nothing to do.
+      if (untitled && !titleGenerating) {
+        IconButton(onClick = { viewModel.retryTitle(projectId) }) {
+          Icon(Icons.Default.Refresh, contentDescription = "Suggest a title")
+        }
+      }
       IconButton(onClick = { showEditDialog = true }) {
         Icon(Icons.Default.Edit, contentDescription = "Edit Project")
       }

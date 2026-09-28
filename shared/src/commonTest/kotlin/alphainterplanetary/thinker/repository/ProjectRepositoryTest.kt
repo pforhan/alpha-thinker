@@ -216,6 +216,35 @@ class ProjectRepositoryTest {
       assertTrue(later.initialCalls.isEmpty(), "the later engine never touches the locked task")
     }
 
+  // ---------- recommendTitle (retry) ----------
+
+  @Test
+  fun `recommendTitle re-runs the recommender for a project that never got one`() = runTest {
+    val generator = FakePlanningEngine().apply { recommendedTitle = "Second Try" }
+    val storage = FakeStorage(mutableMapOf("p1" to untitledProject()))
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val repository = repo(storage = storage, generator = generator, runner = runner)
+
+    repository.recommendTitle("p1")
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("Second Try", storage.getProject("p1")?.editableTitle)
+    assertEquals(TaskStatus.Succeeded, runner.tasks.value.single().status)
+  }
+
+  @Test
+  fun `recommendTitle never overwrites a title the project already has`() = runTest {
+    val generator = FakePlanningEngine().apply { recommendedTitle = "Should Not Land" }
+    val storage = FakeStorage(mutableMapOf("p1" to untitledProject().copy(editableTitle = "Mine")))
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val repository = repo(storage = storage, generator = generator, runner = runner)
+
+    repository.recommendTitle("p1")
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("Mine", storage.getProject("p1")?.editableTitle)
+  }
+
   // ---------- updateProject ----------
 
   @Test
@@ -700,6 +729,17 @@ class ProjectRepositoryTest {
     status = "Draft",
     questions = listOf(question("q1")),
     rounds = listOf(round),
+    createdAt = now,
+    updatedAt = now,
+  )
+
+  private fun untitledProject(): Project = Project(
+    id = "p1",
+    synopsis = "s",
+    editableTitle = "",
+    status = "Draft",
+    questions = emptyList(),
+    rounds = emptyList(),
     createdAt = now,
     updatedAt = now,
   )

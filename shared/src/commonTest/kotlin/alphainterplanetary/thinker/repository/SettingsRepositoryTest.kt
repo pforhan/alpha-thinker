@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class SettingsRepositoryTest {
 
@@ -321,5 +322,57 @@ class SettingsRepositoryTest {
       2,
       repo.engineDelay.value.secondsByInteraction[EngineInteraction.RecommendTitle],
     )
+  }
+
+  // ---------- announced failure ledger ----------
+
+  @Test
+  fun `no failure has been announced before the first one is raised`() = runTest {
+    val repo = repository()
+    testScheduler.advanceUntilIdle()
+
+    assertNull(repo.announcedFailureActivityId.value)
+  }
+
+  @Test
+  fun `markFailureAnnounced records the id and persists it`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.markFailureAnnounced("task-1")
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("task-1", repo.announcedFailureActivityId.value)
+    assertEquals(
+      "task-1",
+      storage.settings[SettingsKey.AnnouncedFailureActivityId.storageKey],
+    )
+  }
+
+  @Test
+  fun `announcedFailureActivityId loads the ledger at startup`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.AnnouncedFailureActivityId, "task-7")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("task-7", repo.announcedFailureActivityId.value)
+  }
+
+  /**
+   * The ledger is the only memory of "already told", so a newer failure must
+   * overwrite an older one rather than being ignored as a duplicate.
+   */
+  @Test
+  fun `a newer failure supersedes the recorded one`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.markFailureAnnounced("task-1")
+    repo.markFailureAnnounced("task-2")
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("task-2", repo.announcedFailureActivityId.value)
   }
 }

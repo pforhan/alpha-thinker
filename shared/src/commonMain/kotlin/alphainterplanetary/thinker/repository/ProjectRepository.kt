@@ -73,6 +73,16 @@ class ProjectRepository @Inject constructor(
   }
 
   /**
+   * Re-runs the title recommendation for an existing project, which is how the
+   * user retries a title that never landed. Does nothing if the project already
+   * has a title (a recommendation never overwrites one), so it is safe to call
+   * on any project.
+   */
+  fun recommendTitle(projectId: String) {
+    enqueueTitleRecommendation(projectId)
+  }
+
+  /**
    * Fills in the project's recommended title on the task runner, re-reading first.
    * The engine is frozen via [engineSelector] at enqueue time, so a queued task
    * runs the engine it was created under even if settings change before it runs.
@@ -81,6 +91,10 @@ class ProjectRepository @Inject constructor(
     val engine = engineSelector.selectedEngine()
     taskRunner.enqueue(projectId, TaskKind.TitleRecommendation) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
+      // Re-checked here, not just at the call site: the project may have been
+      // titled (by the user, or by a recommendation that did land) between the
+      // enqueue and the run.
+      if (reloaded.editableTitle.isNotBlank()) return@enqueue
       val recommended = engine.recommendTitle(reloaded.synopsis, activityId = taskId)
       if (recommended.isNotBlank()) {
         storage.saveProject(
