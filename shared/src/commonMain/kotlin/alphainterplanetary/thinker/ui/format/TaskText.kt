@@ -10,8 +10,7 @@ import kotlin.time.Instant
 /** Human title for a task kind, e.g. for the Task Manager rows. */
 val TaskKind.title: String
   get() = when (this) {
-    TaskKind.InitialQuestions -> "Initial questions"
-    TaskKind.FollowUpQuestions -> "Follow-up questions"
+    TaskKind.QuestionGeneration -> "Question generation"
     TaskKind.TitleRecommendation -> "Title recommendation"
     TaskKind.SynopsisRewrite -> "Synopsis rewrite"
     TaskKind.AutoArchive -> "Auto-archive"
@@ -20,8 +19,7 @@ val TaskKind.title: String
 /** Short label describing what a running task is doing, e.g. a list chip. */
 val TaskKind.progressLabel: String
   get() = when (this) {
-    TaskKind.InitialQuestions -> "Creating questions"
-    TaskKind.FollowUpQuestions -> "Generating questions"
+    TaskKind.QuestionGeneration -> "Generating questions"
     TaskKind.TitleRecommendation -> "Generating title"
     TaskKind.SynopsisRewrite -> "Rewriting synopsis"
     TaskKind.AutoArchive -> "Reviewing answers"

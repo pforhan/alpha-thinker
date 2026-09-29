@@ -9,13 +9,12 @@ import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.chrome.ChromeSheet
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
 import alphainterplanetary.thinker.ui.components.GenerationProblemKind
-import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.SwipeAction
 import alphainterplanetary.thinker.ui.components.SwipeActionStyle
 import alphainterplanetary.thinker.ui.components.SwipeableCard
+import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
 import alphainterplanetary.thinker.ui.components.generationProblemKind
-import alphainterplanetary.thinker.ui.components.headline
 import alphainterplanetary.thinker.ui.format.progressLabel
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.PhaseStyles

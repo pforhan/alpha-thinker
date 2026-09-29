@@ -17,7 +17,7 @@ class TaskRunnerTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     var bodyRan = false
 
-    runner.enqueue("p1", TaskKind.InitialQuestions) {
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {
       bodyRan = true
       assertEquals(
         TaskStatus.Running,
@@ -39,10 +39,10 @@ class TaskRunnerTest {
   @Test
   fun `bodies run serially so a later task stays queued behind a slow peer`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val slow = runner.enqueue("p1", TaskKind.InitialQuestions) {
+    val slow = runner.enqueue("p1", TaskKind.QuestionGeneration) {
       delay(1_000)
     }
-    val fast = runner.enqueue("p1", TaskKind.FollowUpQuestions) {}
+    val fast = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
 
     testScheduler.runCurrent()
 
@@ -78,7 +78,7 @@ class TaskRunnerTest {
     val a = runner.enqueue("p1", TaskKind.SynopsisRewrite, group = ConcurrencyGroup.Remote) {
       delay(1_000)
     }
-    val b = runner.enqueue("p2", TaskKind.FollowUpQuestions, group = ConcurrencyGroup.Remote) {
+    val b = runner.enqueue("p2", TaskKind.QuestionGeneration, group = ConcurrencyGroup.Remote) {
       delay(1_000)
     }
 
@@ -95,10 +95,10 @@ class TaskRunnerTest {
   @Test
   fun `engine group is shared across projects so only one engine task runs at a time`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val slow = runner.enqueue("p1", TaskKind.InitialQuestions) {
+    val slow = runner.enqueue("p1", TaskKind.QuestionGeneration) {
       delay(1_000)
     }
-    val other = runner.enqueue("p2", TaskKind.FollowUpQuestions) {
+    val other = runner.enqueue("p2", TaskKind.QuestionGeneration) {
       delay(500)
     }
 
@@ -115,10 +115,10 @@ class TaskRunnerTest {
   @Test
   fun `same-project tasks never run concurrently even across groups`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val engine = runner.enqueue("p1", TaskKind.InitialQuestions) {
+    val engine = runner.enqueue("p1", TaskKind.QuestionGeneration) {
       delay(1_000)
     }
-    val remote = runner.enqueue("p1", TaskKind.FollowUpQuestions, group = ConcurrencyGroup.Remote) {
+    val remote = runner.enqueue("p1", TaskKind.QuestionGeneration, group = ConcurrencyGroup.Remote) {
       delay(500)
     }
 
@@ -136,7 +136,7 @@ class TaskRunnerTest {
   fun `a throwing body fails the task with its message`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
 
-    runner.enqueue("p1", TaskKind.FollowUpQuestions) {
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {
       error("model exploded")
     }
 
@@ -152,8 +152,8 @@ class TaskRunnerTest {
   @Test
   fun `tasksFor filters by project and keeps insertion order`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val a1 = runner.enqueue("p1", TaskKind.InitialQuestions) {}
-    val a2 = runner.enqueue("p1", TaskKind.FollowUpQuestions) {}
+    val a1 = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
+    val a2 = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
     val b1 = runner.enqueue("p2", TaskKind.SynopsisRewrite) {}
 
     testScheduler.advanceUntilIdle()

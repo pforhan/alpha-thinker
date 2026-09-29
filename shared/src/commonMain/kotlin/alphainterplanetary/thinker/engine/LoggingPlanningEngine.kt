@@ -42,33 +42,8 @@ class LoggingPlanningEngine(
     }
   }
 
-  override suspend fun generateInitialQuestions(
-    editableTitle: String,
-    synopsis: String,
-    roundId: String,
-    phase: Phase,
-    activityId: String,
-  ): QuestionBatch {
-    val context = log.context(activityId, LogCategory.QuestionGeneration, source)
-    filePrompt(
-      context,
-      (delegate as? PromptRenderer)?.initialQuestionsPrompt(editableTitle, synopsis, phase),
-      "phase=$phase, synopsis=$synopsis",
-    )
-    return try {
-      val batch = delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase, activityId)
-      context.response(batchResponse(batch))
-      batch
-    } catch (e: CancellationException) {
-      context.closeCancelled()
-      throw e
-    } catch (e: Exception) {
-      context.closeFailed(e.message ?: e.toString())
-      throw e
-    }
-  }
-
-  override suspend fun generateFollowUpQuestions(
+  override suspend fun generateQuestions(
+    title: String,
     synopsis: String,
     previousQuestions: List<Question>,
     roundId: String,
@@ -78,12 +53,12 @@ class LoggingPlanningEngine(
     val context = log.context(activityId, LogCategory.QuestionGeneration, source)
     filePrompt(
       context,
-      (delegate as? PromptRenderer)?.followUpQuestionsPrompt(synopsis, previousQuestions, phase),
-      "phase=$phase, previous questions=${previousQuestions.size}",
+      (delegate as? PromptRenderer)?.questionsPrompt(title, synopsis, previousQuestions, phase),
+      "phase=$phase, synopsis=$synopsis, previous questions=${previousQuestions.size}",
     )
     return try {
-      val batch = delegate.generateFollowUpQuestions(
-        synopsis, previousQuestions, roundId, phase, activityId
+      val batch = delegate.generateQuestions(
+        title, synopsis, previousQuestions, roundId, phase, activityId
       )
       context.response(batchResponse(batch))
       batch

@@ -95,7 +95,7 @@ class ActivityRecordTest {
     val base = Instant.fromEpochMilliseconds(10_000_000_000)
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = base),
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = base),
         entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = base + 5.days),
       )
     ).single()
@@ -121,7 +121,7 @@ class ActivityRecordTest {
   fun `projectId is the first populated project id across the rows`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
         entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       ).map { it.copy(projectId = "p1") }
     ).single()
@@ -146,7 +146,7 @@ class ActivityRecordTest {
   fun `initial batches summarize the produced count`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
         entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
         entry(
           3,
@@ -158,21 +158,21 @@ class ActivityRecordTest {
       )
     ).single()
 
-    assertEquals("Generated 3 initial questions", activity.summary)
+    assertEquals("Generated 3 questions", activity.summary)
   }
 
   @Test
   fun `an exhausted follow-up batch summarizes the no-further signal`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: FollowUpQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
         entry(2, "task-1", "input: phase=ExecutionPlan, previous questions=12", LogCategory.QuestionGeneration),
         entry(3, "task-1", "response: 0 questions, done=true", LogCategory.QuestionGeneration),
         entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
-    assertEquals("No further follow-up questions generated", activity.summary)
+    assertEquals("No further questions generated", activity.summary)
   }
 
   @Test
@@ -193,25 +193,25 @@ class ActivityRecordTest {
   fun `a failing generation headlines with its topic`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
         entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
         entry(3, "task-1", "failed: model exploded", LogCategory.QuestionGeneration),
         entry(4, "task-1", "failed: model exploded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
-    assertEquals("Initial question generation failed: model exploded", activity.summary)
+    assertEquals("Question generation failed: model exploded", activity.summary)
   }
 
   @Test
   fun `a task lifecycle with no engine rows wraps the kind`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: InitialQuestions", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
         entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
-    assertEquals("Initial question generation succeeded", activity.summary)
+    assertEquals("Question generation succeeded", activity.summary)
   }
 }

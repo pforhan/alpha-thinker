@@ -32,7 +32,7 @@ class ProjectRepository @Inject constructor(
    * supplied, the shell ships with an empty title and a [TaskKind.TitleRecommendation]
    * task fills it in from the synopsis — the title and batch both run in the
    * serial engine group ([TaskKind.group]), so the title lands before the
-   * [TaskKind.InitialQuestions] batch reads the project.
+   * [TaskKind.QuestionGeneration] batch reads the project.
    */
   suspend fun createProject(synopsis: String, title: String? = null): Project {
     val now = now()
@@ -68,7 +68,7 @@ class ProjectRepository @Inject constructor(
     if (resolvedTitle.isEmpty()) {
       enqueueTitleRecommendation(projectId)
     }
-    enqueueQuestionGeneration(project.id, roundId, TaskKind.InitialQuestions)
+    enqueueQuestionGeneration(project.id, roundId)
     return project
   }
 
@@ -109,10 +109,13 @@ class ProjectRepository @Inject constructor(
 
   /**
    * The single generation seam every "request new questions" touchpoint flows
-   * through: generate for [roundId] (initial or follow-up depending on [kind]),
-   * dedupe against everything already asked in the project, shuffle, and
-   * persist as a task on the [taskRunner] so the caller returns immediately and
-   * the UI can surface progress (and navigate away freely) while it runs.
+   * through: generate for [roundId] with the whole project's questions as
+   * context, dedupe against what was already asked, shuffle, and persist as a
+   * [TaskKind.QuestionGeneration] task on the [taskRunner] so the caller returns
+   * immediately and the UI can surface progress (and navigate away freely) while
+   * it runs. Every kind of round — a project's opening batch, "Get more
+   * questions", a wrap-up advance into a new phase — is this one call; what
+   * varies is the round, not the interaction.
    *
    * The batch's [QuestionBatch.done] is latched onto the round as its
    * [RoundOutcome], which is what the "Get more questions" affordances read
@@ -125,32 +128,20 @@ class ProjectRepository @Inject constructor(
   private fun enqueueQuestionGeneration(
     projectId: String,
     roundId: String,
-    kind: TaskKind,
   ) {
     val engine = engineSelector.selectedEngine()
-    taskRunner.enqueue(projectId, kind) { taskId ->
+    taskRunner.enqueue(projectId, TaskKind.QuestionGeneration) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
       val generated = try {
-        when (kind) {
-          TaskKind.InitialQuestions -> engine.generateInitialQuestions(
-            editableTitle = reloaded.editableTitle,
-            synopsis = reloaded.synopsis,
-            roundId = round.id,
-            phase = round.phase,
-            activityId = taskId,
-          )
-
-          TaskKind.FollowUpQuestions -> engine.generateFollowUpQuestions(
-            synopsis = reloaded.synopsis,
-            previousQuestions = reloaded.questions,
-            roundId = round.id,
-            phase = round.phase,
-            activityId = taskId,
-          )
-
-          else -> return@enqueue
-        }
+        engine.generateQuestions(
+          title = reloaded.editableTitle,
+          synopsis = reloaded.synopsis,
+          previousQuestions = reloaded.questions,
+          roundId = round.id,
+          phase = round.phase,
+          activityId = taskId,
+        )
       } catch (e: CancellationException) {
         throw e
       } catch (e: Exception) {
@@ -323,7 +314,7 @@ class ProjectRepository @Inject constructor(
       updatedAt = now,
     )
     storage.saveProject(updated)
-    enqueueQuestionGeneration(project.id, round.id, TaskKind.FollowUpQuestions)
+    enqueueQuestionGeneration(project.id, round.id)
     return updated
   }
 
@@ -357,7 +348,7 @@ class ProjectRepository @Inject constructor(
       updatedAt = now,
     )
     storage.saveProject(updatedProject)
-    enqueueQuestionGeneration(project.id, round.id, TaskKind.InitialQuestions)
+    enqueueQuestionGeneration(project.id, round.id)
     return updatedProject
   }
 

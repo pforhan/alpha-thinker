@@ -52,10 +52,10 @@ class ActivityRecord private constructor(
 
   /**
    * A human one-line summary of the activity's outcome, synthesized from the
-   * rows: a terminal failure headlines with its topic ("Initial question
-   * generation failed: model exploded"), a known interaction reads as a canned
-   * message ("Generated 4 follow-up questions", "Recommended title:
-   * Rocketship"), and anything unrecognized falls back to the last
+   * rows: a terminal failure headlines with its topic ("Question generation
+   * failed: model exploded"), a known interaction reads as a canned message
+   * ("Generated 4 questions", "Recommended title: Rocketship"), and anything
+   * unrecognized falls back to the last
    * response/terminal row's text — or the newest row when no response surfaced
    * (a plain or in-progress activity). The expanded rows stay verbatim; only
    * this headline is reworded.
@@ -65,13 +65,8 @@ class ActivityRecord private constructor(
       failureHeadline()?.let { return it }
 
       val kind = taskKind()
-      if (kind?.isGeneration == true) {
-        batchCount()?.let { count ->
-          val flavor = if (kind == TaskKind.InitialQuestions) "initial " else "follow-up "
-          return batchSummary(count, flavor)
-        }
-      } else if (category == LogCategory.QuestionGeneration) {
-        batchCount()?.let { count -> return batchSummary(count, "") }
+      if (kind?.isGeneration == true || category == LogCategory.QuestionGeneration) {
+        batchCount()?.let { count -> return batchSummary(count) }
       }
 
       titleSummary()?.let { return it }
@@ -190,22 +185,21 @@ private fun LogEntry.isSucceededRow(): Boolean =
   log == LogMarkers.Succeeded || log.startsWith("${LogMarkers.Succeeded}:")
 
 private val TaskKind.isGeneration: Boolean
-  get() = this == TaskKind.InitialQuestions || this == TaskKind.FollowUpQuestions
+  get() = this == TaskKind.QuestionGeneration
 
 /** Human phrase for the kind, used in failure/success headlines. */
 private fun TaskKind.activityLabel(): String = when (this) {
-  TaskKind.InitialQuestions -> "Initial question generation"
-  TaskKind.FollowUpQuestions -> "Follow-up question generation"
+  TaskKind.QuestionGeneration -> "Question generation"
   TaskKind.TitleRecommendation -> "Title recommendation"
   TaskKind.SynopsisRewrite -> "Synopsis rewrite"
   TaskKind.AutoArchive -> "Auto-archive"
 }
 
-/** Canned summary for a produced batch, e.g. "Generated 3 initial questions". */
-private fun batchSummary(count: Int, flavor: String): String = when {
-  count == 0 -> "No further ${flavor}questions generated"
-  count == 1 -> "Generated 1 ${flavor}question"
-  else -> "Generated $count ${flavor}questions"
+/** Canned summary for a produced batch, e.g. "Generated 3 questions". */
+private fun batchSummary(count: Int): String = when {
+  count == 0 -> "No further questions generated"
+  count == 1 -> "Generated 1 question"
+  else -> "Generated $count questions"
 }
 
 private val batchCountRegex = Regex("""(\d+) questions?""")

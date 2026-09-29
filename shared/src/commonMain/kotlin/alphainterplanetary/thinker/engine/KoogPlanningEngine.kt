@@ -38,17 +38,12 @@ class KoogPlanningEngine(
   override fun titlePrompt(synopsis: String): String =
     render(TitleSystemPrompt, titleUserPrompt(synopsis))
 
-  override fun initialQuestionsPrompt(
-    editableTitle: String,
-    synopsis: String,
-    phase: Phase,
-  ): String = render(QuestionsSystemPrompt, initialUserPrompt(editableTitle, synopsis, phase))
-
-  override fun followUpQuestionsPrompt(
+  override fun questionsPrompt(
+    title: String,
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
-  ): String = render(QuestionsSystemPrompt, followUpUserPrompt(synopsis, phase, previousQuestions.map { it.text }))
+  ): String = render(QuestionsSystemPrompt, questionsUserPrompt(title, synopsis, phase, previousQuestions.map { it.text }))
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     val text = ask(PromptRecommendTitle) {
@@ -60,30 +55,22 @@ class KoogPlanningEngine(
     }
   }
 
-  override suspend fun generateInitialQuestions(
-    editableTitle: String,
-    synopsis: String,
-    roundId: String,
-    phase: Phase,
-    activityId: String,
-  ): QuestionBatch {
-    val text = ask(PromptInitialQuestions) {
-      system(QuestionsSystemPrompt)
-      user(initialUserPrompt(editableTitle, synopsis, phase))
-    }
-    return batch(parseQuestions(text), roundId)
-  }
-
-  override suspend fun generateFollowUpQuestions(
+  override suspend fun generateQuestions(
+    title: String,
     synopsis: String,
     previousQuestions: List<Question>,
     roundId: String,
     phase: Phase,
     activityId: String,
   ): QuestionBatch {
-    val text = ask(PromptFollowUpQuestions) {
+    // An empty list is only ever a brand-new project's opening round, so it is
+    // the one thing that still distinguishes the two prompt shapes — kept in
+    // the prompt id alone, where it separates their traces for free.
+    val promptId =
+      if (previousQuestions.isEmpty()) PromptInitialQuestions else PromptFollowUpQuestions
+    val text = ask(promptId) {
       system(QuestionsSystemPrompt)
-      user(followUpUserPrompt(synopsis, phase, previousQuestions.map { it.text }))
+      user(questionsUserPrompt(title, synopsis, phase, previousQuestions.map { it.text }))
     }
     return batch(parseQuestions(text), roundId)
   }
@@ -179,18 +166,19 @@ class KoogPlanningEngine(
     fun titleUserPrompt(synopsis: String): String =
       "Project synopsis:\n$synopsis\n\nReturn the project title."
 
-    fun initialUserPrompt(editableTitle: String, synopsis: String, phase: Phase): String =
-      "Planning a project titled \"$editableTitle\".\n" +
-        "Phase: ${phase.label} — ${phase.description}\n" +
-        "Project synopsis:\n$synopsis\n\n" +
-        "Propose exactly $DraftCount distinct questions for this phase."
-
-    fun followUpUserPrompt(
+    /**
+     * One prompt for every question round. The already-asked block is always
+     * present, reading "(none)" on a project's opening round, so a first batch
+     * and a later one cannot drift into different shapes — and the title
+     * reaches every round, not just the first.
+     */
+    fun questionsUserPrompt(
+      editableTitle: String,
       synopsis: String,
       phase: Phase,
       previousQuestions: List<String>,
     ): String =
-      "Continuing a planning interview for the project described below.\n" +
+      "Planning a project titled \"$editableTitle\".\n" +
         "Phase: ${phase.label} — ${phase.description}\n" +
         "Project synopsis:\n$synopsis\n\n" +
         "These questions were already asked and may contain answers:\n" +

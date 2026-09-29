@@ -16,12 +16,12 @@ class TaskRunnerLoggingTest {
     val log = RecordingActivityLogger()
     val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
 
-    val task = runner.enqueue("p1", TaskKind.InitialQuestions) {}
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
 
     testScheduler.advanceUntilIdle()
 
     assertEquals(
-      listOf("started: InitialQuestions", "succeeded"),
+      listOf("started: QuestionGeneration", "succeeded"),
       log.entries.map { it.log },
       "lifecycle rows append in order, nothing else",
     )
@@ -44,7 +44,7 @@ class TaskRunnerLoggingTest {
     val log = RecordingActivityLogger()
     val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
 
-    val task = runner.enqueue("p1", TaskKind.FollowUpQuestions) {
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {
       error("model exploded")
     }
 
@@ -79,20 +79,20 @@ class TaskRunnerLoggingTest {
     val log = RecordingActivityLogger()
     val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
 
-    runner.enqueue("p1", TaskKind.InitialQuestions) {
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {
       throw kotlin.coroutines.cancellation.CancellationException("stop")
     }
 
     testScheduler.advanceUntilIdle()
 
-    assertEquals(listOf("started: InitialQuestions", "cancelled"), log.entries.map { it.log })
+    assertEquals(listOf("started: QuestionGeneration", "cancelled"), log.entries.map { it.log })
   }
 
   @Test
   fun `no log injected means no log rows and tasks still complete`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
 
-    runner.enqueue("p1", TaskKind.InitialQuestions) {}
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {}
     testScheduler.advanceUntilIdle()
 
     assertTrue(runner.tasks.value.single().isFinished)

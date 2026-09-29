@@ -15,8 +15,7 @@ import me.tatarka.inject.annotations.Inject
 import kotlin.time.Instant
 
 class HardcodedPlanningEngine @Inject constructor(
-  private val initialCount: Int = 5,
-  private val followUpCount: Int = 5,
+  private val count: Int = 5,
 ) : PlanningEngine {
 
   override val source: LogSource = LogSource.Lite
@@ -33,23 +32,8 @@ class HardcodedPlanningEngine @Inject constructor(
     .take(30)
     .trim()
 
-  override suspend fun generateInitialQuestions(
-    editableTitle: String,
-    synopsis: String,
-    roundId: String,
-    phase: Phase,
-    activityId: String,
-  ): QuestionBatch {
-    val now = now()
-    val pool = phase.pool
-    val served = pool.take(initialCount)
-    return QuestionBatch(
-      questions = served.map { text -> newQuestion(text, roundId, now) },
-      done = served.size == pool.size,
-    )
-  }
-
-  override suspend fun generateFollowUpQuestions(
+  override suspend fun generateQuestions(
+    title: String,
     synopsis: String,
     previousQuestions: List<Question>,
     roundId: String,
@@ -60,14 +44,18 @@ class HardcodedPlanningEngine @Inject constructor(
     if (remaining.isEmpty()) return QuestionBatch(emptyList(), done = true)
 
     val now = now()
-    val served = remaining.take(followUpCount)
+    val served = remaining.take(count)
     return QuestionBatch(
       questions = served.map { text -> newQuestion(text, roundId, now) },
       done = served.size == remaining.size,
     )
   }
 
-  /** The phase's pool texts not yet asked in the project, in pool priority order. */
+  /**
+   * The phase's pool texts not yet asked in the project, in pool priority order.
+   * With nothing asked yet this is the whole pool, so a project's opening round
+   * and its later rounds are the same operation at different depths.
+   */
   private fun remainingPool(phase: Phase, previousQuestions: List<Question>): List<String> {
     val askedTexts = previousQuestions.map { it.text }.toSet()
     return phase.pool.filter { it !in askedTexts }
@@ -88,9 +76,10 @@ class HardcodedPlanningEngine @Inject constructor(
   companion object {
     /**
      * Each phase's question pool, ordered within the phase so the front of the
-     * pool (served first by initial rounds, then cycled through by follow-up
-     * rounds) holds that phase's highest-value planning questions. The recipe
-     * mirrors PROJECT-FLOWS.md's settled pool partition.
+     * pool holds that phase's highest-value planning questions. The recipe
+     * mirrors PROJECT-FLOWS.md's settled pool partition. Every round serves the
+     * pool's next [count] unasked questions, so a phase drains from the front
+     * across however many rounds it takes.
      */
     val questionPoolByPhase: Map<Phase, List<String>> = linkedMapOf(
       ScopeGoals to listOf(

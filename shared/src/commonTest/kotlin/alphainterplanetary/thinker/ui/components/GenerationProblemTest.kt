@@ -27,7 +27,7 @@ class GenerationProblemTest {
   fun `a task still in flight is not a problem`() {
     val project = project(rounds = listOf(round("r1", outcome = RoundOutcome.Failed, outcomeDetail = "boom")))
 
-    val running = task(kind = TaskKind.FollowUpQuestions, status = TaskStatus.Running)
+    val running = task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Running)
 
     assertNull(generationProblemKind(project, listOf(running)))
   }
@@ -65,7 +65,7 @@ class GenerationProblemTest {
   fun `a failed question task is a problem even when the round write did not land`() {
     val project = project(rounds = listOf(round("r1")))
 
-    val failed = task(kind = TaskKind.FollowUpQuestions, status = TaskStatus.Failed, error = "HTTP 500")
+    val failed = task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Failed, error = "HTTP 500")
 
     assertEquals(GenerationProblemKind.Questions, generationProblemKind(project, listOf(failed)))
   }
@@ -77,7 +77,7 @@ class GenerationProblemTest {
       rounds = listOf(round("r1")),
     )
 
-    val failed = task(kind = TaskKind.FollowUpQuestions, status = TaskStatus.Failed, error = "HTTP 500")
+    val failed = task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Failed, error = "HTTP 500")
 
     assertNull(generationProblemKind(project, listOf(failed)))
   }

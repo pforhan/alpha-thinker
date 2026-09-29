@@ -100,11 +100,11 @@ class SettingsViewModelTest {
     val vm = viewModel()
 
     vm.setEngineDelayEnabled(true)
-    vm.setEngineDelay(EngineInteraction.FollowUpQuestions, 30)
+    vm.setEngineDelay(EngineInteraction.QuestionGeneration, 30)
     testScheduler.advanceUntilIdle()
 
     val config = vm.engineDelay.value
     assertEquals(true, config.enabled)
-    assertEquals(30, config.secondsByInteraction[EngineInteraction.FollowUpQuestions])
+    assertEquals(30, config.secondsByInteraction[EngineInteraction.QuestionGeneration])
   }
 }

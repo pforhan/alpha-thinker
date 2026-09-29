@@ -59,15 +59,16 @@ class KoogPlanningEngineTest {
   }
 
   @Test
-  fun `initial questions parse a JSON array reply into a batch with the round id`() = runTest {
+  fun `questions parse a JSON array reply into a batch with the round id`() = runTest {
     val client = FakeClient(provider,
       """["Who is this building for?","What is the MVP?"]""",
     )
     val engine = engine(client)
 
-    val batch = engine.generateInitialQuestions(
-      editableTitle = "Menu Planner",
+    val batch = engine.generateQuestions(
+      title = "Menu Planner",
       synopsis = "Plan meals for the week",
+      previousQuestions = emptyList(),
       roundId = "r1",
       phase = BuiltInPhase.ScopeGoals,
       activityId = "t1",
@@ -86,9 +87,10 @@ class KoogPlanningEngineTest {
     )
     val engine = engine(client)
 
-    val batch = engine.generateInitialQuestions(
-      editableTitle = "T",
+    val batch = engine.generateQuestions(
+      title = "T",
       synopsis = "S",
+      previousQuestions = emptyList(),
       roundId = "r1",
       phase = BuiltInPhase.Design,
       activityId = "t1",
@@ -103,7 +105,8 @@ class KoogPlanningEngineTest {
     val client = FakeClient(provider, "[]")
     val engine = engine(client)
 
-    val batch = engine.generateFollowUpQuestions(
+    val batch = engine.generateQuestions(
+      title = "T",
       synopsis = "S",
       previousQuestions = emptyList(),
       roundId = "r2",
@@ -131,7 +134,8 @@ class KoogPlanningEngineTest {
 
     for ((reply, expected) in replies) {
       val engine = engine(FakeClient(provider, reply))
-      val batch = engine.generateFollowUpQuestions(
+      val batch = engine.generateQuestions(
+        title = "T",
         synopsis = "S",
         previousQuestions = emptyList(),
         roundId = "r2",
@@ -163,7 +167,8 @@ class KoogPlanningEngineTest {
     for (reply in replies) {
       val engine = engine(FakeClient(provider, reply))
       try {
-        engine.generateFollowUpQuestions(
+        engine.generateQuestions(
+          title = "T",
           synopsis = "S",
           previousQuestions = emptyList(),
           roundId = "r2",
@@ -185,9 +190,10 @@ class KoogPlanningEngineTest {
     val engine = engine(FakeClient(provider, "I am not able to help with that request."))
 
     val failure = try {
-      engine.generateInitialQuestions(
-        editableTitle = "T",
+      engine.generateQuestions(
+        title = "T",
         synopsis = "S",
+        previousQuestions = emptyList(),
         roundId = "r1",
         phase = BuiltInPhase.ScopeGoals,
         activityId = "t1",
@@ -201,12 +207,13 @@ class KoogPlanningEngineTest {
   }
 
   @Test
-  fun `follow-up prompt includes the phase and already asked questions`() = runTest {
+  fun `the questions prompt carries the title and the phase and the already asked questions`() = runTest {
     val client = FakeClient(provider, """["A fresh question"]""")
     val engine = engine(client)
     val previous = listOf(question("Already asked"))
 
-    val batch = engine.generateFollowUpQuestions(
+    val batch = engine.generateQuestions(
+      title = "Menu Planner",
       synopsis = "S",
       previousQuestions = previous,
       roundId = "r2",
@@ -220,6 +227,87 @@ class KoogPlanningEngineTest {
     val request = client.lastPrompt.messages.joinToString("\n") { it.textContent() }
     assertTrue(request.contains("Scope & Goals"))
     assertTrue(request.contains("Already asked"))
+    assertTrue(
+      request.contains("Menu Planner"),
+      "the title reaches every round, not just a project's opening one",
+    )
+  }
+
+  @Test
+  fun `the questions prompt renders a none marker when nothing has been asked yet`() = runTest {
+    val client = FakeClient(provider, """["A first question"]""")
+    val engine = engine(client)
+
+    engine.generateQuestions(
+      title = "Menu Planner",
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      roundId = "r1",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "t1",
+    )
+
+    val request = client.lastPrompt.messages.joinToString("\n") { it.textContent() }
+    assertTrue(
+      request.contains("(none)"),
+      "the already-asked block stays present on a project's opening round",
+    )
+  }
+
+  /**
+   * The prompt id is the one place the opening/continuing distinction still
+   * lives — it keeps the two prompt shapes separately traceable at no cost.
+   */
+  @Test
+  fun `the prompt id separates a project's opening round from a later one`() = runTest {
+    val client = FakeClient(provider, """["A question"]""", """["Another question"]""")
+    val engine = engine(client)
+
+    engine.generateQuestions(
+      title = "T",
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      roundId = "r1",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "t1",
+    )
+    val opening = client.lastPrompt.id
+
+    engine.generateQuestions(
+      title = "T",
+      synopsis = "S",
+      previousQuestions = listOf(question("Already asked")),
+      roundId = "r2",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "t1",
+    )
+
+    assertEquals(KoogPlanningEngine.PromptInitialQuestions, opening)
+    assertEquals(KoogPlanningEngine.PromptFollowUpQuestions, client.lastPrompt.id)
+  }
+
+  @Test
+  fun `the questions prompt renders the same user message the generation sends`() = runTest {
+    val client = FakeClient(provider, """["A question"]""")
+    val engine = engine(client)
+    val previous = listOf(question("Already asked"))
+
+    engine.generateQuestions(
+      title = "Menu Planner",
+      synopsis = "S",
+      previousQuestions = previous,
+      roundId = "r2",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "t1",
+    )
+
+    val messages = client.lastPrompt.messages
+    assertEquals(
+      engine.questionsPrompt("Menu Planner", "S", previous, BuiltInPhase.ScopeGoals),
+      "SYSTEM\n${KoogPlanningEngine.QuestionsSystemPrompt}\n\nUSER\n" +
+        messages.last().textContent(),
+      "the rendered prompt and the one generation sends are the same text",
+    )
   }
 
   @Test
@@ -227,9 +315,10 @@ class KoogPlanningEngineTest {
     val engine = engine(ThrowingClient(provider))
 
     try {
-      engine.generateInitialQuestions(
-        editableTitle = "T",
+      engine.generateQuestions(
+        title = "T",
         synopsis = "S",
+        previousQuestions = emptyList(),
         roundId = "r1",
         phase = BuiltInPhase.Design,
         activityId = "t1",

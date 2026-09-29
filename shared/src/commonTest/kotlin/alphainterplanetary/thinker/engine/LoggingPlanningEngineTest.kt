@@ -38,16 +38,17 @@ class LoggingPlanningEngineTest {
   }
 
   @Test
-  fun `initial questions record the produced texts in the response row`() = runTest {
+  fun `questions record the produced texts in the response row`() = runTest {
     val delegate = FakePlanningEngine()
-    delegate.initialQuestions += question("first")
-    delegate.initialQuestions += question("second")
+    delegate.questions += question("first")
+    delegate.questions += question("second")
     val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
-    val questions = engine.generateInitialQuestions(
-      editableTitle = "T",
+    val questions = engine.generateQuestions(
+      title = "T",
       synopsis = "S",
+      previousQuestions = emptyList(),
       roundId = "r1",
       phase = BuiltInPhase.ScopeGoals,
       activityId = "task-2",
@@ -63,13 +64,14 @@ class LoggingPlanningEngineTest {
   }
 
   @Test
-  fun `follow-up questions record the done signal in the response row`() = runTest {
+  fun `questions record the done signal in the response row`() = runTest {
     val delegate = FakePlanningEngine()
-    delegate.followUpDone = true
+    delegate.done = true
     val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
-    engine.generateFollowUpQuestions(
+    engine.generateQuestions(
+      title = "T",
       synopsis = "S",
       previousQuestions = emptyList(),
       roundId = "r1",
@@ -80,6 +82,51 @@ class LoggingPlanningEngineTest {
     val terminal = log.entries.last()
     assertEquals(LogCategory.QuestionGeneration, terminal.category)
     assertTrue(terminal.log.startsWith("response: 0 questions, done=true"))
+  }
+
+  /**
+   * The compact `input:` summary a non-rendering delegate gets has to name the
+   * whole context now that there is one call: the title is in it, and so is the
+   * size of the transcript.
+   */
+  @Test
+  fun `a non-rendering delegate gets one input summary covering the whole context`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
+
+    engine.generateQuestions(
+      title = "T",
+      synopsis = "S",
+      previousQuestions = listOf(question("Already asked")),
+      roundId = "r1",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "task-8",
+    )
+
+    assertEquals(
+      "input: phase=ScopeGoals, synopsis=S, previous questions=1",
+      log.entries.first().log,
+    )
+  }
+
+  @Test
+  fun `a rendering delegate has its questions prompt filed instead`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = PromptRenderingEngine(), log = log)
+
+    engine.generateQuestions(
+      title = "Menu Planner",
+      synopsis = "S",
+      previousQuestions = listOf(question("Already asked")),
+      roundId = "r1",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "task-9",
+    )
+
+    assertEquals(
+      "prompt: SYSTEM\nQuestions system\n\nUSER\nMenu Planner / S / Scope & Goals / 1",
+      log.entries.first().log,
+    )
   }
 
   @Test
@@ -123,7 +170,8 @@ class LoggingPlanningEngineTest {
     val engine = LoggingPlanningEngine(delegate = ThrowingEngine(), log = log)
 
     try {
-      engine.generateFollowUpQuestions(
+      engine.generateQuestions(
+        title = "T",
         synopsis = "S",
         previousQuestions = emptyList(),
         roundId = "r9",
@@ -148,17 +196,13 @@ class LoggingPlanningEngineTest {
     override fun titlePrompt(synopsis: String): String =
       "SYSTEM\nTitle system\n\nUSER\n$synopsis"
 
-    override fun initialQuestionsPrompt(
-      editableTitle: String,
-      synopsis: String,
-      phase: Phase,
-    ): String = "SYSTEM\nQuestions system\n\nUSER\n$editableTitle / $synopsis / ${phase.label}"
-
-    override fun followUpQuestionsPrompt(
+    override fun questionsPrompt(
+      title: String,
       synopsis: String,
       previousQuestions: List<Question>,
       phase: Phase,
-    ): String = "SYSTEM\nQuestions system\n\nUSER\n$synopsis"
+    ): String =
+      "SYSTEM\nQuestions system\n\nUSER\n$title / $synopsis / ${phase.label} / ${previousQuestions.size}"
   }
 
   private class ThrowingEngine : PlanningEngine {
@@ -167,15 +211,8 @@ class LoggingPlanningEngineTest {
     override suspend fun recommendTitle(synopsis: String, activityId: String): String =
       throw PlanningEngine.AnalysisFailure("model exploded")
 
-    override suspend fun generateInitialQuestions(
-      editableTitle: String,
-      synopsis: String,
-      roundId: String,
-      phase: Phase,
-      activityId: String,
-    ): QuestionBatch = throw PlanningEngine.AnalysisFailure("model exploded")
-
-    override suspend fun generateFollowUpQuestions(
+    override suspend fun generateQuestions(
+      title: String,
       synopsis: String,
       previousQuestions: List<Question>,
       roundId: String,

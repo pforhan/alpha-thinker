@@ -94,16 +94,16 @@ class ProjectRepositoryTest {
   fun `createProject passes editable title and synopsis to initial generation`() = runTest {
     val generator = FakePlanningEngine().apply {
       recommendedTitle = "Recommended Title"
-      initialQuestions += question("q1", "First?")
-      initialQuestions += question("q2", "Second?")
+      questions += question("q1", "First?")
+      questions += question("q2", "Second?")
     }
     val repository = repo(generator = generator)
 
     repository.createProject("My synopsis")
     testScheduler.advanceUntilIdle()
 
-    assertEquals(1, generator.initialCalls.size)
-    val call = generator.initialCalls.single()
+    assertEquals(1, generator.calls.size)
+    val call = generator.calls.single()
     assertEquals("Recommended Title", call.editableTitle)
     assertEquals("My synopsis", call.synopsis)
   }
@@ -111,8 +111,8 @@ class ProjectRepositoryTest {
   @Test
   fun `createProject saves generated questions onto the project via the task`() = runTest {
     val generator = FakePlanningEngine().apply {
-      initialQuestions += question("q1")
-      initialQuestions += question("q2")
+      questions += question("q1")
+      questions += question("q2")
     }
     val storage = FakeStorage()
     val repository = repo(storage = storage, generator = generator)
@@ -133,8 +133,8 @@ class ProjectRepositoryTest {
   @Test
   fun `createProject creates round 1 as an Initial round in the first phase`() = runTest {
     val generator = FakePlanningEngine().apply {
-      initialQuestions += question("q1")
-      initialQuestions += question("q2")
+      questions += question("q1")
+      questions += question("q2")
     }
     val storage = FakeStorage()
     val repository = repo(storage = storage, generator = generator)
@@ -148,8 +148,8 @@ class ProjectRepositoryTest {
     assertEquals(Phase.first, round.phase)
     assertEquals(project.id, round.projectId)
     assertEquals(round.id, storage.getProject(project.id)?.rounds?.single()?.id)
-    assertEquals(round.id, generator.initialCalls.single().roundId)
-    assertEquals(Phase.first, generator.initialCalls.single().phase)
+    assertEquals(round.id, generator.calls.single().roundId)
+    assertEquals(Phase.first, generator.calls.single().phase)
   }
 
   @Test
@@ -159,23 +159,16 @@ class ProjectRepositoryTest {
 
       override suspend fun recommendTitle(synopsis: String, activityId: String): String = "Title"
 
-      override suspend fun generateInitialQuestions(
-        editableTitle: String,
+      override suspend fun generateQuestions(
+        title: String,
         synopsis: String,
+        previousQuestions: List<Question>,
         roundId: String,
         phase: Phase,
         activityId: String,
       ): QuestionBatch {
         throw PlanningEngine.AnalysisFailure("no model")
       }
-
-      override suspend fun generateFollowUpQuestions(
-        synopsis: String,
-        previousQuestions: List<Question>,
-        roundId: String,
-        phase: Phase,
-        activityId: String,
-      ): QuestionBatch = QuestionBatch(emptyList(), done = true)
     }
     val storage = FakeStorage()
     val repository = repo(storage = storage, generator = failing)
@@ -194,7 +187,7 @@ class ProjectRepositoryTest {
     runTest {
       val enqueued = FakePlanningEngine().apply {
         recommendedTitle = "Enqueued Engine"
-        initialQuestions += question("qa", "From the enqueued engine?")
+        questions += question("qa", "From the enqueued engine?")
       }
       val later = FakePlanningEngine().apply { recommendedTitle = "Latest Engine" }
       var current: PlanningEngine = enqueued
@@ -212,8 +205,8 @@ class ProjectRepositoryTest {
       assertNotNull(persisted)
       assertEquals("Enqueued Engine", persisted.editableTitle)
       assertEquals(listOf("qa"), persisted.questions.map { it.id })
-      assertEquals(1, enqueued.initialCalls.size)
-      assertTrue(later.initialCalls.isEmpty(), "the later engine never touches the locked task")
+      assertEquals(1, enqueued.calls.size)
+      assertTrue(later.calls.isEmpty(), "the later engine never touches the locked task")
     }
 
   // ---------- recommendTitle (retry) ----------
@@ -555,8 +548,8 @@ class ProjectRepositoryTest {
   @Test
   fun `saveAnswer does not generate follow-ups when all active questions are answered`() = runTest {
     val generator = FakePlanningEngine().apply {
-      followUpQuestions += question("f1")
-      followUpQuestions += question("f2")
+      questions += question("f1")
+      questions += question("f2")
     }
     val original = Project(
       id = "p1",
@@ -578,7 +571,7 @@ class ProjectRepositoryTest {
     )
 
     assertNotNull(updated)
-    assertTrue(generator.followUpCalls.isEmpty())
+    assertTrue(generator.calls.isEmpty())
     assertEquals(listOf("q1"), updated.questions.map { it.id })
     assertTrue(updated.rounds.isEmpty())
   }
@@ -606,7 +599,7 @@ class ProjectRepositoryTest {
     )
 
     assertNotNull(updated)
-    assertTrue(generator.followUpCalls.isEmpty())
+    assertTrue(generator.calls.isEmpty())
     assertEquals(listOf("q1", "q2"), updated.questions.map { it.id })
   }
 
@@ -634,7 +627,7 @@ class ProjectRepositoryTest {
 
     // The question being answered is ignored; with no active questions left the
     // all-answered check should not trigger follow-ups.
-    assertTrue(generator.followUpCalls.isEmpty())
+    assertTrue(generator.calls.isEmpty())
     assertNotNull(updated)
   }
 
@@ -663,7 +656,7 @@ class ProjectRepositoryTest {
   fun `generateMoreQuestions starts a UserRequested round and enqueues follow-up generation`() =
     runTest {
       val generator = FakePlanningEngine().apply {
-        followUpQuestions += question("f1")
+        questions += question("f1")
       }
       val storage = FakeStorage(
         mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
@@ -687,9 +680,9 @@ class ProjectRepositoryTest {
       val persisted = storage.getProject("p1")
       assertNotNull(persisted)
       assertEquals(listOf("q1", "f1"), persisted.questions.map { it.id })
-      assertEquals(round.id, generator.followUpCalls.single().roundId)
-      assertEquals(BuiltInPhase.Design, generator.followUpCalls.single().phase)
-      assertEquals(listOf("q1"), generator.followUpCalls.single().previousQuestions.map { it.id })
+      assertEquals(round.id, generator.calls.single().roundId)
+      assertEquals(BuiltInPhase.Design, generator.calls.single().phase)
+      assertEquals(listOf("q1"), generator.calls.single().previousQuestions.map { it.id })
     }
 
   @Test
@@ -710,7 +703,7 @@ class ProjectRepositoryTest {
     assertEquals(1, result.rounds.size)
     assertEquals(listOf("q1"), result.questions.map { it.id })
     testScheduler.advanceUntilIdle()
-    assertEquals(0, generator.followUpCalls.size, "an exhausted phase never calls the engine")
+    assertEquals(0, generator.calls.size, "an exhausted phase never calls the engine")
   }
 
   // ---------- round outcomes ----------
@@ -747,8 +740,8 @@ class ProjectRepositoryTest {
   @Test
   fun `questions with done false latch MoreAvailable and leave the phase open`() = runTest {
     val generator = FakePlanningEngine().apply {
-      followUpQuestions += question("f1")
-      followUpDone = false
+      questions += question("f1")
+      done = false
     }
     val storage = FakeStorage(
       mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
@@ -771,8 +764,8 @@ class ProjectRepositoryTest {
   @Test
   fun `questions with done true latch Exhausted and close the phase`() = runTest {
     val generator = FakePlanningEngine().apply {
-      followUpQuestions += question("f1")
-      followUpDone = true
+      questions += question("f1")
+      done = true
     }
     val storage = FakeStorage(
       mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
@@ -795,7 +788,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `an empty batch with done true latches Exhausted and not Failed`() = runTest {
-    val generator = FakePlanningEngine().apply { followUpDone = true }
+    val generator = FakePlanningEngine().apply { done = true }
     val storage = FakeStorage(
       mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
     )
@@ -830,7 +823,7 @@ class ProjectRepositoryTest {
     assertEquals(outcomeRound.outcomeDetail, persisted.currentPhaseFailure)
     assertEquals(listOf("q1"), persisted.questions.map { it.id })
 
-    val task = runner.tasks.value.single { it.kind == TaskKind.FollowUpQuestions }
+    val task = runner.tasks.value.single { it.kind == TaskKind.QuestionGeneration }
     assertEquals(TaskStatus.Failed, task.status)
     assertEquals(persisted.currentPhaseFailure, task.error)
   }
@@ -838,7 +831,7 @@ class ProjectRepositoryTest {
   @Test
   fun `a batch of only already-asked questions with done false fails rather than quietly adding nothing`() = runTest {
     val generator = FakePlanningEngine().apply {
-      followUpQuestions += question("q1")
+      questions += question("q1")
     }
     val storage = FakeStorage(
       mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
@@ -854,7 +847,7 @@ class ProjectRepositoryTest {
     assertEquals(listOf("q1"), persisted.questions.map { it.id })
     assertEquals(
       TaskStatus.Failed,
-      runner.tasks.value.single { it.kind == TaskKind.FollowUpQuestions }.status,
+      runner.tasks.value.single { it.kind == TaskKind.QuestionGeneration }.status,
     )
   }
 
@@ -878,7 +871,7 @@ class ProjectRepositoryTest {
     assertEquals("the model refused", outcomeRound.outcomeDetail)
     assertEquals(
       "the model refused",
-      runner.tasks.value.single { it.kind == TaskKind.FollowUpQuestions }.error,
+      runner.tasks.value.single { it.kind == TaskKind.QuestionGeneration }.error,
     )
   }
 
@@ -968,7 +961,7 @@ class ProjectRepositoryTest {
 
   @Test
   fun `initial generation latches its outcome on the shell round`() = runTest {
-    val generator = FakePlanningEngine().apply { initialDone = true }
+    val generator = FakePlanningEngine().apply { done = true }
     val storage = FakeStorage()
     val repository = repo(storage = storage, generator = generator)
 
@@ -994,7 +987,7 @@ class ProjectRepositoryTest {
     assertTrue(persisted.questions.isEmpty())
     assertEquals(
       TaskStatus.Failed,
-      runner.tasks.value.single { it.kind == TaskKind.InitialQuestions }.status,
+      runner.tasks.value.single { it.kind == TaskKind.QuestionGeneration }.status,
     )
   }
 
@@ -1004,8 +997,8 @@ class ProjectRepositoryTest {
   fun `advanceToPhase completes in-progress rounds and opens an Initial round in the target phase`() =
     runTest {
       val generator = FakePlanningEngine().apply {
-        initialQuestions += question("n1", "Next?")
-        initialQuestions += question("n2", "After?")
+        questions += question("n1", "Next?")
+        questions += question("n2", "After?")
       }
       val storage = storageWith(
         phaseProject(round(id = "r1", phase = BuiltInPhase.ScopeGoals))
@@ -1042,7 +1035,7 @@ class ProjectRepositoryTest {
         "moving into a phase opens it: the new round's outcome, not the old phase's, decides",
       )
 
-      val call = generator.initialCalls.single()
+      val call = generator.calls.single()
       assertEquals(newRound.id, call.roundId)
       assertEquals(BuiltInPhase.Research, call.phase)
       assertEquals("t", call.editableTitle)
@@ -1075,8 +1068,8 @@ class ProjectRepositoryTest {
   @Test
   fun `advanceToPhase dedupes new questions against the ones already asked`() = runTest {
     val generator = FakePlanningEngine().apply {
-      initialQuestions += question("dup", "Already asked?")
-      initialQuestions += question("n1", "Fresh?")
+      questions += question("dup", "Already asked?")
+      questions += question("n1", "Fresh?")
     }
     val storage = storageWith(
       Project(
@@ -1145,8 +1138,8 @@ class ProjectRepositoryTest {
   fun `advanceToPhase back to a visited phase appends without disturbing existing order`() =
     runTest {
       val generator = FakePlanningEngine().apply {
-        initialQuestions += question("n1", "Fresh 1?")
-        initialQuestions += question("n2", "Fresh 2?")
+        questions += question("n1", "Fresh 1?")
+        questions += question("n2", "Fresh 2?")
       }
       val storage = storageWith(revisitedProject())
       val repository = repo(storage = storage, generator = generator)
@@ -1202,22 +1195,24 @@ class ProjectRepositoryTest {
       val persisted = assertNotNull(repositoryStorage.getProject("p1"))
       val revisitRound = persisted.rounds.last()
       // Nothing new to ask while claiming more is available is a dead end, not an exhausted phase.
+      // The revisit is the case that motivates one generation method: the engine is
+      // handed the whole transcript, so it can see it has nothing new to offer.
       assertEquals(RoundOutcome.Failed, revisitRound.outcome)
       assertFalse(persisted.currentPhaseExhausted)
-      assertEquals(BuiltInPhase.ScopeGoals, generator.initialCalls.single().phase)
+      assertEquals(BuiltInPhase.ScopeGoals, generator.calls.last().phase)
       // Still retryable, and the retry sees the whole project history, earlier visit included.
       assertNotNull(repository.generateMoreQuestions("p1"))
       testScheduler.advanceUntilIdle()
       assertEquals(
         listOf("oldOpen", "oldAnswered", "oldIgnored"),
-        generator.followUpCalls.single().previousQuestions.map { it.id },
+        generator.calls.last().previousQuestions.map { it.id },
       )
     }
 
   @Test
   fun `saveAnswer does not generate a follow-up round in the revisited current phase`() = runTest {
     val generator = FakePlanningEngine().apply {
-      followUpQuestions += question("f1")
+      questions += question("f1")
     }
     val original = revisitedProject().copy(
       questions = listOf(question("revisitedOpen", roundId = "r3")),
@@ -1233,7 +1228,7 @@ class ProjectRepositoryTest {
     val updated = repository.saveAnswer("p1", "revisitedOpen", "Answer", completed = true)
 
     assertNotNull(updated)
-    assertTrue(generator.followUpCalls.isEmpty())
+    assertTrue(generator.calls.isEmpty())
     assertEquals(3, updated.rounds.size)
     assertEquals(listOf("revisitedOpen"), updated.questions.map { it.id })
   }

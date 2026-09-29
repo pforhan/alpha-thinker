@@ -14,7 +14,7 @@ class GenerationTaskBarTest {
     assertNull(activeTaskSummary(emptyList()))
     assertNull(
       activeTaskSummary(
-        listOf(task(kind = TaskKind.InitialQuestions, status = TaskStatus.Succeeded)),
+        listOf(task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Succeeded)),
       )
     )
   }
@@ -22,12 +22,12 @@ class GenerationTaskBarTest {
   @Test
   fun `a single active task describes its kind`() {
     assertEquals(
-      "Creating questions…",
-      activeTaskSummary(listOf(task(kind = TaskKind.InitialQuestions, status = TaskStatus.Running))),
+      "Generating questions…",
+      activeTaskSummary(listOf(task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Running))),
     )
     assertEquals(
       "Generating questions…",
-      activeTaskSummary(listOf(task(kind = TaskKind.FollowUpQuestions, status = TaskStatus.Queued))),
+      activeTaskSummary(listOf(task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Queued))),
     )
     assertEquals(
       "Generating title…",
@@ -49,8 +49,8 @@ class GenerationTaskBarTest {
       "2 tasks running…",
       activeTaskSummary(
         listOf(
-          task(kind = TaskKind.InitialQuestions, status = TaskStatus.Running),
-          task(kind = TaskKind.FollowUpQuestions, status = TaskStatus.Running),
+          task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Running),
+          task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Running),
         )
       ),
     )

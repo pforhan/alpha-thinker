@@ -5,28 +5,20 @@ import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskStatus
-import alphainterplanetary.thinker.tasks.isQuestionGeneration
 
 /**
  * Which planning interaction came up short, so each surface can offer the one
  * action that is missing rather than a generic error.
  */
-enum class GenerationProblemKind {
+enum class GenerationProblemKind(
+  val headline: String,
+) {
   /** No title landed for a project created without one. */
-  Title,
-
+  Title("Couldn't suggest a title"),
   /** No questions landed for the phase's newest round. */
-  Questions,
+  Questions("Couldn't create questions"),
 }
 
-/**
- * What went wrong, in one phrase — the project list's failure chip.
- */
-val GenerationProblemKind.headline: String
-  get() = when (this) {
-    GenerationProblemKind.Title -> "Couldn't suggest a title"
-    GenerationProblemKind.Questions -> "Couldn't create questions"
-  }
 
 /**
  * The placeholder for a project whose title never landed, shared by the list card
@@ -84,11 +76,7 @@ fun generationProblemKind(project: Project, tasks: List<GenerationTask>): Genera
   if (project.currentPhaseFailure != null) return GenerationProblemKind.Questions
   // The round write is best-effort, so a task failure with nothing on the phase's
   // newest round is still a question problem even if the outcome never latched.
-  if (failed.any { it.kind.isQuestionGeneration }) return GenerationProblemKind.Questions
+  if (failed.any { it.kind == TaskKind.QuestionGeneration }) return GenerationProblemKind.Questions
 
   return null
 }
-
-/** Whether this round carries any questions, so a failure on it would be a duplicate of what is on screen. */
-private fun Round.hasQuestions(project: Project): Boolean =
-  project.questions.any { it.roundId == id }

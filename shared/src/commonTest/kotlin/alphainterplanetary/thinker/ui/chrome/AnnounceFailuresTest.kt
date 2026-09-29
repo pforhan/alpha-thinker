@@ -35,7 +35,7 @@ class AnnounceFailuresTest {
         projectId = projectId,
         category = LogCategory.QuestionGeneration,
         source = source,
-        log = "${LogMarkers.Started} ${TaskKind.InitialQuestions.name}",
+        log = "${LogMarkers.Started} ${TaskKind.QuestionGeneration.name}",
         timestamp = now(),
       ),
       LogEntry(
@@ -187,11 +187,11 @@ class AnnounceFailuresTest {
   @Test
   fun `labels the row with the engine that ran it`() {
     assertEquals(
-      "Last Lite activity: Initial question generation failed: model exploded",
+      "Last Lite activity: Question generation failed: model exploded",
       lastActivityLabel(activity("task-1", source = LogSource.Lite)),
     )
     assertEquals(
-      "Last Remote LLM activity: Initial question generation failed: model exploded",
+      "Last Remote LLM activity: Question generation failed: model exploded",
       lastActivityLabel(activity("task-1")),
     )
   }
@@ -199,7 +199,7 @@ class AnnounceFailuresTest {
   @Test
   fun `labels a row with no source without inventing an engine`() {
     assertEquals(
-      "Last activity: Initial question generation failed: model exploded",
+      "Last activity: Question generation failed: model exploded",
       lastActivityLabel(activity("task-1", source = null)),
     )
   }
@@ -207,7 +207,7 @@ class AnnounceFailuresTest {
   @Test
   fun `labels a success with its engine too`() {
     assertEquals(
-      "Last Remote LLM activity: Initial question generation succeeded",
+      "Last Remote LLM activity: Question generation succeeded",
       lastActivityLabel(activity("task-1", failed = false)),
     )
   }

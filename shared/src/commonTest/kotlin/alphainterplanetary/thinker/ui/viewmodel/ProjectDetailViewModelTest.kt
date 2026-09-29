@@ -66,7 +66,7 @@ class ProjectDetailViewModelTest {
       config = MutableStateFlow(
         EngineDelayConfig(
           enabled = true,
-          secondsByInteraction = mapOf(EngineInteraction.FollowUpQuestions to holdSeconds),
+          secondsByInteraction = mapOf(EngineInteraction.QuestionGeneration to holdSeconds),
         )
       ),
     )
@@ -257,7 +257,7 @@ class ProjectDetailViewModelTest {
   @Test
   fun `advanceToPhase moves the project into the chosen phase with a new round`() = runTest {
     val generator = FakePlanningEngine().apply {
-      initialQuestions += question("n1", "Next?")
+      questions += question("n1", "Next?")
     }
     val storage = FakeStorage(
       mutableMapOf(
@@ -281,7 +281,7 @@ class ProjectDetailViewModelTest {
       assertEquals(listOf("q1", "n1"), state.project.questions.map { it.id })
       assertTrue(state.project.rounds.first().isCompleted)
       assertEquals(BuiltInPhase.Research, state.project.rounds.last().phase)
-      assertEquals(generator.initialCalls.single().phase, BuiltInPhase.Research)
+      assertEquals(generator.calls.single().phase, BuiltInPhase.Research)
     }
   }
 
@@ -353,7 +353,7 @@ class ProjectDetailViewModelTest {
   fun `a completed initial-generation task reloads the loaded project with its questions`() =
     runTest {
       val generator = FakePlanningEngine().apply {
-        initialQuestions += question("g1", "Generated?")
+        questions += question("g1", "Generated?")
       }
       withViewModel(generator = generator) { context ->
         val vm = context.vm
@@ -369,7 +369,7 @@ class ProjectDetailViewModelTest {
   @Test
   fun `tasks exposes the current project's generation tasks`() = runTest {
     val generator = FakePlanningEngine().apply {
-      initialQuestions += question("q1", "What?")
+      questions += question("q1", "What?")
     }
     withViewModel(generator = generator) { context ->
       val vm = context.vm
@@ -381,7 +381,7 @@ class ProjectDetailViewModelTest {
       assertEquals(
         listOf(
           TaskKind.TitleRecommendation,
-          TaskKind.InitialQuestions,
+          TaskKind.QuestionGeneration,
         ),
         active.map { it.kind },
       )
@@ -439,7 +439,7 @@ class ProjectDetailViewModelTest {
   @Test
   fun `generateMoreQuestions runs on the task runner and reloads when it completes`() = runTest {
     val fake = FakePlanningEngine().apply {
-      followUpQuestions += question("n1", "Fresh?")
+      questions += question("n1", "Fresh?")
     }
     withViewModel(
       storage = FakeStorage(mutableMapOf("p1" to project(questions = listOf(question("q1"))))),
@@ -470,7 +470,7 @@ class ProjectDetailViewModelTest {
   fun `entering a project with an extant running task reconnects and reloads on completion`() =
     runTest {
       val fake = FakePlanningEngine().apply {
-        followUpQuestions += question("n1", "Fresh?")
+        questions += question("n1", "Fresh?")
       }
       withViewModel(
         storage = FakeStorage(mutableMapOf("p1" to project(questions = listOf(question("q1"))))),

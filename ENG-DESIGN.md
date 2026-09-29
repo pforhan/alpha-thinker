@@ -221,11 +221,10 @@ note). The set of phases the app can be in comes from a **code-defined
   which bounds cognitive load. See PROJECT-FLOWS.md for the per-phase pool
   partition.
 - **Pool serving:** each phase owns a slice of `HardcodedPlanningEngine`
-  `questionPool`; the slice front holds the highest-value questions. The
-  phase's initial round serves the front (~7), each `UserRequested` round
-  continues from where the last stopped (~5). Pools are sized ~10-14 per phase
-  so exhaustion (everything in the phase's pool has been asked) lands naturally
-  after 1-2 "Get more questions" rounds.
+  `questionPool`; the slice front holds the highest-value questions. Each round
+  serves up to 5 questions from where the last round stopped. Pools are sized
+  ~10-14 per phase so exhaustion (everything in the phase's pool has been asked)
+  lands naturally after 1-2 "Get more questions" rounds.
 - **Exhaustion signal:** per-phase. On exhaustion, "Get more questions"
   disables itself and "Finish the plan" surfaces first in the wrap-up chooser.
   This is the hardcoded mirror of the Phase 3 explicit generator "done" signal
@@ -242,7 +241,7 @@ note). The set of phases the app can be in comes from a **code-defined
 
 ### Generation Task Framework
 
-LLM work — initial question generation, follow-up rounds, synopsis rewrites,
+LLM work — question generation, synopsis rewrites,
 cohesive document synthesis, auto-archive evaluation — is inherently
 long-running (seconds to minutes on edge devices). The core must never block a
 calling coroutine or the UI on inference; instead, generation is modeled as an
@@ -252,8 +251,8 @@ observable background task.
 
 - `id` (Unique ID)
 - `projectId` (Foreign Key: Links to the parent Project.)
-- `kind` (Enum/type: `InitialQuestions`, `FollowUpQuestions`,
-  `SynopsisRewrite`, `AutoArchive`, ...)
+- `kind` (Enum/type: `QuestionGeneration`,
+  `TitleRecommendation`, `SynopsisRewrite`, `AutoArchive`, ...)
 - `status` (Enum: `Queued`, `Running`, `Succeeded`, `Failed`)
 - `progress` (Float 0..1, Optional: indeterminate `null` for discrete question
   rounds; denser values when an LLM streams a rewrite/synthesis)
@@ -275,7 +274,7 @@ observable background task.
 - **Scheduling is per-resource-group, not global-serial.** Each task declares a
   `TaskGroup` (defaulting to `TaskKind.group`): `Engine` (concurrency 1 — the
   local planning engine is a single shared resource, so its tasks stay FIFO
-  serial and a title recommendation always lands before the initial batch that
+  serial and a title recommendation always lands before the question batch that
   reads the project) vs `Remote` (bounded parallelism for independent remote
   calls — remote LLM, HTTP lookups). On top of the group limit, tasks for the
   **same project never run concurrently** — bodies re-read and re-persist the
@@ -296,12 +295,14 @@ observable background task.
   result (e.g., new questions appended). The UI observes task completion and
   reloads the affected project.
 - `PlanningEngine` is invoked statelessly with the project context it
-  needs: initial generation gets `synopsis` + the generated `editableTitle`,
-  plus — when a wrap-up advances to a new phase — the questions already asked
-  in prior phases; follow-up generation gets the project's questions (completed
+  needs: `generateQuestions(editableTitle, synopsis, previousQuestions, roundId,
+  phase, activityId)` is the *only* question-generation call, and
+  `previousQuestions` is the project's questions on every path (completed
   answers via `Question.currentAnswer`, drafts via `draftText`, skipped ones via
-  `Question.isIgnored`). The same call shape works for the hardcoded stand-in
-  and a real LLM alike. (Implementors of the `PlanningEngine` interface:
+  `Question.isIgnored`) — empty for a project's opening batch, full for a
+  wrap-up advancing into a new phase and for every "Get more questions" round.
+  The same call shape works for the hardcoded stand-in and a real LLM alike.
+  (Implementors of the `PlanningEngine` interface:
   `HardcodedPlanningEngine` today; a `KoogPlanningEngine` over the Koog
   `LLMClient`/executor seam in Phase 3, which hosts the on-device, remote, and
   downloaded-model backends.)
@@ -309,8 +310,8 @@ observable background task.
 **Planning context & the token budget:**
 
 An LLM backend only produces tailored rounds if the prompt carries what the
-user has already written, so both question interactions receive the project's
-Q&A as `previousQuestions` (initial after a wrap-up advance; follow-up always).
+user has already written, so question generation receives the project's Q&A as
+`previousQuestions` on every call.
 `KoogPlanningEngine` renders each prior question with its state — committed
 answers as `Q:… / A:…`, drafts marked `Draft:`, ignored questions marked
 skipped, unanswered marked not-yet-answered — so the model reads the transcript,
@@ -377,7 +378,7 @@ else. Nothing wraps the Koog layer to delegate to Lite: a hardcoded fallback
 would mean content from a different engine than the one the header reports, so
 the user is the one who changes engines. The **Status sheet** is where a failure
 is read: its last-activity row already headlines a failed run with the engine's
-own words ("Initial question generation failed: …") in error tint, with **Change
+  own words ("Question generation failed: …") in error tint, with **Change
 engine…** — and therefore the picker — directly below, and the app raises that
 sheet when the failure lands rather than making the user go looking for it. A
 failure reported only where the user thinks to look is not reported. A failure

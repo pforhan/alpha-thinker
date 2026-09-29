@@ -212,7 +212,7 @@ class SettingsRepositoryTest {
     val storage = FakeStorage()
     storage.saveSetting(SettingsKey.SlowDownPlanningEngine, "true")
     storage.saveSetting(SettingsKey.EngineRecommendTitleDelay, "5")
-    storage.saveSetting(SettingsKey.EngineInitialQuestionsDelay, "30")
+    storage.saveSetting(SettingsKey.EngineQuestionGenerationDelay, "30")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
@@ -220,8 +220,7 @@ class SettingsRepositoryTest {
     val config = repo.engineDelay.value
     assertEquals(true, config.enabled)
     assertEquals(5, config.secondsByInteraction[EngineInteraction.RecommendTitle])
-    assertEquals(30, config.secondsByInteraction[EngineInteraction.InitialQuestions])
-    assertEquals(2, config.secondsByInteraction[EngineInteraction.FollowUpQuestions])
+    assertEquals(30, config.secondsByInteraction[EngineInteraction.QuestionGeneration])
   }
 
   @Test
@@ -266,16 +265,16 @@ class SettingsRepositoryTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setEngineDelay(EngineInteraction.FollowUpQuestions, 0)
+    repo.setEngineDelay(EngineInteraction.QuestionGeneration, 0)
     testScheduler.advanceUntilIdle()
 
     assertEquals(
       0,
-      repo.engineDelay.value.secondsByInteraction[EngineInteraction.FollowUpQuestions],
+      repo.engineDelay.value.secondsByInteraction[EngineInteraction.QuestionGeneration],
     )
     assertEquals(
       "0",
-      storage.settings[SettingsKey.EngineFollowUpQuestionsDelay.storageKey],
+      storage.settings[SettingsKey.EngineQuestionGenerationDelay.storageKey],
     )
   }
 
@@ -284,16 +283,16 @@ class SettingsRepositoryTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setEngineDelay(EngineInteraction.FollowUpQuestions, 30)
+    repo.setEngineDelay(EngineInteraction.QuestionGeneration, 30)
     testScheduler.advanceUntilIdle()
 
     assertEquals(
       30,
-      repo.engineDelay.value.secondsByInteraction[EngineInteraction.FollowUpQuestions],
+      repo.engineDelay.value.secondsByInteraction[EngineInteraction.QuestionGeneration],
     )
     assertEquals(
       "30",
-      storage.settings[SettingsKey.EngineFollowUpQuestionsDelay.storageKey],
+      storage.settings[SettingsKey.EngineQuestionGenerationDelay.storageKey],
     )
   }
 

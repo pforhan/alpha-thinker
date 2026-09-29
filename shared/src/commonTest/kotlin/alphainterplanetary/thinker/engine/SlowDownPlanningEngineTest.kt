@@ -72,27 +72,27 @@ class SlowDownPlanningEngineTest {
         EngineDelayConfig(
           enabled = true,
           secondsByInteraction = mapOf(
-            EngineInteraction.InitialQuestions to 2,
-            EngineInteraction.FollowUpQuestions to 5,
+            EngineInteraction.RecommendTitle to 2,
+            EngineInteraction.QuestionGeneration to 5,
           ),
         ),
       ),
     )
 
     val job = launch {
-      generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
-      generator.generateFollowUpQuestions("synopsis", emptyList(), "r2", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+      generator.recommendTitle("synopsis", activityId = "test-activity")
+      generator.generateQuestions("title", "synopsis", emptyList(), "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     }
     testScheduler.runCurrent()
     assertEquals(0, delegate.totalCalls())
 
     testScheduler.advanceTimeBy(2_000)
     testScheduler.runCurrent()
-    assertEquals(1, delegate.initialCalls)
-    assertEquals(0, delegate.followUpCalls)
+    assertEquals(1, delegate.titleCalls)
+    assertEquals(0, delegate.questionCalls)
     testScheduler.advanceTimeBy(5_000)
     testScheduler.runCurrent()
-    assertEquals(1, delegate.followUpCalls)
+    assertEquals(1, delegate.questionCalls)
 
     job.join()
   }
@@ -107,7 +107,7 @@ class SlowDownPlanningEngineTest {
           enabled = true,
           secondsByInteraction = mapOf(
             EngineInteraction.RecommendTitle to 0,
-            EngineInteraction.InitialQuestions to 2,
+            EngineInteraction.QuestionGeneration to 2,
           ),
         ),
       ),
@@ -115,15 +115,15 @@ class SlowDownPlanningEngineTest {
 
     val job = launch {
       generator.recommendTitle("synopsis", activityId = "test-activity")
-      generator.generateInitialQuestions("title", "synopsis", "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+      generator.generateQuestions("title", "synopsis", emptyList(), "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     }
     testScheduler.runCurrent()
     assertEquals(1, delegate.titleCalls)
-    assertEquals(0, delegate.initialCalls)
+    assertEquals(0, delegate.questionCalls)
 
     testScheduler.advanceTimeBy(2_000)
     testScheduler.runCurrent()
-    assertEquals(1, delegate.initialCalls)
+    assertEquals(1, delegate.questionCalls)
 
     job.join()
   }
@@ -157,35 +157,24 @@ private class TrackingPlanningEngine(
   override val source: LogSource = LogSource.Lite,
 ) : PlanningEngine {
   var titleCalls: Int = 0
-  var initialCalls: Int = 0
-  var followUpCalls: Int = 0
+  var questionCalls: Int = 0
 
-  fun totalCalls(): Int = titleCalls + initialCalls + followUpCalls
+  fun totalCalls(): Int = titleCalls + questionCalls
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     titleCalls++
     return "title"
   }
 
-  override suspend fun generateInitialQuestions(
-    editableTitle: String,
-    synopsis: String,
-    roundId: String,
-    phase: Phase,
-    activityId: String,
-  ): QuestionBatch {
-    initialCalls++
-    return QuestionBatch(emptyList(), done = true)
-  }
-
-  override suspend fun generateFollowUpQuestions(
+  override suspend fun generateQuestions(
+    title: String,
     synopsis: String,
     previousQuestions: List<Question>,
     roundId: String,
     phase: Phase,
     activityId: String,
   ): QuestionBatch {
-    followUpCalls++
+    questionCalls++
     return QuestionBatch(emptyList(), done = true)
   }
 }

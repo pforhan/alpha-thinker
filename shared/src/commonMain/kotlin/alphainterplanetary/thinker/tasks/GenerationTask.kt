@@ -6,11 +6,14 @@ import kotlin.time.Instant
  * The kind of long-running planning-engine work a task performs.
  */
 enum class TaskKind {
-  /** The opening question batch for a brand-new project ([createProject]). */
-  InitialQuestions,
-
-  /** Follow-up questions in a later round ("Get more questions" / wrap-up). */
-  FollowUpQuestions,
+  /**
+   * A batch of questions for one round — a project's opening round, a
+   * "Get more questions" round, or the opening round of a later phase. The
+   * engine takes the same call for all three (see
+   * [alphainterplanetary.thinker.engine.PlanningEngine.generateQuestions]); what
+   * distinguishes them is the round's [alphainterplanetary.thinker.model.RoundOrigin].
+   */
+  QuestionGeneration,
 
   /** Recommending an editable title from the synopsis when the user didn't type one. */
   TitleRecommendation,
@@ -29,8 +32,7 @@ enum class TaskKind {
    */
   val group: ConcurrencyGroup
     get() = when (this) {
-      InitialQuestions,
-      FollowUpQuestions,
+      QuestionGeneration,
       TitleRecommendation,
       SynopsisRewrite,
       AutoArchive,
@@ -38,19 +40,6 @@ enum class TaskKind {
     }
 }
 
-/**
- * Whether this kind produces a batch of questions, as opposed to the other
- * planning interactions (recommending a title, rewriting the synopsis, reviewing
- * answers). Question batches are the ones whose result is latched onto a round
- * as a [alphainterplanetary.thinker.model.RoundOutcome], so this is also the
- * distinction the failure surface uses to tell "no questions arrived" from
- * "something else didn't arrive".
- */
-val TaskKind.isQuestionGeneration: Boolean
-  get() = when (this) {
-    TaskKind.InitialQuestions, TaskKind.FollowUpQuestions -> true
-    TaskKind.TitleRecommendation, TaskKind.SynopsisRewrite, TaskKind.AutoArchive -> false
-  }
 
 enum class TaskStatus {
   Queued,

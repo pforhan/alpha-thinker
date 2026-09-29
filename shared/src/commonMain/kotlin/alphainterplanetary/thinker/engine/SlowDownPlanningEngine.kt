@@ -27,28 +27,19 @@ class SlowDownPlanningEngine(
     return delegate.recommendTitle(synopsis, activityId)
   }
 
-  override suspend fun generateInitialQuestions(
-    editableTitle: String,
-    synopsis: String,
-    roundId: String,
-    phase: Phase,
-    activityId: String,
-  ): QuestionBatch {
-    println("SlowDownPlanningEngine.generateInitialQuestions()")
-    maybeDelay(EngineInteraction.InitialQuestions)
-    return delegate.generateInitialQuestions(editableTitle, synopsis, roundId, phase, activityId)
-  }
-
-  override suspend fun generateFollowUpQuestions(
+  override suspend fun generateQuestions(
+    title: String,
     synopsis: String,
     previousQuestions: List<Question>,
     roundId: String,
     phase: Phase,
     activityId: String,
   ): QuestionBatch {
-    println("SlowDownPlanningEngine.generateFollowUpQuestions()")
-    maybeDelay(EngineInteraction.FollowUpQuestions)
-    return delegate.generateFollowUpQuestions(synopsis, previousQuestions, roundId, phase, activityId)
+    println("SlowDownPlanningEngine.generateQuestions()")
+    maybeDelay(EngineInteraction.QuestionGeneration)
+    return delegate.generateQuestions(
+      title, synopsis, previousQuestions, roundId, phase, activityId
+    )
   }
 
   private suspend fun maybeDelay(interaction: EngineInteraction) {

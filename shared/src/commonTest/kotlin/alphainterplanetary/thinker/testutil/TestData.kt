@@ -17,7 +17,7 @@ val defaultTestInstant: Instant = Instant.fromEpochMilliseconds(0)
 fun task(
   id: String = "t1",
   projectId: String = "p1",
-  kind: TaskKind = TaskKind.InitialQuestions,
+  kind: TaskKind = TaskKind.QuestionGeneration,
   status: TaskStatus = TaskStatus.Running,
   progress: Float? = null,
   error: String? = null,

@@ -20,11 +20,20 @@ data class QuestionBatch(
 )
 
 /**
- * The unified contract for the engine that produces planning content — initial
- * and follow-up question rounds and recommended titles. A [PlanningEngine] is
- * invoked statelessly with the project context it needs, so the same call shape
- * works across every backend: a local edge LLM, a remote HTTP/cloud model, or
- * the hardcoded Lite fallback ([HardcodedPlanningEngine]).
+ * The unified contract for the engine that produces planning content — question
+ * rounds and recommended titles. A [PlanningEngine] is invoked statelessly with
+ * the project context it needs, so the same call shape works across every
+ * backend: a local edge LLM, a remote HTTP/cloud model, or the hardcoded Lite
+ * fallback ([HardcodedPlanningEngine]).
+ *
+ * There is one question-generation call rather than one per kind of round, so
+ * every round is generated the same way and an engine never has to be told
+ * which round it is filling. That works because the context already says it:
+ * [generateQuestions]'s [previousQuestions] is empty only for a brand-new
+ * project, and populated for both a "Get more questions" round and the opening
+ * round of a later phase (a wrap-up advance hands the engine the whole
+ * transcript). The round's own history lives in `RoundOrigin` and
+ * `RoundOutcome`, not in the engine contract.
  *
  * Phase exhaustion is not asked of the engine: it is answered by the explicit
  * [QuestionBatch.done] each batch already carries, which the repository latches
@@ -49,17 +58,14 @@ interface PlanningEngine {
   @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun recommendTitle(synopsis: String, activityId: String): String
 
+  /**
+   * A batch of questions for [roundId]'s phase, grounded in the project so far.
+   * [previousQuestions] is every question the project has already asked,
+   * carrying its answer state — empty only for a project's very first round.
+   */
   @Throws(AnalysisFailure::class, CancellationException::class)
-  suspend fun generateInitialQuestions(
-    editableTitle: String,
-    synopsis: String,
-    roundId: String,
-    phase: Phase,
-    activityId: String,
-  ): QuestionBatch
-
-  @Throws(AnalysisFailure::class, CancellationException::class)
-  suspend fun generateFollowUpQuestions(
+  suspend fun generateQuestions(
+    title: String,
     synopsis: String,
     previousQuestions: List<Question>,
     roundId: String,
@@ -81,13 +87,8 @@ interface PlanningEngine {
 interface PromptRenderer {
   fun titlePrompt(synopsis: String): String
 
-  fun initialQuestionsPrompt(
-    editableTitle: String,
-    synopsis: String,
-    phase: Phase,
-  ): String
-
-  fun followUpQuestionsPrompt(
+  fun questionsPrompt(
+    title: String,
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,

@@ -81,6 +81,10 @@ data class Round(
   val isCompleted: Boolean
     get() = completedAt != null
 
+  /** Whether this round carries any questions, so a failure on it would be a duplicate of what is on screen. */
+  fun hasQuestions(project: Project): Boolean =
+    project.questions.any { it.roundId == id }
+
   fun complete(at: Instant): Round = copy(completedAt = at)
 
   fun withPending(): Round = copy(outcome = RoundOutcome.Pending)
