@@ -7,67 +7,60 @@ import kotlin.test.assertNull
 class StringExtTest {
 
   @Test
-  fun `jsonObject extracts a simple JSON object`() {
-    val input = """{"key": "value"}"""
-    assertEquals("""{"key": "value"}""", input.jsonObject())
+  fun `jsonArray extracts a simple JSON array`() {
+    assertEquals("""["a", "b"]""", """["a", "b"]""".jsonArray())
   }
 
   @Test
-  fun `jsonObject extracts JSON from surrounding prose`() {
-    val input = "Here is the result: {\"key\": \"value\"} hope this helps!"
-    assertEquals("""{"key": "value"}""", input.jsonObject())
+  fun `jsonArray extracts JSON from surrounding prose and fences`() {
+    val input = "Here you go:\n```json\n[\"a\"]\n```\nHope that helps!"
+    assertEquals("""["a"]""", input.jsonArray())
   }
 
   @Test
-  fun `jsonObject extracts JSON from markdown fences`() {
-    val input = "```json\n{\"key\": \"value\"}\n```"
-    assertEquals("""{"key": "value"}""", input.jsonObject())
+  fun `jsonArray extracts only the first balanced array when multiple are present`() {
+    assertEquals("""[1]""", "See [1] and [2]".jsonArray())
   }
 
   @Test
-  fun `jsonObject extracts only the first balanced JSON object when multiple are present`() {
-    val input = "Some text {first} and {second}"
-    assertEquals("{first}", input.jsonObject())
+  fun `jsonArray extracts nested arrays correctly`() {
+    val input = """Result: [[1, 2], [3]] and the rest"""
+    assertEquals("""[[1, 2], [3]]""", input.jsonArray())
   }
 
   @Test
-  fun `jsonObject extracts nested JSON objects correctly`() {
-    val input = "Result: {\"outer\": {\"inner\": 1}} and some text"
-    assertEquals("""{"outer": {"inner": 1}}""", input.jsonObject())
+  fun `jsonArray ignores brackets inside JSON strings`() {
+    val input = """["What about [draft]?"]"""
+    assertEquals(input, input.jsonArray())
   }
 
   @Test
-  fun `jsonObject returns null when no opening brace is present`() {
-    val input = "just some text"
-    assertNull(input.jsonObject())
+  fun `jsonArray extracts a value even if preceded by a closing bracket`() {
+    assertEquals("""[a]""", "} some text [a]".jsonArray())
   }
 
   @Test
-  fun `jsonObject returns null when no closing brace is present`() {
-    val input = "{\"key\": \"value\""
-    assertNull(input.jsonObject())
+  fun `jsonArray returns null when no opening bracket is present`() {
+    assertNull("just some text".jsonArray())
   }
 
   @Test
-  fun `jsonObject returns null when braces are in wrong order`() {
-    val input = "} some text {"
-    assertNull(input.jsonObject())
+  fun `jsonArray returns null when no closing bracket is present`() {
+    assertNull("""["a", "b" """.jsonArray())
   }
 
   @Test
-  fun `jsonObject returns a value even if preceded by a closing brace`() {
-    val input = "} some text {jsonhere}"
-    assertEquals("{jsonhere}", input.jsonObject())
+  fun `jsonArray returns null when only one bracket is present`() {
+    assertNull("[".jsonArray())
   }
 
   @Test
-  fun `jsonObject returns null when only one brace is present`() {
-    val input = "{"
-    assertNull(input.jsonObject())
+  fun `jsonArray returns null when string is empty`() {
+    assertNull("".jsonArray())
   }
 
   @Test
-  fun `jsonObject returns null when string is empty`() {
-    assertNull("".jsonObject())
+  fun `jsonArray does not match a JSON object`() {
+    assertNull("""{"a": 1}""".jsonArray())
   }
 }

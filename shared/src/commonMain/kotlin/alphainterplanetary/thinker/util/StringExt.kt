@@ -2,12 +2,12 @@ package alphainterplanetary.thinker.util
 
 fun String.normalizeWhitespace(): String = replace(Regex("\\s+"), " ").trim()
 
-/** The JSON object contained in [text], if any (ignoring fences and prose). */
-fun String.jsonObject(): String? {
-  val start = indexOf('{')
+/** The first JSON array contained in this string, if any (ignoring fences and prose). */
+fun String.jsonArray(): String? {
+  val start = indexOf('[')
   if (start == -1) return null
 
-  var braceCount = 0
+  var depth = 0
   var inString = false
   var isEscaped = false
 
@@ -30,11 +30,13 @@ fun String.jsonObject(): String? {
     }
 
     when (char) {
+      // Brackets inside a JSON string are content, not structure, so a question
+      // like "What about [draft]?" doesn't truncate the array at its first `]`.
       '"' -> inString = true
-      '{' -> braceCount++
-      '}' -> {
-        braceCount--
-        if (braceCount == 0) {
+      '[' -> depth++
+      ']' -> {
+        depth--
+        if (depth == 0) {
           return substring(start, i + 1)
         }
       }

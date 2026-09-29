@@ -5,11 +5,11 @@ import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
+import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.Phase
-import alphainterplanetary.thinker.util.jsonObject
+import alphainterplanetary.thinker.util.jsonArray
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Instant
@@ -22,11 +22,11 @@ import kotlin.time.Instant
  * [HardcodedPlanningEngine], so DI can swap Lite for an LLM backend without
  * touching the repository or tasks.
  *
- * Both question interactions ask the model for a JSON `{"questions":[{...}]}`
- * payload and parse it with kotlinx.serialization; a malformed or empty reply
- * degrades to a line-by-line extraction (so a chatty model that ignores the
- * format still yields questions), and an empty reply reports `done` — the
- * LLM's "nothing more to produce" signal.
+ * Both question interactions ask the model for a JSON array of question strings
+ * and parse it with kotlinx.serialization, and no other shape is accepted: a
+ * reply we can't read fails the generation rather than being partially
+ * recovered (see [parseQuestions]). A well-formed empty array reports `done` —
+ * the LLM's "nothing more to produce" signal.
  */
 class KoogPlanningEngine(
   private val backend: KoogPlanningBackend,
@@ -102,7 +102,20 @@ class KoogPlanningEngine(
     return assistant.textContent().trim()
   }
 
-  private fun batch(drafts: List<String>, roundId: String): QuestionBatch {
+  /**
+   * A batch from the parsed questions, or a failure when the reply couldn't be
+   * read. Only a well-formed empty array means "done" — reporting an unreadable
+   * reply as [QuestionBatch.done] would latch the round exhausted, and that state
+   * is storage-backed, so the phase would read as finished (and "Get more
+   * questions" would stay disabled) until the project was recreated. Failing
+   * instead leaves the round [RoundOutcome.Failed] and the phase open to retry.
+   */
+  private fun batch(drafts: List<String>?, roundId: String): QuestionBatch {
+    if (drafts == null) {
+      throw PlanningEngine.AnalysisFailure(
+        "The model didn't reply with a JSON array of question strings",
+      )
+    }
     val timestamp = now()
     return QuestionBatch(
       questions = drafts.map { text -> newQuestion(text, roundId, timestamp) },
@@ -119,34 +132,20 @@ class KoogPlanningEngine(
     )
 
   /**
-   * Extracts question texts from a model reply. Prefers a JSON
-   * `{"questions":[...]}` payload (with or without a markdown fence around it),
-   * then falls back to a line-by-line bullet / numbered extraction.
+   * The questions in a model reply, or null when the reply carries no JSON array
+   * of quoted strings — the only shape the prompt asks for, and the only one
+   * worth reading. The array is taken from wherever it appears, so fences,
+   * surrounding prose, and an object wrapping it are all fine; everything else
+   * is refused rather than guessed at, because a half-recovered batch is
+   * indistinguishable from a real one downstream (see [batch]).
    */
-  private fun parseQuestions(text: String): List<String> {
-    val jsonBody = text.jsonObject()
-    if (jsonBody != null) {
-      runCatching {
-        questionJson.decodeFromString<GeneratedQuestions>(jsonBody)
-      }.getOrNull()?.let { decoded ->
-        return decoded.questions.map { it.text.trim() }.filter { it.isNotEmpty() }
-      }
-    }
-    return text.lineSequence()
-      .map { it.trim() }
-      .mapNotNull { line ->
-        when {
-          line.isEmpty() -> null
-          line.endsWith(":") -> null
-          line.startsWith("-") -> line.removePrefix("-").trim()
-          line.startsWith("•") -> line.removePrefix("•").trim()
-          line.startsWith("*") -> line.removePrefix("*").trim()
-          line.endsWith("?") -> line
-          else -> null
-        }
-      }
-      .filter { it.isNotEmpty() }
-      .toList()
+  private fun parseQuestions(text: String): List<String>? {
+    val body = text.jsonArray() ?: return null
+    return runCatching {
+      questionJson.decodeFromString<List<String>>(body)
+    }.getOrNull()
+      ?.map { it.trim() }
+      ?.filter { it.isNotEmpty() }
   }
 
   companion object {
@@ -161,13 +160,20 @@ class KoogPlanningEngine(
       "no explanation, no trailing period. Keep it under 60 characters."
 
     const val QuestionsSystemPrompt = "You are a project-planning assistant that runs a guided " +
-      "planning interview. Ask focused, concrete questions that help the user scope their project " +
-      "in the current planning phase. Do not ask about things already covered. Reply with only " +
-      "valid JSON of the form {\"questions\":[{\"text\":\"...\"}]}, one object per question."
+      "planning interview. The user message names the planning phase the project is currently in; " +
+      "ask focused, concrete questions that move the project forward, keeping every one within " +
+      "that phase's subject matter rather than a general project check-in. Do not ask about things " +
+      "already covered. Reply with only valid JSON: a plain array of question strings, " +
+      "e.g. [\"What is the MVP?\",\"Who is this for?\"]."
 
+    /**
+     * Strict on purpose. The default is already strict, but stating it pins the
+     * reason: a lenient decode would read a bracketed bullet list like
+     * `[P1] What is the MVP?` as a one-element array of unquoted strings instead
+     * of refusing it.
+     */
     val questionJson: Json = Json {
-      ignoreUnknownKeys = true
-      coerceInputValues = true
+      isLenient = false
     }
 
     fun titleUserPrompt(synopsis: String): String =
@@ -194,13 +200,3 @@ class KoogPlanningEngine(
   }
 }
 
-/** The JSON shape [KoogPlanningEngine.parseQuestions] expects from the model. */
-@Serializable
-private data class GeneratedQuestions(
-  val questions: List<QuestionDraft> = emptyList(),
-)
-
-@Serializable
-private data class QuestionDraft(
-  val text: String,
-)

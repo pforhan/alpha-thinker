@@ -59,9 +59,9 @@ class KoogPlanningEngineTest {
   }
 
   @Test
-  fun `initial questions parse a JSON reply into a batch with the round id`() = runTest {
-    val client = FakeClient(provider, 
-      """{"questions":[{"text":"Who is this building for?"},{"text":"What is the MVP?"}]}""",
+  fun `initial questions parse a JSON array reply into a batch with the round id`() = runTest {
+    val client = FakeClient(provider,
+      """["Who is this building for?","What is the MVP?"]""",
     )
     val engine = engine(client)
 
@@ -81,8 +81,8 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `questions inside a markdown fence still parse`() = runTest {
-    val client = FakeClient(provider, 
-      "```json\n{\"questions\":[{\"text\":\"What data flows through the system?\"}]}\n```",
+    val client = FakeClient(provider,
+      "```json\n[\"What data flows through the system?\"]\n```",
     )
     val engine = engine(client)
 
@@ -99,8 +99,8 @@ class KoogPlanningEngineTest {
   }
 
   @Test
-  fun `an empty JSON reply produces no questions and signals done`() = runTest {
-    val client = FakeClient(provider, """{"questions":[]}""")
+  fun `an empty JSON array produces no questions and signals done`() = runTest {
+    val client = FakeClient(provider, "[]")
     val engine = engine(client)
 
     val batch = engine.generateFollowUpQuestions(
@@ -115,31 +115,94 @@ class KoogPlanningEngineTest {
     assertTrue(batch.done)
   }
 
+  /**
+   * A JSON array of quoted strings is a valid reply wherever it appears — bare,
+   * fenced, or wrapped in an object, since only the array is read. These are
+   * worth pinning because the extractor ignores everything around the array.
+   */
   @Test
-  fun `a non-JSON reply degrades to bullet-point extraction`() = runTest {
-    val client = FakeClient(provider, 
-      "Here are the questions:\n- What is the timeline?\n• Who signs off?\n* Where is the budget?",
-    )
-    val engine = engine(client)
-
-    val batch = engine.generateFollowUpQuestions(
-      synopsis = "S",
-      previousQuestions = emptyList(),
-      roundId = "r2",
-      phase = BuiltInPhase.ExecutionPlan,
-      activityId = "t1",
+  fun `an array of strings is read from whatever surrounds it`() = runTest {
+    val replies = mapOf(
+      """["What is the MVP?"]""" to "What is the MVP?",
+      "```json\n[\"What is the MVP?\"]\n```" to "What is the MVP?",
+      """{"questions":["What is the MVP?"]}""" to "What is the MVP?",
+      """Here you go: ["What is the MVP?"]. Let me know!""" to "What is the MVP?",
     )
 
-    assertEquals(
-      listOf("What is the timeline?", "Who signs off?", "Where is the budget?"),
-      batch.questions.map { it.text },
+    for ((reply, expected) in replies) {
+      val engine = engine(FakeClient(provider, reply))
+      val batch = engine.generateFollowUpQuestions(
+        synopsis = "S",
+        previousQuestions = emptyList(),
+        roundId = "r2",
+        phase = BuiltInPhase.ScopeGoals,
+        activityId = "t1",
+      )
+
+      assertEquals(listOf(expected), batch.questions.map { it.text }, "for reply: $reply")
+      assertFalse(batch.done)
+    }
+  }
+
+  /**
+   * Everything else is refused, so the generation fails instead of latching the
+   * round exhausted (see `KoogPlanningEngine.batch`) — a partly-recovered batch
+   * would read downstream as a phase with more to come.
+   */
+  @Test
+  fun `a reply with no array of strings fails the generation`() = runTest {
+    val replies = listOf(
+      """[{"text":"What is the MVP?"}]""",
+      """[P1] What is the MVP?
+[P2] Who is this for?""",
+      "Here are the questions:\n- What is the MVP?\n- Who is this for?",
+      "No structure here. First, what is the MVP? Then, who is this for?",
+      "I am not able to help with that request.",
     )
-    assertFalse(batch.done)
+
+    for (reply in replies) {
+      val engine = engine(FakeClient(provider, reply))
+      try {
+        engine.generateFollowUpQuestions(
+          synopsis = "S",
+          previousQuestions = emptyList(),
+          roundId = "r2",
+          phase = BuiltInPhase.ScopeGoals,
+          activityId = "t1",
+        )
+        fail("expected ${reply.take(40)} to fail")
+      } catch (e: PlanningEngine.AnalysisFailure) {
+        assertTrue(
+          e.message.orEmpty().contains("JSON array"),
+          "unexpected message for ${reply.take(40)}: ${e.message}",
+        )
+      }
+    }
+  }
+
+  @Test
+  fun `an unreadable reply is a failure rather than a signal that the phase is done`() = runTest {
+    val engine = engine(FakeClient(provider, "I am not able to help with that request."))
+
+    val failure = try {
+      engine.generateInitialQuestions(
+        editableTitle = "T",
+        synopsis = "S",
+        roundId = "r1",
+        phase = BuiltInPhase.ScopeGoals,
+        activityId = "t1",
+      )
+      fail("expected the unreadable reply to fail")
+    } catch (e: PlanningEngine.AnalysisFailure) {
+      e
+    }
+
+    assertTrue(failure.message.orEmpty().contains("JSON array"))
   }
 
   @Test
   fun `follow-up prompt includes the phase and already asked questions`() = runTest {
-    val client = FakeClient(provider, """{"questions":[{"text":"A fresh question"}]}""")
+    val client = FakeClient(provider, """["A fresh question"]""")
     val engine = engine(client)
     val previous = listOf(question("Already asked"))
 
