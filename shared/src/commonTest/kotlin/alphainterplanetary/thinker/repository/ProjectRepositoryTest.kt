@@ -1,6 +1,8 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
+import alphainterplanetary.thinker.activitylog.ActivityLogger
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
@@ -17,6 +19,7 @@ import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
+import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.testutil.round
@@ -41,8 +44,10 @@ class ProjectRepositoryTest {
     storage: FakeStorage = FakeStorage(),
     generator: PlanningEngine = FakePlanningEngine(),
     runner: TaskRunner = TaskRunner(CoroutineScope(coroutineContext)),
+    settings: SettingsRepository = SettingsRepository(storage, CoroutineScope(coroutineContext)),
+    activityLogger: ActivityLogger = RecordingActivityLogger(),
   ): ProjectRepository =
-    ProjectRepository(storage, { generator }, runner)
+    ProjectRepository(storage, { generator }, runner, settings, activityLogger)
 
   // ---------- createProject ----------
 
@@ -193,7 +198,14 @@ class ProjectRepositoryTest {
       var current: PlanningEngine = enqueued
       val runner = TaskRunner(CoroutineScope(coroutineContext))
       val storage = FakeStorage()
-      val repository = ProjectRepository(storage, { current }, runner)
+      val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+      val repository = ProjectRepository(
+        storage,
+        { current },
+        runner,
+        settings,
+        RecordingActivityLogger(),
+      )
 
       // createProject enqueues the title + initial batch under `current` (enqueued).
       val project = repository.createProject("My synopsis")
@@ -684,6 +696,173 @@ class ProjectRepositoryTest {
       assertEquals(BuiltInPhase.Design, generator.calls.single().phase)
       assertEquals(listOf("q1"), generator.calls.single().previousQuestions.map { it.id })
     }
+
+  /**
+   * The engine is budget-ignorant by design, so the trim is the repository's:
+   * what it hands over is the same interview minus the earlier phases' answers,
+   * and the project on disk keeps them. The task's activity also records that a
+   * compaction happened — the prompt the engine received says nothing about it,
+   * so the log is the only place it surfaces.
+   */
+  @Test
+  fun `generation is handed the project trimmed to the configured context budget`() = runTest {
+    val generator = FakePlanningEngine()
+    val log = RecordingActivityLogger()
+    val storage = FakeStorage(
+      mutableMapOf(
+        "p1" to Project(
+          id = "p1",
+          synopsis = "s",
+          editableTitle = "t",
+          status = "Draft",
+          questions = listOf(
+            question(
+              "earlier",
+              "An early question?",
+              answers = listOf(answer("earlier", "word ".repeat(500), id = "a1")),
+              roundId = "r1",
+            ),
+            question(
+              "live",
+              "A live question?",
+              answers = listOf(answer("live", "short", id = "a2")),
+              roundId = "r2",
+            ),
+          ),
+          rounds = listOf(
+            round("r1", phase = BuiltInPhase.ScopeGoals, completedAt = now),
+            round("r2", phase = BuiltInPhase.Design),
+          ),
+          createdAt = now,
+          updatedAt = now,
+        ),
+      ),
+    )
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    settings.setContextBudgetTokens(500)
+    val runner = TaskRunner(CoroutineScope(coroutineContext), log)
+    val repository = repo(
+      storage = storage,
+      generator = generator,
+      runner = runner,
+      settings = settings,
+      activityLogger = log,
+    )
+
+    repository.generateMoreQuestions("p1")
+    testScheduler.advanceUntilIdle()
+
+    val handedOver = generator.calls.single().previousQuestions.associateBy { it.id }
+    assertEquals(setOf("earlier", "live"), handedOver.keys)
+    assertFalse(handedOver.getValue("earlier").isAnswered, "the earlier phase's answer is dropped")
+    assertTrue(handedOver.getValue("live").isAnswered, "the current phase's answer is kept")
+    assertTrue(
+      handedOver.getValue("earlier").compacted,
+      "the dropped answer is marked omitted, so the prompt never calls it unanswered",
+    )
+    assertTrue(
+      storage.getProject("p1")!!.questions.all { it.isAnswered },
+      "the trim is a rendering concern; the project keeps its answers",
+    )
+
+    val note = log.entries.single { it.log.startsWith("context compacted") }
+    assertEquals("context compacted: 1 answer dropped to fit budget", note.log)
+    val task = runner.tasks.value.single()
+    assertEquals(task.id, note.activityId, "the note rides the generation task's activity")
+    assertEquals(LogCategory.TaskRun, note.category)
+    assertEquals(LogSource.TaskRunner, note.source)
+    assertEquals("p1", note.projectId)
+  }
+
+  /** Nothing dropped, nothing logged: the note is about compaction, not every send. */
+  @Test
+  fun `no compaction note is logged when the project fits the budget`() = runTest {
+    val log = RecordingActivityLogger()
+    val generator = FakePlanningEngine()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), log)
+    val repository = repo(
+      generator = generator,
+      runner = runner,
+      activityLogger = log,
+    )
+
+    repository.createProject("A short synopsis")
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(
+      log.entries.none { it.log.startsWith("context compacted") },
+      "a transcript that fit is not a compaction",
+    )
+  }
+
+  /** A failing run still reports its compaction — the note files before the engine call. */
+  @Test
+  fun `a failed generation still logs the compaction that preceded it`() = runTest {
+    val log = RecordingActivityLogger()
+    val storage = FakeStorage(
+      mutableMapOf(
+        "p1" to Project(
+          id = "p1",
+          synopsis = "s",
+          editableTitle = "t",
+          status = "Draft",
+          questions = listOf(
+            question(
+              "earlier",
+              "An early question?",
+              answers = listOf(answer("earlier", "word ".repeat(500), id = "a1")),
+              roundId = "r1",
+            ),
+            question(
+              "live",
+              "A live question?",
+              answers = listOf(answer("live", "short", id = "a2")),
+              roundId = "r2",
+            ),
+          ),
+          rounds = listOf(
+            round("r1", phase = BuiltInPhase.ScopeGoals, completedAt = now),
+            round("r2", phase = BuiltInPhase.Design),
+          ),
+          createdAt = now,
+          updatedAt = now,
+        ),
+      ),
+    )
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    settings.setContextBudgetTokens(500)
+    val generator = FakePlanningEngine().apply {
+      generationFailure = RuntimeException("model exploded")
+    }
+    val runner = TaskRunner(CoroutineScope(coroutineContext), log)
+    val repository = repo(
+      storage = storage,
+      generator = generator,
+      runner = runner,
+      settings = settings,
+      activityLogger = log,
+    )
+
+    repository.generateMoreQuestions("p1")
+    testScheduler.advanceUntilIdle()
+
+    val task = runner.tasks.value.single()
+    assertEquals(TaskStatus.Failed, task.status)
+    val activityId = log.entries.first { it.log.startsWith("started:") }.activityId
+    assertEquals(
+      listOf(
+        "started: QuestionGeneration",
+        "context compacted: 1 answer dropped to fit budget",
+        "failed: model exploded",
+      ),
+      log.entries.map { it.log },
+      "the note files before the engine call, so it survives a failed run",
+    )
+    assertTrue(
+      log.entries.take(3).all { it.activityId == activityId },
+      "the note joins the failed task's activity",
+    )
+  }
 
   @Test
   fun `generateMoreQuestions does not start a round when the phase is exhausted`() = runTest {

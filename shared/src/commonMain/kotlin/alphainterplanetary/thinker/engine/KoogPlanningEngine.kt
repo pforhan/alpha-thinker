@@ -43,7 +43,7 @@ class KoogPlanningEngine(
     synopsis: String,
     previousQuestions: List<Question>,
     phase: Phase,
-  ): String = render(QuestionsSystemPrompt, questionsUserPrompt(title, synopsis, phase, previousQuestions.map { it.text }))
+  ): String = render(QuestionsSystemPrompt, questionsUserPrompt(title, synopsis, phase, previousQuestions))
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     val text = ask(PromptRecommendTitle) {
@@ -70,7 +70,7 @@ class KoogPlanningEngine(
       if (previousQuestions.isEmpty()) PromptInitialQuestions else PromptFollowUpQuestions
     val text = ask(promptId) {
       system(QuestionsSystemPrompt)
-      user(questionsUserPrompt(title, synopsis, phase, previousQuestions.map { it.text }))
+      user(questionsUserPrompt(title, synopsis, phase, previousQuestions))
     }
     return batch(parseQuestions(text), roundId)
   }
@@ -148,9 +148,12 @@ class KoogPlanningEngine(
 
     const val QuestionsSystemPrompt = "You are a project-planning assistant that runs a guided " +
       "planning interview. The user message names the planning phase the project is currently in; " +
-      "ask focused, concrete questions that move the project forward, keeping every one within " +
-      "that phase's subject matter rather than a general project check-in. Do not ask about things " +
-      "already covered. Reply with only valid JSON: a plain array of question strings, " +
+      "ask focused, concrete questions that move the project forward within that phase's subject " +
+      "matter. It also carries the interview so far, one line per question with its answer, its " +
+      "draft, or a note: \"skipped\", \"not yet answered\", or \"A: omitted\". An omitted answer " +
+      "means the user answered the question, but the text was left out to save room — treat it as " +
+      "answered, not open. Never ask a question that already appears in that list, and build on " +
+      "the answers that are there. Reply with only valid JSON: a plain array of question strings, " +
       "e.g. [\"What is the MVP?\",\"Who is this for?\"]."
 
     /**
@@ -167,24 +170,26 @@ class KoogPlanningEngine(
       "Project synopsis:\n$synopsis\n\nReturn the project title."
 
     /**
-     * One prompt for every question round. The already-asked block is always
-     * present, reading "(none)" on a project's opening round, so a first batch
-     * and a later one cannot drift into different shapes — and the title
-     * reaches every round, not just the first.
+     * One prompt for every question round. The interview-so-far block is the
+     * whole transcript — every prior question with whatever the user has done
+     * with it (see [PlanningContext.line]) — and is always present, reading
+     * "(none)" on a project's opening round, so a first batch and a later one
+     * cannot drift into different shapes. The title reaches every round, not
+     * just the first.
      */
     fun questionsUserPrompt(
       editableTitle: String,
       synopsis: String,
       phase: Phase,
-      previousQuestions: List<String>,
+      previousQuestions: List<Question>,
     ): String =
       "Planning a project titled \"$editableTitle\".\n" +
         "Phase: ${phase.label} — ${phase.description}\n" +
         "Project synopsis:\n$synopsis\n\n" +
-        "These questions were already asked and may contain answers:\n" +
-        previousQuestions.joinToString("\n") { "- $it" }.ifEmpty { "(none)" } + "\n\n" +
-        "Propose exactly $DraftCount new questions for this phase. Do not repeat any question " +
-        "already asked."
+        "The interview so far:\n" +
+        PlanningContext.render(previousQuestions).ifEmpty { "(none)" } + "\n\n" +
+        "Propose exactly $DraftCount new questions for this phase. Go deeper on what has been " +
+        "answered, and leave the rest of the interview alone."
   }
 }
 

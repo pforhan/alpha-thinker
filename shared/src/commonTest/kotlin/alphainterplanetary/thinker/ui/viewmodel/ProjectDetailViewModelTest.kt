@@ -9,11 +9,13 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
+import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.defaultTestInstant
 import alphainterplanetary.thinker.testutil.question
@@ -46,7 +48,13 @@ class ProjectDetailViewModelTest {
     block: suspend (VmContext) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val repository = ProjectRepository(storage, PlanningEngineSelector { generator }, runner)
+    val repository = ProjectRepository(
+      storage,
+      PlanningEngineSelector { generator },
+      runner,
+      SettingsRepository(storage, CoroutineScope(coroutineContext)),
+      RecordingActivityLogger(),
+    )
     val vm = ProjectDetailViewModel(
       repository = repository,
       taskRunner = runner,

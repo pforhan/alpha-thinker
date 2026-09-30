@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
@@ -321,6 +322,60 @@ class SettingsRepositoryTest {
       2,
       repo.engineDelay.value.secondsByInteraction[EngineInteraction.RecommendTitle],
     )
+  }
+
+  // ---------- planning context budget ----------
+
+  @Test
+  fun `context budget starts at the default`() = runTest {
+    val repo = repository()
+
+    assertEquals(PlanningContext.DefaultBudgetTokens, repo.contextBudgetTokens.value)
+  }
+
+  @Test
+  fun `context budget loads the persisted value at startup`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.ContextBudgetTokens, "500")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(500, repo.contextBudgetTokens.value)
+  }
+
+  @Test
+  fun `setContextBudgetTokens updates state and persists the budget`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setContextBudgetTokens(4000)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(4000, repo.contextBudgetTokens.value)
+    assertEquals("4000", storage.settings[SettingsKey.ContextBudgetTokens.storageKey])
+  }
+
+  @Test
+  fun `setContextBudgetTokens ignores the already-selected budget`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setContextBudgetTokens(PlanningContext.DefaultBudgetTokens)
+
+    assertEquals(null, storage.settings[SettingsKey.ContextBudgetTokens.storageKey])
+  }
+
+  /** Only the offered budgets round-trip to a picker chip, so anything else falls back. */
+  @Test
+  fun `a persisted budget outside the offered options falls back to the default`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.ContextBudgetTokens, "37")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(PlanningContext.DefaultBudgetTokens, repo.contextBudgetTokens.value)
   }
 
   // ---------- announced failure ledger ----------

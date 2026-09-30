@@ -11,8 +11,8 @@ import kotlin.time.Instant
  * draft — never both (see the [init] guards).
  *
  * State transitions go through the [withAnswer], [withDraft], [withoutAnswer],
- * [withIgnored], and [withoutIgnored] mutators so the committed/draft
- * invariants can't be broken by ad-hoc [copy] calls.
+ * [asCompacted], [withIgnored], and [withoutIgnored] mutators so the
+ * committed/draft invariants can't be broken by ad-hoc [copy] calls.
  */
 data class Question(
   val id: String,
@@ -24,6 +24,18 @@ data class Question(
   val draftText: String? = null,
   val draftUpdatedAt: Instant? = null,
   val answers: List<Answer> = emptyList(),
+  /**
+   * Set only on the throwaway copies a transcript builder makes when an answer
+   * is too long to send (`PlanningContext.trim`): the answer existed, and was
+   * deliberately left out of this one transcript, which renders it as
+   * `A: omitted` rather than pretending the question is open.
+   *
+   * It is never persisted — no stored question is compacted, and the mapping
+   * from storage leaves it false — so it costs no schema column, and a compacted
+   * copy stays honestly un-answered ([isAnswered] false) with its [answers]
+   * history intact.
+   */
+  val compacted: Boolean = false,
 ) {
   init {
     require(answerId == null || draftText.isNullOrBlank()) {
@@ -72,6 +84,19 @@ data class Question(
     draftUpdatedAt = null,
   )
 
+  /**
+   * Marks this question's answer as compacted out of the transcript it is about
+   * to be rendered into — so the reader can tell "the user never answered this"
+   * from "there was an answer here and it did not fit". For use in rendering copy
+   * only (see [compacted]); nothing persists the result.
+   */
+  fun asCompacted(): Question = copy(
+    answerId = null,
+    draftText = null,
+    draftUpdatedAt = null,
+    compacted = true,
+  )
+
   fun withIgnored(at: Instant): Question = copy(ignoredAt = at)
 
   fun withoutIgnored(): Question = copy(ignoredAt = null)
@@ -81,5 +106,6 @@ data class Question(
     draftText = null,
     draftUpdatedAt = null,
     ignoredAt = null,
+    compacted = false,
   )
 }

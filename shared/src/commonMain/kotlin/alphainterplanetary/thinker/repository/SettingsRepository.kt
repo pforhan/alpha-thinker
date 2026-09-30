@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +54,15 @@ class SettingsRepository @Inject constructor(
 
   private val _engineDelay = MutableStateFlow(EngineDelayConfig.Default)
   val engineDelay: StateFlow<EngineDelayConfig> = _engineDelay.asStateFlow()
+
+  /**
+   * The token budget a generation prompt's planning transcript is trimmed to
+   * before it is sent (see [alphainterplanetary.thinker.engine.PlanningContext]).
+   * Read by `ProjectRepository` as it builds each generation's context, so
+   * changing it here affects the next round without any other wiring.
+   */
+  private val _contextBudgetTokens = MutableStateFlow(PlanningContext.DefaultBudgetTokens)
+  val contextBudgetTokens: StateFlow<Int> = _contextBudgetTokens.asStateFlow()
 
   /**
    * The newest failure activity already raised for the user, or null when none
@@ -125,6 +135,17 @@ class SettingsRepository @Inject constructor(
             }
           },
         )
+      }
+    }
+    scope.launch {
+      val stored = storage.getSetting(
+        SettingsKey.ContextBudgetTokens,
+        PlanningContext.DefaultBudgetTokens.toString(),
+      ).toIntOrNull()
+      val loaded = stored.takeIf { it in PlanningContext.BudgetOptionsTokens }
+        ?: PlanningContext.DefaultBudgetTokens
+      if (_contextBudgetTokens.value == PlanningContext.DefaultBudgetTokens) {
+        _contextBudgetTokens.value = loaded
       }
     }
     scope.launch {
@@ -202,6 +223,22 @@ class SettingsRepository @Inject constructor(
     }
     scope.launch {
       storage.saveSetting(interaction.settingsKey, seconds.toString())
+    }
+  }
+
+  /**
+   * Sets the token budget a generation prompt's planning transcript is trimmed
+   * to. Only the offered budgets are accepted, so the stored value always
+   * round-trips to a picker chip.
+   */
+  fun setContextBudgetTokens(tokens: Int) {
+    require(tokens in PlanningContext.BudgetOptionsTokens) {
+      "unsupported context budget: $tokens tokens"
+    }
+    if (_contextBudgetTokens.value == tokens) return
+    _contextBudgetTokens.value = tokens
+    scope.launch {
+      storage.saveSetting(SettingsKey.ContextBudgetTokens, tokens.toString())
     }
   }
 

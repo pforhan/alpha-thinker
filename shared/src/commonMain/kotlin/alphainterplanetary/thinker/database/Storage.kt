@@ -13,6 +13,7 @@ enum class SettingsKey(val storageKey: String) {
   SlowDownPlanningEngine("slow-down-planning-engine"),
   EngineRecommendTitleDelay("engine-delay-recommend-title"),
   EngineQuestionGenerationDelay("engine-delay-question-generation"),
+  ContextBudgetTokens("context-budget-tokens"),
   ActivityLoggerRetentionDays("activity-log-retention-days"),
   AnnouncedFailureActivityId("announced-failure-activity-id"),
   RemoteLlmBaseUrl("remote-llm-base-url"),

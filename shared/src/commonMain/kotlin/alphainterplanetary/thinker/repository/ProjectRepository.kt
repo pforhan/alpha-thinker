@@ -1,8 +1,12 @@
 package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
+import alphainterplanetary.thinker.activitylog.ActivityLogger
+import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
+import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.QuestionBatch
@@ -25,6 +29,8 @@ class ProjectRepository @Inject constructor(
   private val storage: Storage,
   private val engineSelector: PlanningEngineSelector,
   private val taskRunner: TaskRunner,
+  private val settings: SettingsRepository,
+  private val activityLogger: ActivityLogger,
 ) {
 
   /**
@@ -109,13 +115,14 @@ class ProjectRepository @Inject constructor(
 
   /**
    * The single generation seam every "request new questions" touchpoint flows
-   * through: generate for [roundId] with the whole project's questions as
-   * context, dedupe against what was already asked, shuffle, and persist as a
-   * [TaskKind.QuestionGeneration] task on the [taskRunner] so the caller returns
-   * immediately and the UI can surface progress (and navigate away freely) while
-   * it runs. Every kind of round — a project's opening batch, "Get more
-   * questions", a wrap-up advance into a new phase — is this one call; what
-   * varies is the round, not the interaction.
+   * through: generate for [roundId] with the project's questions as context
+   * (trimmed to the configured budget by [PlanningContext], which is also where
+   * the engine's own rendering lives), dedupe against what was already asked,
+   * shuffle, and persist as a [TaskKind.QuestionGeneration] task on the
+   * [taskRunner] so the caller returns immediately and the UI can surface
+   * progress (and navigate away freely) while it runs. Every kind of round — a
+   * project's opening batch, "Get more questions", a wrap-up advance into a new
+   * phase — is this one call; what varies is the round, not the interaction.
    *
    * The batch's [QuestionBatch.done] is latched onto the round as its
    * [RoundOutcome], which is what the "Get more questions" affordances read
@@ -133,11 +140,20 @@ class ProjectRepository @Inject constructor(
     taskRunner.enqueue(projectId, TaskKind.QuestionGeneration) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
+      // The engine renders whatever transcript it is handed, so the budget is
+      // applied here: over-long projects reach it with the earliest phases'
+      // answers dropped, the current phase's intact. Dedupe still reads the
+      // whole project below — a trimmed answer never costs a question its
+      // place in the "already asked" set.
+      val trim = PlanningContext.trim(reloaded, settings.contextBudgetTokens.value)
+      if (trim.droppedAnswers > 0) {
+        logContextCompacted(taskId, reloaded.id, trim.droppedAnswers)
+      }
       val generated = try {
         engine.generateQuestions(
           title = reloaded.editableTitle,
           synopsis = reloaded.synopsis,
-          previousQuestions = reloaded.questions,
+          previousQuestions = trim.questions,
           roundId = round.id,
           phase = round.phase,
           activityId = taskId,
@@ -436,6 +452,27 @@ class ProjectRepository @Inject constructor(
       appendLine(answerBlock)
       appendLine()
     }
+  }
+
+  /**
+   * Files one note on the task's activity that the context the engine was given
+   * had to be compacted to fit the configured budget — how many answers were
+   * dropped, which the engine (and its prompt) never sees. A standalone
+   * [LogContext] per call keeps the note in the task's activity (grouped by
+   * `activityId` in the read model) without sharing lifecycle state with the
+   * task's own context; the note is plain text, so the read model's
+   * started/terminal parsing is unaffected. Deliberately phrased as
+   * "compacted … dropped" so the upcoming near-limit compaction choice
+   * (summarize vs. trim) can extend it without a breaking change.
+   */
+  private suspend fun logContextCompacted(taskId: String, projectId: String, dropped: Int) {
+    val noun = if (dropped == 1) "answer" else "answers"
+    activityLogger.context(
+      activityId = taskId,
+      category = LogCategory.TaskRun,
+      source = LogSource.TaskRunner,
+      projectId = projectId,
+    ).append("context compacted: $dropped $noun dropped to fit budget")
   }
 
   private companion object {

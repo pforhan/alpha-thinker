@@ -11,6 +11,7 @@ import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.util.now
@@ -230,6 +231,81 @@ class KoogPlanningEngineTest {
     assertTrue(
       request.contains("Menu Planner"),
       "the title reaches every round, not just a project's opening one",
+    )
+  }
+
+  /**
+   * The whole point of sending prior questions is what the user did with them,
+   * so a question the model would otherwise re-ask (or mistake for unanswered)
+   * has to arrive carrying its answer, its draft, or the fact that it was
+   * skipped or compacted out of the context.
+   */
+  @Test
+  fun `the questions prompt renders the interview so far with each answer state`() = runTest {
+    val client = FakeClient(provider, """["A fresh question"]""")
+    val engine = engine(client)
+    val previous = listOf(
+      question("What is the MVP?").withAnswer(
+        Answer(questionId = "What is the MVP?", text = "A menu planner", createdAt = now()),
+      ),
+      question("Who is this for?").withDraft("home cooks", now()),
+      question("How much will it cost?").withIgnored(now()),
+      question("What is the timeline?"),
+      question("Who owns this?").asCompacted(),
+    )
+
+    engine.generateQuestions(
+      title = "Menu Planner",
+      synopsis = "S",
+      previousQuestions = previous,
+      roundId = "r2",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "t1",
+    )
+
+    val request = client.lastPrompt.messages.joinToString("\n") { it.textContent() }
+    assertTrue(request.contains("Q: What is the MVP? / A: A menu planner"), "committed")
+    assertTrue(request.contains("Q: Who is this for? / Draft: home cooks"), "draft")
+    assertTrue(request.contains("Q: How much will it cost? / ${PlanningContext.SkippedNote}"), "ignored")
+    assertTrue(request.contains("Q: What is the timeline? / ${PlanningContext.NotAnsweredNote}"), "unanswered")
+    assertTrue(
+      request.contains("Q: Who owns this? / A: ${PlanningContext.OmittedNote}"),
+      "an answer left out of the context still reads as answered",
+    )
+  }
+
+  /**
+   * "skipped" and "not yet answered" read themselves, so the one marker the
+   * prompt has to define is "A: omitted" — a bare "omitted" is as apt to read as
+   * an open question as a settled one, and there is no other way to tell.
+   */
+  @Test
+  fun `the questions system prompt defines the one placeholder that needs it`() = runTest {
+    val client = FakeClient(provider, """["A fresh question"]""")
+    val engine = engine(client)
+
+    engine.generateQuestions(
+      title = "Menu Planner",
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      roundId = "r1",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "t1",
+    )
+
+    val system = client.lastPrompt.messages.filterIsInstance<Message.System>().single().textContent()
+    assertTrue(
+      system.contains("A: ${PlanningContext.OmittedNote}"),
+      "the unusual marker is spelled out verbatim",
+    )
+    assertTrue(
+      system.contains("treat it as answered, not open"),
+      "the explanation makes omitted read as settled, so the model does not re-ask",
+    )
+    assertTrue(
+      system.contains("\"${PlanningContext.SkippedNote}\"") &&
+        system.contains("\"${PlanningContext.NotAnsweredNote}\""),
+      "the self-explanatory markers are listed, not defined",
     )
   }
 

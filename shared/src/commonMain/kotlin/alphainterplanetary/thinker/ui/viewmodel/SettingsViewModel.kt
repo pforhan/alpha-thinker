@@ -71,6 +71,16 @@ class SettingsViewModel(
   }
 
   /**
+   * The token budget a generation prompt's planning transcript is trimmed to
+   * before it is sent; changing it applies to the next round generated.
+   */
+  val contextBudgetTokens: StateFlow<Int> = settingsRepository.contextBudgetTokens
+
+  fun setContextBudgetTokens(tokens: Int) {
+    settingsRepository.setContextBudgetTokens(tokens)
+  }
+
+  /**
    * The newest failure activity already raised for the user, and the write that
    * records one. Hoisted here with the rest of the settings because the chrome
    * reaches persistence only through this ViewModel; nothing in the settings UI
