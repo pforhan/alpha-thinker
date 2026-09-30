@@ -6,10 +6,12 @@ import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -176,6 +178,44 @@ class TaskRunner(
     return task
   }
 
+  /**
+   * Suspends until [taskId] finishes, returning the finished task — or throwing
+   * [TaskFailed] carrying its failure. The counterpart to [enqueue]'s
+   * fire-and-forget return: [enqueue] hands the body to the runner's scope, so
+   * nothing a task produces exists yet when it returns, and a caller that needs
+   * one generation to land before it starts the next had no way to say so.
+   *
+   * Failures are raised rather than returned so a caller cannot accidentally
+   * read a failed task's output as a result — a task that failed has none, and
+   * the storage it left behind is the failure's, not a partial success.
+   *
+   * Cancellation of the *awaiting* coroutine is not a task failure: it throws
+   * [kotlinx.coroutines.CancellationException] out of the suspension without
+   * touching the task, which keeps running. A task cancelled in its own right
+   * lands [TaskStatus.Failed] like any other failure, so it surfaces as
+   * [TaskFailed] carrying the runner's "Task cancelled" message.
+   *
+   * **Not callable from inside a task body for the same project.** A body runs
+   * while holding that project's mutex (see [launchTask]), and every task for
+   * the project needs it, so awaiting there would wait on a task that can never
+   * reach its gate. Sequence from outside the runner, as the UI does.
+   */
+  @Throws(TaskFailed::class, CancellationException::class)
+  suspend fun await(taskId: String): GenerationTask {
+    // Checked against the current value rather than by suspending on the flow,
+    // so an unknown id fails here instead of hanging on one that will never
+    // carry it.
+    if (tasks.value.none { it.id == taskId }) {
+      throw IllegalArgumentException("No task with id $taskId")
+    }
+    val finished = tasks.first { list -> list.any { it.id == taskId && it.isFinished } }
+      .single { it.id == taskId }
+    if (finished.status == TaskStatus.Failed) {
+      throw TaskFailed(finished)
+    }
+    return finished
+  }
+
   /** Reports streaming progress (0..1) for a running task, e.g. a synthesis. */
   fun setProgress(taskId: String, progress: Float) {
     _tasks.update { list ->
@@ -183,6 +223,15 @@ class TaskRunner(
     }
   }
 }
+
+/**
+ * A task reached [TaskStatus.Failed] while [TaskRunner.await] was waiting on it.
+ * Carries the whole task so a caller can report its [GenerationTask.error] or
+ * inspect [GenerationTask.kind] without going back to the runner.
+ */
+class TaskFailed(val task: GenerationTask) : Exception(
+  task.error ?: "Task ${task.kind.name} failed",
+)
 
 /**
  * One concurrency gate: a fair FIFO [Mutex] when the limit is one (so serial

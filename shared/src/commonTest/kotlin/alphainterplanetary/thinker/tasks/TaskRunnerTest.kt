@@ -3,9 +3,11 @@ package alphainterplanetary.thinker.tasks
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -160,6 +162,86 @@ class TaskRunnerTest {
 
     assertEquals(listOf(a1.id, a2.id), runner.tasksFor("p1").first().map { it.id })
     assertEquals(listOf(b1.id), runner.tasksFor("p2").first().map { it.id })
+  }
+
+  @Test
+  fun `await returns once the task succeeds`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      delay(1_000)
+    }
+
+    var awaited: GenerationTask? = null
+    val waiter = launch { awaited = runner.await(task.id) }
+
+    testScheduler.runCurrent()
+    assertNull(awaited, "await suspends while the task is still running")
+
+    testScheduler.advanceUntilIdle()
+    waiter.join()
+
+    assertEquals(TaskStatus.Succeeded, awaited?.status)
+    assertEquals(task.id, awaited?.id)
+    assertNotNull(awaited?.finishedAt)
+  }
+
+  @Test
+  fun `await on an already-finished task returns immediately`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
+    testScheduler.advanceUntilIdle()
+
+    val awaited = runner.await(task.id)
+
+    assertEquals(TaskStatus.Succeeded, awaited.status)
+  }
+
+  @Test
+  fun `await throws TaskFailed carrying the task's error`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      error("model exploded")
+    }
+
+    val thrown = assertFailsWith<TaskFailed> { runner.await(task.id) }
+
+    assertEquals(task.id, thrown.task.id)
+    assertEquals(TaskStatus.Failed, thrown.task.status)
+    assertEquals("model exploded", thrown.task.error)
+    assertEquals("model exploded", thrown.message)
+  }
+
+  @Test
+  fun `await on an unknown id fails instead of hanging`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+
+    assertFailsWith<IllegalArgumentException> { runner.await("nope") }
+  }
+
+  @Test
+  fun `await sequences generations in order`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val order = mutableListOf<String>()
+
+    val first = runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      delay(1_000)
+      order += "first"
+    }
+    val second = runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      order += "second"
+    }
+
+    val waiter = launch {
+      runner.await(first.id)
+      order += "after-first"
+      runner.await(second.id)
+      order += "after-second"
+    }
+
+    testScheduler.advanceUntilIdle()
+    waiter.join()
+
+    assertEquals(listOf("first", "after-first", "second", "after-second"), order)
   }
 
   @Test
