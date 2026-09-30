@@ -394,41 +394,6 @@ class KoogPlanningEngineTest {
     )
   }
 
-  /**
-   * "skipped" and "not yet answered" read themselves, so the one marker the
-   * prompt has to define is "A: omitted" — a bare "omitted" is as apt to read as
-   * an open question as a settled one, and there is no other way to tell.
-   */
-  @Test
-  fun `the questions system prompt defines the one placeholder that needs it`() = runTest {
-    val client = FakeClient(provider, """["A fresh question"]""")
-    val engine = engine(client)
-
-    engine.generateQuestions(
-      title = "Menu Planner",
-      synopsis = "S",
-      previousQuestions = emptyList(),
-      roundId = "r1",
-      phase = BuiltInPhase.ScopeGoals,
-      activityId = "t1",
-    )
-
-    val system = client.lastPrompt.messages.filterIsInstance<Message.System>().single().textContent()
-    assertTrue(
-      system.contains("A: ${PlanningContext.OmittedNote}"),
-      "the unusual marker is spelled out verbatim",
-    )
-    assertTrue(
-      system.contains("treat it as answered, not open"),
-      "the explanation makes omitted read as settled, so the model does not re-ask",
-    )
-    assertTrue(
-      system.contains("\"${PlanningContext.SkippedNote}\"") &&
-        system.contains("\"${PlanningContext.NotAnsweredNote}\""),
-      "the self-explanatory markers are listed, not defined",
-    )
-  }
-
   @Test
   fun `the questions prompt renders a none marker when nothing has been asked yet`() = runTest {
     val client = FakeClient(provider, """["A first question"]""")

@@ -170,15 +170,12 @@ class KoogPlanningEngine(
       "memorable project title from the user's synopsis. Reply with only the title — no quotes, " +
       "no explanation, no trailing period. Keep it under 60 characters."
 
-    const val QuestionsSystemPrompt = "You are a project-planning assistant that runs a guided " +
-      "planning interview. The user message names the planning phase the project is currently in; " +
-      "ask focused, concrete questions that move the project forward within that phase's subject " +
-      "matter. It also carries the interview so far, one line per question with its answer, its " +
-      "draft, or a note: \"skipped\", \"not yet answered\", or \"A: omitted\". An omitted answer " +
-      "means the user answered the question, but the text was left out to save room — treat it as " +
-      "answered, not open. Never ask a question that already appears in that list, and build on " +
-      "the answers that are there. Reply with only valid JSON: a plain array of question strings, " +
-      "e.g. [\"What is the MVP?\",\"Who is this for?\"]."
+    const val QuestionsSystemPrompt = "You are a project-planning assistant. " +
+      "The user provides the current planning phase and the interview history " +
+      "(format: question | status/answer). " +
+      "Ask 3-5 new, focused questions for this phase. " +
+      // "Do not repeat questions from the history. " +
+      "Reply with ONLY a valid JSON array of strings, e.g. [\"Question 1?\", \"Question 2?\"]"
 
     /**
      * Strict on purpose. The default is already strict, but stating it pins the
@@ -208,12 +205,13 @@ class KoogPlanningEngine(
       previousQuestions: List<Question>,
     ): String =
       "Planning a project titled \"$editableTitle\".\n" +
-        "Phase: ${phase.label} — ${phase.description}\n" +
         "Project synopsis:\n$synopsis\n\n" +
         "The interview so far:\n" +
         PlanningContext.render(previousQuestions).ifEmpty { "(none)" } + "\n\n" +
-        "Propose exactly $DraftCount new questions for this phase. Go deeper on what has been " +
-        "answered, and leave the rest of the interview alone."
+        "Propose new questions for this phase. Focus on " +
+        "Phase: ${phase.label} — ${phase.description}\n" +
+        "but if there are crucial details missing that block this phase you may " +
+        "go deeper on what has been answered."
   }
 }
 
