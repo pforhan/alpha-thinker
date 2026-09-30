@@ -12,8 +12,8 @@ import alphainterplanetary.thinker.util.now
  * ([ActivityRecord]) parses.
  *
  * Lifecycle: an activity opens with [started] (or just interaction rows for a
- * standalone detail), then any number of [input]/[prompt]/[response] rows,
- * then exactly one terminal row ([closeSucceeded]/[closeFailed]/[closeCancelled]).
+ * standalone detail), then any number of [prompt]/[response] rows, then exactly
+ * one terminal row ([closeSucceeded]/[closeFailed]/[closeCancelled]).
  * The first terminal method closes the context; a later append fails fast with
  * [IllegalStateException] instead of silently writing a malformed activity.
  * Writers may also create a fresh context per launch — the guard only fires on
@@ -52,10 +52,7 @@ class LogContext internal constructor(
   /** A cancellation terminal row (`cancelled`). */
   suspend fun closeCancelled() = terminal(LogMarkers.Cancelled)
 
-  /** An `input:` detail row (a compact summary of a non-rendered send). */
-  suspend fun input(text: String) = file("${LogMarkers.Input} $text")
-
-  /** A `prompt:` detail row (a rendered prompt, verbatim). */
+  /** A `prompt:` detail row (a prompt, verbatim). */
   suspend fun prompt(text: String) = file("${LogMarkers.Prompt} $text")
 
   /**

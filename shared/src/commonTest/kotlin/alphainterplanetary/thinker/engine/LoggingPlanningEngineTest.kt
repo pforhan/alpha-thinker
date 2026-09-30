@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
@@ -11,30 +12,33 @@ import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
+/**
+ * The decorator's remaining job is narrow: install the interaction's [LogScope],
+ * and file the interaction's *own* outcome row only when the delegate reported
+ * no request of its own (the Lite path, and any engine that fails before it
+ * sends). Everything else is the engine's, one row pair per request.
+ */
 class LoggingPlanningEngineTest {
 
   @Test
-  fun `recommendation records input then response rows under the activity id`() = runTest {
+  fun `a recommendation records its result under the activity id`() = runTest {
     val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
 
     val title = engine.recommendTitle("Build a rocketship", activityId = "task-1")
 
     assertEquals("Recommended", title)
-    assertEquals(2, log.entries.size)
-    val input = log.entries[0]
-    assertEquals("task-1", input.activityId)
-    assertEquals(LogCategory.TitleRecommendation, input.category)
-    assertEquals(LogSource.Lite, input.source)
-    assertEquals("input: synopsis=Build a rocketship", input.log)
-    val terminal = log.entries[1]
+    assertEquals(1, log.entries.size, "nothing was sent to a model, so there is no prompt row")
+    val terminal = log.entries.single()
     assertEquals("task-1", terminal.activityId)
-    assertEquals("response: Recommended", terminal.log)
     assertEquals(LogCategory.TitleRecommendation, terminal.category)
-    assertTrue(terminal.timestamp >= input.timestamp)
+    assertEquals(LogSource.Lite, terminal.source)
+    assertEquals("response: Recommended", terminal.log)
+    assertNull(terminal.raw, "an engine that never spoke to a model has no reply to keep")
   }
 
   @Test
@@ -57,7 +61,7 @@ class LoggingPlanningEngineTest {
     assertEquals(2, questions.size)
     val terminal = log.entries.last()
     assertEquals(LogCategory.QuestionGeneration, terminal.category)
-    assertEquals(2, log.entries.size, "input + response, nothing else")
+    assertEquals(1, log.entries.size, "the result row, nothing else")
     assertTrue(terminal.log.startsWith("response: 2 questions, done=false"))
     assertTrue(terminal.log.contains("first"))
     assertTrue(terminal.log.contains("second"))
@@ -84,51 +88,6 @@ class LoggingPlanningEngineTest {
     assertTrue(terminal.log.startsWith("response: 0 questions, done=true"))
   }
 
-  /**
-   * The compact `input:` summary a non-rendering delegate gets has to name the
-   * whole context now that there is one call: the title is in it, and so is the
-   * size of the transcript.
-   */
-  @Test
-  fun `a non-rendering delegate gets one input summary covering the whole context`() = runTest {
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
-
-    engine.generateQuestions(
-      title = "T",
-      synopsis = "S",
-      previousQuestions = listOf(question("Already asked")),
-      roundId = "r1",
-      phase = BuiltInPhase.ScopeGoals,
-      activityId = "task-8",
-    )
-
-    assertEquals(
-      "input: phase=ScopeGoals, synopsis=S, previous questions=1",
-      log.entries.first().log,
-    )
-  }
-
-  @Test
-  fun `a rendering delegate has its questions prompt filed instead`() = runTest {
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = PromptRenderingEngine(), log = log)
-
-    engine.generateQuestions(
-      title = "Menu Planner",
-      synopsis = "S",
-      previousQuestions = listOf(question("Already asked")),
-      roundId = "r1",
-      phase = BuiltInPhase.ScopeGoals,
-      activityId = "task-9",
-    )
-
-    assertEquals(
-      "prompt: SYSTEM\nQuestions system\n\nUSER\nMenu Planner / S / Scope & Goals / 1",
-      log.entries.first().log,
-    )
-  }
-
   @Test
   fun `records the delegated engine's source on detail rows`() = runTest {
     val delegate = FakePlanningEngine()
@@ -139,29 +98,6 @@ class LoggingPlanningEngineTest {
     engine.recommendTitle("Build a rocketship", activityId = "task-5")
 
     assertEquals(LogSource.RemoteLLM, log.entries.first().source)
-  }
-
-  @Test
-  fun `records the full prompt when the delegate renders prompts`() = runTest {
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = PromptRenderingEngine(), log = log)
-
-    engine.recommendTitle("Build a rocketship", activityId = "task-6")
-
-    assertEquals(
-      "prompt: SYSTEM\nTitle system\n\nUSER\nBuild a rocketship",
-      log.entries.first().log,
-    )
-  }
-
-  @Test
-  fun `leaves prompt unused null to a non-rendering delegate`() = runTest {
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
-
-    engine.recommendTitle("Build a rocketship", activityId = "task-7")
-
-    assertTrue(log.entries.first().log.startsWith("input: synopsis="))
   }
 
   @Test
@@ -190,15 +126,65 @@ class LoggingPlanningEngineTest {
   }
 
   /**
-   * The whole point of the raw capture: a reply that couldn't be read is the
-   * only evidence for the failure it caused, so the failing row has to carry
-   * it. The row's own text stays the one-line message.
+   * The no-double-file rule: an engine that reported a request has already
+   * written the activity's outcome, so the decorator's own row would be a
+   * second, contradicting headline.
    */
   @Test
-  fun `an unreadable reply is kept as the raw payload of the failed row`() = runTest {
+  fun `an engine that reported its own request files no second outcome row`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = ReplyingEngine(), log = log)
+
+    engine.recommendTitle("A menu planner", activityId = "task-6")
+
+    assertEquals(
+      listOf("prompt: SYSTEM\nTitle system\n\nUSER\nA menu planner", "response: Mobile Menu Planner"),
+      log.entries.map { it.log },
+    )
+  }
+
+  /**
+   * An interaction that fans out files one pair per request, all under the one
+   * activity id, and the read model takes the activity's headline and batch
+   * count from the *last* pair — so the request the activity is really about has
+   * to be filed last.
+   */
+  @Test
+  fun `two requests in one interaction file two pairs and the last drives the headline`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = SummarizingThenGenerating(), log = log)
+
+    engine.generateQuestions(
+      title = "T",
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      roundId = "r1",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "task-7",
+    )
+
+    assertEquals(
+      listOf(
+        "prompt: SYSTEM\nSummarize",
+        "response: a summary of earlier answers",
+        "prompt: SYSTEM\nQuestions",
+        "response: 3 questions, done=false\n• one\n• two\n• three",
+      ),
+      log.entries.map { it.log },
+    )
+    assertTrue(log.entries.all { it.activityId == "task-7" })
+    assertEquals("Generated 3 questions", activity(log).summary)
+  }
+
+  /**
+   * A sub-request's failure is the activity's failure — it is filed on the
+   * sub-request's own row, and the parent neither swallows it nor re-files it.
+   */
+  @Test
+  fun `a failed sub-request surfaces as the activity's failure headline`() = runTest {
     val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(
-      delegate = RawReplyingEngine("I am not able to help with that request.", readable = false),
+      delegate = SummarizingThenGenerating(failSummary = true),
       log = log,
     )
 
@@ -207,83 +193,27 @@ class LoggingPlanningEngineTest {
         title = "T",
         synopsis = "S",
         previousQuestions = emptyList(),
-        roundId = "r9",
-        phase = BuiltInPhase.Design,
-        activityId = "task-10",
+        roundId = "r1",
+        phase = BuiltInPhase.ScopeGoals,
+        activityId = "task-8",
       )
-      fail("expected the parse failure to propagate")
+      fail("expected the sub-request failure to propagate")
     } catch (e: PlanningEngine.AnalysisFailure) {
-      assertTrue(e.message.orEmpty().contains("JSON array"))
+      assertEquals("couldn't be read", e.message)
     }
 
-    val terminal = log.entries.last()
-    assertEquals("failed: The model didn't reply with a JSON array of question strings", terminal.log)
-    assertEquals("I am not able to help with that request.", terminal.raw)
-  }
-
-  @Test
-  fun `a parsed reply is kept verbatim as the raw payload of the response row`() = runTest {
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(
-      delegate = RawReplyingEngine("""["What is the MVP?"]"""),
-      log = log,
+    assertEquals(
+      listOf("prompt: SYSTEM\nSummarize", "failed: couldn't be read"),
+      log.entries.map { it.log },
     )
-
-    engine.generateQuestions(
-      title = "T",
-      synopsis = "S",
-      previousQuestions = emptyList(),
-      roundId = "r9",
-      phase = BuiltInPhase.Design,
-      activityId = "task-11",
-    )
-
-    val terminal = log.entries.last()
-    assertTrue(terminal.log.startsWith("response: 1 question, done=false"))
-    assertEquals("""["What is the MVP?"]""", terminal.raw)
+    assertEquals("I am not able to help.", log.entries.last().raw, "the reply that caused it")
+    val activity = activity(log)
+    assertTrue(activity.hasError)
+    assertEquals("failed: couldn't be read", activity.summary)
   }
 
-  @Test
-  fun `a title reply is captured raw too`() = runTest {
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(
-      delegate = RawReplyingEngine("  Mobile Menu Planner  "),
-      log = log,
-    )
-
-    engine.recommendTitle("A menu planner", activityId = "task-12")
-
-    val terminal = log.entries.last()
-    assertEquals("response: Mobile Menu Planner", terminal.log)
-    assertEquals("Mobile Menu Planner", terminal.raw, "the raw is the trimmed reply, as received")
-  }
-
-  /**
-   * Every LLM interaction is covered, not just question generation — an engine
-   * that never spoke to a model simply has nothing to publish.
-   */
-  @Test
-  fun `an engine that publishes no reply records no raw`() = runTest {
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
-
-    engine.recommendTitle("Build a rocketship", activityId = "task-13")
-
-    assertEquals(null, log.entries.last().raw)
-  }
-
-  private class PromptRenderingEngine : PlanningEngine by FakePlanningEngine(), PromptRenderer {
-    override fun titlePrompt(synopsis: String): String =
-      "SYSTEM\nTitle system\n\nUSER\n$synopsis"
-
-    override fun questionsPrompt(
-      title: String,
-      synopsis: String,
-      previousQuestions: List<Question>,
-      phase: Phase,
-    ): String =
-      "SYSTEM\nQuestions system\n\nUSER\n$title / $synopsis / ${phase.label} / ${previousQuestions.size}"
-  }
+  private fun activity(log: RecordingActivityLogger): ActivityRecord =
+    ActivityRecord.groupByActivity(log.entries).single()
 
   private class ThrowingEngine : PlanningEngine {
     override val source: LogSource = LogSource.Lite
@@ -302,18 +232,41 @@ class LoggingPlanningEngineTest {
   }
 
   /**
-   * Stands in for an LLM-backed engine: publishes [reply] the way
-   * [KoogPlanningEngine] does — before trying to read it, failing when it
-   * can't — so the decorator's capture is exercised without a backend.
+   * Stands in for an LLM-backed engine: files one request the way
+   * [KoogPlanningEngine] does, reporting the reply it read.
    */
-  private class RawReplyingEngine(
-    private val reply: String,
-    private val readable: Boolean = true,
+  private class ReplyingEngine : PlanningEngine {
+    override val source: LogSource = LogSource.RemoteLLM
+
+    override suspend fun recommendTitle(synopsis: String, activityId: String): String {
+      val request = logRequest("SYSTEM\nTitle system\n\nUSER\n$synopsis")
+      val reply = "Mobile Menu Planner"
+      request?.responded(reply, reply)
+      return reply
+    }
+
+    override suspend fun generateQuestions(
+      title: String,
+      synopsis: String,
+      previousQuestions: List<Question>,
+      roundId: String,
+      phase: Phase,
+      activityId: String,
+    ): QuestionBatch = throw PlanningEngine.AnalysisFailure("not used")
+  }
+
+  /**
+   * The fan-out shape: a sub-request (today, a summarizing request) followed by
+   * the request the interaction is actually about — the one whose row the
+   * activity's headline reads.
+   */
+  private class SummarizingThenGenerating(
+    private val failSummary: Boolean = false,
   ) : PlanningEngine {
     override val source: LogSource = LogSource.RemoteLLM
 
     override suspend fun recommendTitle(synopsis: String, activityId: String): String =
-      reply.trim().also { publishRawResponse(it) }
+      throw PlanningEngine.AnalysisFailure("not used")
 
     override suspend fun generateQuestions(
       title: String,
@@ -323,17 +276,20 @@ class LoggingPlanningEngineTest {
       phase: Phase,
       activityId: String,
     ): QuestionBatch {
-      val text = reply.trim()
-      publishRawResponse(text)
-      if (!readable) {
-        throw PlanningEngine.AnalysisFailure(
-          "The model didn't reply with a JSON array of question strings",
-        )
+      val summary = logRequest("SYSTEM\nSummarize")
+      if (failSummary) {
+        summary?.failed("couldn't be read", "I am not able to help.")
+        throw PlanningEngine.AnalysisFailure("couldn't be read")
       }
-      return QuestionBatch(
-        questions = listOf(question("What is the MVP?", roundId)),
-        done = false,
+      summary?.responded("a summary of earlier answers", "the summarized text")
+
+      val request = logRequest("SYSTEM\nQuestions")
+      val batch = QuestionBatch(
+        listOf(question("one", roundId), question("two", roundId), question("three", roundId)),
+        false,
       )
+      request?.responded(batch.summary(), """["one","two","three"]""")
+      return batch
     }
   }
 }

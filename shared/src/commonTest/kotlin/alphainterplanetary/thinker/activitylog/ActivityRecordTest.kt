@@ -175,6 +175,28 @@ class ActivityRecordTest {
     assertEquals("No further questions generated", activity.summary)
   }
 
+  /**
+   * An interaction that fans out files a pair of rows per request, and the
+   * activity is read off the *last* one — so the request the activity is really
+   * about has to be filed last (the summarize-then-generate shape).
+   */
+  @Test
+  fun `a fan-out interaction summarizes off its last request`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "prompt: SYSTEM\nSummarize", LogCategory.QuestionGeneration),
+        entry(3, "task-1", "response: a summary of earlier answers", LogCategory.QuestionGeneration),
+        entry(4, "task-1", "prompt: SYSTEM\nQuestions", LogCategory.QuestionGeneration),
+        entry(5, "task-1", "response: 4 questions, done=false", LogCategory.QuestionGeneration),
+        entry(6, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Generated 4 questions", activity.summary)
+    assertEquals(6, activity.entries.size, "both pairs stay on the activity")
+  }
+
   @Test
   fun `a title recommendation summarizes the recommended title`() {
     val activity = titleActivity(

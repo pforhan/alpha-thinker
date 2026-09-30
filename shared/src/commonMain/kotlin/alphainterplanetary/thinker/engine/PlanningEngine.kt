@@ -20,6 +20,23 @@ data class QuestionBatch(
 )
 
 /**
+ * The log line for a produced batch: `N questions, done=<flag>`, then one line
+ * per question. Both writers of that row phrase it here — the request that
+ * generated it, and the [LoggingPlanningEngine] fallback for an engine that
+ * generated nothing — and the activity's collapsed headline parses the count
+ * off that same text, so the phrasing is one contract rather than two.
+ */
+fun QuestionBatch.summary(): String = buildString {
+  val count = questions.size
+  append(if (count == 1) "1 question" else "$count questions")
+  append(", done=$done")
+  questions.forEach { question ->
+    append("\n• ")
+    append(question.text)
+  }
+}
+
+/**
  * The unified contract for the engine that produces planning content — question
  * rounds and recommended titles. A [PlanningEngine] is invoked statelessly with
  * the project context it needs, so the same call shape works across every
@@ -44,6 +61,9 @@ data class QuestionBatch(
  * Each interaction is intended to be recorded on the engine activity log (see
  * ENG-DESIGN.md "Core Data Schema") so the System/Debug workspace can show what
  * ran, through which engine, and (for inference) any nested tool calls it made.
+ * An LLM-backed engine does that itself, one row pair per request, by reporting
+ * into the ambient [LogScope] its caller installed — it has no logger and no
+ * activity id of its own, and the seam is absent when it is called directly.
  *
  * [activityId] threads a generation task's id into every call so the
  * `LoggingPlanningEngine` decorator's interaction-detail rows group under the
@@ -74,23 +94,4 @@ interface PlanningEngine {
   ): QuestionBatch
 
   class AnalysisFailure(override val message: String) : Exception(message)
-}
-
-/**
- * Engines that can render the exact prompt text they send the backend for each
- * planning interaction. The `LoggingPlanningEngine` decorator asks its delegate
- * for this text and records it (prefixing the whole row with `prompt:`) on the
- * detail input row, so the Activity Log viewer can show the full prompt that
- * produced a result (or produced nothing, "why has it stopped"); engines that
- * don't render prompts (the hardcoded Lite engine) simply skip it.
- */
-interface PromptRenderer {
-  fun titlePrompt(synopsis: String): String
-
-  fun questionsPrompt(
-    title: String,
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-  ): String
 }

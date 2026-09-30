@@ -34,19 +34,19 @@ class LogContextTest {
   }
 
   @Test
-  fun `input prompt response and failure rows render their markers`() = runTest {
+  fun `prompt response and failure rows render their markers`() = runTest {
     val log = RecordingActivityLogger()
     val context = log.context("task-2", LogCategory.QuestionGeneration, LogSource.Lite)
 
-    context.input("phase=ScopeGoals, synopsis=S")
     context.prompt("SYSTEM\nTitle system")
+    context.prompt("SYSTEM\nQuestions system")
     context.response("3 questions, done=false")
     context.closeFailed("model exploded")
 
     assertEquals(
       listOf(
-        "input: phase=ScopeGoals, synopsis=S",
         "prompt: SYSTEM\nTitle system",
+        "prompt: SYSTEM\nQuestions system",
         "response: 3 questions, done=false",
         "failed: model exploded",
       ),
@@ -80,7 +80,7 @@ class LogContextTest {
     context.closeSucceeded()
 
     assertFailsWith<IllegalStateException> {
-      context.input("too late")
+      context.prompt("too late")
     }
     assertFailsWith<IllegalStateException> {
       context.closeFailed("double outcome")

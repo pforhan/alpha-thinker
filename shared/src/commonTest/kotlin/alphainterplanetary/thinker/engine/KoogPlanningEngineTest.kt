@@ -10,16 +10,20 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
+import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.util.now
 import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -208,17 +212,17 @@ class KoogPlanningEngineTest {
   }
 
   /**
-   * The raw reply is published before anything tries to read it, so the
-   * activity log keeps the text even on the generations that go on to fail —
-   * which is exactly the case where the message alone is undiagnosable.
+   * The engine's own log rows: the `prompt:` row is read back off the very
+   * Prompt the backend received, and the reply rides on the response row — so
+   * the text that couldn't be read survives the failure it caused.
    */
   @Test
-  fun `a reply is published verbatim whether or not it parses`() = runTest {
-    val unreadable = "I am not able to help with that request."
-    val captured = mutableListOf<String>()
+  fun `a request files the prompt it sent and the reply it read`() = runTest {
+    val client = FakeClient(provider, """["What is the MVP?"]""")
+    val log = RecordingActivityLogger()
 
-    val ok = capturingRawResponses({ captured += it }) {
-      engine(FakeClient(provider, """["What is the MVP?"]""")).generateQuestions(
+    logged(log) {
+      engine(client).generateQuestions(
         title = "T",
         synopsis = "S",
         previousQuestions = emptyList(),
@@ -227,10 +231,25 @@ class KoogPlanningEngineTest {
         activityId = "t1",
       )
     }
-    assertEquals(listOf("What is the MVP?"), ok.questions.map { it.text })
+
+    assertEquals(2, log.entries.size, "one prompt row, one response row")
+    val system = client.lastPrompt.messages.filterIsInstance<Message.System>().single()
+    val user = client.lastPrompt.messages.filterIsInstance<Message.User>().single()
+    assertEquals(
+      "prompt: SYSTEM\n${system.textContent()}\n\nUSER\n${user.textContent()}",
+      log.entries.first().log,
+    )
+    assertTrue(log.entries[1].log.startsWith("response: 1 question, done=false"))
+    assertEquals("""["What is the MVP?"]""", log.entries[1].raw)
+  }
+
+  @Test
+  fun `an unreadable reply is kept as the raw payload of its failed row`() = runTest {
+    val unreadable = "I am not able to help with that request."
+    val log = RecordingActivityLogger()
 
     try {
-      capturingRawResponses({ captured += it }) {
+      logged(log) {
         engine(FakeClient(provider, unreadable)).generateQuestions(
           title = "T",
           synopsis = "S",
@@ -245,23 +264,67 @@ class KoogPlanningEngineTest {
       assertTrue(e.message.orEmpty().contains("JSON array"))
     }
 
-    assertEquals(listOf("""["What is the MVP?"]""", unreadable), captured)
+    assertEquals(
+      "failed: The model didn't reply with a JSON array of question strings",
+      log.entries.last().log,
+    )
+    assertEquals(unreadable, log.entries.last().raw, "the reply is the only evidence")
   }
 
   @Test
-  fun `a blank reply publishes no raw payload`() = runTest {
-    val captured = mutableListOf<String>()
+  fun `a blank reply files no raw payload`() = runTest {
+    val log = RecordingActivityLogger()
 
     try {
-      capturingRawResponses({ captured += it }) {
-        engine(FakeClient(provider, "   ")).recommendTitle("something", activityId = "t1")
-      }
+      logged(log) { engine(FakeClient(provider, "   ")).recommendTitle("something", activityId = "t1") }
       fail("expected the empty title to fail")
     } catch (e: PlanningEngine.AnalysisFailure) {
       assertTrue(e.message.orEmpty().contains("empty title"))
     }
 
-    assertTrue(captured.isEmpty(), "there is nothing to show for an empty reply")
+    assertEquals("failed: The model returned an empty title", log.entries.last().log)
+    assertNull(log.entries.last().raw, "there is nothing to show for an empty reply")
+  }
+
+  @Test
+  fun `an executor failure files a failed row with no reply behind it`() = runTest {
+    val log = RecordingActivityLogger()
+
+    try {
+      logged(log) {
+        engine(ThrowingClient(provider)).generateQuestions(
+          title = "T",
+          synopsis = "S",
+          previousQuestions = emptyList(),
+          roundId = "r1",
+          phase = BuiltInPhase.Design,
+          activityId = "t1",
+        )
+      }
+      fail("expected the executor failure to propagate")
+    } catch (e: PlanningEngine.AnalysisFailure) {
+      assertEquals("model exploded", e.message)
+    }
+
+    assertEquals("failed: model exploded", log.entries.last().log)
+    assertNull(log.entries.last().raw)
+  }
+
+  /** Nothing observes an undecorated call, so the engine runs and records nothing. */
+  @Test
+  fun `an engine with no scope installed still produces its batch`() = runTest {
+    val client = FakeClient(provider, """["What is the MVP?"]""")
+
+    val batch = engine(client).generateQuestions(
+      title = "T",
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      roundId = "r1",
+      phase = BuiltInPhase.ScopeGoals,
+      activityId = "t1",
+    )
+
+    assertEquals(listOf("What is the MVP?"), batch.questions.map { it.text })
   }
 
   @Test
@@ -419,28 +482,35 @@ class KoogPlanningEngineTest {
     assertEquals(KoogPlanningEngine.PromptFollowUpQuestions, client.lastPrompt.id)
   }
 
+  /**
+   * The prompt row is the sent prompt: each message under its role, read off the
+   * Prompt that was built rather than rendered a second time from the same
+   * arguments, so a prompt that grows cannot drift from what was received.
+   */
   @Test
-  fun `the questions prompt renders the same user message the generation sends`() = runTest {
+  fun `the logged prompt is the prompt the request sent`() = runTest {
     val client = FakeClient(provider, """["A question"]""")
-    val engine = engine(client)
-    val previous = listOf(question("Already asked"))
+    val log = RecordingActivityLogger()
 
-    engine.generateQuestions(
-      title = "Menu Planner",
-      synopsis = "S",
-      previousQuestions = previous,
-      roundId = "r2",
-      phase = BuiltInPhase.ScopeGoals,
-      activityId = "t1",
-    )
+    logged(log) {
+      engine(client).generateQuestions(
+        title = "Menu Planner",
+        synopsis = "S",
+        previousQuestions = listOf(question("Already asked")),
+        roundId = "r2",
+        phase = BuiltInPhase.ScopeGoals,
+        activityId = "t1",
+      )
+    }
 
-    val messages = client.lastPrompt.messages
+    val sent = client.lastPrompt.messages
+    val system = sent.filterIsInstance<Message.System>().single()
+    val user = sent.filterIsInstance<Message.User>().single()
     assertEquals(
-      engine.questionsPrompt("Menu Planner", "S", previous, BuiltInPhase.ScopeGoals),
-      "SYSTEM\n${KoogPlanningEngine.QuestionsSystemPrompt}\n\nUSER\n" +
-        messages.last().textContent(),
-      "the rendered prompt and the one generation sends are the same text",
+      "prompt: SYSTEM\n${system.textContent()}\n\nUSER\n${user.textContent()}",
+      log.entries.first().log,
     )
+    assertTrue(user.textContent().contains("Menu Planner"))
   }
 
   @Test
@@ -464,6 +534,15 @@ class KoogPlanningEngineTest {
 
   private fun question(text: String): Question =
     Question(id = text, text = text, timestamp = now(), roundId = "r0")
+
+  /**
+   * Runs [block] with the interaction's log scope installed, the way the
+   * decorator does — the engine is not given a logger of its own.
+   */
+  private suspend fun <T> logged(log: RecordingActivityLogger, block: suspend () -> T): T =
+    withContext(LogScope { log.context("t1", LogCategory.QuestionGeneration, LogSource.RemoteLLM) }) {
+      block()
+    }
 
   /** A Koog [LLMClient] answering from a canned queue, capturing each built [Prompt]. */
 private class FakeClient(

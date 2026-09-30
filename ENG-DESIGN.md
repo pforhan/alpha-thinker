@@ -96,9 +96,10 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
         `RemoteLLM`.
     *   `log` (String — the durable text: lifecycle rows read
         `started:`/`succeeded`/`failed: <msg>`/`cancelled`; interaction rows
-        read `prompt:` (full rendered prompt) or `input:` plus a terminal
-        `response:`/`failed:` row. The bylines namespace its free-form text the
-        way the old typed per-event payload columns did.)
+        read a `prompt:` row (the prompt that was sent, verbatim) followed by
+        that request's terminal `response:`/`failed:` row. The bylines
+        namespace its free-form text the way the old typed per-event payload
+        columns did.)
     *   `timestamp` (Timestamp)
 
     **Read models are derived, never stored.** `ActivityRecord.groupByActivity()`
@@ -115,12 +116,20 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     `cancelled` on resolution, with `activityId = taskId`). A
     **`LoggingPlanningEngine` decorator** — wrapping whichever engine is
     active, exactly as `SlowDownPlanningEngine` wraps
-    `HardcodedPlanningEngine` — appends the interaction detail (an `input:` or
-    full `prompt:` row, then a terminal `response:` or `failed:` row). The task
+    `HardcodedPlanningEngine` — installs a **`LogScope`** coroutine-context
+    element for each interaction, and an LLM-backed engine reports into it from
+    its one request call site (`logRequest`): one `prompt:` row carrying the
+    prompt that was actually sent, then that request's terminal `response:` or
+    `failed:` row with the verbatim reply as its `raw` payload. One row pair per
+    request, so an interaction that fans out (a summarizing sub-request, a
+    multi-model request) files a pair for each — the primary request last, since
+    the activity's headline and batch count read the newest `response:` row. The
+    decorator's own terminal row is the fallback for an engine that reported no
+    request at all (the hardcoded Lite engine never speaks to a model). The task
     body passes its `taskId` into the engine call as `activityId` (the
     `PlanningEngine` methods carry a required `activityId: String` with no
     defaults, so every call is attributed to its originating generation task by
-    construction), so the decorator's detail groups under the same activity as
+    construction), so the interaction's rows group under the same activity as
     the lifecycle rows. `ProjectRepository` and the engines are pure producers
     — neither writes the log.
 

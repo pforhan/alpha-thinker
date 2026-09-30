@@ -73,7 +73,14 @@ object LogMarkers {
   /** A cancellation terminal (`cancelled`). */
   const val Cancelled = "cancelled"
 
-  /** A compact non-rendered summary of what was sent, e.g. `input: synopsis=…`. */
+  /**
+   * A compact summary of what was sent, e.g. `input: phase=…, previous=2`.
+   *
+   * Unused by the current writers — a request that sends anything files the
+   * prompt itself, and an engine that never speaks to a model has nothing to
+   * summarize. It stays in the vocabulary because a persisted log can still
+   * carry these rows, and the read model must not choke on them.
+   */
   const val Input = "input:"
 
   /** A rendered prompt, verbatim. */

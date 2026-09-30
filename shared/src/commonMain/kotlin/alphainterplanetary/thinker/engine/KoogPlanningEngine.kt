@@ -1,8 +1,9 @@
 package alphainterplanetary.thinker.engine
 
-import ai.koog.prompt.dsl.PromptBuilder
+import ai.koog.prompt.Prompt
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
+import ai.koog.prompt.message.Message
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOutcome
@@ -28,36 +29,33 @@ import kotlin.time.Instant
  * recovered (see [parseQuestions]). A well-formed empty array reports `done` —
  * the LLM's "nothing more to produce" signal.
  *
- * Every reply is published verbatim through [publishRawResponse] before
- * anything tries to read it, so the activity log keeps the text even when the
- * generation goes on to fail — the failing message alone says what went wrong,
- * not what the model actually said.
+ * Each request is built once and reported into the ambient [LogScope] as it is
+ * sent ([logRequest]), so the `prompt:` row is read back off the very [Prompt]
+ * the backend received and the reply is filed verbatim on that request's own
+ * outcome row — including the ones we could not read, where the failing message
+ * alone says what went wrong and not what the model actually said.
  */
 class KoogPlanningEngine(
   private val backend: KoogPlanningBackend,
-) : PlanningEngine, PromptRenderer {
+) : PlanningEngine {
 
   override val source: LogSource
     get() = backend.source
 
-  override fun titlePrompt(synopsis: String): String =
-    render(TitleSystemPrompt, titleUserPrompt(synopsis))
-
-  override fun questionsPrompt(
-    title: String,
-    synopsis: String,
-    previousQuestions: List<Question>,
-    phase: Phase,
-  ): String = render(QuestionsSystemPrompt, questionsUserPrompt(title, synopsis, phase, previousQuestions))
-
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
-    val text = ask(PromptRecommendTitle) {
+    val built = prompt(PromptRecommendTitle) {
       system(TitleSystemPrompt)
       user(titleUserPrompt(synopsis))
     }
-    return text.ifEmpty {
-      throw PlanningEngine.AnalysisFailure("The model returned an empty title")
+    val request = logRequest(built.asLogText())
+    val text = send(built, request)
+    if (text.isEmpty()) {
+      val message = "The model returned an empty title"
+      request?.failed(message, text)
+      throw PlanningEngine.AnalysisFailure(message)
     }
+    request?.responded(text, text)
+    return text
   }
 
   override suspend fun generateQuestions(
@@ -73,25 +71,36 @@ class KoogPlanningEngine(
     // the prompt id alone, where it separates their traces for free.
     val promptId =
       if (previousQuestions.isEmpty()) PromptInitialQuestions else PromptFollowUpQuestions
-    val text = ask(promptId) {
+    val built = prompt(promptId) {
       system(QuestionsSystemPrompt)
       user(questionsUserPrompt(title, synopsis, phase, previousQuestions))
     }
-    return batch(parseQuestions(text), roundId)
+    val request = logRequest(built.asLogText())
+    val text = send(built, request)
+    val batch = try {
+      batch(parseQuestions(text), roundId)
+    } catch (e: Exception) {
+      request?.failed(e.message ?: e.toString(), text)
+      throw e
+    }
+    request?.responded(batch.summary(), text)
+    return batch
   }
 
-  private fun render(system: String, user: String): String =
-    "SYSTEM\n$system\n\nUSER\n$user"
-
-  private suspend fun ask(promptId: String, content: PromptBuilder.() -> Unit): String {
-    val assistant = try {
-      backend.executor.execute(prompt(promptId) { content() }, backend.model)
-    } catch (e: CancellationException) {
-      throw e
-    } catch (e: Exception) {
-      throw PlanningEngine.AnalysisFailure(e.message ?: e.toString())
-    }
-    return assistant.textContent().trim().also { publishRawResponse(it) }
+  /**
+   * The model's verbatim reply to [built], or the failure it raised — which
+   * [request] has already recorded, since a send that never got a reply is
+   * exactly the case whose row would otherwise stand empty.
+   */
+  private suspend fun send(built: Prompt, request: LogRequest?): String = try {
+    backend.executor.execute(built, backend.model).textContent().trim()
+  } catch (e: CancellationException) {
+    request?.cancelled()
+    throw e
+  } catch (e: Exception) {
+    val message = e.message ?: e.toString()
+    request?.failed(message)
+    throw PlanningEngine.AnalysisFailure(message)
   }
 
   /**
@@ -139,6 +148,16 @@ class KoogPlanningEngine(
       ?.map { it.trim() }
       ?.filter { it.isNotEmpty() }
   }
+
+  /**
+   * A built prompt as one log row: each message under its role. Reading it off
+   * the [Prompt] rather than re-rendering its arguments is the whole point —
+   * the row and the request cannot drift apart, however the prompt grows.
+   */
+  private fun Prompt.asLogText(): String =
+    messages.joinToString("\n\n") { message ->
+      "${message.role()}\n${message.textContent()}"
+    }
 
   companion object {
     const val DraftCount: Int = 5
@@ -196,5 +215,16 @@ class KoogPlanningEngine(
         "Propose exactly $DraftCount new questions for this phase. Go deeper on what has been " +
         "answered, and leave the rest of the interview alone."
   }
+}
+
+/**
+ * The role a prompt message is logged under, e.g. `SYSTEM` (see `asLogText`).
+ * Exhaustive on purpose: a new Koog message type has to say how it reads in the
+ * log rather than fall through to a placeholder.
+ */
+private fun Message.role(): String = when (this) {
+  is Message.System -> "SYSTEM"
+  is Message.User -> "USER"
+  is Message.Assistant -> "ASSISTANT"
 }
 
