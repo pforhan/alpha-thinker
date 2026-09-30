@@ -75,12 +75,6 @@ object PlanningContext {
    * The token budget for a [contextWindowTokens]-sized window: what the
    * interview is allowed to occupy, and the point at which the user is asked
    * what to do about the overflow.
-   *
-   * There is one number because there is one thing to respect. An earlier shape
-   * offered the ceiling as a share of the window and a second, nested band
-   * below it for when to ask; with the ceiling pinned at
-   * [TranscriptSharePercent] the band was the ceiling, so the setting the user
-   * was asked to tune was a dial on a number that does not change.
    */
   fun budgetTokens(contextWindowTokens: Int): Int =
     (contextWindowTokens * TranscriptSharePercent).coerceAtLeast(0) / 100
