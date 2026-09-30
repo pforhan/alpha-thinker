@@ -281,15 +281,23 @@ observable background task.
   `setProgress(taskId, progress)` and folded into the terminal publish, so a
   body reporting progress mid-run keeps it after completion.
 - **Scheduling is per-resource-group, not global-serial.** Each task declares a
-  `TaskGroup` (defaulting to `TaskKind.group`): `Engine` (concurrency 1 — the
-  local planning engine is a single shared resource, so its tasks stay FIFO
-  serial and a title recommendation always lands before the question batch that
-  reads the project) vs `Remote` (bounded parallelism for independent remote
-  calls — remote LLM, HTTP lookups). On top of the group limit, tasks for the
-  **same project never run concurrently** — bodies re-read and re-persist the
-  whole `Project` aggregate, so two writers for one project would clobber each
-  other; parallelism is safe across projects and for read-only checks like
-  `RemainingInPhase`.
+  `TaskGroup` (defaulting to `TaskKind.group`): `Engine` (concurrency 1 — a
+  planning-engine call, whatever backend serves it) vs `Remote` (bounded
+  parallelism for independent remote calls — remote LLM, HTTP lookups). The group
+  names the subsystem, not where it runs: a remote-inference engine's tasks also
+  land in `Engine`, so the limit of 1 is a conservative policy, not a hardware
+  constraint, and it serializes engine work across *all* projects. Deriving the
+  group from the engine a call site resolved (rather than from `TaskKind`) is the
+  open improvement. On top of the group limit, tasks for the **same project never
+  run concurrently** — bodies re-read and re-persist the whole `Project`
+  aggregate, so two writers for one project would clobber each other; parallelism
+  is safe across projects and for read-only checks like `RemainingInPhase`.
+- **Inter-task ordering is by enqueue order, not by dependency.** A title
+  recommendation is enqueued ahead of the question batch that reads the title, so
+  it normally lands first, but the two are independent coroutines and either can
+  reach the gate first on a multi-threaded dispatcher. The runner does not encode
+  "task B needs task A's output"; a body that depends on another task's result has
+  to wait on it explicitly.
 - Cancellation is intentionally coarse for now: `CancellationException` marks
   the task `Failed` with "Task cancelled" (policy refines when background
   notification lands, IMPLEMENTATION-PLAN.md Phase 3). Writes are always

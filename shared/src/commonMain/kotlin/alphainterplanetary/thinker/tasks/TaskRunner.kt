@@ -27,12 +27,18 @@ import kotlin.coroutines.cancellation.CancellationException
  * launched coroutine.
  *
  * Bodies are scheduled by **resource group** ([ConcurrencyGroup], defaulting to the
- * task's [TaskKind.group]): engine work is a single shared resource and
- * serializes (limit 1, FIFO in enqueue order), while remote groups run with
- * bounded parallelism. Grouping is a scheduling policy, not a fixed property
- * of a run — a title recommendation and the initial batch both run in the
- * serial engine group, so a recommendation another task's output depends on
- * (the title before the batch reads the project) is guaranteed to land first.
+ * task's [TaskKind.group]): engine work serializes (limit 1, FIFO among tasks
+ * already at the gate), while remote groups run with bounded parallelism.
+ * Grouping is a scheduling policy, not a fixed property of a run.
+ *
+ * Ordering between tasks is a property of *enqueue order*, not of grouping: a
+ * title recommendation and the initial batch both land in the serial engine
+ * group, so the recommendation is enqueued first and normally lands first. That
+ * is a convention, not a dependency the runner enforces — the recommendation and
+ * the batch that reads the title are launched as independent coroutines, so on a
+ * multi-threaded dispatcher either can reach the gate first. A body that must
+ * observe another task's output has to say so (wait on it, or fold the work into
+ * its own body) rather than rely on enqueue order.
  *
  * On top of the group limit, tasks for the **same project never run
  * concurrently**: task bodies re-read and re-persist the whole `Project`

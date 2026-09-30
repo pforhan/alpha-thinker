@@ -26,9 +26,11 @@ enum class TaskKind {
 
   /**
    * The resource group this kind lands in by default ([TaskRunner] schedules
-   * against [ConcurrencyGroup]). Every current kind drives the shared local planning
-   * engine and stays serial; a future remote-engine kind (e.g. `Lookup`)
-   * opts into [ConcurrencyGroup.Remote] here so it runs in parallel.
+   * against [ConcurrencyGroup]). Every current kind drives the planning engine
+   * and stays serial; a future kind that doesn't (e.g. `Lookup`) opts into
+   * [ConcurrencyGroup.Remote] here so it runs in parallel, or a call site passes
+   * an explicit group to [TaskRunner.enqueue] instead. This is a per-kind
+   * default, not a statement about where the engine runs — see [ConcurrencyGroup].
    */
   val group: ConcurrencyGroup
     get() = when (this) {

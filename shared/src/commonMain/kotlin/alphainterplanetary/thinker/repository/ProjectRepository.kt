@@ -36,9 +36,12 @@ class ProjectRepository @Inject constructor(
   /**
    * Persists the project shell immediately and returns it. When no [title] is
    * supplied, the shell ships with an empty title and a [TaskKind.TitleRecommendation]
-   * task fills it in from the synopsis — the title and batch both run in the
-   * serial engine group ([TaskKind.group]), so the title lands before the
-   * [TaskKind.QuestionGeneration] batch reads the project.
+   * task fills it in from the synopsis. That task is enqueued *before* the
+   * [TaskKind.QuestionGeneration] batch, which reads the title, so the
+   * recommendation normally lands first — but nothing in the runner orders the
+   * two, and on a multi-threaded dispatcher the batch can win the race and
+   * generate against an empty title. Treat the title as best-effort for this
+   * batch, not as a precondition it may rely on.
    */
   suspend fun createProject(synopsis: String, title: String? = null): Project {
     val now = now()
