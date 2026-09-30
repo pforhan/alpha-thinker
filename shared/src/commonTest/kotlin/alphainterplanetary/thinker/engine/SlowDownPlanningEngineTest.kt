@@ -156,6 +156,8 @@ class SlowDownPlanningEngineTest {
 private class TrackingPlanningEngine(
   override val source: LogSource = LogSource.Lite,
 ) : PlanningEngine {
+  override val contextWindowTokens: Int? = 8192
+
   var titleCalls: Int = 0
   var questionCalls: Int = 0
 
@@ -173,6 +175,7 @@ private class TrackingPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
+    priorSummaries: List<PlanningContext.PhaseSummary>,
   ): QuestionBatch {
     questionCalls++
     return QuestionBatch(emptyList(), done = true)

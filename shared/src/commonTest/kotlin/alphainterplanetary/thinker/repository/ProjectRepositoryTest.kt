@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.QuestionBatch
@@ -161,6 +162,7 @@ class ProjectRepositoryTest {
   fun `createProject keeps the shell when initial generation fails`() = runTest {
     val failing = object : PlanningEngine {
       override val source: LogSource = LogSource.Lite
+      override val contextWindowTokens: Int? = 8192
 
       override suspend fun recommendTitle(synopsis: String, activityId: String): String = "Title"
 
@@ -171,6 +173,7 @@ class ProjectRepositoryTest {
         roundId: String,
         phase: Phase,
         activityId: String,
+        priorSummaries: List<PlanningContext.PhaseSummary>,
       ): QuestionBatch {
         throw PlanningEngine.AnalysisFailure("no model")
       }
@@ -739,7 +742,7 @@ class ProjectRepositoryTest {
       ),
     )
     val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
-    settings.setContextBudgetTokens(500)
+    budgetedFor(generator, 500)
     val runner = TaskRunner(CoroutineScope(coroutineContext), log)
     val repository = repo(
       storage = storage,
@@ -830,10 +833,10 @@ class ProjectRepositoryTest {
       ),
     )
     val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
-    settings.setContextBudgetTokens(500)
     val generator = FakePlanningEngine().apply {
       generationFailure = RuntimeException("model exploded")
     }
+    budgetedFor(generator, 500)
     val runner = TaskRunner(CoroutineScope(coroutineContext), log)
     val repository = repo(
       storage = storage,
@@ -861,6 +864,290 @@ class ProjectRepositoryTest {
     assertTrue(
       log.entries.take(3).all { it.activityId == activityId },
       "the note joins the failed task's activity",
+    )
+  }
+
+  // ---------- the near-limit check and the summarize choice ----------
+
+  /**
+   * The check is what the dialog is built from, so it has to describe the
+   * project the user is looking at: what it would cost to send, and what each
+   * of the choices would give up.
+   */
+  @Test
+  fun `checkContext describes the project against its budget`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    val generator = FakePlanningEngine()
+    budgetedFor(generator, 500)
+    val repository = repo(storage = storage, generator = generator, settings = settings)
+
+    val check = repository.checkContext("p1")
+
+    assertNotNull(check)
+    assertEquals(556, check.windowTokens, "the window is the model's, as configured")
+    assertEquals(500, check.budgetTokens, "the budget is the transcript's share of it")
+    assertTrue(check.estimatedTokens > 500, "the fixture overruns the budget it is given")
+    assertTrue(check.nearLimit, "over the budget is always worth asking about")
+    assertEquals(2, check.droppableAnswers, "both past phases' answers have to go")
+    assertEquals(
+      listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research),
+      check.summarizablePhases,
+      "the past phases, oldest first — the units a summary would be written from",
+    )
+  }
+
+  /** A small project is nobody's problem, and nobody gets interrupted for it. */
+  @Test
+  fun `checkContext leaves a small project under the budget`() = runTest {
+    val storage = FakeStorage(
+      mutableMapOf(
+        "p1" to Project(
+          id = "p1",
+          synopsis = "s",
+          editableTitle = "t",
+          status = "Draft",
+          questions = listOf(question("q1", "A short question?")),
+          rounds = listOf(round("r1", phase = BuiltInPhase.ScopeGoals)),
+          createdAt = now,
+          updatedAt = now,
+        ),
+      )
+    )
+    val repository = repo(storage = storage)
+
+    val check = repository.checkContext("p1")
+
+    assertNotNull(check)
+    assertFalse(check.nearLimit)
+    assertFalse(check.canSummarize, "there is no past phase to summarize")
+  }
+
+  /**
+   * The summarize choice is only offered to an engine that can carry it out:
+   * a Lite engine draws fixed strings from a pool and has no way to condense
+   * anything, so offering it would be offering a failure.
+   */
+  @Test
+  fun `checkContext only offers summarizing to an engine that can do it`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+
+    val lite = repo(storage = storage).checkContext("p1")
+    assertNotNull(lite)
+    assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), lite.summarizablePhases)
+    assertFalse(lite.canSummarize)
+
+    val llm = repo(storage = storage, generator = FakePlanningEngine().apply {
+      canSummarize = true
+    }).checkContext("p1")
+    assertNotNull(llm)
+    assertTrue(llm.canSummarize)
+  }
+
+  @Test
+  fun `checkContext is null for a project that is gone`() = runTest {
+    assertNull(repo().checkContext("nope"))
+  }
+
+  /**
+   * The summarize loop: the oldest full phase first, re-measured after each
+   * one, and only as many as it takes. A project that fits after one summary
+   * spends exactly one model call, and the summary — not the verbatim answer —
+   * is what the question prompt receives for that phase.
+   */
+  @Test
+  fun `the summarize choice condenses the oldest phase and stops once it fits`() = runTest {
+    val generator = FakePlanningEngine().apply {
+      canSummarize = true
+      summaries[BuiltInPhase.ScopeGoals] = "A menu planner for home cooks."
+    }
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    budgetedFor(generator, 1000)
+    val repository = repo(storage = storage, generator = generator, settings = settings)
+
+    repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(
+      listOf(BuiltInPhase.ScopeGoals),
+      generator.summarizeCalls.map { it.phase },
+      "the oldest phase goes first, and one summary is enough to fit here",
+    )
+    val summary = generator.summarizeCalls.single()
+    assertEquals("t", summary.editableTitle)
+    assertEquals("s", summary.synopsis)
+    assertTrue(
+      summary.transcript.contains(PhasedAnswerText),
+      "the phase is summarized from the transcript the model would have been sent",
+    )
+    assertEquals(
+      1,
+      generator.calls.size,
+      "one batch — the summarize request is not a question round",
+    )
+  }
+
+  /**
+   * The summary replaces the phase's answers in the prompt rather than being
+   * appended to them: the point is to stop paying for the verbatim text.
+   */
+  @Test
+  fun `a summarized phase's answers are compacted away for the prompt`() = runTest {
+    val generator = FakePlanningEngine().apply { canSummarize = true }
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    budgetedFor(generator, 2000)
+    val repository = repo(storage = storage, generator = generator, settings = settings)
+
+    repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
+    testScheduler.advanceUntilIdle()
+
+    val call = generator.calls.single()
+    val handedOver = call.previousQuestions.associateBy { it.id }
+    assertTrue(handedOver.getValue("q1").compacted, "the summarized phase's answer is gone")
+    assertTrue(handedOver.getValue("q2").isAnswered, "the next phase is still verbatim")
+    assertEquals(
+      listOf(BuiltInPhase.ScopeGoals),
+      call.priorSummaries.map { it.phase },
+    )
+    assertEquals(setOf("q1"), call.priorSummaries.single().coversQuestionIds)
+    assertEquals("Summary of Scope & Goals", call.priorSummaries.single().summary)
+    assertTrue(
+      storage.getProject("p1")!!.questions.all { it.isAnswered },
+      "compaction is a rendering concern; the project keeps its answers",
+    )
+  }
+
+  /** A project far over budget keeps going: one phase per request, oldest first. */
+  @Test
+  fun `the summarize choice keeps going until the transcript fits`() = runTest {
+    val generator = FakePlanningEngine().apply { canSummarize = true }
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    budgetedFor(generator, 500)
+    val repository = repo(storage = storage, generator = generator, settings = settings)
+
+    repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(
+      listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research),
+      generator.summarizeCalls.map { it.phase },
+      "both past phases, oldest first — one summary still wasn't enough",
+    )
+    assertEquals(2, generator.calls.single().priorSummaries.size)
+  }
+
+  /**
+   * The current phase is never summarized: it is what the round is being asked
+   * about, and there is no question after this one to protect it from.
+   */
+  @Test
+  fun `the summarize choice never reaches the phase in progress`() = runTest {
+    val generator = FakePlanningEngine().apply { canSummarize = true }
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    budgetedFor(generator, 500)
+    val repository = repo(storage = storage, generator = generator, settings = settings)
+
+    repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
+    testScheduler.advanceUntilIdle()
+
+    assertFalse(
+      generator.summarizeCalls.any { it.phase == BuiltInPhase.Design },
+      "the live phase's answers are not a candidate",
+    )
+    assertTrue(
+      generator.calls.single().previousQuestions.first { it.id == "q3" }.isAnswered,
+      "and it survives a budget nothing could fit",
+    )
+  }
+
+  /**
+   * Every model request files its own rows under the generation's activity, so
+   * a compaction that took three requests is three prompt/response pairs —
+   * visible in the log, and with the batch last, because that is the pair the
+   * activity's headline reads.
+   */
+  @Test
+  fun `each summarized phase is recorded on the task's activity`() = runTest {
+    val generator = FakePlanningEngine().apply { canSummarize = true }
+    val log = RecordingActivityLogger()
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    budgetedFor(generator, 500)
+    val runner = TaskRunner(CoroutineScope(coroutineContext), log)
+    val repository = repo(
+      storage = storage,
+      generator = generator,
+      runner = runner,
+      settings = settings,
+      activityLogger = log,
+    )
+
+    repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
+    testScheduler.advanceUntilIdle()
+
+    val notes = log.entries.filter { it.log.startsWith("context compacted") }
+    assertEquals(2, notes.size, "one note per phase, not one per generation")
+    assertTrue(notes.all { it.log.contains("Scope & Goals summarized") || it.log.contains("Research summarized") })
+    assertTrue(notes.all { it.log.contains("1 answer replaced") }, notes.joinToString(" | "))
+    val activityId = log.entries.first { it.log.startsWith("started:") }.activityId
+    assertTrue(notes.all { it.activityId == activityId }, "the notes join the task's activity")
+  }
+
+  /**
+   * "Keep everything" is a real answer, not a no-op: the budget is a guard rail
+   * and the user is allowed to say no to it.
+   */
+  @Test
+  fun `keeping everything hands the engine the whole interview`() = runTest {
+    val generator = FakePlanningEngine()
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    budgetedFor(generator, 500)
+    val repository = repo(storage = storage, generator = generator, settings = settings)
+
+    repository.generateMoreQuestions("p1", ContextCompaction.KeepEverything)
+    testScheduler.advanceUntilIdle()
+
+    val call = generator.calls.single()
+    assertEquals(listOf("q1", "q2", "q3"), call.previousQuestions.map { it.id })
+    assertTrue(call.previousQuestions.all { it.isAnswered })
+    assertEquals(emptyList(), call.priorSummaries)
+  }
+
+  /**
+   * A wrap-up advance carries the same choice as "Get more questions" — and it
+   * is the moment the phase being left behind joins the summarizable ones, so
+   * the choice reaches the generation rather than the check.
+   */
+  @Test
+  fun `the summarize choice follows a phase advance`() = runTest {
+    val generator = FakePlanningEngine().apply { canSummarize = true }
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    budgetedFor(generator, 500)
+    val repository = repo(storage = storage, generator = generator, settings = settings)
+
+    repository.advanceToPhase(
+      "p1",
+      BuiltInPhase.ExecutionPlan,
+      ContextCompaction.SummarizeEarlierPhases,
+    )
+    testScheduler.advanceUntilIdle()
+
+    val call = generator.calls.single()
+    assertEquals(BuiltInPhase.ExecutionPlan, call.phase)
+    assertEquals(
+      listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research),
+      call.priorSummaries.map { it.phase },
+      "the past phases are condensed on the way into the new one",
+    )
+    assertEquals(
+      BuiltInPhase.ScopeGoals,
+      repository.checkContext("p1")?.summarizablePhases?.first(),
     )
   }
 
@@ -915,6 +1202,48 @@ class ProjectRepositoryTest {
     createdAt = now,
     updatedAt = now,
   )
+
+  /**
+   * A project three phases in, each with a long answer, so the near-limit paths
+   * have something to bite on. The two long answers are 2000 characters — a
+   * little over 500 tokens each — so the smallest budget the settings offer
+   * (500) has to drop both, and the current phase's short answer is the one
+   * thing no budget can reach.
+   */
+  private fun phasedProject(): Project = Project(
+    id = "p1",
+    synopsis = "s",
+    editableTitle = "t",
+    status = "Draft",
+    questions = listOf(
+      question("q1", "Q1?", answers = listOf(answer("q1", PhasedAnswerText, id = "a1")), roundId = "r1"),
+      question("q2", "Q2?", answers = listOf(answer("q2", PhasedAnswerText, id = "a2")), roundId = "r2"),
+      question("q3", "Q3?", answers = listOf(answer("q3", "short", id = "a3")), roundId = "r3"),
+    ),
+    rounds = listOf(
+      round("r1", phase = BuiltInPhase.ScopeGoals, completedAt = now),
+      round("r2", phase = BuiltInPhase.Research, completedAt = now),
+      round("r3", phase = BuiltInPhase.Design),
+    ),
+    createdAt = now,
+    updatedAt = now,
+  )
+
+  /** 2000 characters, so each of the two long answers renders to about 500 tokens. */
+  private val PhasedAnswerText: String = "word ".repeat(400)
+
+  /**
+   * Budget plumbing for the compaction tests: the window [generator] reports is
+   * the only input, and the budget is a fixed [PlanningContext.TranscriptSharePercent]
+   * of it — so a window a hundred tokens over the wanted budget gives a budget a
+   * hair under it, which keeps the assertions written in token counts.
+   */
+  private fun budgetedFor(generator: FakePlanningEngine, budgetTokens: Int) {
+    val share = PlanningContext.TranscriptSharePercent
+    // Rounded up, so the window resolves to at least the budget asked for
+    // rather than a token short of it.
+    generator.contextWindowTokens = (budgetTokens * 100 + share - 1) / share
+  }
 
   @Test
   fun `questions with done false latch MoreAvailable and leave the phase open`() = runTest {
@@ -1600,5 +1929,78 @@ class ProjectRepositoryTest {
     assertTrue(markdown.contains("### Q: What is it?"))
     assertTrue(markdown.contains("| **Answer:** | A thing |"))
     assertTrue(markdown.contains("|**Status:** | unanswered |"))
+  }
+
+  // ---------- engines that never read the transcript ----------
+
+  /**
+   * The Lite engine serves fixed strings from a pool and composes no prompt, so
+   * it has no window to fill: an over-long project is not near any limit, and
+   * none of the three choices are on the table.
+   */
+  @Test
+  fun `an engine with no context window is never near the limit`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val repository = repo(
+      storage = storage,
+      generator = FakePlanningEngine().apply { contextWindowTokens = null },
+    )
+
+    val check = repository.checkContext("p1")
+
+    assertNotNull(check)
+    assertFalse(check.nearLimit, "there is no window to fill, so there is nothing to ask about")
+    assertEquals(0, check.droppableAnswers)
+    assertEquals(emptyList(), check.summarizablePhases)
+    assertFalse(check.canSummarize, "nothing to summarize, since nothing is read to summarize")
+    assertTrue(check.estimatedTokens > 500, "the transcript is still measured; it just doesn't bind")
+  }
+
+  /**
+   * The other half of the same fact: the generation runs with the project
+   * whole. Compacting here would drop answers the engine discards, and would
+   * file a "context compacted" note about a loss that never reached a model.
+   */
+  @Test
+  fun `an engine with no context window is handed the project whole`() = runTest {
+    val log = RecordingActivityLogger()
+    val generator = FakePlanningEngine().apply { contextWindowTokens = null }
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    val repository = repo(
+      storage = storage,
+      generator = generator,
+      settings = settings,
+      activityLogger = log,
+    )
+
+    repository.generateMoreQuestions("p1")
+    testScheduler.advanceUntilIdle()
+
+    val call = generator.calls.single()
+    assertTrue(call.previousQuestions.all { it.isAnswered }, "no answer was dropped for nothing")
+    assertEquals(emptyList(), call.priorSummaries)
+    assertTrue(
+      log.entries.none { it.log.startsWith("context compacted") },
+      "a compaction the engine never saw is not a compaction",
+    )
+  }
+
+  /**
+   * Even an explicit summarize request falls flat: the engine is handed the
+   * project untouched and spends no model call on a summary nobody would read.
+   */
+  @Test
+  fun `an engine with no context window is never asked to summarize`() = runTest {
+    val generator = FakePlanningEngine().apply { contextWindowTokens = null }
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
+    val repository = repo(storage = storage, generator = generator, settings = settings)
+
+    repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(emptyList(), generator.summarizeCalls)
+    assertTrue(generator.calls.single().previousQuestions.all { it.isAnswered })
   }
 }

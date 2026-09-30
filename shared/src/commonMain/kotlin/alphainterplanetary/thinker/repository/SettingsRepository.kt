@@ -6,7 +6,6 @@ import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
-import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,17 +51,20 @@ class SettingsRepository @Inject constructor(
   private val _remoteLlmModel = MutableStateFlow(DefaultRemoteLlmModel)
   val remoteLlmModel: StateFlow<String> = _remoteLlmModel.asStateFlow()
 
+  /**
+   * The context window declared for [remoteLlmModel].
+   *
+   * A model named in a settings field is a bare id with no metadata attached, so
+   * unlike a registry-known model its window cannot be read off anything — this
+   * is the number the app budgets against, resolved into the same
+   * `LLModel.contextLength` a Koog-catalogued model would already carry.
+   */
+  private val _remoteLlmContextTokens =
+    MutableStateFlow(DefaultRemoteLlmContextTokens)
+  val remoteLlmContextTokens: StateFlow<Int> = _remoteLlmContextTokens.asStateFlow()
+
   private val _engineDelay = MutableStateFlow(EngineDelayConfig.Default)
   val engineDelay: StateFlow<EngineDelayConfig> = _engineDelay.asStateFlow()
-
-  /**
-   * The token budget a generation prompt's planning transcript is trimmed to
-   * before it is sent (see [alphainterplanetary.thinker.engine.PlanningContext]).
-   * Read by `ProjectRepository` as it builds each generation's context, so
-   * changing it here affects the next round without any other wiring.
-   */
-  private val _contextBudgetTokens = MutableStateFlow(PlanningContext.DefaultBudgetTokens)
-  val contextBudgetTokens: StateFlow<Int> = _contextBudgetTokens.asStateFlow()
 
   /**
    * The newest failure activity already raised for the user, or null when none
@@ -117,6 +119,16 @@ class SettingsRepository @Inject constructor(
       }
     }
     scope.launch {
+      val stored = storage.getSetting(
+        SettingsKey.RemoteLlmContextTokens,
+        DefaultRemoteLlmContextTokens.toString(),
+      ).toIntOrNull()
+      val loaded = stored?.takeIf { it > 0 } ?: DefaultRemoteLlmContextTokens
+      if (_remoteLlmContextTokens.value == DefaultRemoteLlmContextTokens) {
+        _remoteLlmContextTokens.value = loaded
+      }
+    }
+    scope.launch {
       val enabled = storage.getSetting(SettingsKey.SlowDownPlanningEngine, "false").toBoolean()
       val loadedSeconds = EngineInteraction.entries.associateWith { interaction ->
         loadDelaySeconds(interaction)
@@ -135,17 +147,6 @@ class SettingsRepository @Inject constructor(
             }
           },
         )
-      }
-    }
-    scope.launch {
-      val stored = storage.getSetting(
-        SettingsKey.ContextBudgetTokens,
-        PlanningContext.DefaultBudgetTokens.toString(),
-      ).toIntOrNull()
-      val loaded = stored.takeIf { it in PlanningContext.BudgetOptionsTokens }
-        ?: PlanningContext.DefaultBudgetTokens
-      if (_contextBudgetTokens.value == PlanningContext.DefaultBudgetTokens) {
-        _contextBudgetTokens.value = loaded
       }
     }
     scope.launch {
@@ -203,6 +204,20 @@ class SettingsRepository @Inject constructor(
     }
   }
 
+  /**
+   * Sets the context window declared for the remote model. Must be positive: a
+   * window of zero would resolve the budget to zero and compact every answer
+   * in every round, which is a configuration nobody means.
+   */
+  fun setRemoteLlmContextTokens(tokens: Int) {
+    require(tokens > 0) { "a model context window must be positive: $tokens" }
+    if (_remoteLlmContextTokens.value == tokens) return
+    _remoteLlmContextTokens.value = tokens
+    scope.launch {
+      storage.saveSetting(SettingsKey.RemoteLlmContextTokens, tokens.toString())
+    }
+  }
+
   /** Turns the artificial PlanningEngine slow-down on or off for Task Manager testing. */
   fun setEngineDelayEnabled(enabled: Boolean) {
     if (enabled == _engineDelay.value.enabled) return
@@ -223,22 +238,6 @@ class SettingsRepository @Inject constructor(
     }
     scope.launch {
       storage.saveSetting(interaction.settingsKey, seconds.toString())
-    }
-  }
-
-  /**
-   * Sets the token budget a generation prompt's planning transcript is trimmed
-   * to. Only the offered budgets are accepted, so the stored value always
-   * round-trips to a picker chip.
-   */
-  fun setContextBudgetTokens(tokens: Int) {
-    require(tokens in PlanningContext.BudgetOptionsTokens) {
-      "unsupported context budget: $tokens tokens"
-    }
-    if (_contextBudgetTokens.value == tokens) return
-    _contextBudgetTokens.value = tokens
-    scope.launch {
-      storage.saveSetting(SettingsKey.ContextBudgetTokens, tokens.toString())
     }
   }
 
@@ -277,5 +276,18 @@ class SettingsRepository @Inject constructor(
 
     /** The default model a fresh Ollama install exposes over that endpoint. */
     const val DefaultRemoteLlmModel: String = "llama3.2:latest"
+
+    /**
+     * The window assumed for a user-named OpenAI-compatible model.
+     *
+     * A model id typed into a settings field carries no metadata, so unlike a
+     * registry-known model its window cannot be read — it has to be declared.
+     * The default is deliberately small: this is an edge-first app whose
+     * documented targets are local models, and a window guessed too high is
+     * worse than one guessed too low, because too low merely compacts the
+     * interview early while too high lets the endpoint reject the request. The
+     * field sits next to the model it describes, so the fix is one tap away.
+     */
+    const val DefaultRemoteLlmContextTokens: Int = 8192
   }
 }

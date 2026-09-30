@@ -29,6 +29,10 @@ import alphainterplanetary.thinker.repository.SettingsRepository
  * OpenAI client appends its own `v1/...` paths, so a user-supplied
  * `.../v1` root (as Ollama's docs print) is stripped to avoid doubled
  * segments.
+ *
+ * The user's model window rides along on the [LLModel] as [LLModel.contextLength].
+ * That is what lets the app budget a share of the *real* window on this backend
+ * instead of asking the user to convert a model name into a token count.
  */
 class RemoteKoogPlanningBackend(
   private val settings: SettingsRepository,
@@ -50,6 +54,7 @@ class RemoteKoogPlanningBackend(
       baseUrl = settings.remoteLlmBaseUrl.value,
       apiKey = settings.remoteLlmApiKey.value,
       model = settings.remoteLlmModel.value,
+      contextLength = settings.remoteLlmContextTokens.value,
     )
     val existing = current
     if (existing != null && existing.target == target) {
@@ -74,6 +79,10 @@ class RemoteKoogPlanningBackend(
           LLMCapability.Completion,
           LLMCapability.OpenAIEndpoint.Completions,
         ),
+        // Declared rather than read: a model named in a settings field has no
+        // catalogue entry to read a window from, so this is where the user's
+        // number becomes the fact the app budgets against.
+        contextLength = target.contextLength.toLong(),
       ),
       client = client,
     )
@@ -89,6 +98,7 @@ class RemoteKoogPlanningBackend(
     val baseUrl: String,
     val apiKey: String,
     val model: String,
+    val contextLength: Int,
   )
 
   private class State(

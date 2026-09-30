@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskKind
@@ -28,6 +29,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -281,7 +283,7 @@ class ProjectDetailViewModelTest {
       vm.loadProject("p1")
       testScheduler.advanceUntilIdle()
 
-      vm.advanceToPhase("p1", BuiltInPhase.Research)
+      vm.requestPhaseAdvance("p1", BuiltInPhase.Research)
       testScheduler.advanceUntilIdle()
 
       val state = vm.uiState.value as ProjectDetailUiState.Success
@@ -292,6 +294,172 @@ class ProjectDetailViewModelTest {
       assertEquals(generator.calls.single().phase, BuiltInPhase.Research)
     }
   }
+
+  // ---------- the near-limit question ----------
+
+  /**
+   * A project well inside its budget is nobody's problem: the request goes
+   * straight through and the user is never interrupted.
+   */
+  @Test
+  fun `a project inside the budget asks nothing`() = runTest {
+    val storage = FakeStorage(
+      mutableMapOf("p1" to project(questions = listOf(question("q1"))).copy(rounds = listOf(round("r1"))))
+    )
+    withViewModel(storage) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+
+      vm.requestMoreQuestions("p1")
+      testScheduler.advanceUntilIdle()
+
+      assertNull(vm.contextPrompt.value, "no dialog for a project that fits")
+      assertEquals(2, (vm.uiState.value as ProjectDetailUiState.Success).project.rounds.size)
+    }
+  }
+
+  /**
+   * The point of parking the request: nothing is enqueued until the user has
+   * answered, so the choice is made before the round exists rather than after.
+   */
+  @Test
+  fun `an over-long project parks the request until the user answers`() = runTest {
+    val generator = budgetedGenerator().apply { canSummarize = true }
+    val storage = FakeStorage(mutableMapOf("p1" to overlongProject()))
+    withViewModel(storage, generator) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+
+      vm.requestMoreQuestions("p1")
+      testScheduler.advanceUntilIdle()
+
+      val prompt = vm.contextPrompt.value
+      assertIs<ContextPrompt.MoreQuestions>(prompt)
+      assertTrue(prompt.check.nearLimit)
+      assertTrue(prompt.check.canSummarize, "the engine can summarize, so the option is offered")
+      assertEquals(2, (vm.uiState.value as ProjectDetailUiState.Success).project.rounds.size, "no round yet")
+      assertTrue(generator.calls.isEmpty(), "and no generation yet")
+
+      vm.resolveContextPrompt(ContextCompaction.SummarizeEarlierPhases)
+      testScheduler.advanceUntilIdle()
+
+      assertNull(vm.contextPrompt.value)
+      assertEquals(3, (vm.uiState.value as ProjectDetailUiState.Success).project.rounds.size)
+      assertEquals(
+        listOf(BuiltInPhase.ScopeGoals),
+        generator.summarizeCalls.map { it.phase },
+        "the answer is carried all the way into the generation",
+      )
+    }
+  }
+
+  /** Backing out of the dialog is not a decision; nothing happens. */
+  @Test
+  fun `dismissing the parked request changes nothing`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to overlongProject()))
+    withViewModel(storage, budgetedGenerator()) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+
+      vm.requestMoreQuestions("p1")
+      testScheduler.advanceUntilIdle()
+      vm.dismissContextPrompt()
+      testScheduler.advanceUntilIdle()
+
+      assertNull(vm.contextPrompt.value)
+      assertEquals(2, (vm.uiState.value as ProjectDetailUiState.Success).project.rounds.size)
+    }
+  }
+
+  /** The wrap-up is the other door into the same question, and carries the phase. */
+  @Test
+  fun `a phase advance parks the chosen phase with the request`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to overlongProject()))
+    withViewModel(storage, budgetedGenerator()) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+
+      vm.requestPhaseAdvance("p1", BuiltInPhase.Research)
+      testScheduler.advanceUntilIdle()
+
+      val prompt = vm.contextPrompt.value
+      assertIs<ContextPrompt.PhaseAdvance>(prompt)
+      assertEquals(BuiltInPhase.Research, prompt.phase)
+      assertEquals(BuiltInPhase.Design, (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase)
+
+      vm.resolveContextPrompt(ContextCompaction.KeepEverything)
+      testScheduler.advanceUntilIdle()
+
+      assertEquals(BuiltInPhase.Research, (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase)
+    }
+  }
+
+  /**
+   * The Lite engine draws from a fixed pool and has nothing to summarize with,
+   * so the dialog offers two ways forward rather than a third that would fail.
+   */
+  @Test
+  fun `the summarize option is withheld from an engine that cannot write summaries`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to overlongProject()))
+    withViewModel(storage, budgetedGenerator()) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+
+      vm.requestMoreQuestions("p1")
+      testScheduler.advanceUntilIdle()
+
+      val prompt = vm.contextPrompt.value
+      assertIs<ContextPrompt.MoreQuestions>(prompt)
+      assertTrue(prompt.check.nearLimit)
+      assertFalse(prompt.check.canSummarize)
+      assertTrue(prompt.check.summarizablePhases.isNotEmpty(), "there is a phase; the engine just can't write it up")
+    }
+  }
+
+  /**
+   * Two phases deep with one very long answer — more than [budgetedGenerator]'s
+   * window allows, and short enough that the current phase's answer is still
+   * what a trim would keep.
+   */
+  /**
+   * The engine behind the near-limit tests: a window small enough that
+   * [overlongProject]'s transcript doesn't fit in the share of it the app fills,
+   * which is what puts the project over the budget.
+   */
+  private fun budgetedGenerator(): FakePlanningEngine =
+    FakePlanningEngine().apply { contextWindowTokens = 2000 }
+
+  private fun overlongProject(): Project = Project(
+    id = "p1",
+    synopsis = "synopsis",
+    editableTitle = "Title",
+    status = "Draft",
+    questions = listOf(
+      question(
+        "q1",
+        "An early question?",
+        answers = listOf(answer("q1", "word ".repeat(2000), id = "a1")),
+        roundId = "r1",
+      ),
+      question(
+        "q2",
+        "A live question?",
+        answers = listOf(answer("q2", "short", id = "a2")),
+        roundId = "r2",
+      ),
+    ),
+    rounds = listOf(
+      round("r1", phase = BuiltInPhase.ScopeGoals, completedAt = testInstant),
+      round("r2", phase = BuiltInPhase.Design),
+    ),
+    createdAt = testInstant,
+    updatedAt = testInstant,
+  )
 
   // ---------- token semantics ----------
 
@@ -457,7 +625,7 @@ class ProjectDetailViewModelTest {
       vm.loadProject("p1")
       testScheduler.advanceUntilIdle()
 
-      vm.generateMoreQuestions("p1")
+      vm.requestMoreQuestions("p1")
       testScheduler.runCurrent()
 
       // The round is in place immediately and the task stays observable while it lingers.

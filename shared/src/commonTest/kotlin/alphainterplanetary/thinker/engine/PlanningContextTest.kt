@@ -142,9 +142,175 @@ class PlanningContextTest {
     )
   }
 
+  /**
+   * The budget is [PlanningContext.TranscriptSharePercent] of the model's own
+   * window, and the rest is the prompt around the transcript plus the room the
+   * model needs to answer. Nothing to configure: the window is the model's and
+   * the share is a constant, so the same project is measured the same way
+   * against a 4k edge model and a 200k hosted one.
+   */
   @Test
-  fun `the default budget is one of the offered budgets`() {
-    assertTrue(PlanningContext.DefaultBudgetTokens in PlanningContext.BudgetOptionsTokens)
+  fun `the budget is the transcript's share of the window`() {
+    assertEquals(921, PlanningContext.budgetTokens(contextWindowTokens = 1024))
+    assertEquals(3686, PlanningContext.budgetTokens(contextWindowTokens = 4096))
+    assertEquals(7372, PlanningContext.budgetTokens(contextWindowTokens = 8192))
+    assertEquals(73728, PlanningContext.budgetTokens(contextWindowTokens = 81920))
+  }
+
+  /**
+   * A window small enough that even the reserved share rounds to nothing, and a
+   * nonsense one: neither may produce a negative budget, which would read as
+   * "over budget by an unknown amount" and compact every answer in every round.
+   */
+  @Test
+  fun `the budget never goes negative`() {
+    assertEquals(0, PlanningContext.budgetTokens(contextWindowTokens = 0))
+    assertEquals(0, PlanningContext.budgetTokens(contextWindowTokens = -1))
+  }
+
+  // ---------- the near-limit question ----------
+
+  /**
+   * One threshold, the budget itself: a transcript comfortably inside it has
+   * nothing to decide, and one past it has to be asked about.
+   */
+  @Test
+  fun `the question is asked once the transcript is over the budget`() {
+    assertFalse(PlanningContext.nearLimit(estimatedTokens = 1999, budgetTokens = 2000))
+    assertFalse(PlanningContext.nearLimit(estimatedTokens = 2000, budgetTokens = 2000))
+    assertTrue(PlanningContext.nearLimit(estimatedTokens = 2001, budgetTokens = 2000))
+  }
+
+
+  // ---------- the phases a summary could be written from ----------
+
+  /**
+   * Whole past phases, oldest first: the unit a summary is written from is the
+   * unit of work the project actually finished, and the one it can least afford
+   * to keep re-reading is the one it started with. (The fixture leaves the
+   * *last* phase given in progress, so Design is the live one here.)
+   */
+  @Test
+  fun `summarizable phases are the past ones oldest first`() {
+    val project = project(
+      BuiltInPhase.ScopeGoals to answered("q1", "First?", "yes"),
+      BuiltInPhase.Research to answered("q2", "Second?", "yes"),
+      BuiltInPhase.Design to answered("q3", "Third?", "yes"),
+    )
+
+    val phases = PlanningContext.summarizablePhases(project)
+
+    assertEquals(
+      listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research),
+      phases.map { it.phase },
+      "the phase in progress is not a candidate — it is the one being asked about",
+    )
+    assertEquals(listOf("q1", "q2"), phases.flatMap { it.questions }.map { it.id })
+    assertTrue(phases.all { it.estimatedTokens > 0 })
+  }
+
+  @Test
+  fun `a phase with nothing to summarize is not offered`() {
+    val project = project(
+      BuiltInPhase.ScopeGoals to question("q1", "Ignored?", ignoredAt = defaultTestInstant),
+      BuiltInPhase.Research to question("q2", "Never answered?"),
+      BuiltInPhase.Design to answered("q3", "Live?", "yes"),
+    )
+
+    assertEquals(emptyList(), PlanningContext.summarizablePhases(project))
+  }
+
+  @Test
+  fun `a past phase's transcript is its own answered questions rendered`() {
+    val project = project(
+      BuiltInPhase.ScopeGoals to answered("q1", "MVP?", "a menu planner"),
+      BuiltInPhase.ScopeGoals to answered("q2", "Budget?", "shoestring"),
+      BuiltInPhase.Design to question("live", "And now?"),
+    )
+
+    val unit = PlanningContext.summarizablePhases(project).single()
+
+    assertEquals(BuiltInPhase.ScopeGoals, unit.phase)
+    assertEquals(
+      "Q: MVP? / A: a menu planner\nQ: Budget? / A: shoestring",
+      unit.transcript,
+    )
+    assertEquals(setOf("q1", "q2"), unit.coveredQuestionIds)
+  }
+
+  // ---------- rendering with summaries ----------
+
+  /**
+   * The summary rides ahead of the transcript and the questions it stands in
+   * for stay in it, so a model reads what the phase settled *and* still knows
+   * what it was asked.
+   */
+  @Test
+  fun `a summary leads the transcript and marks the answers it replaces`() {
+    val summary = PlanningContext.PhaseSummary(
+      phase = BuiltInPhase.ScopeGoals,
+      summary = "A menu planner for home cooks.",
+      coversQuestionIds = setOf("q1"),
+    )
+
+    val transcript = PlanningContext.render(
+      listOf(answered("q1", "MVP?", "a menu planner"), question("q2", "And now?")),
+      listOf(summary),
+    )
+
+    assertEquals(
+      listOf(
+        PlanningContext.SummariesHeading,
+        "Scope & Goals: A menu planner for home cooks.",
+        "",
+        "Q: MVP? / A: ${PlanningContext.SummarizedNote}",
+        "Q: And now? / ${PlanningContext.NotAnsweredNote}",
+      ),
+      transcript.split("\n"),
+    )
+  }
+
+  @Test
+  fun `a transcript with no summaries renders exactly as it always did`() {
+    val questions = listOf(question("q1", "First?"), answered("q2", "Second?", "Yes"))
+
+    assertEquals(PlanningContext.render(questions), PlanningContext.render(questions, emptyList()))
+  }
+
+  @Test
+  fun `a blank summary is left out rather than filed as an empty section`() {
+    val questions = listOf(question("q1", "First?"))
+    val summary = PlanningContext.PhaseSummary(
+      phase = BuiltInPhase.ScopeGoals,
+      summary = "   ",
+      coversQuestionIds = setOf("q1"),
+    )
+
+    assertEquals(
+      "Q: First? / ${PlanningContext.NotAnsweredNote}",
+      PlanningContext.render(questions, listOf(summary)),
+    )
+  }
+
+  /**
+   * A summary is only worth its tokens if it costs less than the answers it
+   * replaces — and the estimate has to see it, or the loop that decides how many
+   * phases to summarize would count a saving it hasn't made yet.
+   */
+  @Test
+  fun `estimating counts the summaries as well as the transcript`() {
+    val questions = listOf(answered("q1", "MVP?", "word ".repeat(80)))
+    val summary = PlanningContext.PhaseSummary(
+      phase = BuiltInPhase.ScopeGoals,
+      summary = "a menu planner",
+      coversQuestionIds = setOf("q1"),
+    )
+
+    assertTrue(PlanningContext.estimateTokens(questions, listOf(summary)) > 0)
+    assertEquals(
+      PlanningContext.estimateTokens(PlanningContext.render(questions, listOf(summary))),
+      PlanningContext.estimateTokens(questions, listOf(summary)),
+    )
   }
 
   // ---------- trimming to the budget ----------
@@ -313,6 +479,58 @@ class PlanningContextTest {
 
     assertEquals(0, trim.droppedAnswers, "a skipped answer is already not rendered")
     assertEquals("Q: Ignored? / ${PlanningContext.SkippedNote}", PlanningContext.line(trim.questions.first()))
+  }
+
+  // ---------- trimming a transcript that already has summaries ----------
+
+  /**
+   * A summarized phase's answers are already gone, so the trim must not count
+   * dropping them a second time — both because the count is what the task's log
+   * line reports, and because a "dropped" question the model can already read
+   * through its summary is a phantom loss.
+   */
+  @Test
+  fun `a summarized phase's answers are not dropped again`() {
+    val project = project(
+      BuiltInPhase.ScopeGoals to answered("q1", "First?", "summarized. ".repeat(20)),
+      BuiltInPhase.Research to answered("q2", "Second?", "kept. ".repeat(20)),
+      BuiltInPhase.Design to question("live", "And now?"),
+    )
+    val summary = PlanningContext.PhaseSummary(
+      phase = BuiltInPhase.ScopeGoals,
+      summary = "the first phase settled on a menu planner",
+      coversQuestionIds = setOf("q1"),
+    )
+
+    val trim = PlanningContext.trim(project, 2000, listOf(summary))
+
+    assertEquals(0, trim.droppedAnswers, "the phase the summary covers is untouched")
+    assertEquals(listOf(summary), trim.summaries, "what was already compacted is carried through")
+  }
+
+  /**
+   * The summaries are part of what gets sent, so a budget that only fits once
+   * they are counted still has to be enforced against them.
+   */
+  @Test
+  fun `summaries count against the budget when trimming`() {
+    val project = project(
+      BuiltInPhase.ScopeGoals to answered("q1", "First?", "words. ".repeat(20)),
+      BuiltInPhase.Research to answered("q2", "Second?", "words. ".repeat(20)),
+      BuiltInPhase.Design to question("live", "And now?"),
+    )
+    val summary = PlanningContext.PhaseSummary(
+      phase = BuiltInPhase.ScopeGoals,
+      summary = "a summary that is itself a good deal of text. ".repeat(10),
+      coversQuestionIds = setOf("q1"),
+    )
+
+    val trim = PlanningContext.trim(project, 300, listOf(summary))
+
+    assertTrue(
+      PlanningContext.estimateTokens(trim.questions, trim.summaries) <= 300,
+      "the summary and the transcript together come back inside the budget",
+    )
   }
 
   // ---------- fixtures ----------

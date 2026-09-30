@@ -85,6 +85,27 @@ class RemoteKoogPlanningBackendTest {
     assertEquals("qwen2.5:7b", backend.model.id)
   }
 
+  /**
+   * A model named in a settings field has no catalogue to read a window from, so
+   * this is where the user's declared number becomes the fact the app budgets a
+   * share of — and where it has to land for the budget to mean anything at all
+   * on this backend.
+   */
+  @Test
+  fun `the model's context window is the one the user declared`() = runTest {
+    val repo = repository()
+    val backend = RemoteKoogPlanningBackend(repo, RecordingFactory())
+
+    assertEquals(
+      SettingsRepository.DefaultRemoteLlmContextTokens.toLong(),
+      backend.model.contextLength,
+    )
+
+    repo.setRemoteLlmContextTokens(128_000)
+
+    assertEquals(128_000L, backend.model.contextLength)
+  }
+
   @Test
   fun `changing the base url rebuilds the client at the new origin`() = runTest {
     val repo = repository()

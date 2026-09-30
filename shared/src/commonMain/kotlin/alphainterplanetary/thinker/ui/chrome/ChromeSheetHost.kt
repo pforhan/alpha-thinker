@@ -76,6 +76,7 @@ internal fun ChromeSheetHost(chrome: AppChromeState) {
 
         ChromeSheet.Intelligence -> IntelligenceSheetContent(chrome = chrome)
 
+
         ChromeSheet.Testing -> TestingSheetContent(chrome = chrome)
       }
     }

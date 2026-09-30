@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 private const val COUNT = 3
@@ -14,6 +15,18 @@ private const val COUNT = 3
 class HardcodedPlanningEngineTest {
 
   private val generator = HardcodedPlanningEngine(count = COUNT)
+
+  /**
+   * The declaration the whole context-budget apparatus keys off: the pool
+   * serves fixed strings, so this engine composes no prompt and has no window
+   * to overrun. Getting it wrong would put a near-limit dialog in front of a
+   * Lite user whose generation sends nothing they wrote.
+   */
+  @Test
+  fun `the engine declares that it has no context window`() {
+    assertNull(generator.contextWindowTokens)
+    assertFalse(generator.canSummarize)
+  }
 
   // ---------- recommendTitle ----------
 

@@ -59,6 +59,17 @@ class SettingsViewModel(
     settingsRepository.setRemoteLlmModel(model)
   }
 
+  /**
+   * The context window declared for [remoteLlmModel] — the number a model named
+   * in a settings field cannot supply for itself, and that the planning-context
+   * budget is a share of.
+   */
+  val remoteLlmContextTokens: StateFlow<Int> = settingsRepository.remoteLlmContextTokens
+
+  fun setRemoteLlmContextTokens(tokens: Int) {
+    settingsRepository.setRemoteLlmContextTokens(tokens)
+  }
+
   /** Whether PlanningEngine interactions carry the artificial testing delay. */
   val engineDelay: StateFlow<EngineDelayConfig> = settingsRepository.engineDelay
 
@@ -68,16 +79,6 @@ class SettingsViewModel(
 
   fun setEngineDelay(interaction: EngineInteraction, seconds: Int) {
     settingsRepository.setEngineDelay(interaction, seconds)
-  }
-
-  /**
-   * The token budget a generation prompt's planning transcript is trimmed to
-   * before it is sent; changing it applies to the next round generated.
-   */
-  val contextBudgetTokens: StateFlow<Int> = settingsRepository.contextBudgetTokens
-
-  fun setContextBudgetTokens(tokens: Int) {
-    settingsRepository.setContextBudgetTokens(tokens)
   }
 
   /**

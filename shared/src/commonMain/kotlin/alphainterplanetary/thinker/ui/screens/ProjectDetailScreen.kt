@@ -14,6 +14,7 @@ import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.ConfettiBurst
+import alphainterplanetary.thinker.ui.components.ContextCompactionDialog
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.PhaseAdvanceDialog
 import alphainterplanetary.thinker.ui.components.PhaseBadge
@@ -130,6 +131,7 @@ fun ProjectDetailScreen(
   val uiState by viewModel.uiState.collectAsState()
   val pendingUndo by viewModel.pendingUndo.collectAsState()
   val phaseSuggestions by viewModel.nextPhaseSuggestions.collectAsState()
+  val contextPrompt by viewModel.contextPrompt.collectAsState()
   val tasks by viewModel.tasks.collectAsState()
   // Reconnects to tasks that are already in flight (or finished) when the
   // screen (re)enters composition — the VM's collector replays the current
@@ -235,8 +237,8 @@ fun ProjectDetailScreen(
           onUnignore = { viewModel.unignoreQuestion(projectId, it) },
           onAnswerClick = { selectedQuestion = it },
           onDeleteAnswer = { viewModel.saveAnswer(projectId, it.id, "", completed = false) },
-          onGenerateMore = { viewModel.generateMoreQuestions(projectId) },
-          onAdvancePhase = { viewModel.advanceToPhase(projectId, it) },
+          onGenerateMore = { viewModel.requestMoreQuestions(projectId) },
+          onAdvancePhase = { viewModel.requestPhaseAdvance(projectId, it) },
           onBeginWrapUp = { showPhaseAdvanceDialog = true },
           modifier = Modifier
             .fillMaxSize()
@@ -282,10 +284,22 @@ fun ProjectDetailScreen(
         completedPhase = project.currentPhase,
         suggestions = phaseSuggestions.orEmpty(),
         suggestionsLoading = phaseSuggestions == null,
-        onAdvance = { viewModel.advanceToPhase(projectId, it) },
+        onAdvance = { viewModel.requestPhaseAdvance(projectId, it) },
         onDismiss = { showPhaseAdvanceDialog = false },
       )
     }
+  }
+
+  // The near-limit choice. Its state lives in the view model rather than here
+  // because the request behind it is parked there too: answering the question
+  // has to know whether it was "get more questions" or a wrap-up into a
+  // particular phase, and that is not something a composable can recover.
+  contextPrompt?.let { prompt ->
+    ContextCompactionDialog(
+      check = prompt.check,
+      onChoose = { viewModel.resolveContextPrompt(it) },
+      onDismiss = { viewModel.dismissContextPrompt() },
+    )
   }
 
   val questionToShow = selectedQuestion

@@ -13,7 +13,15 @@ enum class EngineCapability {
   /** The engine sends requests over the network (a remote / cloud endpoint). */
   Network,
 
-  /** A language model produces the content. */
+  /**
+   * A language model produces the content.
+   *
+   * Also the reason a generation prompt has a context window at all, which is
+   * why there is no separate window capability: an engine that composes no
+   * prompt draws its output from a library instead and sends nothing the user
+   * wrote. The window itself is a fact about the engine, not the mode — see
+   * [PlanningEngine.contextWindowTokens].
+   */
   Llm,
 
   /** The engine may call tools (lookup / web search) on the model's behalf. */

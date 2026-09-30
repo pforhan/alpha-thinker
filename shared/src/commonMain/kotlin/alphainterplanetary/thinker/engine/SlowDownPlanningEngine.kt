@@ -21,6 +21,14 @@ class SlowDownPlanningEngine(
   override val source: LogSource
     get() = delegate.source
 
+  /** The delegate's answer; delaying an engine doesn't change its window. */
+  override val contextWindowTokens: Int?
+    get() = delegate.contextWindowTokens
+
+  /** The delegate's answer; delaying an engine adds no capability to it. */
+  override val canSummarize: Boolean
+    get() = delegate.canSummarize
+
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     println("SlowDownPlanningEngine.recommendTitle()")
     maybeDelay(EngineInteraction.RecommendTitle)
@@ -34,12 +42,29 @@ class SlowDownPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
+    priorSummaries: List<PlanningContext.PhaseSummary>,
   ): QuestionBatch {
     println("SlowDownPlanningEngine.generateQuestions()")
     maybeDelay(EngineInteraction.QuestionGeneration)
     return delegate.generateQuestions(
-      title, synopsis, previousQuestions, roundId, phase, activityId
+      title, synopsis, previousQuestions, roundId, phase, activityId, priorSummaries
     )
+  }
+
+  /**
+   * The summarize request is delayed with the question generation it feeds, and
+   * under the same interaction: it is the same model call the user is waiting
+   * on, and a separate setting would only be a second dial for one dial's job.
+   */
+  override suspend fun summarizePriorAnswers(
+    title: String,
+    synopsis: String,
+    phase: Phase,
+    transcript: String,
+    activityId: String,
+  ): String {
+    maybeDelay(EngineInteraction.QuestionGeneration)
+    return delegate.summarizePriorAnswers(title, synopsis, phase, transcript, activityId)
   }
 
   private suspend fun maybeDelay(interaction: EngineInteraction) {

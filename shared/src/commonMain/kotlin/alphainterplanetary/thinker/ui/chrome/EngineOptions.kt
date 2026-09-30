@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.background
@@ -99,9 +100,11 @@ internal fun RemoteConnectionFields(
   baseUrl: String,
   apiKey: String,
   model: String,
+  contextTokens: String,
   onBaseUrlChange: (String) -> Unit,
   onApiKeyChange: (String) -> Unit,
   onModelChange: (String) -> Unit,
+  onContextTokensChange: (String) -> Unit,
 ) {
   Spacer(modifier = Modifier.height(Dimens.SectionGap))
   Text(
@@ -139,5 +142,20 @@ internal fun RemoteConnectionFields(
     modifier = Modifier.fillMaxWidth(),
     singleLine = true,
     isError = model.isBlank(),
+  )
+  Spacer(modifier = Modifier.height(Dimens.ContentGap))
+  OutlinedTextField(
+    value = contextTokens,
+    onValueChange = onContextTokensChange,
+    label = { Text("Context window (tokens)") },
+    modifier = Modifier.fillMaxWidth(),
+    singleLine = true,
+    isError = contextTokens.toIntOrNull()?.let { it > 0 } != true,
+    supportingText = {
+      Text("A model named here has no catalogue to read a window from, so tell " +
+        "the app how big it is. Each generation fills up to " +
+        "${PlanningContext.TranscriptSharePercent}% of it with this project's " +
+        "questions and answers.")
+    },
   )
 }

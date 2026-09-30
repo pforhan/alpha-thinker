@@ -28,6 +28,7 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
   val baseUrl by chrome.settings.remoteLlmBaseUrl.collectAsState()
   val apiKey by chrome.settings.remoteLlmApiKey.collectAsState()
   val model by chrome.settings.remoteLlmModel.collectAsState()
+  val contextTokens by chrome.settings.remoteLlmContextTokens.collectAsState()
   val settings = chrome.settings
 
   Column(
@@ -49,9 +50,19 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
               baseUrl = baseUrl,
               apiKey = apiKey,
               model = model,
+              contextTokens = contextTokens.toString(),
               onBaseUrlChange = settings::setRemoteLlmBaseUrl,
               onApiKeyChange = settings::setRemoteLlmApiKey,
               onModelChange = settings::setRemoteLlmModel,
+              // Digits only, and only a complete number: a half-typed window
+              // would otherwise resolve the budget to something the user did not
+              // ask for while they are still in the field.
+              onContextTokensChange = { typed ->
+                typed.filter { it.isDigit() }
+                  .toIntOrNull()
+                  ?.takeIf { it > 0 }
+                  ?.let(settings::setRemoteLlmContextTokens)
+              },
             )
           }
         },

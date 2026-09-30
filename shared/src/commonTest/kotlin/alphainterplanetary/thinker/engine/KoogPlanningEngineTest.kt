@@ -32,10 +32,11 @@ class KoogPlanningEngineTest {
   private val provider = LLMProvider("fake", "Fake")
   private val model = LLModel(provider, "fake-model")
 
-  private fun engine(client: LLMClient): KoogPlanningEngine {
+  private fun engine(client: LLMClient, contextLength: Long? = null): KoogPlanningEngine {
+    val template = model
     val backend = object : KoogPlanningBackend {
       override val executor: PromptExecutor = MultiLLMPromptExecutor(client)
-      override val model: LLModel = this@KoogPlanningEngineTest.model
+      override val model: LLModel = template.copy(contextLength = contextLength)
       override val source: LogSource = LogSource.RemoteLLM
     }
     return KoogPlanningEngine(backend)
@@ -412,6 +413,149 @@ class KoogPlanningEngineTest {
     assertTrue(
       request.contains("(none)"),
       "the already-asked block stays present on a project's opening round",
+    )
+  }
+
+  // ---------- the context window ----------
+
+  /**
+   * The budget is a share of the model's window, so the number has to be the
+   * real one and it has to come off the model rather than out of a setting.
+   */
+  @Test
+  fun `the engine reports the window off its model`() = runTest {
+    assertEquals(32_000, engine(FakeClient(provider, "hi"), contextLength = 32_000).contextWindowTokens)
+    assertEquals(4_096, engine(FakeClient(provider, "hi"), contextLength = 4_096).contextWindowTokens)
+  }
+
+  /**
+   * A model with no declared window is a real case, not a hypothetical: a
+   * user-named OpenAI-compatible id has no catalogue entry. The engine reports
+   * the absence rather than a made-up number, and the app skips the budget.
+   */
+  @Test
+  fun `a model with no declared window reports none`() = runTest {
+    assertNull(engine(FakeClient(provider, "hi")).contextWindowTokens)
+  }
+
+  @Test
+  fun `a model-backed engine can summarize`() = runTest {
+    assertTrue(engine(FakeClient(provider, "hi")).canSummarize)
+  }
+
+  // ---------- summarizing a past phase ----------
+
+  /**
+   * The summary is prose, taken as written — there is no shape to refuse here,
+   * unlike the question batch. An empty reply is still a failure: an empty
+   * summary would compact a phase's answers away for nothing.
+   */
+  @Test
+  fun `summarizePriorAnswers returns the summary as written`() = runTest {
+    val client = FakeClient(provider, "A menu planner for home cooks, on a shoestring budget.")
+    val engine = engine(client)
+
+    val summary = engine.summarizePriorAnswers(
+      title = "Menu Planner",
+      synopsis = "Plan meals from phone screenshots",
+      phase = BuiltInPhase.ScopeGoals,
+      transcript = "Q: Who is this for? / A: home cooks",
+      activityId = "t1",
+    )
+
+    assertEquals("A menu planner for home cooks, on a shoestring budget.", summary)
+    val request = client.lastPrompt.messages.joinToString("\n") { it.textContent() }
+    assertTrue(request.contains("Who is this for? / A: home cooks"), "the phase transcript is sent")
+    assertTrue(request.contains("Scope & Goals"), "the phase it belongs to is named")
+  }
+
+  @Test
+  fun `summarizePriorAnswers fails when the model returns an empty summary`() = runTest {
+    val engine = engine(FakeClient(provider, "  "))
+
+    try {
+      engine.summarizePriorAnswers(
+        title = "T",
+        synopsis = "S",
+        phase = BuiltInPhase.ScopeGoals,
+        transcript = "Q: Who is this for? / A: home cooks",
+        activityId = "t1",
+      )
+      fail("expected the empty summary to fail")
+    } catch (e: PlanningEngine.AnalysisFailure) {
+      assertTrue(e.message.orEmpty().contains("empty summary"))
+    }
+  }
+
+  /** The summarize request is a request like any other: its own row pair. */
+  @Test
+  fun `a summarize request files the prompt it sent and the summary it read`() = runTest {
+    val client = FakeClient(provider, "the project is a menu planner for home cooks")
+    val log = RecordingActivityLogger()
+    val engine = engine(client)
+
+    withContext(LogScope { log.context("t1", LogCategory.PriorSummary, LogSource.RemoteLLM) }) {
+      engine.summarizePriorAnswers(
+        title = "T",
+        synopsis = "S",
+        phase = BuiltInPhase.ScopeGoals,
+        transcript = "Q: Who is this for? / A: home cooks",
+        activityId = "t1",
+      )
+    }
+
+    assertEquals(KoogPlanningEngine.PromptSummarizeAnswers, client.lastPrompt.id)
+    assertEquals(2, log.entries.size, "one prompt row and one response row")
+    assertTrue(log.entries.first().log.startsWith("prompt: SYSTEM"))
+    assertEquals("response: the project is a menu planner for home cooks", log.entries.last().log)
+    assertEquals("the project is a menu planner for home cooks", log.entries.last().raw)
+    assertEquals(LogCategory.PriorSummary, log.entries.last().category)
+  }
+
+  /**
+   * The summary leads the interview block, and the questions it stands in for
+   * stay in it marked as summarized — so a model reads what the phase settled
+   * and still knows what it was asked.
+   */
+  @Test
+  fun `the questions prompt carries the prior summaries in place of their answers`() = runTest {
+    val client = FakeClient(provider, """["Another question"]""")
+    val engine = engine(client)
+    val summarized = question("What is the MVP?").let {
+      Question(
+        id = it.id,
+        text = it.text,
+        timestamp = it.timestamp,
+        roundId = it.roundId,
+        answers = listOf(Answer(id = "a1", questionId = it.id, text = "a menu planner", createdAt = it.timestamp)),
+      )
+    }
+
+    engine.generateQuestions(
+      title = "T",
+      synopsis = "S",
+      previousQuestions = listOf(summarized, question("And now?")),
+      roundId = "r2",
+      phase = BuiltInPhase.Design,
+      activityId = "t1",
+      priorSummaries = listOf(
+        PlanningContext.PhaseSummary(
+          phase = BuiltInPhase.ScopeGoals,
+          summary = "A menu planner for home cooks.",
+          coversQuestionIds = setOf(summarized.id),
+        )
+      ),
+    )
+
+    val request = client.lastPrompt.messages.joinToString("\n") { it.textContent() }
+    assertTrue(request.contains("Scope & Goals: A menu planner for home cooks."))
+    assertTrue(
+      request.contains("Q: What is the MVP? / A: ${PlanningContext.SummarizedNote}"),
+      "the question is still asked of the model, with the summary standing in for the answer",
+    )
+    assertFalse(
+      request.contains("a menu planner\n"),
+      "the verbatim answer is not sent alongside its own summary",
     )
   }
 

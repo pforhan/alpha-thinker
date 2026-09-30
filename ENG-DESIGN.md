@@ -333,9 +333,40 @@ round; the current phase's answers are never dropped), and the repository hands
 the engine the already-trimmed list — the engine stays budget-ignorant, and the
 same decision is available to the UI. This renderer is the phase-grouped Q&A
 source the Markdown export rewrite (IMPLEMENTATION-PLAN.md item 283) should
-reuse, so one transcript serves both the prompts and the exported plan. A
-near-limit interactive choice (keep everything / trim / ask the LLM to summarize
-earlier answers — the last a new engine interaction) is parked as a refinement.
+reuse, so one transcript serves both the prompts and the exported plan.
+
+Trimming is lossy, so a project that has outgrown the budget gets to choose
+instead: `ProjectRepository.checkContext` measures the transcript against the
+budget, and a project inside it is asked nothing. When it is asked, the choice is a
+`ContextCompaction` — keep everything, drop the earliest answers (the shipped
+default), or have the engine condense whole past phases. The decision has to be
+made *before* the round is enqueued, so `generateMoreQuestions`/`advanceToPhase`
+take it as a parameter and the dialog is asked from the ViewModel; the
+summarizing itself runs inside the generation task, where each phase is one
+`PlanningEngine.summarizePriorAnswers` request filed as its own
+`prompt:`/`response:` pair under the same activity, oldest phase first,
+re-measured after each, until the transcript fits. The returned `PhaseSummary`
+rides ahead of the transcript and the questions it covers read `A: summarized
+below` instead of `A: omitted`, so a model still sees what was asked and is told
+what it was told. Only an engine that reports `canSummarize` is offered the
+option.
+
+**The budget is a share of the model's window, and there is no setting.** The
+window belongs to the model, so it is read from the model:
+`PlanningEngine.contextWindowTokens` is the engine-level fact (null for the
+built-in library, which composes no prompt and so has no window to overrun, and
+no budget, no near-limit question, and nothing to summarize), and
+`KoogPlanningEngine` takes it from the `LLModel.contextLength` it is handed.
+`PlanningContext.budgetTokens` is a fixed `TranscriptSharePercent` (90) of that
+window, the remainder being the prompt built around the transcript and the room
+the model needs to answer — the same kind of estimate standing in for an
+unmeasurable thing as `CharsPerToken`. A registry-known model reports its own
+window; a user-named OpenAI-compatible id carries no metadata, so the Remote
+connection fields declare one and feed it onto the `LLModel`, which makes that
+field the only place any of this is configured. An earlier shape offered the
+ceiling and a nested near-limit band as two percentages to tune; with the ceiling
+pinned to the window the band was the ceiling, so the second dial was a control
+on a number that did not change, and both are gone.
 
 **Roadmap / deferred:**
 

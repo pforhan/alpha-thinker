@@ -20,6 +20,16 @@ class HardcodedPlanningEngine @Inject constructor(
 
   override val source: LogSource = LogSource.Lite
 
+  /**
+   * No window, and not merely a large one: the pool serves fixed strings, so
+   * this engine composes no prompt and nothing the user has written is ever a
+   * payload. The transcript is read only to avoid re-asking a question. That
+   * makes the context budget, the near-limit question, and phase summaries
+   * meaningless here, and the app skips all of them rather than trimming text
+   * this engine was never going to look at.
+   */
+  override val contextWindowTokens: Int? = null
+
   override suspend fun recommendTitle(synopsis: String, activityId: String): String =
     generateTitleFromSynopsis(synopsis)
 
@@ -39,7 +49,11 @@ class HardcodedPlanningEngine @Inject constructor(
     roundId: String,
     phase: Phase,
     activityId: String,
+    priorSummaries: List<PlanningContext.PhaseSummary>,
   ): QuestionBatch {
+    // Summaries stand in for answers this engine never reads; see
+    // [contextUse]. The repository knows not to send any, and none would mean
+    // anything if it did.
     val remaining = remainingPool(phase, previousQuestions)
     if (remaining.isEmpty()) return QuestionBatch(emptyList(), done = true)
 

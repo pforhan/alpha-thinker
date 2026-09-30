@@ -19,6 +19,9 @@ enum class LogCategory(val label: String) {
   /** A tool / web-search / fetch call. */
   Lookup("Lookup"),
 
+  /** A past phase's answers condensed into a summary the question prompt uses. */
+  PriorSummary("Prior-phase summary"),
+
   /** Long-running task lifecycle rows (start/finish). */
   TaskRun("Task"),
 

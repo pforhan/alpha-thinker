@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -324,59 +325,58 @@ class SettingsRepositoryTest {
     )
   }
 
-  // ---------- planning context budget ----------
+  // ---------- the remote model's declared window ----------
 
   @Test
-  fun `context budget starts at the default`() = runTest {
+  fun `the remote context window starts conservative`() = runTest {
+    val repo = repository()
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(
+      SettingsRepository.DefaultRemoteLlmContextTokens,
+      repo.remoteLlmContextTokens.value,
+    )
+  }
+
+  @Test
+  fun `setRemoteLlmContextTokens persists the declared window`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setRemoteLlmContextTokens(128_000)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(128_000, repo.remoteLlmContextTokens.value)
+    assertEquals("128000", storage.settings[SettingsKey.RemoteLlmContextTokens.storageKey])
+  }
+
+  /**
+   * A window of zero would resolve every budget to zero and compact every
+   * answer in every round, which is a configuration nobody means — and a
+   * negative one is not a window at all.
+   */
+  @Test
+  fun `a non-positive remote context window is rejected`() = runTest {
     val repo = repository()
 
-    assertEquals(PlanningContext.DefaultBudgetTokens, repo.contextBudgetTokens.value)
+    assertFailsWith<IllegalArgumentException> { repo.setRemoteLlmContextTokens(0) }
+    assertFailsWith<IllegalArgumentException> { repo.setRemoteLlmContextTokens(-1) }
   }
 
   @Test
-  fun `context budget loads the persisted value at startup`() = runTest {
+  fun `a persisted non-positive remote window falls back to the default`() = runTest {
     val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.ContextBudgetTokens, "500")
+    storage.saveSetting(SettingsKey.RemoteLlmContextTokens, "0")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
 
-    assertEquals(500, repo.contextBudgetTokens.value)
+    assertEquals(
+      SettingsRepository.DefaultRemoteLlmContextTokens,
+      repo.remoteLlmContextTokens.value,
+    )
   }
 
-  @Test
-  fun `setContextBudgetTokens updates state and persists the budget`() = runTest {
-    val storage = FakeStorage()
-    val repo = repository(storage)
-
-    repo.setContextBudgetTokens(4000)
-    testScheduler.advanceUntilIdle()
-
-    assertEquals(4000, repo.contextBudgetTokens.value)
-    assertEquals("4000", storage.settings[SettingsKey.ContextBudgetTokens.storageKey])
-  }
-
-  @Test
-  fun `setContextBudgetTokens ignores the already-selected budget`() = runTest {
-    val storage = FakeStorage()
-    val repo = repository(storage)
-
-    repo.setContextBudgetTokens(PlanningContext.DefaultBudgetTokens)
-
-    assertEquals(null, storage.settings[SettingsKey.ContextBudgetTokens.storageKey])
-  }
-
-  /** Only the offered budgets round-trip to a picker chip, so anything else falls back. */
-  @Test
-  fun `a persisted budget outside the offered options falls back to the default`() = runTest {
-    val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.ContextBudgetTokens, "37")
-
-    val repo = repository(storage)
-    testScheduler.advanceUntilIdle()
-
-    assertEquals(PlanningContext.DefaultBudgetTokens, repo.contextBudgetTokens.value)
-  }
 
   // ---------- announced failure ledger ----------
 

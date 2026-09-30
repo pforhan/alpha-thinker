@@ -12,6 +12,7 @@ import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -212,11 +213,179 @@ class LoggingPlanningEngineTest {
     assertEquals("failed: couldn't be read", activity.summary)
   }
 
+  // ---------- the summarize interaction ----------
+
+  /**
+   * A summary the delegate produced itself is logged like any other
+   * interaction — its own category, under the activity it was asked for, with
+   * the summary as the response.
+   */
+  @Test
+  fun `a summarize request records the summary under the activity id`() = runTest {
+    val delegate = FakePlanningEngine().apply {
+      summaries[BuiltInPhase.ScopeGoals] = "A menu planner for home cooks."
+    }
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = delegate, log = log)
+
+    val summary = engine.summarizePriorAnswers(
+      title = "T",
+      synopsis = "S",
+      phase = BuiltInPhase.ScopeGoals,
+      transcript = "Q: MVP? / A: a menu planner",
+      activityId = "task-9",
+    )
+
+    assertEquals("A menu planner for home cooks.", summary)
+    val terminal = log.entries.single()
+    assertEquals("task-9", terminal.activityId)
+    assertEquals(LogCategory.PriorSummary, terminal.category)
+    assertEquals("response: A menu planner for home cooks.", terminal.log)
+  }
+
+  /**
+   * A phase-by-phase compaction is several summarize interactions in one task,
+   * then the batch: one prompt/response pair each, all under the same activity
+   * id, with the batch last so the activity still headlines the questions.
+   */
+  @Test
+  fun `a phase-by-phase compaction files one pair per phase and the batch last`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = SummarizingTwiceThenGenerating(), log = log)
+
+    engine.generateQuestions(
+      title = "T",
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      roundId = "r1",
+      phase = BuiltInPhase.Design,
+      activityId = "task-10",
+    )
+
+    assertEquals(
+      listOf(
+        "prompt: SYSTEM\nSummarize Scope & Goals",
+        "response: scope, in short",
+        "prompt: SYSTEM\nSummarize Research",
+        "response: research, in short",
+        "prompt: SYSTEM\nQuestions",
+        "response: 3 questions, done=false\n• one\n• two\n• three",
+      ),
+      log.entries.map { it.log },
+    )
+    assertTrue(log.entries.all { it.activityId == "task-10" })
+    assertEquals("Generated 3 questions", activity(log).summary)
+  }
+
+  /**
+   * Both facts are the delegate's: the decorator observes an engine, it doesn't
+   * give one capabilities or lend it a context window. This is also the guard
+   * against a decorated Lite engine being treated as though it had one.
+   */
+  @Test
+  fun `the context window and the summarize capability are both the delegate's`() = runTest {
+    val log = RecordingActivityLogger()
+
+    val lite = LoggingPlanningEngine(
+      FakePlanningEngine().apply { contextWindowTokens = null },
+      log,
+    )
+    assertNull(lite.contextWindowTokens)
+    assertFalse(lite.canSummarize)
+
+    val llm = LoggingPlanningEngine(
+      FakePlanningEngine().apply {
+        contextWindowTokens = 32_000
+        canSummarize = true
+      },
+      log,
+    )
+    assertEquals(32_000, llm.contextWindowTokens)
+    assertTrue(llm.canSummarize)
+  }
+
+  /**
+   * A refusal is still an interaction, so it files a failure row rather than
+   * vanishing: the task that asked for it has to fail visibly, not silently
+   * send a compacted prompt built from nothing.
+   */
+  @Test
+  fun `an engine that cannot summarize fails the request rather than inventing one`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = HardcodedPlanningEngine(), log = log)
+
+    try {
+      engine.summarizePriorAnswers(
+        title = "T",
+        synopsis = "S",
+        phase = BuiltInPhase.ScopeGoals,
+        transcript = "Q: MVP? / A: a menu planner",
+        activityId = "task-11",
+      )
+      fail("expected the engine to refuse")
+    } catch (e: PlanningEngine.AnalysisFailure) {
+      assertTrue(e.message.orEmpty().contains("summarize"))
+    }
+
+    val terminal = log.entries.single()
+    assertEquals(LogCategory.PriorSummary, terminal.category)
+    assertTrue(terminal.log.startsWith("failed: "))
+  }
+
   private fun activity(log: RecordingActivityLogger): ActivityRecord =
     ActivityRecord.groupByActivity(log.entries).single()
 
+  /**
+   * The compaction shape the near-limit choice produces: a summarize request
+   * per phase, oldest first, then the question batch they were making room for.
+   */
+  private class SummarizingTwiceThenGenerating : PlanningEngine {
+    override val source: LogSource = LogSource.RemoteLLM
+    override val contextWindowTokens: Int? = 8192
+    override val canSummarize: Boolean = true
+
+    override suspend fun recommendTitle(synopsis: String, activityId: String): String =
+      throw PlanningEngine.AnalysisFailure("not used")
+
+    override suspend fun summarizePriorAnswers(
+      title: String,
+      synopsis: String,
+      phase: Phase,
+      transcript: String,
+      activityId: String,
+    ): String {
+      val request = logRequest("SYSTEM\nSummarize ${phase.label}")
+      val summary = "${phase.label.substringBefore(' ').lowercase()}, in short"
+      request?.responded(summary, summary)
+      return summary
+    }
+
+    override suspend fun generateQuestions(
+      title: String,
+      synopsis: String,
+      previousQuestions: List<Question>,
+      roundId: String,
+      phase: Phase,
+      activityId: String,
+      priorSummaries: List<PlanningContext.PhaseSummary>,
+    ): QuestionBatch {
+      // The repository summarizes before it asks; modelled here as the calls
+      // that happen on the way in, so the pairs land in the order they would.
+      summarizePriorAnswers(title, synopsis, BuiltInPhase.ScopeGoals, "", activityId)
+      summarizePriorAnswers(title, synopsis, BuiltInPhase.Research, "", activityId)
+      val request = logRequest("SYSTEM\nQuestions")
+      val batch = QuestionBatch(
+        listOf(question("one", roundId), question("two", roundId), question("three", roundId)),
+        false,
+      )
+      request?.responded(batch.summary(), """["one","two","three"]""")
+      return batch
+    }
+  }
+
   private class ThrowingEngine : PlanningEngine {
     override val source: LogSource = LogSource.Lite
+    override val contextWindowTokens: Int? = 8192
 
     override suspend fun recommendTitle(synopsis: String, activityId: String): String =
       throw PlanningEngine.AnalysisFailure("model exploded")
@@ -228,6 +397,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
+      priorSummaries: List<PlanningContext.PhaseSummary>,
     ): QuestionBatch = throw PlanningEngine.AnalysisFailure("model exploded")
   }
 
@@ -237,6 +407,7 @@ class LoggingPlanningEngineTest {
    */
   private class ReplyingEngine : PlanningEngine {
     override val source: LogSource = LogSource.RemoteLLM
+    override val contextWindowTokens: Int? = 8192
 
     override suspend fun recommendTitle(synopsis: String, activityId: String): String {
       val request = logRequest("SYSTEM\nTitle system\n\nUSER\n$synopsis")
@@ -252,6 +423,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
+      priorSummaries: List<PlanningContext.PhaseSummary>,
     ): QuestionBatch = throw PlanningEngine.AnalysisFailure("not used")
   }
 
@@ -264,6 +436,7 @@ class LoggingPlanningEngineTest {
     private val failSummary: Boolean = false,
   ) : PlanningEngine {
     override val source: LogSource = LogSource.RemoteLLM
+    override val contextWindowTokens: Int? = 8192
 
     override suspend fun recommendTitle(synopsis: String, activityId: String): String =
       throw PlanningEngine.AnalysisFailure("not used")
@@ -275,6 +448,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
+      priorSummaries: List<PlanningContext.PhaseSummary>,
     ): QuestionBatch {
       val summary = logRequest("SYSTEM\nSummarize")
       if (failSummary) {

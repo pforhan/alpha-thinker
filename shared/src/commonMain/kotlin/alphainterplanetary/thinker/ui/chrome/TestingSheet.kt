@@ -20,8 +20,12 @@ import androidx.compose.ui.Modifier
 
 /**
  * The testing controls: the artificial planning-engine delay, so Task Manager
- * tasks stay visible long enough to watch, and the planning-context budget, the
- * other knob that shapes a generation's inputs.
+ * tasks stay visible long enough to watch.
+ *
+ * The planning-context budget used to live here too, which was the wrong drawer
+ * for it — it shapes what a real generation is sent, not how the app behaves
+ * under test. It is [ChromeSheet.PlanningContext] now, next to the engine whose
+ * window it is a share of.
  *
  * Turning the delay on reveals the per-interaction pickers below the toggle, and
  * this scrolls just enough to bring them into view. The reveal is measured
@@ -31,7 +35,6 @@ import androidx.compose.ui.Modifier
 @Composable
 internal fun TestingSheetContent(chrome: AppChromeState) {
   val engineDelay by chrome.settings.engineDelay.collectAsState()
-  val contextBudgetTokens by chrome.settings.contextBudgetTokens.collectAsState()
   val scrollState = rememberScrollState()
   var expandedHeight by remember { mutableIntStateOf(0) }
   var previousEnabled by remember { mutableStateOf(engineDelay.enabled) }
@@ -58,10 +61,6 @@ internal fun TestingSheetContent(chrome: AppChromeState) {
       onEnabledChange = chrome.settings::setEngineDelayEnabled,
       onDelayChange = chrome.settings::setEngineDelay,
       onExpandedHeightChange = { expandedHeight = it },
-    )
-    ContextBudgetItem(
-      budgetTokens = contextBudgetTokens,
-      onBudgetChange = chrome.settings::setContextBudgetTokens,
     )
   }
 }

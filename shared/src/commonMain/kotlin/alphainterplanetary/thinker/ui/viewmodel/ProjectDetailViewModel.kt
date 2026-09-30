@@ -3,6 +3,8 @@ package alphainterplanetary.thinker.ui.viewmodel
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.repository.ContextCheck
+import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskRunner
@@ -33,6 +35,25 @@ sealed interface ProjectDetailUiState {
   data class Error(val message: String) : ProjectDetailUiState
 }
 
+/**
+ * A request for more questions (or a phase advance) that is parked while the
+ * user decides what to do about an over-long planning transcript.
+ *
+ * The check has to happen before the round is opened, so the request is held
+ * whole rather than half-done: the phase being advanced to rides along, so
+ * answering the question never has to remember which button the user pressed.
+ */
+sealed interface ContextPrompt {
+  /** What the project would send, and what the choice is worth. */
+  val check: ContextCheck
+
+  /** "Get more questions" in the current phase. */
+  data class MoreQuestions(override val check: ContextCheck) : ContextPrompt
+
+  /** The wrap-up advance into [phase]. */
+  data class PhaseAdvance(override val check: ContextCheck, val phase: Phase) : ContextPrompt
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProjectDetailViewModel(
   private val repository: ProjectRepository,
@@ -52,6 +73,10 @@ class ProjectDetailViewModel(
 
   private val _nextPhaseSuggestions = MutableStateFlow<List<Phase>?>(null)
   val nextPhaseSuggestions: StateFlow<List<Phase>?> = _nextPhaseSuggestions.asStateFlow()
+
+  /** The parked near-limit request, or null when none is waiting on the user. */
+  private val _contextPrompt = MutableStateFlow<ContextPrompt?>(null)
+  val contextPrompt: StateFlow<ContextPrompt?> = _contextPrompt.asStateFlow()
 
   private val _projectId = MutableStateFlow<String?>(null)
 
@@ -122,10 +147,59 @@ class ProjectDetailViewModel(
     persistOrder(current.rotateToEnd(unanswered.take(3).map { it.id }))
   }
 
-  fun generateMoreQuestions(projectId: String) {
+  /**
+   * Requests a round in the current phase, asking first when the project's
+   * planning transcript is over the budget.
+   *
+   * The check is a storage read and a measurement, so the common case — a
+   * project well inside its budget — goes straight through to the repository
+   * with the default compaction and never surfaces a dialog. A failed check
+   * falls back to requesting the round anyway rather than stranding the
+   * affordance: the budget is a guard rail, not a gate.
+   */
+  fun requestMoreQuestions(projectId: String) {
+    vmScope.launch {
+      val check = checkContext(projectId) ?: run {
+        generateMoreQuestions(projectId, ContextCompaction.DropEarlierAnswers)
+        return@launch
+      }
+      if (check.nearLimit) {
+        _contextPrompt.value = ContextPrompt.MoreQuestions(check)
+      } else {
+        generateMoreQuestions(projectId, ContextCompaction.DropEarlierAnswers)
+      }
+    }
+  }
+
+  /**
+   * Answers the parked [ContextPrompt] and carries out the request behind it.
+   * Taking the prompt out of the flow first means a second tap can't enqueue
+   * the same round twice while this is in flight.
+   */
+  fun resolveContextPrompt(compaction: ContextCompaction) {
+    val prompt = _contextPrompt.value ?: return
+    _contextPrompt.value = null
+    val projectId = _projectId.value ?: return
+    when (prompt) {
+      is ContextPrompt.MoreQuestions -> generateMoreQuestions(projectId, compaction)
+      is ContextPrompt.PhaseAdvance -> advanceToPhase(projectId, prompt.phase, compaction)
+    }
+  }
+
+  /** Backs out of the parked request, changing nothing. */
+  fun dismissContextPrompt() {
+    _contextPrompt.value = null
+  }
+
+  /** The project's context check, or null when the project is gone. */
+  private suspend fun checkContext(projectId: String): ContextCheck? =
+    runCatching { repository.checkContext(projectId) }
+      .getOrNull()
+
+  private fun generateMoreQuestions(projectId: String, compaction: ContextCompaction) {
     vmScope.launch {
       try {
-        repository.generateMoreQuestions(projectId)
+        repository.generateMoreQuestions(projectId, compaction)
         loadProject(projectId)
       } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
@@ -144,10 +218,30 @@ class ProjectDetailViewModel(
     repository.recommendTitle(projectId)
   }
 
-  fun advanceToPhase(projectId: String, phase: Phase) {
+  /**
+   * Requests the wrap-up advance into [phase], asking first when the project's
+   * planning transcript is over the budget — the moment a project is
+   * most likely to need it, since the phase it is leaving behind is the one
+   * whose answers the next round will no longer need in full.
+   */
+  fun requestPhaseAdvance(projectId: String, phase: Phase) {
+    vmScope.launch {
+      val check = checkContext(projectId) ?: run {
+        advanceToPhase(projectId, phase, ContextCompaction.DropEarlierAnswers)
+        return@launch
+      }
+      if (check.nearLimit) {
+        _contextPrompt.value = ContextPrompt.PhaseAdvance(check, phase)
+      } else {
+        advanceToPhase(projectId, phase, ContextCompaction.DropEarlierAnswers)
+      }
+    }
+  }
+
+  private fun advanceToPhase(projectId: String, phase: Phase, compaction: ContextCompaction) {
     vmScope.launch {
       try {
-        repository.advanceToPhase(projectId, phase)
+        repository.advanceToPhase(projectId, phase, compaction)
         loadProject(projectId)
       } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
