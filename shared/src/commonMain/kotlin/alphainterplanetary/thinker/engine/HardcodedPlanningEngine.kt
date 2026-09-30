@@ -12,6 +12,7 @@ import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import me.tatarka.inject.annotations.Inject
+import org.jetbrains.annotations.VisibleForTesting
 import kotlin.time.Instant
 
 class HardcodedPlanningEngine @Inject constructor(
@@ -33,10 +34,8 @@ class HardcodedPlanningEngine @Inject constructor(
   override suspend fun recommendTitle(synopsis: String, activityId: String): String =
     generateTitleFromSynopsis(synopsis)
 
-  fun generateTitleFromSynopsisForTest(synopsis: String): String =
-    generateTitleFromSynopsis(synopsis)
-
-  private fun generateTitleFromSynopsis(synopsis: String): String = synopsis.trim()
+  @VisibleForTesting
+  fun generateTitleFromSynopsis(synopsis: String): String = synopsis.trim()
     .substringBefore('\n')
     .substringBefore('.')
     .take(30)

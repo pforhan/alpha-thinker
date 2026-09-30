@@ -230,9 +230,12 @@ class ProjectRepository @Inject constructor(
     storage.saveQuestionOrder(projectId, order)
   }
 
-  suspend fun restoreProject(project: Project): Project {
+  /**
+   * Restores a deleted project to its original state. Used for undo.
+   * [Storage] is responsible for putting it back together.
+   */
+  suspend fun restoreProject(project: Project) {
     storage.saveProject(project)
-    return project
   }
 
   suspend fun updateProject(

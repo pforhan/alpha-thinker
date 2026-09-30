@@ -101,7 +101,7 @@ class HardcodedPlanningEngineTest {
     assertEquals("Line one", title("Line one\nLine two\nLine three"))
   }
 
-  private fun title(synopsis: String): String = generator.generateTitleFromSynopsisForTest(synopsis)
+  private fun title(synopsis: String): String = generator.generateTitleFromSynopsis(synopsis)
 
   // ---------- generateQuestions: a project's opening round (nothing asked yet) ----------
 
