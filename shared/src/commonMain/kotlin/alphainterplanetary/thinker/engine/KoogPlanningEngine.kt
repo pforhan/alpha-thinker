@@ -27,6 +27,11 @@ import kotlin.time.Instant
  * reply we can't read fails the generation rather than being partially
  * recovered (see [parseQuestions]). A well-formed empty array reports `done` —
  * the LLM's "nothing more to produce" signal.
+ *
+ * Every reply is published verbatim through [publishRawResponse] before
+ * anything tries to read it, so the activity log keeps the text even when the
+ * generation goes on to fail — the failing message alone says what went wrong,
+ * not what the model actually said.
  */
 class KoogPlanningEngine(
   private val backend: KoogPlanningBackend,
@@ -86,7 +91,7 @@ class KoogPlanningEngine(
     } catch (e: Exception) {
       throw PlanningEngine.AnalysisFailure(e.message ?: e.toString())
     }
-    return assistant.textContent().trim()
+    return assistant.textContent().trim().also { publishRawResponse(it) }
   }
 
   /**

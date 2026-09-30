@@ -18,6 +18,11 @@ import alphainterplanetary.thinker.util.now
  * [IllegalStateException] instead of silently writing a malformed activity.
  * Writers may also create a fresh context per launch — the guard only fires on
  * a genuine post-outcome write, not on a reused name.
+ *
+ * [response] and [closeFailed] also take the verbatim payload behind their
+ * message ([LogEntry.raw]) — the unparsed model reply — which rides along on
+ * the row rather than becoming a row of its own, so the outcome rows stay one
+ * line each in the viewer.
  */
 class LogContext internal constructor(
   private val log: ActivityLogger,
@@ -37,9 +42,12 @@ class LogContext internal constructor(
   /**
    * A failure terminal row rendering `failed: $message` — the single failure
    * marker (previously a separate `error:` variant; the read model treats the
-   * two rows identically, so there's only one writer path).
+   * two rows identically, so there's only one writer path). [raw] is the
+   * verbatim payload behind the failure (an unreadable model reply, say), kept
+   * so the popup can show what actually came back.
    */
-  suspend fun closeFailed(message: String) = terminal("${LogMarkers.Failed} $message")
+  suspend fun closeFailed(message: String, raw: String? = null) =
+    terminal("${LogMarkers.Failed} $message", raw)
 
   /** A cancellation terminal row (`cancelled`). */
   suspend fun closeCancelled() = terminal(LogMarkers.Cancelled)
@@ -50,8 +58,11 @@ class LogContext internal constructor(
   /** A `prompt:` detail row (a rendered prompt, verbatim). */
   suspend fun prompt(text: String) = file("${LogMarkers.Prompt} $text")
 
-  /** A `response:` detail row (the engine's produced outcome). */
-  suspend fun response(text: String) = file("${LogMarkers.Response} $text")
+  /**
+   * A `response:` detail row (the engine's produced outcome), optionally with
+   * the verbatim payload it was read from (see [LogEntry.raw]).
+   */
+  suspend fun response(text: String, raw: String? = null) = file("${LogMarkers.Response} $text", raw)
 
   /** Files a row verbatim — the escape hatch for text that has no marker. */
   suspend fun append(text: String) = file(text)
@@ -60,7 +71,7 @@ class LogContext internal constructor(
     check(!closed) { "activity $activityId already terminated; no further rows accepted" }
   }
 
-  private suspend fun file(text: String) {
+  private suspend fun file(text: String, raw: String? = null) {
     checkOpen()
     log.append(
       LogEntry(
@@ -70,12 +81,13 @@ class LogContext internal constructor(
         source = source,
         log = text,
         timestamp = now(),
+        raw = raw,
       )
     )
   }
 
-  private suspend fun terminal(text: String) {
-    file(text)
+  private suspend fun terminal(text: String, raw: String? = null) {
+    file(text, raw)
     closed = true
   }
 }

@@ -207,6 +207,63 @@ class KoogPlanningEngineTest {
     assertTrue(failure.message.orEmpty().contains("JSON array"))
   }
 
+  /**
+   * The raw reply is published before anything tries to read it, so the
+   * activity log keeps the text even on the generations that go on to fail —
+   * which is exactly the case where the message alone is undiagnosable.
+   */
+  @Test
+  fun `a reply is published verbatim whether or not it parses`() = runTest {
+    val unreadable = "I am not able to help with that request."
+    val captured = mutableListOf<String>()
+
+    val ok = capturingRawResponses({ captured += it }) {
+      engine(FakeClient(provider, """["What is the MVP?"]""")).generateQuestions(
+        title = "T",
+        synopsis = "S",
+        previousQuestions = emptyList(),
+        roundId = "r1",
+        phase = BuiltInPhase.ScopeGoals,
+        activityId = "t1",
+      )
+    }
+    assertEquals(listOf("What is the MVP?"), ok.questions.map { it.text })
+
+    try {
+      capturingRawResponses({ captured += it }) {
+        engine(FakeClient(provider, unreadable)).generateQuestions(
+          title = "T",
+          synopsis = "S",
+          previousQuestions = emptyList(),
+          roundId = "r1",
+          phase = BuiltInPhase.ScopeGoals,
+          activityId = "t1",
+        )
+      }
+      fail("expected the unreadable reply to fail")
+    } catch (e: PlanningEngine.AnalysisFailure) {
+      assertTrue(e.message.orEmpty().contains("JSON array"))
+    }
+
+    assertEquals(listOf("""["What is the MVP?"]""", unreadable), captured)
+  }
+
+  @Test
+  fun `a blank reply publishes no raw payload`() = runTest {
+    val captured = mutableListOf<String>()
+
+    try {
+      capturingRawResponses({ captured += it }) {
+        engine(FakeClient(provider, "   ")).recommendTitle("something", activityId = "t1")
+      }
+      fail("expected the empty title to fail")
+    } catch (e: PlanningEngine.AnalysisFailure) {
+      assertTrue(e.message.orEmpty().contains("empty title"))
+    }
+
+    assertTrue(captured.isEmpty(), "there is nothing to show for an empty reply")
+  }
+
   @Test
   fun `the questions prompt carries the title and the phase and the already asked questions`() = runTest {
     val client = FakeClient(provider, """["A fresh question"]""")

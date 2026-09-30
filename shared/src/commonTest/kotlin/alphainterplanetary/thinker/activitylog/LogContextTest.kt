@@ -54,6 +54,24 @@ class LogContextTest {
     )
   }
 
+  /**
+   * The raw payload rides on the outcome row rather than becoming a row of its
+   * own: the row's text stays the summary, and the raw is only ever additive.
+   */
+  @Test
+  fun `outcome rows carry their raw payload without adding a row`() = runTest {
+    val log = RecordingActivityLogger()
+    val context = log.context("task-4", LogCategory.QuestionGeneration, LogSource.RemoteLLM)
+
+    context.response("0 questions, done=true", raw = """["a", ]""")
+    context.closeFailed("model exploded")
+
+    assertEquals(2, log.entries.size)
+    assertEquals("response: 0 questions, done=true", log.entries[0].log)
+    assertEquals("""["a", ]""", log.entries[0].raw)
+    assertEquals(null, log.entries[1].raw, "a row with no payload carries no raw")
+  }
+
   @Test
   fun `a write after a terminal row fails fast`() = runTest {
     val log = RecordingActivityLogger()

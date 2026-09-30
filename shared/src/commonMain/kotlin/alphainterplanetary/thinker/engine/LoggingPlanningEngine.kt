@@ -17,6 +17,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * the produced payload — joining the [TaskRunner]'s `TaskRun` lifecycle rows for
  * the same activity. The [LogCategory] is chosen per interaction and [LogSource]
  * reflects whichever engine actually ran.
+ *
+ * The terminal row also carries the delegate's verbatim model reply as its
+ * [LogEntry.raw] (captured through [capturingRawResponses]), so a reply that
+ * couldn't be parsed survives the failure that it caused — see
+ * [RawResponseCapture] for why the text has to travel that way.
  */
 class LoggingPlanningEngine(
   private val delegate: PlanningEngine,
@@ -29,15 +34,18 @@ class LoggingPlanningEngine(
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     val context = log.context(activityId, LogCategory.TitleRecommendation, source)
     filePrompt(context, (delegate as? PromptRenderer)?.titlePrompt(synopsis), "synopsis=$synopsis")
+    val raw = mutableListOf<String>()
     return try {
-      val title = delegate.recommendTitle(synopsis, activityId)
-      context.response(title)
+      val title = capturingRawResponses({ raw += it }) {
+        delegate.recommendTitle(synopsis, activityId)
+      }
+      context.response(title, raw.joinedRawResponse())
       title
     } catch (e: CancellationException) {
       context.closeCancelled()
       throw e
     } catch (e: Exception) {
-      context.closeFailed(e.message ?: e.toString())
+      context.closeFailed(e.message ?: e.toString(), raw.joinedRawResponse())
       throw e
     }
   }
@@ -56,17 +64,20 @@ class LoggingPlanningEngine(
       (delegate as? PromptRenderer)?.questionsPrompt(title, synopsis, previousQuestions, phase),
       "phase=$phase, synopsis=$synopsis, previous questions=${previousQuestions.size}",
     )
+    val raw = mutableListOf<String>()
     return try {
-      val batch = delegate.generateQuestions(
-        title, synopsis, previousQuestions, roundId, phase, activityId
-      )
-      context.response(batchResponse(batch))
+      val batch = capturingRawResponses({ raw += it }) {
+        delegate.generateQuestions(
+          title, synopsis, previousQuestions, roundId, phase, activityId
+        )
+      }
+      context.response(batchResponse(batch), raw.joinedRawResponse())
       batch
     } catch (e: CancellationException) {
       context.closeCancelled()
       throw e
     } catch (e: Exception) {
-      context.closeFailed(e.message ?: e.toString())
+      context.closeFailed(e.message ?: e.toString(), raw.joinedRawResponse())
       throw e
     }
   }

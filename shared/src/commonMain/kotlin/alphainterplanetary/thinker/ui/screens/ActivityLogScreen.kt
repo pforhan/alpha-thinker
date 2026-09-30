@@ -2,11 +2,13 @@ package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogEntry
+import alphainterplanetary.thinker.activitylog.LogMarkers
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogItem
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
+import alphainterplanetary.thinker.ui.platform.toClipEntry
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
 import alphainterplanetary.thinker.util.formatTaskDuration
 import androidx.compose.animation.AnimatedVisibility
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -43,11 +46,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.launch
 import kotlin.time.Instant
 
 /**
@@ -59,11 +65,17 @@ import kotlin.time.Instant
   * question count + `done` flag, a produced title, or an
   * error), and tapping expands the full ordered rows with timestamps.
   *
-  * This addresses IMPLEMENTATION-PLAN.md line 228 and the "why has the backend
-  * stopped offering questions" audit: a `FollowUpQuestions` batch that produced
-  * zero questions but
-  * marked `done`, or a failed/cancelled generation task with its error message
-  * all read directly off the collapsed row.
+ * This addresses IMPLEMENTATION-PLAN.md line 228 and the "why has the backend
+ * stopped offering questions" audit: a `FollowUpQuestions` batch that produced
+ * zero questions but marked `done`, or a failed/cancelled generation task with
+ * its error message all read directly off the collapsed row.
+ *
+ * The same audit needs the other half: a failure message says what went wrong
+ * but not what the model actually said, so a row that carries a raw payload
+ * ([LogEntry.raw]) opens its (i) popup straight onto the verbatim reply —
+ * including the ones that could not be parsed, which is precisely when the text
+ * matters. The popup is selectable and copyable for the same reason: a reply
+ * that needs reading twice usually needs pasting somewhere else.
  *
  * It is read-only; the delete action wipes the whole log (no confirmation) and
  * nothing else is mutated.
@@ -210,13 +222,19 @@ private fun secondaryLine(activity: ActivityRecord, projectLabel: String?): Stri
 private fun summaryColor(hasError: Boolean): Color =
   if (hasError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
 
-/** One immutable log row: timestamp and full text, prompt rows verbatim. */
+/**
+ * One immutable log row: timestamp and full text, prompt rows verbatim. A row
+ * carrying a raw payload (an unparsed model reply) always offers the (i) popup
+ * — the popup then shows that payload instead of the row, which is the only
+ * thing this row can't already tell you.
+ */
 @Composable
 private fun EntryRow(entry: LogEntry) {
   var showFull by remember { mutableStateOf(false) }
-  val isVerbose = entry.log.startsWith("prompt:") || entry.log.startsWith("response:")
+  val raw = entry.raw
+  val isVerbose = entry.log.startsWith(LogMarkers.Prompt) || entry.log.startsWith(LogMarkers.Response)
   val valueColor = when {
-    entry.log.startsWith("failed:") || entry.log == "cancelled" -> {
+    entry.log.startsWith(LogMarkers.Failed) || entry.log == LogMarkers.Cancelled -> {
       MaterialTheme.colorScheme.error
     }
     isVerbose -> MaterialTheme.colorScheme.onSurface
@@ -230,11 +248,15 @@ private fun EntryRow(entry: LogEntry) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
       Spacer(modifier = Modifier.weight(1f))
-      if (entry.log.length > 400) {
+      if (raw != null || entry.log.length > 400) {
         IconButton(onClick = { showFull = true }) {
           Icon(
             imageVector = Icons.Default.Info,
-            contentDescription = "Show full entry",
+            contentDescription = if (raw != null) {
+              "Show the model's raw response"
+            } else {
+              "Show full entry"
+            },
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
           )
         }
@@ -254,29 +276,57 @@ private fun EntryRow(entry: LogEntry) {
   }
 }
 
-/** Modal with the full text of [entry], rendered untruncated. */
+/**
+ * The row's payload, untruncated: the verbatim model reply where the row has
+ * one, otherwise the row's own text (a `prompt:` row has no separate raw).
+ * Never both — repeating the row line above the reply is what this replaced,
+ * and it is the reply that makes the popup worth opening.
+ *
+ * The text is selectable as well as copyable, because the point of a raw reply
+ * is usually to take it somewhere else (an issue, a prompt-tuning session, a
+ * bug report). Selection covers the pointer-driven targets; the Copy button
+ * covers Android, and closes the dialog on the way out — closing *is* the
+ * confirmation there is no other. The dismiss happens *after* the write, not
+ * before it: the coroutine scope belongs to this dialog's composition, so
+ * dismissing first would cancel the copy mid-flight.
+ */
 @Composable
 private fun FullEntryDialog(
   entry: LogEntry,
   onDismiss: () -> Unit,
 ) {
+  val raw = entry.raw
+  val payload = raw ?: entry.log
+  val clipboard = LocalClipboard.current
+  val scope = rememberCoroutineScope()
   AlertDialog(
     onDismissRequest = onDismiss,
-    title = { Text("Full entry") },
+    title = { Text(if (raw != null) "Raw model response" else "Full entry") },
     text = {
-      Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-      ) {
-        Text(
-          text = entry.log,
-          style = MaterialTheme.typography.bodySmall,
-        )
+      Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+        SelectionContainer {
+          Text(
+            text = payload,
+            style = MaterialTheme.typography.bodySmall,
+          )
+        }
       }
     },
     confirmButton = {
       TextButton(onClick = onDismiss) {
         Text("Close")
+      }
+    },
+    dismissButton = {
+      TextButton(
+        onClick = {
+          scope.launch {
+            clipboard.setClipEntry(payload.toClipEntry())
+            onDismiss()
+          }
+        },
+      ) {
+        Text("Copy")
       }
     },
   )

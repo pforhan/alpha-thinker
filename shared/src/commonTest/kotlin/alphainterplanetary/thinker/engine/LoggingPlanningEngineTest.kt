@@ -189,8 +189,88 @@ class LoggingPlanningEngineTest {
     assertEquals("failed: model exploded", terminal.log)
   }
 
-  private fun question(text: String): Question =
-    Question(id = text, text = text, timestamp = now(), roundId = "r1")
+  /**
+   * The whole point of the raw capture: a reply that couldn't be read is the
+   * only evidence for the failure it caused, so the failing row has to carry
+   * it. The row's own text stays the one-line message.
+   */
+  @Test
+  fun `an unreadable reply is kept as the raw payload of the failed row`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(
+      delegate = RawReplyingEngine("I am not able to help with that request.", readable = false),
+      log = log,
+    )
+
+    try {
+      engine.generateQuestions(
+        title = "T",
+        synopsis = "S",
+        previousQuestions = emptyList(),
+        roundId = "r9",
+        phase = BuiltInPhase.Design,
+        activityId = "task-10",
+      )
+      fail("expected the parse failure to propagate")
+    } catch (e: PlanningEngine.AnalysisFailure) {
+      assertTrue(e.message.orEmpty().contains("JSON array"))
+    }
+
+    val terminal = log.entries.last()
+    assertEquals("failed: The model didn't reply with a JSON array of question strings", terminal.log)
+    assertEquals("I am not able to help with that request.", terminal.raw)
+  }
+
+  @Test
+  fun `a parsed reply is kept verbatim as the raw payload of the response row`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(
+      delegate = RawReplyingEngine("""["What is the MVP?"]"""),
+      log = log,
+    )
+
+    engine.generateQuestions(
+      title = "T",
+      synopsis = "S",
+      previousQuestions = emptyList(),
+      roundId = "r9",
+      phase = BuiltInPhase.Design,
+      activityId = "task-11",
+    )
+
+    val terminal = log.entries.last()
+    assertTrue(terminal.log.startsWith("response: 1 question, done=false"))
+    assertEquals("""["What is the MVP?"]""", terminal.raw)
+  }
+
+  @Test
+  fun `a title reply is captured raw too`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(
+      delegate = RawReplyingEngine("  Mobile Menu Planner  "),
+      log = log,
+    )
+
+    engine.recommendTitle("A menu planner", activityId = "task-12")
+
+    val terminal = log.entries.last()
+    assertEquals("response: Mobile Menu Planner", terminal.log)
+    assertEquals("Mobile Menu Planner", terminal.raw, "the raw is the trimmed reply, as received")
+  }
+
+  /**
+   * Every LLM interaction is covered, not just question generation — an engine
+   * that never spoke to a model simply has nothing to publish.
+   */
+  @Test
+  fun `an engine that publishes no reply records no raw`() = runTest {
+    val log = RecordingActivityLogger()
+    val engine = LoggingPlanningEngine(delegate = FakePlanningEngine(), log = log)
+
+    engine.recommendTitle("Build a rocketship", activityId = "task-13")
+
+    assertEquals(null, log.entries.last().raw)
+  }
 
   private class PromptRenderingEngine : PlanningEngine by FakePlanningEngine(), PromptRenderer {
     override fun titlePrompt(synopsis: String): String =
@@ -220,4 +300,43 @@ class LoggingPlanningEngineTest {
       activityId: String,
     ): QuestionBatch = throw PlanningEngine.AnalysisFailure("model exploded")
   }
+
+  /**
+   * Stands in for an LLM-backed engine: publishes [reply] the way
+   * [KoogPlanningEngine] does — before trying to read it, failing when it
+   * can't — so the decorator's capture is exercised without a backend.
+   */
+  private class RawReplyingEngine(
+    private val reply: String,
+    private val readable: Boolean = true,
+  ) : PlanningEngine {
+    override val source: LogSource = LogSource.RemoteLLM
+
+    override suspend fun recommendTitle(synopsis: String, activityId: String): String =
+      reply.trim().also { publishRawResponse(it) }
+
+    override suspend fun generateQuestions(
+      title: String,
+      synopsis: String,
+      previousQuestions: List<Question>,
+      roundId: String,
+      phase: Phase,
+      activityId: String,
+    ): QuestionBatch {
+      val text = reply.trim()
+      publishRawResponse(text)
+      if (!readable) {
+        throw PlanningEngine.AnalysisFailure(
+          "The model didn't reply with a JSON array of question strings",
+        )
+      }
+      return QuestionBatch(
+        questions = listOf(question("What is the MVP?", roundId)),
+        done = false,
+      )
+    }
+  }
 }
+
+private fun question(text: String, roundId: String = "r1"): Question =
+  Question(id = text, text = text, timestamp = now(), roundId = roundId)

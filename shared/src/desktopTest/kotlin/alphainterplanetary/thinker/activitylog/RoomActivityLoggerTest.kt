@@ -146,6 +146,30 @@ class RoomActivityLoggerTest {
     assertEquals(null, latest)
   }
 
+  /**
+   * The raw payload is the whole evidence for a failed parse, so it has to
+   * survive the round trip to disk — including one that looks like prose
+   * rather than the JSON the parser wanted.
+   */
+  @Test
+  fun `a row's raw payload survives persistence`() = runTest {
+    val db = inMemory()
+    val raw = "Sure! Here are some questions:\n- What is the MVP?"
+    db.logDao().append(
+      LogEntry(
+        projectId = "p1",
+        activityId = "a1",
+        category = LogCategory.QuestionGeneration,
+        source = LogSource.RemoteLLM,
+        log = "failed: The model didn't reply with a JSON array of question strings",
+        timestamp = now(),
+        raw = raw,
+      ).toEntity(),
+    )
+
+    assertEquals(raw, log(db, scope = CoroutineScope(coroutineContext)).entries().first().single().raw)
+  }
+
   @Test
   fun `clear wipes the whole log`() = runTest {
     val db = inMemory()

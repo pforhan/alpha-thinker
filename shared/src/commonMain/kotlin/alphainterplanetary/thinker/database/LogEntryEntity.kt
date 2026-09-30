@@ -30,6 +30,8 @@ data class LogEntryEntity(
   val source: String? = null,
   val log: String,
   val timestampMillis: Long,
+  /** The verbatim payload behind [log] (see [LogEntry.raw]); rarely null. */
+  val raw: String? = null,
 )
 
 fun LogEntry.toEntity(): LogEntryEntity = LogEntryEntity(
@@ -40,6 +42,7 @@ fun LogEntry.toEntity(): LogEntryEntity = LogEntryEntity(
   source = source?.name,
   log = log,
   timestampMillis = timestamp.toEpochMilliseconds(),
+  raw = raw,
 )
 
 fun LogEntryEntity.toEntry(): LogEntry = LogEntry(
@@ -50,6 +53,7 @@ fun LogEntryEntity.toEntry(): LogEntry = LogEntry(
   source = source?.let(::parseSource),
   log = log,
   timestamp = Instant.fromEpochMilliseconds(timestampMillis),
+  raw = raw,
 )
 
 /** Unknown stored categories degrade to [LogCategory.Info] rather than crash. */

@@ -107,4 +107,14 @@ data class LogEntry(
   /** The row's content: a prompt, response, error, result, or note. */
   val log: String,
   val timestamp: Instant,
+  /**
+   * The verbatim payload behind [log] — today the model's unedited reply, kept
+   * even when it couldn't be parsed. It is deliberately *not* folded into
+   * [log]: the row's text stays the readable summary the headlines are derived
+   * from, and the raw is what the viewer's full-entry popup adds on top (never
+   * a second copy of the row). Null when there is no underlying payload — a
+   * lifecycle marker, a synthesized `input:` summary, or an engine that never
+   * spoke to a model (Lite).
+   */
+  val raw: String? = null,
 )
