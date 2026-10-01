@@ -18,7 +18,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.coroutineContext
 
 /**
  * App-scoped executor for long-running generation work. [enqueue] wraps a
@@ -125,23 +129,27 @@ class TaskRunner(
       source = LogSource.TaskRunner,
       projectId = task.projectId,
     )
-    scope.launch {
-      logContext?.started(task.kind.name)
-      val guard = projectGuard(task.projectId)
-      val groupGate = groupGates.getValue(task.group)
-      guard.withLock {
-        groupGate.withLock {
-          val startedAt = now()
-          _tasks.update { it.replace(task.asStarted(startedAt)) }
-          println(
-            "[AlphaThinker] task started: kind=${task.kind}, group=${task.group}, " +
-              "project=${task.projectId}, id=${task.id}"
-          )
-          var cancelled = false
-          var failure: String? = null
-          try {
-            produce(task.id)
-          } catch (e: CancellationException) {
+scope.launch {
+        logContext?.started(task.kind.name)
+        val guard = projectGuard(task.projectId)
+        val groupGate = groupGates.getValue(task.group)
+        guard.withLock {
+          groupGate.withLock {
+            val startedAt = now()
+            _tasks.update { it.replace(task.asStarted(startedAt)) }
+            println(
+              "[AlphaThinker] task started: kind=${task.kind}, group=${task.group}, " +
+                "project=${task.projectId}, id=${task.id}"
+            )
+            var cancelled = false
+            var failure: String? = null
+            try {
+              // Installed for the body only — and only once both locks are held,
+              // which is exactly the window [await] refuses to suspend in.
+              withContext(TaskBodyContext(projectId = task.projectId, group = task.group)) {
+                produce(task.id)
+              }
+            } catch (e: CancellationException) {
             cancelled = true
           } catch (e: Exception) {
             failure = e.message ?: e.toString()
@@ -205,9 +213,9 @@ class TaskRunner(
     // Checked against the current value rather than by suspending on the flow,
     // so an unknown id fails here instead of hanging on one that will never
     // carry it.
-    if (tasks.value.none { it.id == taskId }) {
-      throw IllegalArgumentException("No task with id $taskId")
-    }
+    val task = tasks.value.firstOrNull { it.id == taskId }
+      ?: throw IllegalArgumentException("No task with id $taskId")
+    checkAwaitIsReachable(task)
     val finished = tasks.first { list -> list.any { it.id == taskId && it.isFinished } }
       .single { it.id == taskId }
     if (finished.status == TaskStatus.Failed) {
@@ -216,12 +224,65 @@ class TaskRunner(
     return finished
   }
 
+  /**
+   * Fails fast when this coroutine is itself running as a task body that would
+   * have to release its own lock before [task] could start — the deadlock the
+   * KDoc on [await] describes, caught at the call instead of as a hang.
+   *
+   * The check is context-based rather than a flag on the runner, so it holds
+   * across suspensions and dispatcher hops: [TaskBodyContext] is installed
+   * around the body (see [launchTask]) and travels with the coroutine
+   * everywhere it goes.
+   *
+   * Only an *unfinished* target deadlocks, and the two locks fail differently:
+   * the project mutex serializes every task for a project regardless of group,
+   * while a group's gate serializes only tasks in that group. So awaiting a
+   * finished task is always safe, awaiting a task in a different group is
+   * always safe, and awaiting a live task is safe exactly when neither lock
+   * would be contended.
+   */
+  private suspend fun checkAwaitIsReachable(task: GenerationTask) {
+    if (task.isFinished) return
+    val body = coroutineContext[TaskBodyContext] ?: return
+    val sameProject = task.projectId == body.projectId
+    val sameGate = task.group == body.group
+    if (!sameProject && !sameGate) return
+    val held = if (sameProject) {
+      "the project mutex for ${task.projectId}"
+    } else {
+      "the ${task.group} gate, which admits one task at a time"
+    }
+    throw IllegalStateException(
+      "await(${task.id}) would deadlock: this coroutine is a ${body.group} task body " +
+        "for project ${body.projectId} and is holding $held, which the awaited task " +
+        "needs before it can start. Await from outside a task body.",
+    )
+  }
+
   /** Reports streaming progress (0..1) for a running task, e.g. a synthesis. */
   fun setProgress(taskId: String, progress: Float) {
     _tasks.update { list ->
       list.map { task -> if (task.id == taskId) task.copy(progress = progress) else task }
     }
   }
+}
+
+/**
+ * Marks a coroutine as running as a [TaskRunner] task body, carrying the two
+ * locks that body holds for its whole duration: the project's mutex and its
+ * [group]'s gate. Installed by the runner around the body and read by
+ * [TaskRunner.await] to refuse a self-deadlocking wait.
+ *
+ * A context element rather than runner state because the question "is this
+ * coroutine a task body?" is asked from inside a deeply nested suspend call
+ * that may have hopped dispatchers, where no shared field would still be
+ * reachable — but the coroutine context is, by construction.
+ */
+private class TaskBodyContext(
+  val projectId: String,
+  val group: ConcurrencyGroup,
+) : AbstractCoroutineContextElement(TaskBodyContext) {
+  companion object Key : CoroutineContext.Key<TaskBodyContext>
 }
 
 /**

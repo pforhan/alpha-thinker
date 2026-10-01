@@ -1,10 +1,12 @@
 package alphainterplanetary.thinker.tasks
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -216,6 +218,125 @@ class TaskRunnerTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
 
     assertFailsWith<IllegalArgumentException> { runner.await("nope") }
+  }
+
+  @Test
+  fun `await from inside a task body for the same project fails fast`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    var thrown: Throwable? = null
+    // Enqueued first, so this body holds the project mutex and `second` is
+    // still queued behind it — the state the guard exists to catch.
+    lateinit var second: GenerationTask
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      thrown = runCatching { runner.await(second.id) }.exceptionOrNull()
+    }
+    second = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
+
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(
+      thrown is IllegalStateException,
+      "expected IllegalStateException, got $thrown",
+    )
+    assertTrue(
+      thrown!!.message!!.contains("would deadlock"),
+      "message should name the hazard: ${thrown!!.message}",
+    )
+    assertTrue(thrown!!.message!!.contains("project mutex"))
+  }
+
+  @Test
+  fun `await from inside a task body for a different project in the same group fails fast`() =
+    runTest {
+      val runner = TaskRunner(CoroutineScope(coroutineContext))
+      var thrown: Throwable? = null
+      // Enqueued first so this body holds the Engine gate with `other` still
+      // queued behind it.
+      lateinit var other: GenerationTask
+      runner.enqueue("p1", TaskKind.QuestionGeneration) {
+        thrown = runCatching { runner.await(other.id) }.exceptionOrNull()
+      }
+      // Different project, so the project mutex is free — but both tasks are in
+      // the serial Engine group and this body already holds that gate.
+      other = runner.enqueue("p2", TaskKind.QuestionGeneration) {}
+
+      testScheduler.advanceUntilIdle()
+
+      assertTrue(
+        thrown is IllegalStateException,
+        "expected IllegalStateException, got $thrown",
+      )
+      assertTrue(thrown!!.message!!.contains("Engine gate"))
+    }
+
+  @Test
+  fun `await from inside a task body is allowed across groups and projects`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    // A Remote task for another project contends with neither lock the body
+    // holds: different project, and Remote admits four at a time.
+    val remote = runner.enqueue("p2", TaskKind.QuestionGeneration, group = ConcurrencyGroup.Remote) {
+      delay(500)
+    }
+    var awaited: GenerationTask? = null
+    var thrown: Throwable? = null
+
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      thrown = runCatching { awaited = runner.await(remote.id) }.exceptionOrNull()
+    }
+
+    testScheduler.advanceUntilIdle()
+
+    assertNull(thrown, "no contention, so no deadlock: $thrown")
+    assertEquals(TaskStatus.Succeeded, awaited?.status)
+  }
+
+  @Test
+  fun `await of an already-finished task from inside a body is allowed`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val done = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
+    testScheduler.advanceUntilIdle()
+    assertEquals(TaskStatus.Succeeded, runner.tasks.value.single { it.id == done.id }.status)
+
+    // Same project and same group as the running body, but the target already
+    // finished, so there is nothing left to wait for and nothing to deadlock.
+    var awaited: GenerationTask? = null
+    var thrown: Throwable? = null
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      thrown = runCatching { awaited = runner.await(done.id) }.exceptionOrNull()
+    }
+
+    testScheduler.advanceUntilIdle()
+
+    assertNull(thrown, "a finished task cannot deadlock: $thrown")
+    assertEquals(done.id, awaited?.id)
+  }
+
+@Test
+  fun `the deadlock guard is not fooled by an unwrapped dispatcher`() = runTest {
+    // The guard reads the coroutine context, so it must still see the body's
+    // marker after the coroutine has been re-dispatched — here via
+    // `Unconfined`, which keeps the test on one thread and its clock virtual.
+    // This pins the *mechanism* (context, not a captured field or thread-local)
+    // without a real-time timeout; whether the marker is actually reachable
+    // from a foreign thread is a property of kotlinx.coroutines' context
+    // propagation, not of this class.
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    var thrown: Throwable? = null
+    lateinit var second: GenerationTask
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      thrown = withContext(Dispatchers.Unconfined) {
+        runCatching { runner.await(second.id) }.exceptionOrNull()
+      }
+    }
+    second = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
+
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(
+      thrown is IllegalStateException,
+      "the guard must read the coroutine context across a dispatch, got $thrown",
+    )
+    assertTrue(thrown!!.message!!.contains("would deadlock"))
   }
 
   @Test
