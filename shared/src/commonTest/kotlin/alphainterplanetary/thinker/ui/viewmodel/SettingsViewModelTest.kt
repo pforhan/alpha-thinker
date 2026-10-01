@@ -3,9 +3,15 @@ package alphainterplanetary.thinker.ui.viewmodel
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.SettingsRepository
+import alphainterplanetary.thinker.tasks.TaskRunner
+import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
+import alphainterplanetary.thinker.testutil.RecordingActivityLogger
+import alphainterplanetary.thinker.tools.ProjectSimulator
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
+import alphainterplanetary.thinker.tools.SimulationState
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
@@ -19,11 +25,31 @@ class SettingsViewModelTest {
   val sampleProjectGenerator = SampleProjectGenerator(storage)
 
   private fun TestScope.viewModel(): SettingsViewModel {
-    return SettingsViewModel(
-      settingsRepository = SettingsRepository(storage, CoroutineScope(coroutineContext)),
-      sampleProjectGenerator = sampleProjectGenerator,
-      scope = CoroutineScope(coroutineContext),
+    val scope = CoroutineScope(coroutineContext)
+    val runner = TaskRunner(scope)
+    val repository = ProjectRepository(
+      storage = storage,
+      engineSelector = { FakePlanningEngine() },
+      taskRunner = runner,
+      settings = SettingsRepository(storage, scope),
+      activityLogger = RecordingActivityLogger(),
     )
+    return SettingsViewModel(
+      settingsRepository = SettingsRepository(storage, scope),
+      sampleProjectGenerator = sampleProjectGenerator,
+      projectSimulator = ProjectSimulator(repository, storage, scope),
+      scope = scope,
+    )
+  }
+
+  @Test
+  fun `simulation state is the simulator's own so the sheet cannot drift from the run`() = runTest {
+    val vm = viewModel()
+
+    assertEquals(SimulationState.Idle, vm.simulation.value)
+    // Nothing is running, so a cancel is a no-op rather than an error.
+    vm.cancelSimulation()
+    assertEquals(SimulationState.Idle, vm.simulation.value)
   }
 
   @Test

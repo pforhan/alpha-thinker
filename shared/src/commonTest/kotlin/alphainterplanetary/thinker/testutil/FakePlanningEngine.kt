@@ -15,6 +15,18 @@ class FakePlanningEngine : PlanningEngine {
   val questions: MutableList<Question> = mutableListOf()
   var calls: MutableList<Call> = mutableListOf()
 
+  /**
+   * Supplies a call's batch instead of [questions] when set, which is what a
+   * caller generating more than one round needs: a fixed [questions] list is
+   * deduped away by the second round and fails as a dead end, whereas a caller
+   * that varies by call gets fresh text every round.
+   *
+   * Handed the call's index (counting from zero) and its [Call.roundId] — the
+   * latter because a question's round is what resolves its phase, and a batch
+   * built without it lands in no phase at all.
+   */
+  var batchFor: ((callIndex: Int, roundId: String) -> List<Question>)? = null
+
   /** The window a budget is a share of; null means the engine composes no prompt. */
   override var contextWindowTokens: Int? = 8192
 
@@ -49,9 +61,11 @@ class FakePlanningEngine : PlanningEngine {
     activityId: String,
     priorSummaries: List<PlanningContext.PhaseSummary>,
   ): QuestionBatch {
-    calls += Call(title, synopsis, previousQuestions, roundId, phase, priorSummaries)
+    val call = Call(title, synopsis, previousQuestions, roundId, phase, priorSummaries)
+    calls += call
     generationFailure?.let { throw it }
-    return QuestionBatch(questions, done)
+    val batch = batchFor?.invoke(calls.size - 1, roundId) ?: questions
+    return QuestionBatch(batch, done)
   }
 
   /** One recorded call, carrying the whole context the engine was handed. */

@@ -151,6 +151,7 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
     SettingsViewModel(
       settingsRepository = appComponent.settingsRepository,
       sampleProjectGenerator = appComponent.sampleProjectGenerator,
+      projectSimulator = appComponent.projectSimulator,
       scope = appComponent.appScope,
     )
   }

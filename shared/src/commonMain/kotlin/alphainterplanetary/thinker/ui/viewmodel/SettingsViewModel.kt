@@ -4,7 +4,10 @@ import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.repository.SettingsRepository
+import alphainterplanetary.thinker.tools.ProjectSimulator
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
+import alphainterplanetary.thinker.tools.SimulationConfig
+import alphainterplanetary.thinker.tools.SimulationState
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +25,7 @@ sealed interface SettingsUiState {
 class SettingsViewModel(
   private val settingsRepository: SettingsRepository,
   private val sampleProjectGenerator: SampleProjectGenerator,
+  private val projectSimulator: ProjectSimulator,
   private val scope: CoroutineScope,
 ) {
   /** The selected phase-color theme; changes apply immediately and persist. */
@@ -119,5 +123,26 @@ class SettingsViewModel(
         )
       }
     }
+  }
+
+  /**
+   * Where a project-simulator run has got to. Read straight off the simulator
+   * rather than mirrored here, so the Testing sheet's progress cannot drift from
+   * the run it is describing; a run outlives the sheet that started it, which is
+   * the whole reason this ViewModel is hoisted.
+   */
+  val simulation: StateFlow<SimulationState> = projectSimulator.state
+
+  /** Starts a simulator run against the selected engine, replacing any in flight. */
+  fun simulateProject(config: SimulationConfig) {
+    projectSimulator.run(config)
+  }
+
+  /**
+   * Stops a run in progress. The round it was waiting on still lands; the run
+   * simply stops advancing (see `ProjectSimulator.cancel`).
+   */
+  fun cancelSimulation() {
+    projectSimulator.cancel()
   }
 }

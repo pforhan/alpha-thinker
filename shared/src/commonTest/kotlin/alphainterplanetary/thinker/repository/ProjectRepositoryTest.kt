@@ -15,6 +15,7 @@ import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.tasks.TaskFailed
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
@@ -30,6 +31,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -1170,6 +1172,120 @@ class ProjectRepositoryTest {
     assertEquals(listOf("q1"), result.questions.map { it.id })
     testScheduler.advanceUntilIdle()
     assertEquals(0, generator.calls.size, "an exhausted phase never calls the engine")
+  }
+
+  // ---------- awaiting variants ----------
+
+  @Test
+  fun `createProjectAndWait returns once the opening round has landed`() = runTest {
+    val generator = FakePlanningEngine().apply {
+      questions += question("q1", "First?")
+    }
+    val storage = FakeStorage()
+    val repository = repo(storage = storage, generator = generator)
+
+    val project = repository.createProjectAndWait("My synopsis")
+
+    // No advanceUntilIdle: the questions are already there on return, which is
+    // the whole difference from createProject.
+    assertEquals(
+      listOf("First?"),
+      storage.getProject(project.id)?.questions?.map { it.text },
+    )
+    assertEquals(RoundOutcome.MoreAvailable, storage.getProject(project.id)?.rounds?.single()?.outcome)
+  }
+
+  @Test
+  fun `createProjectAndWait throws rather than returning a project with no questions`() = runTest {
+    val generator = FakePlanningEngine().apply {
+      generationFailure = IllegalStateException("engine is down")
+    }
+    val storage = FakeStorage()
+    val repository = repo(storage = storage, generator = generator)
+
+    val thrown = assertFailsWith<TaskFailed> {
+      repository.createProjectAndWait("My synopsis")
+    }
+
+    assertEquals(TaskStatus.Failed, thrown.task.status)
+    assertEquals(1, storage.projects.size, "the project shell is still left behind")
+  }
+
+  @Test
+  fun `advanceToPhaseAndWait returns once the new phase's round has landed`() = runTest {
+    val generator = FakePlanningEngine().apply {
+      batchFor = { _, roundId -> listOf(question("q9", "Fresh?", roundId = roundId)) }
+    }
+    val storage = FakeStorage(
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.ScopeGoals)))
+    )
+    val repository = repo(storage = storage, generator = generator)
+
+    repository.advanceToPhaseAndWait("p1", BuiltInPhase.Design)
+
+    assertEquals(
+      listOf("q1", "Fresh?"),
+      storage.getProject("p1")?.questions?.map { it.text },
+      "the new phase's questions are there on return, alongside the ones already asked",
+    )
+    assertEquals(BuiltInPhase.Design, storage.getProject("p1")?.rounds?.last()?.phase)
+  }
+
+  @Test
+  fun `advanceToPhaseAndWait throws when the round fails`() = runTest {
+    val generator = FakePlanningEngine().apply {
+      generationFailure = IllegalStateException("engine is down")
+    }
+    val storage = FakeStorage(
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.ScopeGoals)))
+    )
+    val repository = repo(storage = storage, generator = generator)
+
+    assertFailsWith<TaskFailed> {
+      repository.advanceToPhaseAndWait("p1", BuiltInPhase.Design)
+    }
+
+    // The round is still there, latched failed — the phase swap landed, only its
+    // questions did not.
+    assertEquals(BuiltInPhase.Design, storage.getProject("p1")?.rounds?.last()?.phase)
+    assertEquals(RoundOutcome.Failed, storage.getProject("p1")?.rounds?.last()?.outcome)
+  }
+
+  @Test
+  fun `generateMoreQuestionsAndWait returns once the round has landed`() = runTest {
+    val generator = FakePlanningEngine().apply {
+      batchFor = { _, roundId -> listOf(question("q9", "Fresh?", roundId = roundId)) }
+    }
+    val storage = FakeStorage(
+      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.ScopeGoals)))
+    )
+    val repository = repo(storage = storage, generator = generator)
+
+    repository.generateMoreQuestionsAndWait("p1")
+
+    assertEquals(
+      listOf("q1", "Fresh?"),
+      storage.getProject("p1")?.questions?.map { it.text },
+    )
+  }
+
+  @Test
+  fun `generateMoreQuestionsAndWait still short-circuits an exhausted phase`() = runTest {
+    val storage = FakeStorage(
+      mutableMapOf(
+        "p1" to phaseProject(
+          round = round(id = "r1", phase = BuiltInPhase.ScopeGoals, outcome = RoundOutcome.Exhausted),
+        )
+      )
+    )
+    val generator = FakePlanningEngine()
+    val repository = repo(storage = storage, generator = generator)
+
+    val result = repository.generateMoreQuestionsAndWait("p1")
+
+    assertNotNull(result)
+    assertEquals(1, result.rounds.size, "no round was opened, so none was waited on")
+    assertEquals(0, generator.calls.size)
   }
 
   // ---------- round outcomes ----------

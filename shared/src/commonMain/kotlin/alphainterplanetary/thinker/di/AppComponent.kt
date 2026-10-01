@@ -19,6 +19,7 @@ import alphainterplanetary.thinker.engine.resolveSelectedEngine
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
+import alphainterplanetary.thinker.tools.ProjectSimulator
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   abstract val settingsRepository: SettingsRepository
 
   abstract val sampleProjectGenerator: SampleProjectGenerator
+
+  abstract val projectSimulator: ProjectSimulator
 
   abstract val engineSelector: PlanningEngineSelector
 

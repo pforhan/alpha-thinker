@@ -16,6 +16,8 @@ import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.tasks.GenerationTask
+import alphainterplanetary.thinker.tasks.TaskFailed
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.util.now
@@ -43,7 +45,33 @@ class ProjectRepository @Inject constructor(
    * generate against an empty title. Treat the title as best-effort for this
    * batch, not as a precondition it may rely on.
    */
-  suspend fun createProject(synopsis: String, title: String? = null): Project {
+  suspend fun createProject(synopsis: String, title: String? = null): Project =
+    createProject(synopsis, title, awaitRound = false)
+
+  /**
+   * [createProject], then suspends until the opening round's generation has
+   * finished.
+   *
+   * For a caller that has to sequence one generation against the next — a
+   * simulator walking the phase library, say. Every other caller wants the
+   * opposite: to hand the project back and watch the task arrive on
+   * [TaskRunner.tasks], which is what [createProject] is for. The two differ only
+   * in whether they wait, so they share this body rather than each owning a copy
+   * of it.
+   *
+   * Throws [TaskFailed] if the round failed, rather than returning a project whose
+   * questions are quietly missing: a caller sequencing rounds would otherwise
+   * read the failure as "this phase produced nothing" and advance past it.
+   */
+  @Throws(TaskFailed::class, CancellationException::class)
+  suspend fun createProjectAndWait(synopsis: String, title: String? = null): Project =
+    createProject(synopsis, title, awaitRound = true)
+
+  private suspend fun createProject(
+    synopsis: String,
+    title: String?,
+    awaitRound: Boolean,
+  ): Project {
     val now = now()
     val projectId = randomUUID()
 
@@ -77,7 +105,8 @@ class ProjectRepository @Inject constructor(
     if (resolvedTitle.isEmpty()) {
       enqueueTitleRecommendation(projectId)
     }
-    enqueueQuestionGeneration(project.id, roundId, ContextCompaction.DropEarlierAnswers)
+    val task = enqueueQuestionGeneration(project.id, roundId, ContextCompaction.DropEarlierAnswers)
+    if (awaitRound) taskRunner.await(task.id)
     return project
   }
 
@@ -135,6 +164,11 @@ class ProjectRepository @Inject constructor(
    * the task, where the summarize requests are ordinary log rows under the same
    * activity as the batch they feed.
    *
+   * The enqueued [GenerationTask] comes back so a caller that has to wait can,
+   * without reconstructing which task this call produced — the fire-and-forget
+   * entry points discard it, and [createProjectAndWait] and [advanceToPhaseAndWait]
+   * pass it to [TaskRunner.await].
+   *
    * The batch's [QuestionBatch.done] is latched onto the round as its
    * [RoundOutcome], which is what the "Get more questions" affordances read
    * (see `Project.currentPhaseExhausted`) — a phase is exhausted only because
@@ -147,9 +181,9 @@ class ProjectRepository @Inject constructor(
     projectId: String,
     roundId: String,
     compaction: ContextCompaction,
-  ) {
+  ): GenerationTask {
     val engine = engineSelector.selectedEngine()
-    taskRunner.enqueue(projectId, TaskKind.QuestionGeneration) { taskId ->
+    return taskRunner.enqueue(projectId, TaskKind.QuestionGeneration) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
       // The engine renders whatever transcript it is handed, so the budget is
@@ -468,6 +502,28 @@ class ProjectRepository @Inject constructor(
   suspend fun generateMoreQuestions(
     projectId: String,
     compaction: ContextCompaction = ContextCompaction.DropEarlierAnswers,
+  ): Project? = generateMoreQuestions(projectId, compaction, awaitRound = false)
+
+  /**
+   * [generateMoreQuestions], then suspends until the new round's generation has
+   * finished. The awaiting counterpart to [createProjectAndWait], and part of why
+   * that one exists: a caller walking phases needs each round to land before it
+   * can decide what the next phase's context is.
+   *
+   * Throws [TaskFailed] if the round failed. A project that no longer exists, or a
+   * phase with nothing left to give, still returns as [generateMoreQuestions]
+   * does — there was no round to wait on.
+   */
+  @Throws(TaskFailed::class, CancellationException::class)
+  suspend fun generateMoreQuestionsAndWait(
+    projectId: String,
+    compaction: ContextCompaction = ContextCompaction.DropEarlierAnswers,
+  ): Project? = generateMoreQuestions(projectId, compaction, awaitRound = true)
+
+  private suspend fun generateMoreQuestions(
+    projectId: String,
+    compaction: ContextCompaction,
+    awaitRound: Boolean,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     if (project.currentPhaseExhausted) return project
@@ -479,7 +535,8 @@ class ProjectRepository @Inject constructor(
       updatedAt = now,
     )
     storage.saveProject(updated)
-    enqueueQuestionGeneration(project.id, round.id, compaction)
+    val task = enqueueQuestionGeneration(project.id, round.id, compaction)
+    if (awaitRound) taskRunner.await(task.id)
     return updated
   }
 
@@ -498,6 +555,29 @@ class ProjectRepository @Inject constructor(
     projectId: String,
     nextPhase: Phase,
     compaction: ContextCompaction = ContextCompaction.DropEarlierAnswers,
+  ): Project? = advanceToPhase(projectId, nextPhase, compaction, awaitRound = false)
+
+  /**
+   * [advanceToPhase], then suspends until the new phase's first round has
+   * finished — the awaiting counterpart to [createProjectAndWait], and the one the
+   * project simulator walks the phase library with.
+   *
+   * Throws [TaskFailed] if the round failed, which for a phase walk is the
+   * difference between "this phase is empty" and "this phase's generation broke" —
+   * two things that lead to different next steps.
+   */
+  @Throws(TaskFailed::class, CancellationException::class)
+  suspend fun advanceToPhaseAndWait(
+    projectId: String,
+    nextPhase: Phase,
+    compaction: ContextCompaction = ContextCompaction.DropEarlierAnswers,
+  ): Project? = advanceToPhase(projectId, nextPhase, compaction, awaitRound = true)
+
+  private suspend fun advanceToPhase(
+    projectId: String,
+    nextPhase: Phase,
+    compaction: ContextCompaction,
+    awaitRound: Boolean,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val now = now()
@@ -521,7 +601,8 @@ class ProjectRepository @Inject constructor(
       updatedAt = now,
     )
     storage.saveProject(updatedProject)
-    enqueueQuestionGeneration(project.id, round.id, compaction)
+    val task = enqueueQuestionGeneration(project.id, round.id, compaction)
+    if (awaitRound) taskRunner.await(task.id)
     return updatedProject
   }
 
