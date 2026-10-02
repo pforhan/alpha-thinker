@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -94,6 +93,11 @@ internal fun TestingSheetContent(chrome: AppChromeState) {
       state = simulation,
       onRun = chrome.settings::simulateProject,
       onCancel = chrome.settings::cancelSimulation,
+      onProbePrevious = {
+        val has = chrome.settings.hasPreviousSimulation()
+        val title = chrome.settings.previousSimulationTitle()
+        Pair(has, title)
+      },
     )
   }
 }
@@ -120,10 +124,24 @@ private fun ProjectSimulatorItem(
   state: SimulationState,
   onRun: (SimulationConfig) -> Unit,
   onCancel: () -> Unit,
+  hasPrevious: Boolean = false,
+  previousTitle: String? = null,
+  onProbePrevious: suspend () -> Pair<Boolean, String?> = { Pair(false, null) },
 ) {
   var synopsis by remember { mutableStateOf("") }
   var compaction by remember { mutableStateOf(ContextCompaction.DropEarlierAnswers) }
   var resolveQuestions by remember { mutableStateOf(true) }
+  var replacePrevious by remember { mutableStateOf(true) }
+  var previousTitleState by remember { mutableStateOf(previousTitle) }
+  var hasPreviousState by remember { mutableStateOf(hasPrevious) }
+
+  LaunchedEffect(state) {
+    // Probe whether there's a previous simulated project we own. The run itself
+    // owns the setting write; this is just to help the user decide the toggle.
+    val (has, title) = onProbePrevious()
+    hasPreviousState = has
+    previousTitleState = title
+  }
 
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
@@ -147,7 +165,7 @@ private fun ProjectSimulatorItem(
 
         is SimulationState.Finished -> SimulatorResultRow(
           state = state,
-          onRunAgain = { onRun(SimulationConfig(synopsis, compaction = compaction, resolveQuestions = resolveQuestions)) },
+          onRunAgain = { onRun(SimulationConfig(synopsis.trim(), compaction = compaction, resolveQuestions = resolveQuestions, replacePrevious = replacePrevious)) },
         )
 
         is SimulationState.Failed -> Text(
@@ -157,8 +175,8 @@ private fun ProjectSimulatorItem(
         )
 
         SimulationState.Cancelled -> Text(
-          text = "Simulation cancelled. The round it was waiting on still finished, " +
-            "so the project is there — partway through.",
+          text = "Simulation cancelled. The round it was waiting on is still finishing; " +
+            "the run stopped advancing at this point.",
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -199,6 +217,31 @@ private fun ProjectSimulatorItem(
           Switch(checked = resolveQuestions, onCheckedChange = { resolveQuestions = it })
         }
 
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              text = if (replacePrevious && hasPreviousState) {
+                val title = previousTitleState?.let { "\"$it\"" } ?: "the previous simulated project"
+                "Replace $title"
+              } else if (replacePrevious) {
+                "Replace the previous simulated project"
+              } else {
+                "Keep the previous simulated project"
+              },
+              style = MaterialTheme.typography.bodyMedium,
+            )
+            if (hasPreviousState) {
+              Text(
+                text = "Your last simulation is still in the project list.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
+          }
+          Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
+          Switch(checked = replacePrevious, onCheckedChange = { replacePrevious = it })
+        }
+
         Button(
           onClick = {
             onRun(
@@ -206,6 +249,7 @@ private fun ProjectSimulatorItem(
                 synopsis = synopsis.trim(),
                 compaction = compaction,
                 resolveQuestions = resolveQuestions,
+                replacePrevious = replacePrevious,
               )
             )
           },
@@ -280,6 +324,10 @@ private fun SimulatorResultRow(
       Text(
         text = if (state.stoppedAtQuestionCap) {
           "Stopped at the question cap with ${state.questions} questions."
+        } else if (state.failures.isNotEmpty() && state.phasesCovered == 0) {
+          "Simulated ${state.questions} questions, no complete phases."
+        } else if (state.failures.isNotEmpty()) {
+          "Simulated ${state.questions} questions across ${state.phasesCovered} of ${state.phaseCount} phases."
         } else {
           "Simulated ${state.questions} questions across every phase."
         },
@@ -293,7 +341,7 @@ private fun SimulatorResultRow(
         )
       }
       Text(
-        text = "Find it in the project list — it is the one marked \"${ProjectSimulator.SimulatedStatus}\".",
+        text = "The latest simulated project is in the project list.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )

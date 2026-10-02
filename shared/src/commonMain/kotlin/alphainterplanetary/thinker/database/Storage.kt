@@ -19,6 +19,14 @@ enum class SettingsKey(val storageKey: String) {
   RemoteLlmApiKey("remote-llm-api-key"),
   RemoteLlmModel("remote-llm-model"),
   RemoteLlmContextTokens("remote-llm-context-tokens"),
+
+  /**
+   * The id of the project the project simulator last created, so a later run
+   * replaces it. A setting rather than a marker on the project, because the
+   * thing being remembered is "which project this tool made", not a state of
+   * the project — the same reasoning as [AnnouncedFailureActivityId].
+   */
+  SimulatedProjectId("simulated-project-id"),
 }
 
 interface Storage {

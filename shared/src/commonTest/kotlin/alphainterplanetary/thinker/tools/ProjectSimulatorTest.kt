@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.tools
 
-import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.QuestionBatch
@@ -234,12 +233,12 @@ class ProjectSimulatorTest {
     harness.simulator.simulate(SimulationConfig(synopsis))
     testScheduler.advanceUntilIdle()
     val first = harness.project
-    assertEquals(ProjectSimulator.SimulatedStatus, first.status, "the run marks its project")
+    assertEquals(1, harness.storage.projects.size, "the run created its project")
 
     harness.simulator.simulate(SimulationConfig(synopsis))
     testScheduler.advanceUntilIdle()
 
-    assertEquals(1, harness.storage.projects.size, "the previous run's project was left behind")
+    assertEquals(1, harness.storage.projects.size, "the previous run's project was replaced")
   }
 
   @Test

@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.tools
 
 import alphainterplanetary.thinker.database.Storage
+import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
@@ -42,9 +43,11 @@ import me.tatarka.inject.annotations.Inject
  * worth looking at populated and the wrap-up reachable — a phase only offers its
  * next phase once nothing in it is unanswered.
  *
- * Repeatable by construction: each run deletes whatever the last one left
- * ([SimulatedStatus] is the marker) and recreates it, so a second run compares
- * like with like instead of stacking another near-identical project in the list.
+ * Repeatable by construction: each run has the option to delete whatever the
+ * last one left. The previous run's project is found by id, remembered in a setting
+ * (see [deletePreviousRun]) — not by scanning for a marker on the project, which
+ * is what this needed before the repository grew its `…AndWait` entry points and
+ * a caller could no longer assume which project a background task was writing to.
  */
 @AppScope
 class ProjectSimulator @Inject constructor(
@@ -57,6 +60,14 @@ class ProjectSimulator @Inject constructor(
   val state: StateFlow<SimulationState> = _state.asStateFlow()
 
   private var job: Job? = null
+
+  /**
+   * Counts runs so a cancelled one cannot publish terminal state over the run
+   * that replaced it: [run] does not wait for the old job to unwind, so its
+   * `Cancelled` write would otherwise land *after* the new run's `Running` and
+   * leave the Testing sheet showing neither a spinner nor a run.
+   */
+  private var currentRun = 0
 
   private var lastProjectId: String? = null
 
@@ -76,7 +87,9 @@ class ProjectSimulator @Inject constructor(
    */
   fun run(config: SimulationConfig) {
     job?.cancel()
-    job = scope.launch { simulate(config) }
+    currentRun += 1
+    val run = currentRun
+    job = scope.launch { simulate(config, run) }
   }
 
   /**
@@ -99,25 +112,31 @@ class ProjectSimulator @Inject constructor(
    * The run itself, suspending until it finishes. [run] is the UI's entry point
    * (launched, so a long run survives navigating away); this is the same body for
    * a caller that wants to wait for it — chiefly tests.
+   *
+   * [runId] identifies this run for [publish]; it defaults to the current one so a
+   * direct caller is never the stale run it would be racing.
    */
-  suspend fun simulate(config: SimulationConfig) {
+  suspend fun simulate(config: SimulationConfig, runId: Int = currentRun) {
     val phases = BuiltInPhase.entries
     val failures = mutableListOf<String>()
     try {
-      deletePreviousRuns()
+      deletePreviousRun(config.replacePrevious)
 
-      _state.value = SimulationState.Running(
-        phase = null,
-        phaseNumber = 0,
-        phaseCount = phases.size,
-        detail = "Creating the project…",
+      publish(
+        runId,
+        SimulationState.Running(
+          phase = null,
+          phaseNumber = 0,
+          phaseCount = phases.size,
+          detail = "Creating the project…",
+        ),
       )
       val projectId = createAndAwait(config, failures)
       lastProjectId = projectId
-      // Marked only once the first round has landed: until then the generation
-      // task is writing the project too, and a second write from here could lose
-      // either the round's questions or the marker.
-      markSimulated(projectId)
+      // Recorded only once the first round has landed. Recording earlier would
+      // mean a run cancelled mid-opening-round had nothing to point the next run
+      // at, leaving the half-created project orphaned in the list.
+      storage.saveSetting(SettingsKey.SimulatedProjectId, projectId)
 
       resolvePhase(projectId, config, allowDrafts = phases.size == 1)
 
@@ -127,11 +146,14 @@ class ProjectSimulator @Inject constructor(
           stoppedAtQuestionCap = true
           break
         }
-        _state.value = SimulationState.Running(
-          phase = phase,
-          phaseNumber = index + 2,
-          phaseCount = phases.size,
-          detail = "Asking about ${phase.label}…",
+        publish(
+          runId,
+          SimulationState.Running(
+            phase = phase,
+            phaseNumber = index + 2,
+            phaseCount = phases.size,
+            detail = "Asking about ${phase.label}…",
+          ),
         )
         // The compaction choice is passed explicitly rather than left to the
         // repository's default so all three branches are reachable from the tool —
@@ -142,14 +164,19 @@ class ProjectSimulator @Inject constructor(
         resolvePhase(projectId, config, allowDrafts = index == phases.size - 2)
       }
 
-      _state.value = SimulationState.Finished(
-        projectId = projectId,
-        questions = questionCount(projectId),
-        stoppedAtQuestionCap = stoppedAtQuestionCap,
-        failures = failures.toList(),
+      publish(
+        runId,
+        SimulationState.Finished(
+          projectId = projectId,
+          questions = questionCount(projectId),
+          phasesCovered = phasesCovered(projectId),
+          phaseCount = phases.size,
+          stoppedAtQuestionCap = stoppedAtQuestionCap,
+          failures = failures.toList(),
+        ),
       )
     } catch (e: CancellationException) {
-      _state.value = SimulationState.Cancelled
+      publish(runId, SimulationState.Cancelled)
       throw e
     } catch (e: TaskFailed) {
       // The opening round failed, so there are no phases left to walk. The run
@@ -157,31 +184,80 @@ class ProjectSimulator @Inject constructor(
       // left behind is still worth opening — and the failed task names it, which
       // matters because this is the one path where the id never got assigned.
       val id = e.task.projectId.also { lastProjectId = it }
-      _state.value = SimulationState.Finished(
-        projectId = id,
-        questions = questionCount(id),
-        stoppedAtQuestionCap = false,
-        failures = failures.toList(),
+      publish(
+        runId,
+        SimulationState.Finished(
+          projectId = id,
+          questions = questionCount(id),
+          phasesCovered = phasesCovered(id),
+          phaseCount = phases.size,
+          stoppedAtQuestionCap = false,
+          failures = failures.toList(),
+        ),
       )
     } catch (e: Exception) {
-      _state.value = SimulationState.Failed(e.message ?: e.toString())
+      publish(runId, SimulationState.Failed(e.message ?: e.toString()))
     }
   }
 
-  /** Deletes every project a previous run of this tool left behind. */
-  private suspend fun deletePreviousRuns() {
-    storage.getAllProjects()
-      .filter { it.status == SimulatedStatus }
-      .forEach { storage.deleteProject(it.id) }
+  /**
+   * Publishes [state] unless a newer run has already started — see [currentRun].
+   * Every write goes through here rather than touching the flow directly, since a
+   * stale run's write is the one thing that must never reach the UI.
+   */
+  private fun publish(runId: Int, state: SimulationState) {
+    if (runId == currentRun) _state.value = state
   }
 
-  private suspend fun markSimulated(projectId: String) {
-    val project = storage.getProject(projectId) ?: return
-    storage.saveProject(project.copy(status = SimulatedStatus))
+  /**
+   * Returns the title of the simulated project recorded in settings, if it still
+   * exists, so the UI can ask for confirmation before deleting it.
+   */
+  suspend fun previousSimulatedProjectTitle(): String? {
+    val id = storage.getSetting(SettingsKey.SimulatedProjectId, "").takeIf { it.isNotBlank() }
+      ?: return null
+    return storage.getProject(id)?.editableTitle?.takeIf { it.isNotBlank() }
+      ?: storage.getProject(id)?.synopsis?.lineSequence()?.first()?.trim()?.take(40)
+  }
+
+  /** True when the last simulated project the tool created still exists. */
+  suspend fun hasPreviousSimulatedProject(): Boolean {
+    val id = storage.getSetting(SettingsKey.SimulatedProjectId, "").takeIf { it.isNotBlank() }
+      ?: return false
+    return storage.getProject(id) != null
+  }
+
+  /**
+   * Deletes the project the last run left behind, if any, and only when
+   * [replace] is true. The id is stored in settings so the next run can find
+   * what the tool owns, without scanning for a marker on project rows.
+   */
+  private suspend fun deletePreviousRun(replace: Boolean = true) {
+    if (!replace) return
+    val previous = storage.getSetting(SettingsKey.SimulatedProjectId, "").takeIf { it.isNotBlank() }
+      ?: return
+    storage.deleteProject(previous)
+    storage.saveSetting(SettingsKey.SimulatedProjectId, "")
   }
 
   private suspend fun questionCount(projectId: String): Int =
     storage.getProject(projectId)?.questions?.size ?: 0
+
+  /**
+   * How many phases the project actually has questions in — the number a user
+   * walking it will find, as opposed to the number of phases the run opened.
+   * They differ whenever a round failed, and a report that conflated them would
+   * claim a project was fully planned when a phase of it is empty.
+   */
+  private suspend fun phasesCovered(projectId: String): Int {
+    val project = storage.getProject(projectId) ?: return 0
+    val asked = project.questions.mapTo(mutableSetOf()) { it.roundId }
+    return project.rounds
+      .filter { it.id in asked }
+      .map { it.phase }
+      .distinct()
+      .size
+  }
 
   /**
    * Answers — and deliberately skips — everything the current phase asked, so
@@ -284,17 +360,6 @@ private suspend fun createAndAwait(config: SimulationConfig, failures: MutableLi
 
   companion object {
     /**
-     * Marks a project as this tool's, so a later run replaces it instead of
-     * adding another. [Project.status] is otherwise always [DraftStatus] and read
-     * by nothing, which makes it the one field a fixture can claim without
-     * touching the schema.
-     */
-    const val SimulatedStatus: String = "Simulated"
-
-    /** The status every project the app creates for real carries. */
-    const val DraftStatus: String = "Draft"
-
-    /**
      * One in every [IgnoreEvery] questions is ignored rather than answered. Three
      * rather than something larger because it has to land inside the smallest
      * batch an engine serves (the built-in pool's phases run ten deep), or the
@@ -345,8 +410,8 @@ data class SimulationConfig(
   val title: String? = null,
   /**
    * What to do with a transcript that no longer fits the model's window. Passed to
-   * every phase advance rather than inherited, so the summarize branch is
-   * reachable from the tool.
+   * every phase advance rather than left to the repository's default so the
+   * summarize branch is reachable from the tool.
    */
   val compaction: ContextCompaction = ContextCompaction.DropEarlierAnswers,
   /**
@@ -357,6 +422,11 @@ data class SimulationConfig(
   val resolveQuestions: Boolean = true,
   /** Ceiling on the questions the run produces before it stops advancing. */
   val questionCap: Int = DefaultQuestionCap,
+  /**
+   * If true, delete the previous simulated project before starting this run.
+   * If false, leave it in place and create a new simulated project.
+   */
+  val replacePrevious: Boolean = true,
 ) {
   companion object {
     /**
@@ -383,6 +453,13 @@ sealed interface SimulationState {
   data class Finished(
     val projectId: String,
     val questions: Int,
+    /**
+     * How many phases actually have questions in them, against [phaseCount] — the
+     * library's length. A failed round leaves a phase empty, so this is what
+     * distinguishes "planned all six phases" from "opened six, planned five".
+     */
+    val phasesCovered: Int,
+    val phaseCount: Int,
     /** True when the run stopped on [SimulationConfig.questionCap] rather than at the last phase. */
     val stoppedAtQuestionCap: Boolean,
     /** One message per round that failed; empty when every round landed. */

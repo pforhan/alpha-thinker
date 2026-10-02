@@ -133,6 +133,10 @@ class SettingsViewModel(
    */
   val simulation: StateFlow<SimulationState> = projectSimulator.state
 
+  suspend fun hasPreviousSimulation(): Boolean = projectSimulator.hasPreviousSimulatedProject()
+
+  suspend fun previousSimulationTitle(): String? = projectSimulator.previousSimulatedProjectTitle()
+
   /** Starts a simulator run against the selected engine, replacing any in flight. */
   fun simulateProject(config: SimulationConfig) {
     projectSimulator.run(config)

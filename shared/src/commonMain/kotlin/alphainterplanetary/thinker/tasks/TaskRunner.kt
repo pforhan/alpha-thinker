@@ -84,7 +84,7 @@ class TaskRunner(
   fun tasksFor(projectId: String): Flow<List<GenerationTask>> =
     _tasks.map { list -> list.filter { it.projectId == projectId } }
 
-    /**
+  /**
    * Enqueues [body] as a [kind] generation task for [projectId], returning the
    * task immediately (still [TaskStatus.Queued]); the body runs later on the
    * injected scope. [body] receives the task's id so it can thread it into
