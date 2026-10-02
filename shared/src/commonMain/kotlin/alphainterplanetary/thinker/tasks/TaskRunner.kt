@@ -137,10 +137,6 @@ scope.launch {
           groupGate.withLock {
             val startedAt = now()
             _tasks.update { it.replace(task.asStarted(startedAt)) }
-            println(
-              "[AlphaThinker] task started: kind=${task.kind}, group=${task.group}, " +
-                "project=${task.projectId}, id=${task.id}"
-            )
             var cancelled = false
             var failure: String? = null
             try {
@@ -160,11 +156,6 @@ scope.launch {
             failure != null -> "failed: $failure"
             else -> "succeeded"
           }
-          println(
-            "[AlphaThinker] task finished: kind=${task.kind}, group=${task.group}, " +
-              "project=${task.projectId}, id=${task.id}, outcome=$outcome, " +
-              "duration=${finishedAt - startedAt}"
-          )
           val terminal: (GenerationTask) -> GenerationTask = when {
             cancelled -> { t -> t.asFailed(finishedAt, "Task cancelled") }
             failure != null -> { t -> t.asFailed(finishedAt, failure) }

@@ -30,7 +30,6 @@ class SlowDownPlanningEngine(
     get() = delegate.canSummarize
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
-    println("SlowDownPlanningEngine.recommendTitle()")
     maybeDelay(EngineInteraction.RecommendTitle)
     return delegate.recommendTitle(synopsis, activityId)
   }
@@ -44,7 +43,6 @@ class SlowDownPlanningEngine(
     activityId: String,
     priorSummaries: List<PlanningContext.PhaseSummary>,
   ): QuestionBatch {
-    println("SlowDownPlanningEngine.generateQuestions()")
     maybeDelay(EngineInteraction.QuestionGeneration)
     return delegate.generateQuestions(
       title, synopsis, previousQuestions, roundId, phase, activityId, priorSummaries
