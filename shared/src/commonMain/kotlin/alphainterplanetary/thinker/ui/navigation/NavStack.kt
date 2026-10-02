@@ -25,6 +25,17 @@ internal sealed interface AppRoute {
 
   /** The generation task manager. */
   data object TaskManager : AppRoute
+
+  /**
+   * The project simulator, full-screen.
+   *
+   * A destination rather than a settings sheet because a run is minutes of real
+   * latency on a form worth watching: a sheet is a half-height peek with a
+   * dismiss gesture, and the thing being simulated has its own progress, its own
+   * Cancel, and a result the user has to be able to read without first finding
+   * the right sheet. See `SimulatorScreen`.
+   */
+  data object Simulator : AppRoute
 }
 
 /**
@@ -114,6 +125,23 @@ internal class NavStack(
   }
 
   /**
+   * Replaces the whole stack with the root screen and [route] on top of it,
+   * discarding every sheet and every screen in between.
+   *
+   * For a caller that has a destination to put the user in front of wherever
+   * they happen to be — the simulator opening the project it just created, say.
+   * It is deliberately not [navigate]: pushing onto the current stack would
+   * leave the way in on the history, so back from the new screen would return
+   * the user to wherever the jump happened from. The place they jumped *from* is
+   * not a place worth returning to, so back lands on the project list instead.
+   */
+  fun resetTo(route: AppRoute) {
+    entries.clear()
+    entries.add(NavEntry.Screen(AppRoute.ProjectList))
+    if (route != AppRoute.ProjectList) entries.add(NavEntry.Screen(route))
+  }
+
+  /**
    * Opens [target] over the current screen, or over the open sheet when one is
    * already up. Re-opening the sheet already on top does nothing, so a double
    * tap cannot stack two copies of it.
@@ -162,6 +190,7 @@ internal fun NavEntry.toKey(): String = when (this) {
     is AppRoute.ProjectDetail -> "route:project_detail:${route.projectId}"
     AppRoute.ActivityLog -> "route:activity_log"
     AppRoute.TaskManager -> "route:task_manager"
+    AppRoute.Simulator -> "route:simulator"
   }
 
   is NavEntry.Sheet -> "sheet:${target.name}"
@@ -176,6 +205,7 @@ internal fun navEntryFromKey(key: String): NavEntry? = when {
   key == "route:project_list" -> NavEntry.Screen(AppRoute.ProjectList)
   key == "route:activity_log" -> NavEntry.Screen(AppRoute.ActivityLog)
   key == "route:task_manager" -> NavEntry.Screen(AppRoute.TaskManager)
+  key == "route:simulator" -> NavEntry.Screen(AppRoute.Simulator)
   key.startsWith("route:project_detail:") -> key
     .removePrefix("route:project_detail:")
     .takeIf { it.isNotEmpty() }

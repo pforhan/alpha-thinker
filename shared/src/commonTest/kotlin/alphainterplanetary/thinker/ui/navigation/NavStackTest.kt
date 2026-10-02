@@ -149,6 +149,39 @@ class NavStackTest {
   }
 
   @Test
+  fun `a reset drops the sheets and the screens on the way in`() {
+    val stack = NavStack()
+    stack.navigate(AppRoute.ProjectDetail("project-1"))
+    stack.navigate(AppRoute.ActivityLog)
+    stack.openSheet(ChromeSheet.Testing)
+
+    // The simulator's finished run opens its project from wherever the user is —
+    // which is not somewhere they asked to be sent from.
+    stack.resetTo(AppRoute.ProjectDetail("project-2"))
+
+    assertNull(stack.sheet)
+    assertEquals(AppRoute.ProjectDetail("project-2"), stack.route)
+
+    assertTrue(stack.pop())
+    assertNull(stack.sheet)
+    assertEquals(AppRoute.ProjectList, stack.route)
+    assertFalse(stack.canGoBack)
+  }
+
+  @Test
+  fun `a reset to the list itself is just the list`() {
+    val stack = NavStack()
+    stack.navigate(AppRoute.ActivityLog)
+    stack.openSheet(ChromeSheet.Status)
+
+    stack.resetTo(AppRoute.ProjectList)
+
+    assertNull(stack.sheet)
+    assertEquals(AppRoute.ProjectList, stack.route)
+    assertFalse(stack.canGoBack)
+  }
+
+  @Test
   fun `a saved stack restores with the same history`() {
     // The shape a save actually produces: sheets are only ever on top, because
     // navigating to a screen drops them.
@@ -177,6 +210,7 @@ class NavStackTest {
       NavEntry.Screen(AppRoute.ProjectDetail("project-1")),
       NavEntry.Screen(AppRoute.ActivityLog),
       NavEntry.Screen(AppRoute.TaskManager),
+      NavEntry.Screen(AppRoute.Simulator),
       NavEntry.Sheet(ChromeSheet.Status),
       NavEntry.Sheet(ChromeSheet.PhaseColors),
       NavEntry.Sheet(ChromeSheet.Intelligence),

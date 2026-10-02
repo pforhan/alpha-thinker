@@ -1,33 +1,19 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.repository.ContextCompaction
-import alphainterplanetary.thinker.tools.ProjectSimulator
-import alphainterplanetary.thinker.tools.SimulationConfig
 import alphainterplanetary.thinker.tools.SimulationState
+import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,13 +23,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 /**
  * The testing controls: the artificial planning-engine delay, so Task Manager
- * tasks stay visible long enough to watch, and the project simulator, which runs
- * a whole project against the selected engine.
+ * tasks stay visible long enough to watch, and the way into the project
+ * simulator.
  *
  * The planning-context budget used to live here too, which was the wrong drawer
  * for it — it shapes what a real generation is sent, not how the app behaves
@@ -89,60 +74,28 @@ internal fun TestingSheetContent(chrome: AppChromeState) {
 
     HorizontalDivider()
 
-    ProjectSimulatorItem(
+    SimulatorLauncherItem(
       state = simulation,
-      onRun = chrome.settings::simulateProject,
-      onCancel = chrome.settings::cancelSimulation,
-      onProbePrevious = {
-        val has = chrome.settings.hasPreviousSimulation()
-        val title = chrome.settings.previousSimulationTitle()
-        Pair(has, title)
-      },
+      onOpen = { chrome.navigate(AppRoute.Simulator) },
     )
   }
 }
 
 /**
- * The project simulator's controls: a synopsis, the two knobs a real project
- * would ask about, and a run button that stays put for the length of the run.
+ * The way into the simulator, and a line about whatever the last run did.
  *
- * The run outlives this sheet — it lives on the app scope so navigating away
- * doesn't kill it — but the button that started it doesn't get to disappear the
- * moment it is pressed. A simulator that closed its own dialog on submit would
- * leave the user with no way back to the run they just started, and the run is
- * exactly the thing worth watching: a remote engine plus the engine-delay setting
- * makes several minutes of real latency. So the panel holds its place and swaps
- * the form for a spinner and a running summary, with Cancel beside it; what it
- * becomes afterwards is the result.
- *
- * The spinner is deliberately indeterminate rather than a progress bar: the
- * simulator knows which phase it is on but not how much of a model call is left,
- * and a bar that guesses would be the more dishonest of the two.
+ * The simulator's config, its progress and its result all live on
+ * [AppRoute.Simulator] rather than here: a run is minutes of real latency on a
+ * form with five knobs in it, which is a screen's worth of work, and a
+ * half-height sheet is a poor place to be when it finishes. So this is the
+ * launcher and the standing answer to "is anything running, and what did the
+ * last one leave" — the two questions worth answering without leaving the sheet.
  */
 @Composable
-private fun ProjectSimulatorItem(
+private fun SimulatorLauncherItem(
   state: SimulationState,
-  onRun: (SimulationConfig) -> Unit,
-  onCancel: () -> Unit,
-  hasPrevious: Boolean = false,
-  previousTitle: String? = null,
-  onProbePrevious: suspend () -> Pair<Boolean, String?> = { Pair(false, null) },
+  onOpen: () -> Unit,
 ) {
-  var synopsis by remember { mutableStateOf("") }
-  var compaction by remember { mutableStateOf(ContextCompaction.DropEarlierAnswers) }
-  var resolveQuestions by remember { mutableStateOf(true) }
-  var replacePrevious by remember { mutableStateOf(true) }
-  var previousTitleState by remember { mutableStateOf(previousTitle) }
-  var hasPreviousState by remember { mutableStateOf(hasPrevious) }
-
-  LaunchedEffect(state) {
-    // Probe whether there's a previous simulated project we own. The run itself
-    // owns the setting write; this is just to help the user decide the toggle.
-    val (has, title) = onProbePrevious()
-    hasPreviousState = has
-    previousTitleState = title
-  }
-
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
       modifier = Modifier.padding(Dimens.CardPadding),
@@ -153,236 +106,20 @@ private fun ProjectSimulatorItem(
         style = MaterialTheme.typography.titleSmall,
       )
       Text(
-        text = "Runs a whole project against the selected engine: one round of " +
-          "questions in every phase, with answers so each phase can be wrapped up. " +
-          "Replaces the last simulated project rather than adding another.",
+        text = when (state) {
+          is SimulationState.Running -> "A run is in flight."
+          is SimulationState.Finished -> "Last run: ${state.questions} questions across " +
+            "${state.phasesCovered} of ${state.phaseCount} phases."
+          is SimulationState.Failed -> "The last run failed: ${state.message}"
+          SimulationState.Cancelled -> "The last run was cancelled."
+          SimulationState.Idle -> "Runs a whole project against the selected engine."
+        },
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
-
-      when (state) {
-        is SimulationState.Running -> SimulatorRunningRow(state = state, onCancel = onCancel)
-
-        is SimulationState.Finished -> SimulatorResultRow(
-          state = state,
-          onRunAgain = { onRun(SimulationConfig(synopsis.trim(), compaction = compaction, resolveQuestions = resolveQuestions, replacePrevious = replacePrevious)) },
-        )
-
-        is SimulationState.Failed -> Text(
-          text = "Simulation failed: ${state.message}",
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.error,
-        )
-
-        SimulationState.Cancelled -> Text(
-          text = "Simulation cancelled. The round it was waiting on is still finishing; " +
-            "the run stopped advancing at this point.",
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        SimulationState.Idle -> Unit
-      }
-
-      // The form stays visible under a finished or failed run so its knobs can be
-      // changed and run again without retyping; only a running run takes it away,
-      // because there is nothing useful to edit mid-flight.
-      if (state !is SimulationState.Running) {
-        OutlinedTextField(
-          value = synopsis,
-          onValueChange = { synopsis = it },
-          label = { Text("Synopsis") },
-          modifier = Modifier.fillMaxWidth(),
-          minLines = 2,
-          maxLines = 4,
-        )
-
-        Text(
-          text = "When the transcript no longer fits the engine's context:",
-          style = MaterialTheme.typography.bodyMedium,
-        )
-        CompactionChoiceRow(selected = compaction, onSelect = { compaction = it })
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Column(modifier = Modifier.weight(1f)) {
-            Text(text = "Answer the questions", style = MaterialTheme.typography.bodyMedium)
-            Text(
-              text = "Canned answers and a few ignored questions, so every phase can " +
-                "be wrapped up and the filters have something in them.",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-          Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
-          Switch(checked = resolveQuestions, onCheckedChange = { resolveQuestions = it })
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Column(modifier = Modifier.weight(1f)) {
-            Text(
-              text = if (replacePrevious && hasPreviousState) {
-                val title = previousTitleState?.let { "\"$it\"" } ?: "the previous simulated project"
-                "Replace $title"
-              } else if (replacePrevious) {
-                "Replace the previous simulated project"
-              } else {
-                "Keep the previous simulated project"
-              },
-              style = MaterialTheme.typography.bodyMedium,
-            )
-            if (hasPreviousState) {
-              Text(
-                text = "Your last simulation is still in the project list.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-          }
-          Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
-          Switch(checked = replacePrevious, onCheckedChange = { replacePrevious = it })
-        }
-
-        Button(
-          onClick = {
-            onRun(
-              SimulationConfig(
-                synopsis = synopsis.trim(),
-                compaction = compaction,
-                resolveQuestions = resolveQuestions,
-                replacePrevious = replacePrevious,
-              )
-            )
-          },
-          enabled = synopsis.isNotBlank(),
-          modifier = Modifier.fillMaxWidth(),
-        ) {
-          Text("Run simulation")
-        }
+      Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+        Text("Open the simulator")
       }
     }
   }
 }
-
-/** The in-flight state: a spinner, the phase, and a way out. */
-@Composable
-private fun SimulatorRunningRow(
-  state: SimulationState.Running,
-  onCancel: () -> Unit,
-) {
-  Surface(
-    shape = MaterialTheme.shapes.medium,
-    color = MaterialTheme.colorScheme.secondaryContainer,
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    Row(
-      modifier = Modifier.padding(Dimens.CardPadding),
-      horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      CircularProgressIndicator(modifier = Modifier.size(Dimens.IconSizeMedium))
-      Column(modifier = Modifier.weight(1f)) {
-        Text(
-          text = if (state.phase == null) {
-            state.detail
-          } else {
-            "Phase ${state.phaseNumber} of ${state.phaseCount} · ${state.phase.label}"
-          },
-          style = MaterialTheme.typography.titleSmall,
-        )
-        Text(
-          text = state.detail,
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-      TextButton(onClick = onCancel) {
-        Text("Cancel")
-      }
-    }
-  }
-}
-
-/**
- * What a finished run left behind. A cap that stopped the run early says so,
- * rather than reporting a project across fewer phases as if it had been planned
- * that way.
- */
-@Composable
-private fun SimulatorResultRow(
-  state: SimulationState.Finished,
-  onRunAgain: () -> Unit,
-) {
-  Surface(
-    shape = MaterialTheme.shapes.medium,
-    color = MaterialTheme.colorScheme.secondaryContainer,
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    Column(
-      modifier = Modifier.padding(Dimens.CardPadding),
-      verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-    ) {
-      Text(
-        text = if (state.stoppedAtQuestionCap) {
-          "Stopped at the question cap with ${state.questions} questions."
-        } else if (state.failures.isNotEmpty() && state.phasesCovered == 0) {
-          "Simulated ${state.questions} questions, no complete phases."
-        } else if (state.failures.isNotEmpty()) {
-          "Simulated ${state.questions} questions across ${state.phasesCovered} of ${state.phaseCount} phases."
-        } else {
-          "Simulated ${state.questions} questions across every phase."
-        },
-        style = MaterialTheme.typography.titleSmall,
-      )
-      if (state.failures.isNotEmpty()) {
-        Text(
-          text = "${state.failures.size} round(s) failed: ${state.failures.joinToString("; ")}",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.error,
-        )
-      }
-      Text(
-        text = "The latest simulated project is in the project list.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-      TextButton(onClick = onRunAgain) {
-        Text("Run again")
-      }
-    }
-  }
-}
-
-/** The three compaction choices, as chips; see [ContextCompactionDialog] for what they do. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CompactionChoiceRow(
-  selected: ContextCompaction,
-  onSelect: (ContextCompaction) -> Unit,
-) {
-  FlowRow(
-    horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
-    verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-  ) {
-    ContextCompaction.entries.forEach { option ->
-      FilterChip(
-        selected = option == selected,
-        onClick = { onSelect(option) },
-        label = { Text(option.simulatorLabel) },
-        elevation = null,
-      )
-    }
-  }
-}
-
-/**
- * The chip label for a compaction choice. The enum's own names are written for
- * the near-limit dialog, where the surrounding prose explains them; a chip has
- * no room for that, so the two phrasings are separate — shortening the shared
- * name instead would make the dialog read worse.
- */
-private val ContextCompaction.simulatorLabel: String
-  get() = when (this) {
-    ContextCompaction.KeepEverything -> "Keep everything"
-    ContextCompaction.DropEarlierAnswers -> "Drop old answers"
-    ContextCompaction.SummarizeEarlierPhases -> "Summarize phases"
-  }

@@ -43,6 +43,11 @@ import me.tatarka.inject.annotations.Inject
  * worth looking at populated and the wrap-up reachable — a phase only offers its
  * next phase once nothing in it is unanswered.
  *
+ * One thing the run does that a real project does not do for itself: a phase the
+ * engine comes back empty for is asked once more before the run accepts the hole
+ * (see `retryCurrentPhase`). Whether accepting it ends the run is
+ * [SimulationConfig.stopOnEmptyPhase]'s call.
+ *
  * Repeatable by construction: each run has the option to delete whatever the
  * last one left. The previous run's project is found by id, remembered in a setting
  * (see [deletePreviousRun]) — not by scanning for a marker on the project, which
@@ -141,6 +146,7 @@ class ProjectSimulator @Inject constructor(
       resolvePhase(projectId, config, allowDrafts = phases.size == 1)
 
       var stoppedAtQuestionCap = false
+      var stoppedAtEmptyPhase = false
       for ((index, phase) in phases.drop(1).withIndex()) {
         if (questionCount(projectId) >= config.questionCap) {
           stoppedAtQuestionCap = true
@@ -160,7 +166,13 @@ class ProjectSimulator @Inject constructor(
         // including the summarize one, which costs an extra model call per past
         // phase. A project's opening round is the exception: it is the first
         // round of an empty project, so there is nothing to compact.
-        advanceAndAwait(projectId, phase, config.compaction, failures)
+        val landed = advanceAndAwait(projectId, phase, config, failures)
+        // A phase left empty is a hole in the fixture, but only the phases after
+        // it are missing, so whether that ends the run is the caller's call.
+        if (!landed && config.stopOnEmptyPhase) {
+          stoppedAtEmptyPhase = true
+          break
+        }
         resolvePhase(projectId, config, allowDrafts = index == phases.size - 2)
       }
 
@@ -172,6 +184,7 @@ class ProjectSimulator @Inject constructor(
           phasesCovered = phasesCovered(projectId),
           phaseCount = phases.size,
           stoppedAtQuestionCap = stoppedAtQuestionCap,
+          stoppedAtEmptyPhase = stoppedAtEmptyPhase,
           failures = failures.toList(),
         ),
       )
@@ -179,10 +192,11 @@ class ProjectSimulator @Inject constructor(
       publish(runId, SimulationState.Cancelled)
       throw e
     } catch (e: TaskFailed) {
-      // The opening round failed, so there are no phases left to walk. The run
-      // reports finished-with-failures rather than failed, because the project it
-      // left behind is still worth opening — and the failed task names it, which
-      // matters because this is the one path where the id never got assigned.
+      // The opening round failed twice over, so there are no phases left to walk.
+      // The run reports finished-with-failures rather than failed, because the
+      // project it left behind is still worth opening — and the failed task names
+      // it, which matters because this is the one path where the id never got
+      // assigned.
       val id = e.task.projectId.also { lastProjectId = it }
       publish(
         runId,
@@ -192,6 +206,7 @@ class ProjectSimulator @Inject constructor(
           phasesCovered = phasesCovered(id),
           phaseCount = phases.size,
           stoppedAtQuestionCap = false,
+          stoppedAtEmptyPhase = false,
           failures = failures.toList(),
         ),
       )
@@ -321,41 +336,99 @@ class ProjectSimulator @Inject constructor(
   private fun draftFor(question: Question, phase: Phase): String =
     "Rough notes for \"${question.text.trim()}\" while working through ${phase.label}."
 
-/**
-   * Creates the project and waits for its opening round.
- *
- * A failed opening round is the one failure the run cannot simply step over: it
- * failed before there was a project to advance, so the run has nothing else to do
- * and ends. The project itself still exists, and its id comes off the failed task
- * rather than off a search for "the newest draft", which would be a guess about
- * storage order in a run that is allowed to be cancelled at any moment.
- */
-private suspend fun createAndAwait(config: SimulationConfig, failures: MutableList<String>): String {
+  /**
+   * Creates the project and waits for its opening round, asking once more if that
+   * round comes back with nothing.
+   *
+   * A failed opening round is otherwise the one failure the run cannot simply
+   * step over: it failed before there was a project to advance, so the run has
+   * nothing else to do and ends. But it is still only the first of a phase's two
+   * chances (see [retryCurrentPhase]) — a project that recovers here is one the
+   * run can keep walking, so its id comes back as if nothing had happened. The
+   * project exists either way, and on the unrecovered path its id comes off the
+   * failed task rather than off a search for "the newest draft", which would be a
+   * guess about storage order in a run that is allowed to be cancelled at any
+   * moment.
+   */
+  private suspend fun createAndAwait(config: SimulationConfig, failures: MutableList<String>): String {
     try {
       return repository.createProjectAndWait(config.synopsis, config.title).id
     } catch (e: TaskFailed) {
-      failures += e.message ?: e.toString()
+      val problems = mutableListOf(e.message ?: e.toString())
+      val projectId = e.task.projectId
+      if (retryCurrentPhase(projectId, config.compaction, problems)) return projectId
+      failures += problems.first()
       throw e
     }
   }
 
   /**
-   * Advances to [phase] and waits for its round, recording a failure rather than
-   * raising it: a failed round is a coherent state the round itself already
-   * latched, and a run that stopped at the first failure would be reporting the
-   * failure instead of exercising the pipeline.
+   * Advances to [phase] and waits for its round, asking once more when the engine
+   * has nothing for it, and returns whether the phase ended up with questions.
+   *
+   * A failed round is a problem recorded rather than a failure raised: it is a
+   * coherent state the round itself already latched, and a run that stopped at
+   * the first one would be reporting the failure instead of exercising the
+   * pipeline. What the caller is told is only whether the phase came out usable,
+   * because whether an empty phase ends the run is
+   * [SimulationConfig.stopOnEmptyPhase]'s call — and a round that failed and then
+   * landed questions on the retry is nothing to report, so its message goes with
+   * it.
    */
   private suspend fun advanceAndAwait(
     projectId: String,
     phase: Phase,
-    compaction: ContextCompaction,
+    config: SimulationConfig,
     failures: MutableList<String>,
-  ) {
+  ): Boolean {
+    val problems = mutableListOf<String>()
     try {
-      repository.advanceToPhaseAndWait(projectId, phase, compaction)
+      repository.advanceToPhaseAndWait(projectId, phase, config.compaction)
     } catch (e: TaskFailed) {
-      failures += e.message ?: e.toString()
+      problems += e.message ?: e.toString()
     }
+    val landed = retryCurrentPhase(projectId, config.compaction, problems)
+    if (!landed && problems.isNotEmpty()) failures += problems.first()
+    return landed
+  }
+
+  /**
+   * Asks the project's current phase once more when its generation came back with
+   * nothing, and returns whether the phase ended up with questions.
+   *
+   * A phase with nothing in it is a hole in the fixture: there is nothing to
+   * answer, its round has nothing for the filters to show, and it contributes
+   * nothing to the context the next phase is generated against. An empty batch is
+   * usually one unlucky generation rather than a dead phase, and what a user
+   * reaches for when a round comes back empty is exactly what this reaches for —
+   * "Get more questions", a seam the project already has — rather than a retry
+   * bolted onto the round that just failed.
+   *
+   * Deliberately one more attempt. A second miss says something about the engine,
+   * and the tool's job is to report that (see [SimulationState.Finished.failures])
+   * rather than to grind against it. Nor is anything asked again once the engine
+   * has answered `done`: [Project.currentPhaseExhausted] means the phase has
+   * nothing left to give, so an empty phase there is the engine's answer rather
+   * than a miss.
+   *
+   * Both attempts' messages end up in [problems] so the caller can report the
+   * phase's first one and drop the rest — one thing went wrong in a phase, and
+   * saying so twice would read as two.
+   */
+  private suspend fun retryCurrentPhase(
+    projectId: String,
+    compaction: ContextCompaction,
+    problems: MutableList<String>,
+  ): Boolean {
+    val project = storage.getProject(projectId) ?: return false
+    if (project.currentPhaseQuestions.isNotEmpty()) return true
+    if (project.currentPhaseExhausted) return false
+    try {
+      repository.generateMoreQuestionsAndWait(projectId, compaction)
+    } catch (e: TaskFailed) {
+      problems += e.message ?: e.toString()
+    }
+    return storage.getProject(projectId)?.currentPhaseQuestions?.isNotEmpty() == true
   }
 
   companion object {
@@ -427,6 +500,18 @@ data class SimulationConfig(
    * If false, leave it in place and create a new simulated project.
    */
   val replacePrevious: Boolean = true,
+  /**
+   * Whether the run stops at the first phase the engine leaves empty instead of
+   * walking past it.
+   *
+   * Off by default: a phase is always asked twice (see `retryCurrentPhase`), and
+   * once both attempts have come back nothing, only the phases *after* it are
+   * missing — the rest of the library is still worth generating, and
+   * [SimulationState.Finished.phasesCovered] reports the hole. Turn it on when a
+   * half-planned project is the thing being looked at, rather than a run that
+   * should cover the library.
+   */
+  val stopOnEmptyPhase: Boolean = false,
 ) {
   companion object {
     /**
@@ -462,7 +547,17 @@ sealed interface SimulationState {
     val phaseCount: Int,
     /** True when the run stopped on [SimulationConfig.questionCap] rather than at the last phase. */
     val stoppedAtQuestionCap: Boolean,
-    /** One message per round that failed; empty when every round landed. */
+    /**
+     * True when the run stopped at a phase the engine left empty, because
+     * [SimulationConfig.stopOnEmptyPhase] was on. The phases it walked before
+     * that one are as complete as [phasesCovered] says.
+     */
+    val stoppedAtEmptyPhase: Boolean,
+    /**
+     * One message per phase that came up empty; empty when every phase the run
+     * walked landed questions. A round that failed and then succeeded on the
+     * retry is not one of these — see `retryCurrentPhase`.
+     */
     val failures: List<String>,
   ) : SimulationState
 

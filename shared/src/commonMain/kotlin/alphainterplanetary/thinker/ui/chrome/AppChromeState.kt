@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.tools.SimulationState
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
 import alphainterplanetary.thinker.ui.viewmodel.SettingsViewModel
@@ -13,8 +14,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -124,6 +127,23 @@ class AppChromeState internal constructor(
 
   /** Pops one entry — a sheet if one is up, else the current screen. */
   internal fun goBack(): Boolean = stack.pop()
+
+  /**
+   * Puts [projectId]'s detail in front of the user with nothing behind it but
+   * the project list: any open sheet, any other screen, and the way in are all
+   * gone, so back from the project returns to the list.
+   *
+   * For a destination the user is going to want regardless of where they were —
+   * the project a simulator run just finished making. The run's own surface is
+   * either long gone by the time it lands (a run is minutes of real latency) or
+   * deliberately holding the result instead (see [shouldOpenSimulatedProject]),
+   * and reaching the project through a list that may not even be showing it —
+   * the run deleted the previous one — is a worse outcome than losing the place
+   * they were standing.
+   */
+  internal fun openProjectFromList(projectId: String) {
+    stack.resetTo(AppRoute.ProjectDetail(projectId))
+  }
 
   /**
    * Shows an app-wide message, optionally with an undo-style action, and waits
@@ -256,5 +276,57 @@ internal fun AppChromeState.announceFailures() {
     }
     settings.markFailureAnnounced(activity.activityId)
     openSheet(ChromeSheet.Status)
+  }
+}
+
+/**
+ * Whether a finished run should take the user to the project it created — the
+ * whole rule, as a pure function so the policy is testable without a
+ * composition and cannot drift between the two things that could act on it.
+ *
+ * - a finished run only, and only one the app has not already acted on
+ *   ([handledProjectId]). Every run mints a fresh project id, so an id acts once
+ *   and once only.
+ * - not while the simulator screen is up ([route]). That screen *is* the result:
+ *   it has to show the user what the run left behind, and a jump out from under
+ *   it would replace the summary with the very thing the summary describes. A
+ *   sheet up over it does not count — the sheet is not the result.
+ *
+ * Note what this does *not* decide: whether the user gets the jump afterwards.
+ * Closing the simulator after a held finish leaves them where they were, because
+ * the id is marked handled either way.
+ */
+internal fun shouldOpenSimulatedProject(
+  finishedProjectId: String?,
+  handledProjectId: String?,
+  route: AppRoute,
+): Boolean = finishedProjectId != null &&
+  finishedProjectId != handledProjectId &&
+  route != AppRoute.Simulator
+
+/**
+ * Opens the project a simulator run has finished creating, wherever the user is
+ * when the run lands.
+ *
+ * Called by the nav root for the same reason [announceFailures] is: the finished
+ * project is a fact about the run rather than about the screen that started it.
+ * The jump replaces the stack (see [openProjectFromList]), so whatever was over
+ * the project list closes with it and the list reloads when back returns.
+ *
+ * The one place the jump is withheld is [AppRoute.Simulator], which reports the
+ * finish itself; see [shouldOpenSimulatedProject]. Both cases mark the id
+ * handled, so a run is acted on exactly once either way.
+ */
+@Composable
+internal fun AppChromeState.openSimulatedProject() {
+  val simulation by settings.simulation.collectAsState()
+  val finished = (simulation as? SimulationState.Finished)?.projectId
+  var handledProjectId by remember { mutableStateOf<String?>(null) }
+
+  LaunchedEffect(finished) {
+    val projectId = finished ?: return@LaunchedEffect
+    val jump = shouldOpenSimulatedProject(projectId, handledProjectId, route)
+    handledProjectId = projectId
+    if (jump) openProjectFromList(projectId)
   }
 }

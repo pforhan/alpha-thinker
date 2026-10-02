@@ -37,13 +37,14 @@ class ProjectSimulatorTest {
    * would fail its second round as a dead end. This hands out fresh text per
    * call, which is what a real phase-partitioned engine does.
    */
-  private fun engine(): FakePlanningEngine = FakePlanningEngine().apply {
-    batchFor = { callIndex, roundId ->
-      (0 until 3).map { index ->
-        question("q$callIndex-$index", "Call $callIndex question $index", roundId = roundId)
-      }
+  private fun engine(): FakePlanningEngine =
+    FakePlanningEngine().apply { batchFor = ::batch }
+
+  /** A call's batch: [count] fresh questions, which nothing later can collide with. */
+  private fun batch(callIndex: Int, roundId: String, count: Int = 3): List<Question> =
+    (0 until count).map { index ->
+      question("q$callIndex-$index", "Call $callIndex question $index", roundId = roundId)
     }
-  }
 
   /** A simulator over its own storage, plus the storage to read the result from. */
   private fun TestScope.harness(
@@ -252,11 +253,13 @@ class ProjectSimulatorTest {
     testScheduler.advanceUntilIdle()
 
     val state = harness.finished()
-    assertTrue(state.failures.isNotEmpty(), "a failing round was not reported")
-    // The failed round latched on the project, and the run stopped there — there
-    // was no project to advance yet.
-    assertEquals(1, harness.project.rounds.size)
-    assertEquals(RoundOutcome.Failed, harness.project.rounds.single().outcome)
+    assertTrue(state.failures.isNotEmpty(), "a phase that never generated anything was not reported")
+    // The run asked the opening phase twice before giving up on it — and both
+    // rounds latched their failure on the project, which is then a project with
+    // no first phase and so no library left to walk.
+    val rounds = harness.project.rounds
+    assertEquals(2, rounds.size, "the opening phase was not asked a second time")
+    assertTrue(rounds.all { it.outcome == RoundOutcome.Failed }, "a failed round did not latch its failure")
   }
 
   @Test
@@ -270,13 +273,140 @@ class ProjectSimulatorTest {
     testScheduler.advanceUntilIdle()
 
     val state = harness.finished()
-    assertEquals(BuiltInPhase.entries.size - 1, state.failures.size, "one round failed, the rest ran")
     assertEquals(
-      BuiltInPhase.entries.size,
-      harness.project.rounds.size,
-      "a failed round is still a round the run moved past",
+      BuiltInPhase.entries.size - 1,
+      state.failures.size,
+      "every phase after the first came up empty, and each is reported once",
+    )
+    assertEquals(
+      BuiltInPhase.entries.map { it.key },
+      harness.project.rounds.map { it.phase.key }.distinct(),
+      "an empty phase is still a phase the run moved past",
     )
   }
+
+  // ---------- a phase that comes back empty ----------
+
+  @Test
+  fun `a phase that generates nothing is asked again`() = runTest {
+    val generator = engine().apply {
+      // Phase 2's opening round (call 1) comes back empty; the run's second ask,
+      // and everything after it, serves questions.
+      batchFor = { callIndex, roundId -> if (callIndex == 1) emptyList() else batch(callIndex, roundId) }
+    }
+    val harness = harness(generator = generator)
+
+    harness.simulator.simulate(SimulationConfig(synopsis))
+    testScheduler.advanceUntilIdle()
+
+    val project = harness.project
+    BuiltInPhase.entries.forEach { phase ->
+      assertTrue(
+        project.questions.any { project.phaseForQuestion(it) == phase },
+        "$phase ended up empty, so the run never asked for it twice",
+      )
+    }
+    assertTrue(
+      harness.finished().failures.isEmpty(),
+      "a round that failed and then landed questions is nothing to report",
+    )
+  }
+
+  @Test
+  fun `a phase that stays empty is reported once and the run carries on by default`() = runTest {
+    val harness = harness(generator = engineEmptyFrom(BuiltInPhase.Research))
+
+    harness.simulator.simulate(SimulationConfig(synopsis))
+    testScheduler.advanceUntilIdle()
+
+    val project = harness.project
+    assertTrue(
+      project.questions.none { project.phaseForQuestion(it) == BuiltInPhase.Research },
+      "the empty phase was supposed to stay empty",
+    )
+    assertEquals(
+      BuiltInPhase.entries.map { it.key },
+      project.rounds.map { it.phase.key }.distinct(),
+      "the phases after the empty one were still generated",
+    )
+    val state = harness.finished()
+    assertEquals(1, state.failures.size, "one thing went wrong in that phase, so it is reported once")
+    assertTrue(!state.stoppedAtEmptyPhase, "stopping is off unless the run asks for it")
+    assertEquals(
+      BuiltInPhase.entries.size - 1,
+      state.phasesCovered,
+      "the report counts the phases that landed questions, so the hole shows",
+    )
+  }
+
+  @Test
+  fun `stopping on an empty phase ends the run there`() = runTest {
+    val harness = harness(generator = engineEmptyFrom(BuiltInPhase.Design))
+
+    harness.simulator.simulate(SimulationConfig(synopsis, stopOnEmptyPhase = true))
+    testScheduler.advanceUntilIdle()
+
+    val state = harness.finished()
+    assertTrue(state.stoppedAtEmptyPhase, "the run did not report stopping at the empty phase")
+    assertEquals(
+      listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research, BuiltInPhase.Design),
+      harness.project.rounds.map { it.phase }.distinct(),
+      "the run kept walking past the phase it was told to stop at",
+    )
+  }
+
+  @Test
+  fun `a failed opening round is asked again before the run gives up on it`() = runTest {
+    val harness = harness(generator = FailFirstPlanningEngine(engine(), failures = 1))
+
+    harness.simulator.simulate(SimulationConfig(synopsis))
+    testScheduler.advanceUntilIdle()
+
+    val project = harness.project
+    assertTrue(project.questions.isNotEmpty(), "the recovered opening round left the project empty")
+    assertEquals(
+      BuiltInPhase.entries.map { it.key },
+      project.rounds.map { it.phase.key }.distinct(),
+      "a project that recovered its first round walks the whole library",
+    )
+  }
+
+  @Test
+  fun `an engine that reports a phase done is not asked again`() = runTest {
+    // Every phase answers `done` with nothing, which is the one empty phase that
+    // is the engine's answer rather than a miss — so nothing is retried, and
+    // nothing is a failure.
+    val generator = engine().apply {
+      done = true
+      batchFor = { _, _ -> emptyList() }
+    }
+    val harness = harness(generator = generator)
+
+    harness.simulator.simulate(SimulationConfig(synopsis))
+    testScheduler.advanceUntilIdle()
+
+    val state = harness.finished()
+    assertEquals(
+      BuiltInPhase.entries.size,
+      generator.calls.size,
+      "a phase the engine reported done was asked a second time",
+    )
+    assertEquals(0, state.questions)
+    assertTrue(state.failures.isEmpty(), "an engine that answered done did not fail")
+    assertTrue(!state.stoppedAtEmptyPhase, "a phase that is done is not an empty phase to stop at")
+  }
+
+  /**
+   * An engine that serves nothing at all for one phase — and keeps serving
+   * nothing for it, which is what "asked again and got the same answer" has to
+   * look like from the run's side of the seam.
+   */
+  private fun engineEmptyFrom(phase: Phase): FakePlanningEngine =
+    engine().apply {
+      batchFor = { callIndex, roundId ->
+        if (calls[callIndex].phase == phase) emptyList() else batch(callIndex, roundId)
+      }
+    }
 
   @Test
   fun `cancelling mid-round leaves the phases that already landed`() = runTest {
@@ -314,6 +444,7 @@ class ProjectSimulatorTest {
       "the phase the cancel landed in was resolved anyway",
     )
   }
+}
 
 /**
  * A [PlanningEngine] that scripts one run's generation: park inside a numbered
@@ -322,52 +453,99 @@ class ProjectSimulatorTest {
  * observed at are the ones a fake that finishes instantly never reaches.
  */
 private class ScriptedPlanningEngine(
-    private val delegate: PlanningEngine,
-    private val parkOnCall: Int? = null,
-    private val gate: CompletableDeferred<Unit>? = null,
-    private val failFromCall: Int? = null,
-  ) : PlanningEngine {
-    private var calls = 0
+  private val delegate: PlanningEngine,
+  private val parkOnCall: Int? = null,
+  private val gate: CompletableDeferred<Unit>? = null,
+  private val failFromCall: Int? = null,
+) : PlanningEngine {
+  private var calls = 0
 
-    override val source get() = delegate.source
-    override val contextWindowTokens get() = delegate.contextWindowTokens
-    override val canSummarize get() = delegate.canSummarize
+  override val source get() = delegate.source
+  override val contextWindowTokens get() = delegate.contextWindowTokens
+  override val canSummarize get() = delegate.canSummarize
 
-    override suspend fun recommendTitle(synopsis: String, activityId: String): String =
-      delegate.recommendTitle(synopsis, activityId)
+  override suspend fun recommendTitle(synopsis: String, activityId: String): String =
+    delegate.recommendTitle(synopsis, activityId)
 
-    override suspend fun summarizePriorAnswers(
-      title: String,
-      synopsis: String,
-      phase: Phase,
-      transcript: String,
-      activityId: String,
-    ): String = delegate.summarizePriorAnswers(title, synopsis, phase, transcript, activityId)
+  override suspend fun summarizePriorAnswers(
+    title: String,
+    synopsis: String,
+    phase: Phase,
+    transcript: String,
+    activityId: String,
+  ): String = delegate.summarizePriorAnswers(title, synopsis, phase, transcript, activityId)
 
-    override suspend fun generateQuestions(
-      title: String,
-      synopsis: String,
-      previousQuestions: List<Question>,
-      roundId: String,
-      phase: Phase,
-      activityId: String,
-      priorSummaries: List<PlanningContext.PhaseSummary>,
-    ): QuestionBatch {
-      calls += 1
-      val batch = delegate.generateQuestions(
-        title,
-        synopsis,
-        previousQuestions,
-        roundId,
-        phase,
-        activityId,
-        priorSummaries,
-      )
-      if (failFromCall != null && calls >= failFromCall) {
-        throw IllegalStateException("engine call $calls failed")
-      }
-      if (parkOnCall != null && calls == parkOnCall) gate?.await()
-      return batch
+  override suspend fun generateQuestions(
+    title: String,
+    synopsis: String,
+    previousQuestions: List<Question>,
+    roundId: String,
+    phase: Phase,
+    activityId: String,
+    priorSummaries: List<PlanningContext.PhaseSummary>,
+  ): QuestionBatch {
+    calls += 1
+    val batch = delegate.generateQuestions(
+      title,
+      synopsis,
+      previousQuestions,
+      roundId,
+      phase,
+      activityId,
+      priorSummaries,
+    )
+    if (failFromCall != null && calls >= failFromCall) {
+      throw IllegalStateException("engine call $calls failed")
     }
+    if (parkOnCall != null && calls == parkOnCall) gate?.await()
+    return batch
+  }
+}
+
+/**
+ * A [PlanningEngine] that fails its first [failures] generations and delegates
+ * the rest, so a run's second ask at a phase can be the one that lands.
+ */
+private class FailFirstPlanningEngine(
+  private val delegate: PlanningEngine,
+  private val failures: Int,
+) : PlanningEngine {
+  private var calls = 0
+
+  override val source get() = delegate.source
+  override val contextWindowTokens get() = delegate.contextWindowTokens
+  override val canSummarize get() = delegate.canSummarize
+
+  override suspend fun recommendTitle(synopsis: String, activityId: String): String =
+    delegate.recommendTitle(synopsis, activityId)
+
+  override suspend fun summarizePriorAnswers(
+    title: String,
+    synopsis: String,
+    phase: Phase,
+    transcript: String,
+    activityId: String,
+  ): String = delegate.summarizePriorAnswers(title, synopsis, phase, transcript, activityId)
+
+  override suspend fun generateQuestions(
+    title: String,
+    synopsis: String,
+    previousQuestions: List<Question>,
+    roundId: String,
+    phase: Phase,
+    activityId: String,
+    priorSummaries: List<PlanningContext.PhaseSummary>,
+  ): QuestionBatch {
+    calls += 1
+    if (calls <= failures) throw IllegalStateException("generation call $calls failed")
+    return delegate.generateQuestions(
+      title,
+      synopsis,
+      previousQuestions,
+      roundId,
+      phase,
+      activityId,
+      priorSummaries,
+    )
   }
 }
