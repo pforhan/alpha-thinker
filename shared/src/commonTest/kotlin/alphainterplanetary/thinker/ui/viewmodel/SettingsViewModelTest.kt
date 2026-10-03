@@ -31,7 +31,6 @@ class SettingsViewModelTest {
       storage = storage,
       engineSelector = { FakePlanningEngine() },
       taskRunner = runner,
-      settings = SettingsRepository(storage, scope),
       activityLogger = RecordingActivityLogger(),
     )
     return SettingsViewModel(

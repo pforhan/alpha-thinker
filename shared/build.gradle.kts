@@ -1,7 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
-import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
@@ -31,24 +30,6 @@ kotlin {
     withHostTest {
       isIncludeAndroidResources = true
     }
-  }
-
-  js(IR) {
-    nodejs()
-    browser {
-      testTask {
-        val chromeBin = System.getenv("CHROME_EXECUTABLE") ?: System.getenv("CHROME_BIN")
-        if (chromeBin != null) {
-          environment("CHROME_BIN", chromeBin)
-        } else {
-          enabled = false
-        }
-      }
-    }
-    compilerOptions {
-      freeCompilerArgs.addAll("-Xexpect-actual-classes")
-    }
-    binaries.executable()
   }
 
   wasmJs {
@@ -118,12 +99,6 @@ kotlin {
       implementation(libs.androidx.activity.compose)
     }
 
-    jsMain.dependencies {
-      implementation(libs.sqlite.web)
-      implementation(npm("sqlite-wasm-worker", layout.projectDirectory.dir("webWorker/worker").asFile))
-      implementation(npm("@sqlite.org/sqlite-wasm", "3.50.4-build1"))
-    }
-
     wasmJsMain.dependencies {
       implementation(libs.sqlite.web)
       implementation(libs.kotlinx.browser)
@@ -153,8 +128,6 @@ kotlin {
 dependencies {
   add("kspAndroid", libs.kotlin.inject.compiler)
   add("kspAndroid", libs.room.compiler)
-  add("kspJs", libs.kotlin.inject.compiler)
-  add("kspJs", libs.room.compiler)
   add("kspWasmJs", libs.kotlin.inject.compiler)
   add("kspWasmJs", libs.room.compiler)
   add("kspDesktop", libs.kotlin.inject.compiler)
@@ -165,6 +138,13 @@ dependencies {
   add("kspIosSimulatorArm64", libs.room.compiler)
 }
 
-tasks.named<KotlinJsTest>("wasmJsNodeTest") {
+// The wasm tests are browser-only: skiko's wasm glue cannot load under Node.
+// In skiko.mjs (skiko-js-wasm-runtime 0.9.37.4) the whole Node loader is
+// compiled out — `var read_, readAsync, readBinary; if (false) { const
+// {createRequire} = await import("module"); ... }` — so skiko.wasm is only ever
+// fetched over http(s) and Node aborts with "failed to asynchronously prepare
+// wasm" before the first test runs, no matter how skiko.mjs/skiko.wasm are
+// staged next to the executable. `wasmJsBrowserTest` covers the same tests.
+tasks.named("wasmJsNodeTest") {
   enabled = false
 }

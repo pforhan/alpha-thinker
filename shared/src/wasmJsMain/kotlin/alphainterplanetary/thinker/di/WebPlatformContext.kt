@@ -1,7 +1,9 @@
 package alphainterplanetary.thinker.di
 
 /**
- * Web (wasmJs) platform context. There is no Android [android.content.Context] to back the
- * database, so the web build falls back to in-memory storage.
+ * Web platform: the SQLite driver resolves a bare file name itself (in the
+ * page's OPFS), so there is no path to hand it.
  */
-class WebPlatformContext : PlatformContext
+class WebPlatformContext : PlatformContext {
+  override fun databaseFile(name: String): String = name
+}

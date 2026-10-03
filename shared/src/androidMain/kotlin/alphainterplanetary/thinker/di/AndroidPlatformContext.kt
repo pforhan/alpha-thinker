@@ -3,5 +3,7 @@ package alphainterplanetary.thinker.di
 import android.content.Context
 
 class AndroidPlatformContext(androidContext: Context) : PlatformContext {
-  val context: Context = androidContext.applicationContext
+  private val context: Context = androidContext.applicationContext
+
+  override fun databaseFile(name: String): String = context.getDatabasePath(name).absolutePath
 }

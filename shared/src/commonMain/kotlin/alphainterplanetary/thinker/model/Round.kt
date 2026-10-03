@@ -87,8 +87,6 @@ data class Round(
 
   fun complete(at: Instant): Round = copy(completedAt = at)
 
-  fun withPending(): Round = copy(outcome = RoundOutcome.Pending)
-
   /** The batch landed with fresh questions and the engine can still produce more. */
   fun withMoreAvailable(): Round = copy(outcome = RoundOutcome.MoreAvailable)
 

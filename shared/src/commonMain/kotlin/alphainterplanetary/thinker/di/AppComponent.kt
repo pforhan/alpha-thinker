@@ -24,6 +24,7 @@ import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.KmpComponentCreate
 import me.tatarka.inject.annotations.Provides
@@ -66,7 +67,11 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
     database: ActivityDatabase,
     storage: Storage,
     scope: CoroutineScope,
-  ): ActivityLogger = RoomActivityLogger(database, storage, scope)
+  ): ActivityLogger = RoomActivityLogger(database, storage).also { logger ->
+    // The startup sweep is the composition root's call, not the constructor's:
+    // anything constructing a logger directly (tests) gets an inert one.
+    scope.launch { runCatching { logger.runStartupSweep() } }
+  }
 
   @AppScope
   @Provides

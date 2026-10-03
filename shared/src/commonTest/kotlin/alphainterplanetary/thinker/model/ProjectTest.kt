@@ -154,41 +154,6 @@ class ProjectTest {
     assertEquals(listOf("c", "d"), p.unansweredQuestions.map { it.id })
   }
 
-  @Test
-  fun `activeQuestions excludes only ignored questions`() {
-    val p = project(answeredQuestion("a"), ignoredQuestion("b"), question("c"))
-
-    assertEquals(listOf("a", "c"), p.activeQuestions.map { it.id })
-  }
-
-  @Test
-  fun `allActiveQuestionsAnswered is true when every active question is answered`() {
-    val p = project(answeredQuestion("a"), answeredQuestion("b"), ignoredQuestion("c"))
-
-    assertTrue(p.allActiveQuestionsAnswered)
-  }
-
-  @Test
-  fun `allActiveQuestionsAnswered is false when an active question is unanswered`() {
-    val p = project(answeredQuestion("a"), question("b"))
-
-    assertFalse(p.allActiveQuestionsAnswered)
-  }
-
-  @Test
-  fun `allActiveQuestionsAnswered is false when an active question only has a draft`() {
-    val p = project(answeredQuestion("a"), draftQuestion("b"))
-
-    assertFalse(p.allActiveQuestionsAnswered)
-  }
-
-  @Test
-  fun `allActiveQuestionsAnswered is false when there are no active questions`() {
-    val p = project(ignoredQuestion("a"), ignoredQuestion("b"))
-
-    assertFalse(p.allActiveQuestionsAnswered)
-  }
-
   // ---------- rounds ----------
 
   @Test

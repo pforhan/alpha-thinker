@@ -43,6 +43,10 @@ The Kotlin codebase follows these formatting conventions:
   and its result is clear.
 - **Reuse types:** Avoid introducing a new class when an existing class is an
   obvious close match; reuse or extend the existing type when appropriate.
+- **One type per file:** Don't pack unrelated declarations into a file named
+  after one of them — a file holding five DAOs is called `SettingsDao.kt`
+  from the reader's point of view. Split them (see `database/ProjectDao.kt`,
+  `QuestionDao.kt`, `AnswerDao.kt`, `RoundDao.kt`, `SettingsDao.kt`).
 
 When in doubt, match the surrounding code styles.
 

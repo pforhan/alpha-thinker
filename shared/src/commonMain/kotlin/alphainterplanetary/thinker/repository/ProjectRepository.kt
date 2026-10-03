@@ -31,7 +31,6 @@ class ProjectRepository @Inject constructor(
   private val storage: Storage,
   private val engineSelector: PlanningEngineSelector,
   private val taskRunner: TaskRunner,
-  private val settings: SettingsRepository,
   private val activityLogger: ActivityLogger,
 ) {
 

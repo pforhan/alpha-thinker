@@ -9,7 +9,6 @@ import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.util.now
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -42,12 +41,9 @@ class RoomActivityLoggerTest {
   private fun log(
     db: ActivityDatabase,
     storage: FakeStorage = FakeStorage(),
-    scope: CoroutineScope,
   ): RoomActivityLogger = RoomActivityLogger(
     database = db,
     storage = storage,
-    scope = scope,
-    runStartupSweep = false,
   )
 
   @Test
@@ -63,11 +59,11 @@ class RoomActivityLoggerTest {
     dao.append(Entry("old-2", "response: y", timestamp = now - 20.days))
     dao.append(Entry("fresh", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = now - 1.days))
 
-    log(db, storage = storage, scope = CoroutineScope(coroutineContext)).runStartupSweep()
+    log(db, storage = storage).runStartupSweep()
 
     assertEquals(
       listOf("old-2", "fresh"),
-      dao.all().map { it.activityId },
+      dao.observeAll().first().map { it.activityId },
       "rows older than the 30-day window are pruned by row age; rows within it survive",
     )
   }
@@ -81,10 +77,10 @@ class RoomActivityLoggerTest {
     dao.append(Entry("stale", "response: x", timestamp = now - 400.days))
     dao.append(Entry("recent", "response: y", timestamp = now - 1.days))
 
-    val deleted = log(db, scope = CoroutineScope(coroutineContext)).prune(retentionDays = 7, now = now)
+    val deleted = log(db).prune(retentionDays = 7, now = now)
 
     assertEquals(1, deleted)
-    assertEquals(listOf("recent"), dao.all().map { it.activityId })
+    assertEquals(listOf("recent"), dao.observeAll().first().map { it.activityId })
   }
 
   @Test
@@ -96,7 +92,7 @@ class RoomActivityLoggerTest {
     dao.append(Entry("a1", "response: done", timestamp = now + 1.days))
     dao.append(Entry("a2", "response: title", LogCategory.TitleRecommendation, timestamp = now + 2.days))
 
-    val roomLog = log(db, scope = CoroutineScope(coroutineContext))
+    val roomLog = log(db)
     val grouped = ActivityRecord.groupByActivity(roomLog.entries().first())
 
     assertEquals(listOf("a2", "a1"), grouped.map { it.activityId })
@@ -112,7 +108,7 @@ class RoomActivityLoggerTest {
     dao.append(Entry("a2", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = now + 1.days))
     dao.append(Entry("a2", "failed: model exploded", timestamp = now + 1.days))
 
-    val latest = log(db, scope = CoroutineScope(coroutineContext)).latestActivity().first()
+    val latest = log(db).latestActivity().first()
 
     assertNotNull(latest)
     assertEquals("a2", latest.activityId)
@@ -131,7 +127,7 @@ class RoomActivityLoggerTest {
     }
     dao.append(Entry("new", "response: fresh", LogCategory.TitleRecommendation, timestamp = now + 1.days))
 
-    val latest = log(db, scope = CoroutineScope(coroutineContext)).latestActivity().first()
+    val latest = log(db).latestActivity().first()
 
     assertEquals("new", latest?.activityId)
     assertEquals("Recommended title: fresh", latest?.summary)
@@ -141,7 +137,7 @@ class RoomActivityLoggerTest {
   fun `latestActivity is null on an empty log`() = runTest {
     val db = inMemory()
 
-    val latest = log(db, scope = CoroutineScope(coroutineContext)).latestActivity().first()
+    val latest = log(db).latestActivity().first()
 
     assertEquals(null, latest)
   }
@@ -167,7 +163,7 @@ class RoomActivityLoggerTest {
       ).toEntity(),
     )
 
-    assertEquals(raw, log(db, scope = CoroutineScope(coroutineContext)).entries().first().single().raw)
+    assertEquals(raw, log(db).entries().first().single().raw)
   }
 
   @Test
@@ -179,8 +175,8 @@ class RoomActivityLoggerTest {
     dao.append(Entry("a1", "response: x", timestamp = now))
     dao.append(Entry("a1", "response: y", timestamp = now + 1.days))
 
-    log(db, scope = CoroutineScope(coroutineContext)).clear()
+    log(db).clear()
 
-    assertTrue(dao.all().isEmpty())
+    assertTrue(dao.observeAll().first().isEmpty())
   }
 }

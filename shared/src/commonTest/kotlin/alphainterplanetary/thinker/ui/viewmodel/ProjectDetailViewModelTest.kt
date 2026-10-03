@@ -10,7 +10,6 @@ import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
-import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
@@ -54,7 +53,6 @@ class ProjectDetailViewModelTest {
       storage,
       PlanningEngineSelector { generator },
       runner,
-      SettingsRepository(storage, CoroutineScope(coroutineContext)),
       RecordingActivityLogger(),
     )
     val vm = ProjectDetailViewModel(

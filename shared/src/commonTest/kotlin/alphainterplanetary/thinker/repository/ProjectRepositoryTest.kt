@@ -47,10 +47,9 @@ class ProjectRepositoryTest {
     storage: FakeStorage = FakeStorage(),
     generator: PlanningEngine = FakePlanningEngine(),
     runner: TaskRunner = TaskRunner(CoroutineScope(coroutineContext)),
-    settings: SettingsRepository = SettingsRepository(storage, CoroutineScope(coroutineContext)),
     activityLogger: ActivityLogger = RecordingActivityLogger(),
   ): ProjectRepository =
-    ProjectRepository(storage, { generator }, runner, settings, activityLogger)
+    ProjectRepository(storage, { generator }, runner, activityLogger)
 
   // ---------- createProject ----------
 
@@ -203,12 +202,10 @@ class ProjectRepositoryTest {
       var current: PlanningEngine = enqueued
       val runner = TaskRunner(CoroutineScope(coroutineContext))
       val storage = FakeStorage()
-      val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
       val repository = ProjectRepository(
         storage,
         { current },
         runner,
-        settings,
         RecordingActivityLogger(),
       )
 
@@ -743,14 +740,12 @@ class ProjectRepositoryTest {
         ),
       ),
     )
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     budgetedFor(generator, 500)
     val runner = TaskRunner(CoroutineScope(coroutineContext), log)
     val repository = repo(
       storage = storage,
       generator = generator,
       runner = runner,
-      settings = settings,
       activityLogger = log,
     )
 
@@ -834,7 +829,6 @@ class ProjectRepositoryTest {
         ),
       ),
     )
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     val generator = FakePlanningEngine().apply {
       generationFailure = RuntimeException("model exploded")
     }
@@ -844,7 +838,6 @@ class ProjectRepositoryTest {
       storage = storage,
       generator = generator,
       runner = runner,
-      settings = settings,
       activityLogger = log,
     )
 
@@ -879,10 +872,9 @@ class ProjectRepositoryTest {
   @Test
   fun `checkContext describes the project against its budget`() = runTest {
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     val generator = FakePlanningEngine()
     budgetedFor(generator, 500)
-    val repository = repo(storage = storage, generator = generator, settings = settings)
+    val repository = repo(storage = storage, generator = generator)
 
     val check = repository.checkContext("p1")
 
@@ -964,9 +956,8 @@ class ProjectRepositoryTest {
       summaries[BuiltInPhase.ScopeGoals] = "A menu planner for home cooks."
     }
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     budgetedFor(generator, 1000)
-    val repository = repo(storage = storage, generator = generator, settings = settings)
+    val repository = repo(storage = storage, generator = generator)
 
     repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
     testScheduler.advanceUntilIdle()
@@ -998,9 +989,8 @@ class ProjectRepositoryTest {
   fun `a summarized phase's answers are compacted away for the prompt`() = runTest {
     val generator = FakePlanningEngine().apply { canSummarize = true }
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     budgetedFor(generator, 2000)
-    val repository = repo(storage = storage, generator = generator, settings = settings)
+    val repository = repo(storage = storage, generator = generator)
 
     repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
     testScheduler.advanceUntilIdle()
@@ -1026,9 +1016,8 @@ class ProjectRepositoryTest {
   fun `the summarize choice keeps going until the transcript fits`() = runTest {
     val generator = FakePlanningEngine().apply { canSummarize = true }
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     budgetedFor(generator, 500)
-    val repository = repo(storage = storage, generator = generator, settings = settings)
+    val repository = repo(storage = storage, generator = generator)
 
     repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
     testScheduler.advanceUntilIdle()
@@ -1049,9 +1038,8 @@ class ProjectRepositoryTest {
   fun `the summarize choice never reaches the phase in progress`() = runTest {
     val generator = FakePlanningEngine().apply { canSummarize = true }
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     budgetedFor(generator, 500)
-    val repository = repo(storage = storage, generator = generator, settings = settings)
+    val repository = repo(storage = storage, generator = generator)
 
     repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
     testScheduler.advanceUntilIdle()
@@ -1077,14 +1065,12 @@ class ProjectRepositoryTest {
     val generator = FakePlanningEngine().apply { canSummarize = true }
     val log = RecordingActivityLogger()
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     budgetedFor(generator, 500)
     val runner = TaskRunner(CoroutineScope(coroutineContext), log)
     val repository = repo(
       storage = storage,
       generator = generator,
       runner = runner,
-      settings = settings,
       activityLogger = log,
     )
 
@@ -1107,9 +1093,8 @@ class ProjectRepositoryTest {
   fun `keeping everything hands the engine the whole interview`() = runTest {
     val generator = FakePlanningEngine()
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     budgetedFor(generator, 500)
-    val repository = repo(storage = storage, generator = generator, settings = settings)
+    val repository = repo(storage = storage, generator = generator)
 
     repository.generateMoreQuestions("p1", ContextCompaction.KeepEverything)
     testScheduler.advanceUntilIdle()
@@ -1129,9 +1114,8 @@ class ProjectRepositoryTest {
   fun `the summarize choice follows a phase advance`() = runTest {
     val generator = FakePlanningEngine().apply { canSummarize = true }
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     budgetedFor(generator, 500)
-    val repository = repo(storage = storage, generator = generator, settings = settings)
+    val repository = repo(storage = storage, generator = generator)
 
     repository.advanceToPhase(
       "p1",
@@ -2082,11 +2066,9 @@ class ProjectRepositoryTest {
     val log = RecordingActivityLogger()
     val generator = FakePlanningEngine().apply { contextWindowTokens = null }
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
     val repository = repo(
       storage = storage,
       generator = generator,
-      settings = settings,
       activityLogger = log,
     )
 
@@ -2110,8 +2092,7 @@ class ProjectRepositoryTest {
   fun `an engine with no context window is never asked to summarize`() = runTest {
     val generator = FakePlanningEngine().apply { contextWindowTokens = null }
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
-    val settings = SettingsRepository(storage, CoroutineScope(coroutineContext))
-    val repository = repo(storage = storage, generator = generator, settings = settings)
+    val repository = repo(storage = storage, generator = generator)
 
     repository.generateMoreQuestions("p1", ContextCompaction.SummarizeEarlierPhases)
     testScheduler.advanceUntilIdle()

@@ -17,9 +17,6 @@ interface LogDao {
   suspend fun append(entry: LogEntryEntity): Long
 
   @Query("SELECT * FROM log_events ORDER BY id ASC")
-  suspend fun all(): List<LogEntryEntity>
-
-  @Query("SELECT * FROM log_events ORDER BY id ASC")
   fun observeAll(): Flow<List<LogEntryEntity>>
 
   /**

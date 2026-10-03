@@ -44,4 +44,9 @@ interface Storage {
   suspend fun saveSetting(key: SettingsKey, value: String)
 }
 
-expect fun provideStorage(context: PlatformContext): Storage
+/**
+ * The app's [Storage] over the shared Room database. DI memoizes it under
+ * `@AppScope`, so this builds the whole persistence stack exactly once.
+ */
+fun provideStorage(context: PlatformContext): Storage =
+  RoomStorage(getRoomDatabase(provideDatabaseBuilder(context)))

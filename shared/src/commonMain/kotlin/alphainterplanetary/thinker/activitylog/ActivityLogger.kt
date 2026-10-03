@@ -7,10 +7,8 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.toEntity
 import alphainterplanetary.thinker.database.toEntry
 import alphainterplanetary.thinker.util.now
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
@@ -77,28 +75,19 @@ interface ActivityLogger {
 }
 
 /**
- * Room-backed [ActivityLogger] over the standalone [ActivityDatabase]. On
- * construction it runs one startup sweep on [scope]: a row-age TTL prune at
- * the persisted [SettingsKey.ActivityLoggerRetentionDays] (default 7 days).
+ * Room-backed [ActivityLogger] over the standalone [ActivityDatabase]. The
+ * composition root launches the one startup sweep — a row-age TTL prune at the
+ * persisted [SettingsKey.ActivityLoggerRetentionDays] (default 7 days) — so a
+ * constructed logger is inert until someone asks for the sweep.
  */
 class RoomActivityLogger(
   private val database: ActivityDatabase,
   private val storage: Storage,
-  private val scope: CoroutineScope,
-  private val runStartupSweep: Boolean = true,
 ) : ActivityLogger {
   private val dao: LogDao = database.logDao()
 
-  init {
-    if (runStartupSweep) {
-      scope.launch {
-        runCatching { runStartupSweep() }
-      }
-    }
-  }
-
   /** Startup sweep: the row-age TTL prune (no activity-state recovery needed). */
-  suspend fun runStartupSweep() {
+  internal suspend fun runStartupSweep() {
     prune(defaultRetentionDays(), now())
   }
 

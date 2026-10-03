@@ -5,7 +5,6 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
-import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
@@ -31,9 +30,6 @@ class ProjectListViewModelTest {
       storage,
       PlanningEngineSelector { FakePlanningEngine() },
       runner,
-      // Over its own store: the list's settings are not what these tests vary,
-      // and a storage double that fails every call would fail the settings load.
-      SettingsRepository(FakeStorage(), CoroutineScope(coroutineContext)),
       RecordingActivityLogger(),
     )
     val vm = ProjectListViewModel(repository, runner, CoroutineScope(coroutineContext))

@@ -10,7 +10,6 @@ import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
-import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
@@ -56,7 +55,6 @@ class ProjectSimulatorTest {
       storage = storage,
       engineSelector = { generator },
       taskRunner = runner,
-      settings = SettingsRepository(storage, CoroutineScope(coroutineContext)),
       activityLogger = RecordingActivityLogger(),
     )
     val simulator = ProjectSimulator(

@@ -41,7 +41,7 @@ class LogDaoTest {
     val second = dao.append(entry("a1", timestamp + 1.days))
 
     assertTrue(second > first, "entry ids must increase strictly")
-    val rows = dao.all()
+    val rows = dao.observeAll().first()
     assertEquals(2, rows.size)
     assertEquals(listOf("a1", "a1"), rows.map { it.activityId })
     assertTrue(rows.map { it.id } == listOf(first, second))
@@ -60,7 +60,7 @@ class LogDaoTest {
     dao.append(entry("a1", timestamp + 1.days, projectId = "p1"))
     dao.append(entry("a1", timestamp + 2.days, projectId = "p1"))
 
-    assertEquals(listOf("a1", "a2", "a1", "a1"), dao.all().map { it.activityId })
+    assertEquals(listOf("a1", "a2", "a1", "a1"), dao.observeAll().first().map { it.activityId })
     assertEquals(listOf("a1", "a1", "a1"), dao.allForProject("p1").map { it.activityId })
     assertEquals(listOf("p2"), dao.allForProject("p2").map { it.projectId })
     assertEquals(4, dao.observeAll().first().size)
@@ -79,7 +79,7 @@ class LogDaoTest {
     val deleted = dao.pruneOlderThan((now - 7.days).toEpochMilliseconds())
 
     assertEquals(2, deleted, "only rows older than the retention window are deleted")
-    assertEquals(listOf("fresh"), dao.all().map { it.activityId })
+    assertEquals(listOf("fresh"), dao.observeAll().first().map { it.activityId })
   }
 
   @Test
@@ -93,7 +93,6 @@ class LogDaoTest {
 
     dao.clearAll()
 
-    assertTrue(dao.all().isEmpty())
     assertTrue(dao.observeAll().first().isEmpty())
   }
 }
