@@ -84,7 +84,7 @@ internal fun StatusSheetContent(
     HorizontalDivider()
     ChevronRow(
       title = "Change engine…",
-      onClick = onOpenIntelligence,
+      modifier = Modifier.clickable(onClick = onOpenIntelligence),
     )
   }
 }

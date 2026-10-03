@@ -1,7 +1,5 @@
 package alphainterplanetary.thinker.ui.components
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,12 +23,10 @@ internal fun ChevronRow(
   modifier: Modifier = Modifier,
   value: String? = null,
   contentPadding: Modifier = Modifier.padding(vertical = Dimens.ActionRowVerticalPadding),
-  onClick: () -> Unit = {},
 ) {
   Row(
     modifier = modifier
       .fillMaxWidth()
-      .clickable(onClick = onClick)
       .then(contentPadding),
     verticalAlignment = Alignment.CenterVertically,
   ) {
