@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
+import alphainterplanetary.thinker.ui.components.ChevronRow
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.SettingsUiState
@@ -219,30 +220,7 @@ private fun FlyoutRow(
   onClick: () -> Unit,
 ) {
   DropdownMenuItem(
-    text = {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-          text = title,
-          style = MaterialTheme.typography.bodyLarge,
-          modifier = Modifier.weight(1f),
-        )
-        if (value != null) {
-          Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
-        }
-      }
-    },
-    trailingIcon = {
-      Icon(
-        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-        contentDescription = null,
-      )
-    },
+    text = { ChevronRow(title = title, value = value) },
     onClick = onClick,
   )
 }

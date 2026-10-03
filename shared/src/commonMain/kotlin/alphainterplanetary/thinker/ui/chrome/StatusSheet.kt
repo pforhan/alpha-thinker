@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
+import alphainterplanetary.thinker.ui.components.ChevronRow
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -81,7 +82,7 @@ internal fun StatusSheetContent(
     }
 
     HorizontalDivider()
-    SheetLinkRow(
+    ChevronRow(
       title = "Change engine…",
       onClick = onOpenIntelligence,
     )
@@ -114,7 +115,7 @@ internal fun lastActivityLabel(activity: ActivityRecord): String {
  * already showed, now tappable, with the same chevron the other rows carry so it
  * reads as a destination rather than a label.
  *
- * It keeps the wrapped sentence instead of becoming a [SheetLinkRow] with the
+ * It keeps the wrapped sentence instead of becoming a [ChevronRow] with the
  * summary as its trailing value, because a failure headline is the one text
  * here that carries its explanation ("Initial question generation failed: …")
  * and a link row's value is single-line by construction — the part of the sheet
@@ -265,39 +266,4 @@ private fun CapabilityRow(
   }
 }
 
-/** A row that opens another sheet: title, optional current value, chevron. */
-@Composable
-internal fun SheetLinkRow(
-  title: String,
-  value: String? = null,
-  onClick: () -> Unit,
-) {
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clickable(onClick = onClick)
-      .padding(vertical = Dimens.ActionRowVerticalPadding),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Text(
-      text = title,
-      style = MaterialTheme.typography.bodyLarge,
-      modifier = Modifier.weight(1f),
-    )
-    if (value != null) {
-      Text(
-        text = value,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-      Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-    }
-    Icon(
-      imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-      contentDescription = null,
-      tint = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-  }
-}
+
