@@ -7,10 +7,10 @@ import androidx.room3.RoomDatabaseConstructor
 import kotlinx.coroutines.Dispatchers
 
 /**
- * The app-wide activity log's own database, deliberately separate from
- * [AppDatabase] (see ENG-DESIGN.md schema item 4): it grows and prunes on its
- * own schedule, and a wholesale "clear log" never touches
- * projects/questions/settings.
+ * The app's activity log database. Stores runtime/activity events separately
+ * from [AppDatabase] (which holds projects, questions, answers, rounds, and
+ * settings). Deliberately isolated so that clearing the log never affects core
+ * project data.
  */
 @Database(
   entities = [LogEntryEntity::class],
@@ -22,7 +22,7 @@ abstract class ActivityDatabase : RoomDatabase() {
   abstract fun logDao(): LogDao
 }
 
-@Suppress("KotlinNoActualForExpect")
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect object ActivityDatabaseConstructor : RoomDatabaseConstructor<ActivityDatabase> {
   override fun initialize(): ActivityDatabase
 }

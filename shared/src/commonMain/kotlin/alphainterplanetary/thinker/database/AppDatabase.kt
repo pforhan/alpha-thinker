@@ -6,6 +6,11 @@ import androidx.room3.RoomDatabase
 import androidx.room3.RoomDatabaseConstructor
 import kotlinx.coroutines.Dispatchers
 
+/**
+ * The app's primary Room database containing projects, questions, answers,
+ * rounds, and settings. This is distinct from [ActivityDatabase], which stores
+ * the activity log in another file.
+ */
 @Database(
   entities = [ProjectEntity::class, QuestionEntity::class, AnswerEntity::class, RoundEntity::class, SettingsEntity::class],
   version = 10,
@@ -20,7 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
   abstract fun settingsDao(): SettingsDao
 }
 
-@Suppress("KotlinNoActualForExpect")
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
   override fun initialize(): AppDatabase
 }
