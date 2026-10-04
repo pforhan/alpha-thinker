@@ -20,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -78,6 +79,19 @@ class AppChromeState internal constructor(
   val settings: SettingsViewModel,
   /** The newest logged activity, or null on an empty log. */
   val latestActivity: StateFlow<ActivityRecord?>,
+  /**
+   * The status the chrome displays right now: the selected engine and the remote
+   * connection settings, run through the pure [engineStatus] derivation.
+   *
+   * A [StateFlow] rather than a composable helper because it has exactly one
+   * derivation for the app, not one per place that reads it. The header cluster,
+   * the flyout row, and the Status sheet are all composed at once on every
+   * screen, and each of them needs the status, so deriving it at each of them
+   * built the same three slots three times per frame; the derivation now runs
+   * once per change of the three settings it reads, and [AppScaffold] — which
+   * owns all three of those call sites — is the single collector.
+   */
+  val engineStatus: StateFlow<EngineStatus>,
   private val stack: NavStack,
 ) {
   /** The app's single snackbar host (undo on ProjectDetail, tool results). */
@@ -183,28 +197,31 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
         initialValue = null,
       )
   }
+  val status = remember(appComponent, settings) {
+    combine(
+      settings.engineMode,
+      settings.remoteLlmBaseUrl,
+      settings.remoteLlmModel,
+    ) { mode, baseUrl, model -> engineStatus(mode, baseUrl, model) }
+      .stateIn(
+        scope = appComponent.appScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = engineStatus(
+          settings.engineMode.value,
+          settings.remoteLlmBaseUrl.value,
+          settings.remoteLlmModel.value,
+        ),
+      )
+  }
   val stack = rememberSaveable(saver = NavStack.Saver) { NavStack() }
-  return remember(appComponent, settings, latestActivity, stack) {
+  return remember(appComponent, settings, latestActivity, status, stack) {
     AppChromeState(
       settings = settings,
       latestActivity = latestActivity,
+      engineStatus = status,
       stack = stack,
     )
   }
-}
-
-/**
- * The status the chrome displays right now: the selected engine and the remote
- * connection settings, run through the pure [engineStatus] derivation. Collected
- * here rather than passed in, so every screen's header reads the same status
- * from the same hoisted ViewModel.
- */
-@Composable
-fun AppChromeState.engineStatus(): EngineStatus {
-  val mode by settings.engineMode.collectAsState()
-  val baseUrl by settings.remoteLlmBaseUrl.collectAsState()
-  val model by settings.remoteLlmModel.collectAsState()
-  return remember(mode, baseUrl, model) { engineStatus(mode, baseUrl, model) }
 }
 
 /**

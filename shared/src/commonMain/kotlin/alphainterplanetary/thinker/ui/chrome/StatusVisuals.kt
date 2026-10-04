@@ -81,3 +81,22 @@ internal fun CapabilityState.glyph(): ImageVector =
     CapabilityState.Incomplete -> Icons.Filled.Close
     CapabilityState.Unused -> Icons.Filled.Remove
   }
+
+/**
+ * The collapsed cluster's dot: the whole status as one fill, for the wide form's
+ * pills when there is no room for them.
+ *
+ * Lives beside the per-slot mapping rather than in `StatusCluster` so collapsing
+ * the cluster cannot change what a color means — a `primary` dot here would read
+ * as a different state from a theme-accent pill one resize away. The three
+ * answers are the per-slot ones rolled up rather than a new palette: an
+ * unconfigured capability's error (which is what [EngineStatus.needsAttention]
+ * asks), the accent of a capability that is live, and otherwise the neutral ink.
+ */
+@Composable
+internal fun EngineStatus.dotColor(): Color =
+  when {
+    needsAttention -> MaterialTheme.colorScheme.error
+    slots.any { it.state == CapabilityState.Active } -> PhaseStyles.accent().container
+    else -> MaterialTheme.colorScheme.onSurfaceVariant
+  }

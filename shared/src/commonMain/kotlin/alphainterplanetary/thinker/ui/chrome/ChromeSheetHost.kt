@@ -43,7 +43,10 @@ import androidx.compose.ui.text.style.TextOverflow
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ChromeSheetHost(chrome: AppChromeState) {
+internal fun ChromeSheetHost(
+  chrome: AppChromeState,
+  status: EngineStatus,
+) {
   val target = chrome.sheet ?: return
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   val nested = chrome.hasSheetBelow
@@ -60,7 +63,6 @@ internal fun ChromeSheetHost(chrome: AppChromeState) {
     ) {
       when (target) {
         ChromeSheet.Status -> {
-          val status = chrome.engineStatus()
           val activity by chrome.latestActivity.collectAsState()
           StatusSheetContent(
             status = status,

@@ -47,12 +47,11 @@ import androidx.compose.ui.text.style.TextOverflow
 @Composable
 internal fun SettingsFlyoutButton(
   chrome: AppChromeState,
+  status: EngineStatus,
   modifier: Modifier = Modifier,
 ) {
   var expanded by remember { mutableStateOf(false) }
-  val status = chrome.engineStatus()
   val phaseTheme by chrome.settings.phaseTheme.collectAsState()
-  val engineMode by chrome.settings.engineMode.collectAsState()
   val engineDelay by chrome.settings.engineDelay.collectAsState()
   val uiState by chrome.settings.uiState.collectAsState()
   var confirmingSampleProjects by remember { mutableStateOf(false) }
@@ -91,7 +90,7 @@ internal fun SettingsFlyoutButton(
       // sentence twice and tap twice to reach the engine.
       IntelligenceFlyoutRow(
         status = status,
-        engineLabel = engineMode.label,
+        engineLabel = status.mode.label,
         onClick = {
           expanded = false
           chrome.openSheet(ChromeSheet.Status)

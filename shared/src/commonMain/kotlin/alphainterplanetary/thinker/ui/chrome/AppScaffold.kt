@@ -11,6 +11,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 
 /**
@@ -41,7 +43,7 @@ fun AppScaffold(
   floatingActionButton: @Composable () -> Unit = {},
   content: @Composable (PaddingValues) -> Unit,
 ) {
-  val status = chrome.engineStatus()
+  val status by chrome.engineStatus.collectAsState()
 
   Scaffold(
     modifier = modifier,
@@ -66,7 +68,7 @@ fun AppScaffold(
           )
           // Last, so the chrome's own controls read as the bar's trailing edge
           // on every screen rather than shifting around per screen.
-          SettingsFlyoutButton(chrome = chrome)
+          SettingsFlyoutButton(chrome = chrome, status = status)
         },
       )
     },
@@ -77,5 +79,5 @@ fun AppScaffold(
 
   // A sibling of the Scaffold rather than a child: the sheet is an overlay, and
   // the navigation root's Box is what stacks the two.
-  ChromeSheetHost(chrome = chrome)
+  ChromeSheetHost(chrome = chrome, status = status)
 }

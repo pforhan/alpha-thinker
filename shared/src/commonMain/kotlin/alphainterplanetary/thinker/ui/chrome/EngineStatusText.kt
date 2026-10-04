@@ -16,7 +16,12 @@ internal fun EngineCapability.displayName(): String =
     EngineCapability.Tools -> "Tools"
   }
 
-/** How a slot's state reads in a sentence. */
+/**
+ * How a slot's state reads in a sentence: the one place the three states are
+ * worded. Both the sentence a screen reader announces and the value a column
+ * shows when there is nothing else to show are drawn from it, so a state is never
+ * called one thing in the accessibility text and another in the row beside it.
+ */
 internal fun CapabilityState.readout(): String =
   when (this) {
     CapabilityState.Active -> "in use"
@@ -24,18 +29,20 @@ internal fun CapabilityState.readout(): String =
     CapabilityState.Unused -> "not used"
   }
 
+/** [readout] as a value-column entry, where it opens the string. */
+private fun CapabilityState.valueReadout(): String =
+  readout().replaceFirstChar { it.uppercase() }
+
 /**
  * The value to show for a slot: its detail, or the state's own words when the
  * mode has nothing to name (a Lite mode, or Tools before the lookup work).
  */
-internal fun CapabilityStatus.displayDetail(): String =
-  detail.ifBlank {
-    when (state) {
-      CapabilityState.Active -> ""
-      CapabilityState.Incomplete -> "Not set up"
-      CapabilityState.Unused -> "Not used"
-    }
-  }
+internal fun CapabilityStatus.displayDetail(): String {
+  if (detail.isNotBlank()) return detail
+  // An active slot with no value is fully described by its pill, which shows the
+  // "in use" fill and check; a word here would only repeat it.
+  return if (state == CapabilityState.Active) "" else state.valueReadout()
+}
 
 /** One slot as a sentence, for a screen reader and for the compact form. */
 internal fun CapabilityStatus.sentence(): String =

@@ -50,9 +50,10 @@ data class EngineStatus(
     slots.first { it.capability == capability }
 
   /**
-   * Whether any slot is selected-but-unconfigured. Drives the compact form's
-   * status dot and the Status sheet's attention tint: a plain muted pill would
-   * read as "working as intended" when the user has not finished setup.
+   * Whether any slot is selected-but-unconfigured: the one definition of "the
+   * user has not finished setup", read by the compact form's status dot (see
+   * `dotColor`). A plain muted pill would read as "working as intended" when the
+   * user has not finished setup, so the dot has to be able to ask.
    */
   val needsAttention: Boolean
     get() = slots.any { it.state == CapabilityState.Incomplete }

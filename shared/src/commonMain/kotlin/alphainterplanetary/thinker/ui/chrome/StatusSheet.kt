@@ -229,7 +229,7 @@ private fun CapabilityList(
  * the eye scans down.
  *
  * There is also no prose for the state. [CapabilityStatus.displayDetail] already
- * says "Not used" or "Not set up" whenever there is no value to show, so a
+ * says "Not used" or "Needs setup" whenever there is no value to show, so a
  * subtitle repeating it was two renderings of one fact, and the states it did
  * not repeat are exactly the ones the pill's fill and glyph already carry. The
  * row merges its semantics into the same sentence [StatusPillRow] announces, so
