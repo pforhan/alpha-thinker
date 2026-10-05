@@ -10,12 +10,13 @@ import alphainterplanetary.thinker.ui.chrome.ChromeSheet
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
 import alphainterplanetary.thinker.ui.components.GenerationProblemKind
 import alphainterplanetary.thinker.ui.components.PhaseBadge
+import alphainterplanetary.thinker.ui.components.SpinnerLabel
 import alphainterplanetary.thinker.ui.components.SwipeAction
 import alphainterplanetary.thinker.ui.components.SwipeActionStyle
 import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
+import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.components.generationProblemKind
-import alphainterplanetary.thinker.ui.format.progressLabel
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.PhaseStyles
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListUiState
@@ -224,7 +225,7 @@ private fun ProjectListEmpty(onCreateClick: () -> Unit) {
 @Composable
 private fun ProjectListItem(
   project: Project,
-  activeTaskKinds: List<TaskKind>,
+  activeTasks: List<GenerationTask>,
   /** The generation failure to mark, or null when there is nothing to act on. */
   problem: GenerationProblemKind?,
   onOpenEngineStatus: () -> Unit,
@@ -303,7 +304,7 @@ private fun ProjectListItem(
         Column {
           Row(verticalAlignment = Alignment.CenterVertically) {
             val titleGenerating = project.editableTitle.isBlank() &&
-              activeTaskKinds.contains(TaskKind.TitleRecommendation)
+              activeTasks.any { it.kind == TaskKind.TitleRecommendation }
             Text(
               // A title that never landed would otherwise render the card blank;
               // the marker below carries the reason and the detail screen the fix.
@@ -327,8 +328,8 @@ private fun ProjectListItem(
             )
           }
           Spacer(modifier = Modifier.height(Dimens.ContentGap))
-          if (activeTaskKinds.isNotEmpty()) {
-            ActiveTaskChip(kinds = activeTaskKinds)
+          if (activeTasks.isNotEmpty()) {
+            ActiveTaskChip(tasks = activeTasks)
             Spacer(modifier = Modifier.height(Dimens.ContentGap))
           } else if (problem != null) {
             GenerationProblemChip(kind = problem, onClick = onOpenEngineStatus)
@@ -379,7 +380,7 @@ private fun ProjectListSuccess(
       items(projects, key = { it.id }) { project ->
         ProjectListItem(
           project = project,
-          activeTaskKinds = activeTasksByProject[project.id].orEmpty().map { it.kind },
+          activeTasks = activeTasksByProject[project.id].orEmpty(),
           problem = problemsByProject[project.id],
           onOpenEngineStatus = onOpenEngineStatus,
           pendingDeletionId = pendingDeletionId,
@@ -394,28 +395,15 @@ private fun ProjectListSuccess(
 }
 
 @Composable
-private fun ActiveTaskChip(kinds: List<TaskKind>) {
-  val firstKind = kinds.first()
-  val label = if (kinds.size == 1) {
-    "${firstKind.progressLabel}…"
-  } else {
-    "${firstKind.progressLabel} +${kinds.size - 1}…"
-  }
-  Row(verticalAlignment = Alignment.CenterVertically) {
-    CircularProgressIndicator(
-      modifier = Modifier
-        .width(Dimens.ProgressIndicatorSize)
-        .height(Dimens.ProgressIndicatorSize),
-      strokeWidth = Dimens.ProgressStroke,
-      color = MaterialTheme.colorScheme.primary,
-    )
-    Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-    Text(
-      text = label,
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.primary,
-    )
-  }
+private fun ActiveTaskChip(tasks: List<GenerationTask>) {
+  // Same wording as the floating task bar, so a card and the bar never describe
+  // the same work two different ways. Non-null: the caller only shows this chip
+  // when the project has active tasks.
+  SpinnerLabel(
+    text = activeTaskSummary(tasks).orEmpty(),
+    textStyle = MaterialTheme.typography.labelSmall,
+    textColor = MaterialTheme.colorScheme.primary,
+  )
 }
 
 @Composable

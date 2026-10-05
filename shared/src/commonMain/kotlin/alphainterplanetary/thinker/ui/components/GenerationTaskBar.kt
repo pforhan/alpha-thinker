@@ -8,16 +8,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,21 +55,12 @@ fun GenerationTaskBar(
         ),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      CircularProgressIndicator(
-        modifier = Modifier
-          .width(Dimens.ProgressIndicatorSize)
-          .height(Dimens.ProgressIndicatorSize),
-        strokeWidth = Dimens.ProgressStroke,
-        color = MaterialTheme.colorScheme.primary,
-      )
-      Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-      Text(
+      SpinnerLabel(
         text = label,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = Modifier.weight(1f),
+        textColor = MaterialTheme.colorScheme.onSecondaryContainer,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.weight(1f),
       )
       Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
       Icon(

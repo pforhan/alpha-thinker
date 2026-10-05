@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.TaskManagerRow
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
+import alphainterplanetary.thinker.ui.components.TaskSpinner
 import alphainterplanetary.thinker.ui.viewmodel.TaskManagerViewModel
 import alphainterplanetary.thinker.util.now
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -127,12 +127,7 @@ private fun TaskManagerRowItem(row: TaskManagerRow, at: Instant) {
         )
         if (task.status == TaskStatus.Running) {
           Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
-          CircularProgressIndicator(
-            modifier = Modifier
-              .width(Dimens.ProgressIndicatorSize)
-              .height(Dimens.ProgressIndicatorSize),
-            strokeWidth = Dimens.ProgressStroke,
-          )
+          TaskSpinner()
         }
         Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
         Text(

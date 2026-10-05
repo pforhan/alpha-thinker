@@ -20,6 +20,7 @@ import alphainterplanetary.thinker.ui.components.PhaseAdvanceDialog
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.PhasePill
 import alphainterplanetary.thinker.ui.components.PhaseSectionHeader
+import alphainterplanetary.thinker.ui.components.SpinnerLabel
 import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
@@ -137,7 +138,6 @@ fun ProjectDetailScreen(
   // screen (re)enters composition — the VM's collector replays the current
   // list, so an extant task shows here even if it outlived a previous visit.
   val activeTasksLabel = activeTaskSummary(tasks)
-  val generationActive = activeTasksLabel != null
   val titleGenerating = tasks.any { it.isActive && it.kind == TaskKind.TitleRecommendation }
 
   // The title has a retry affordance of its own because nothing else on this
@@ -358,7 +358,6 @@ private fun ProjectDetailContent(
 ) {
   var showPhaseOverview by remember { mutableStateOf(false) }
   val phaseSummaries = remember(project) { project.priorPhaseStats() }
-  val generationActive = activeTaskLabel != null
 
   Column(modifier = modifier) {
     Box(
@@ -466,8 +465,7 @@ private fun ProjectDetailContent(
             onViewSelected = onViewSelected,
             onGenerateMore = if (view == QuestionViewMode.Unanswered) onGenerateMore else null,
             canGenerateMore = view == QuestionViewMode.Unanswered && canGenerateMore,
-            generationActive = view == QuestionViewMode.Unanswered && generationActive,
-            generationLabel = activeTaskLabel,
+            generatingLabel = activeTaskLabel.takeIf { view == QuestionViewMode.Unanswered },
             nextPhases = if (view == QuestionViewMode.Unanswered) nextPhases else emptyList(),
             onBeginWrapUp = if (view == QuestionViewMode.Unanswered) onBeginWrapUp else null,
             completedStats = completedStats,
@@ -522,8 +520,7 @@ private fun ProjectDetailContent(
               item {
                 ShuffleRow(
                   remainingCount = if (shuffleGenerates) null else unansweredCount - filteredQuestions.size,
-                  generating = generationActive,
-                  generationLabel = activeTaskLabel,
+                  generatingLabel = activeTaskLabel,
                   generateFresh = shuffleGenerates,
                   onClick = if (shuffleGenerates) onGenerateMore else onShuffle,
                 )
@@ -595,8 +592,8 @@ private fun QuestionEmptyState(
   onViewSelected: (QuestionViewMode) -> Unit,
   onGenerateMore: (() -> Unit)?,
   canGenerateMore: Boolean,
-  generationActive: Boolean,
-  generationLabel: String?,
+  /** Non-null while a generation task is in flight; replaces the button. */
+  generatingLabel: String?,
   nextPhases: List<Phase>,
   onBeginWrapUp: (() -> Unit)?,
   completedStats: PhaseStats?,
@@ -621,10 +618,8 @@ private fun QuestionEmptyState(
       )
       if (onGenerateMore != null) {
         Spacer(modifier = Modifier.height(Dimens.EmptyStateActionGap))
-        if (generationActive) {
-          GeneratingQuestionsRow(
-            label = generationLabel ?: "Preparing questions…",
-          )
+        if (generatingLabel != null) {
+          SpinnerLabel(text = generatingLabel)
         } else if (canGenerateMore) {
           Button(onClick = onGenerateMore) {
             Text("Get more questions")
@@ -775,29 +770,10 @@ private fun ProjectSynopsis(synopsis: String) {
 }
 
 @Composable
-private fun GeneratingQuestionsRow(label: String) {
-  Row(verticalAlignment = Alignment.CenterVertically) {
-    CircularProgressIndicator(
-      modifier = Modifier
-        .width(Dimens.ProgressIndicatorSize)
-        .height(Dimens.ProgressIndicatorSize),
-      strokeWidth = Dimens.ProgressStroke,
-      color = MaterialTheme.colorScheme.primary,
-    )
-    Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-    Text(
-      text = label,
-      style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-  }
-}
-
-@Composable
 private fun ShuffleRow(
   remainingCount: Int?,
-  generating: Boolean,
-  generationLabel: String?,
+  /** Non-null while a generation task is in flight: the row becomes the spinner-and-label. */
+  generatingLabel: String?,
   generateFresh: Boolean,
   onClick: () -> Unit,
 ) {
@@ -806,7 +782,7 @@ private fun ShuffleRow(
       .fillMaxWidth()
       .padding(horizontal = Dimens.ScreenPadding)
       .clip(MaterialTheme.shapes.medium)
-      .clickable(enabled = !generating, onClick = onClick),
+      .clickable(enabled = generatingLabel == null, onClick = onClick),
     contentAlignment = Alignment.Center,
   ) {
     Row(
@@ -814,20 +790,8 @@ private fun ShuffleRow(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.Center,
     ) {
-      if (generating) {
-        CircularProgressIndicator(
-          modifier = Modifier
-            .width(Dimens.ProgressIndicatorSize)
-            .height(Dimens.ProgressIndicatorSize),
-          strokeWidth = Dimens.ProgressStroke,
-          color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-        Text(
-          text = generationLabel ?: "Preparing questions…",
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+      if (generatingLabel != null) {
+        SpinnerLabel(text = generatingLabel)
       } else {
         Icon(
           Icons.Default.Shuffle,
