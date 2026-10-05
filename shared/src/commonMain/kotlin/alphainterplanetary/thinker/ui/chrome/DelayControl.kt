@@ -2,18 +2,17 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.ui.components.OptionHeader
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -21,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 
@@ -39,20 +37,11 @@ internal fun DelayControlItem(
 ) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(modifier = Modifier.padding(Dimens.CardPadding)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "Slow down the planning engine",
-            style = MaterialTheme.typography.titleSmall,
-          )
-          Spacer(modifier = Modifier.height(Dimens.TightGap))
-          Text(
-            text = "Adds an artificial delay to each PlanningEngine interaction so " +
-              "Task Manager tasks stay visible long enough to observe them.",
-            style = MaterialTheme.typography.bodyMedium,
-          )
-        }
-        Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
+      OptionHeader(
+        label = "Slow down the planning engine",
+        description = "Adds an artificial delay to each PlanningEngine interaction so " +
+          "Task Manager tasks stay visible long enough to observe them.",
+      ) {
         Switch(
           checked = config.enabled,
           onCheckedChange = onEnabledChange,

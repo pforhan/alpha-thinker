@@ -1,8 +1,9 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.ui.components.OptionHeader
 import alphainterplanetary.thinker.ui.components.PhaseBadge
-import alphainterplanetary.thinker.ui.theme.BadgeShape
+import alphainterplanetary.thinker.ui.components.SelectionDot
 import alphainterplanetary.thinker.ui.theme.DarkColorScheme
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.LightColorScheme
@@ -10,14 +11,12 @@ import alphainterplanetary.thinker.ui.theme.LocalDarkTheme
 import alphainterplanetary.thinker.ui.theme.LocalPhaseTheme
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,28 +43,8 @@ internal fun ThemeOption(
 ) {
   Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
     Column(modifier = Modifier.padding(Dimens.CardPadding)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = theme.label,
-            style = MaterialTheme.typography.titleSmall,
-          )
-          Spacer(modifier = Modifier.height(Dimens.TightGap))
-          Text(
-            text = theme.description,
-            style = MaterialTheme.typography.bodyMedium,
-          )
-        }
-        Spacer(modifier = Modifier.width(Dimens.ContentGap))
-        Box(
-          modifier = Modifier
-            .size(Dimens.ScrollControlSize)
-            .clip(BadgeShape)
-            .background(
-              if (selected) MaterialTheme.colorScheme.primary
-              else MaterialTheme.colorScheme.outlineVariant,
-            ),
-        )
+      OptionHeader(label = theme.label, description = theme.description) {
+        SelectionDot(selected)
       }
       Spacer(modifier = Modifier.height(Dimens.ContentGap))
       ThemePreviewRow(

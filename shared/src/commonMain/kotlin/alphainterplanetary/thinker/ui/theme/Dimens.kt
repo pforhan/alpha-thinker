@@ -74,6 +74,9 @@ object Dimens {
   val IconSizeMedium = 20.dp
   val ScrollControlSize = 16.dp
 
+  // Marker on the selected option card (see SelectionDot)
+  val SelectionDotSize = 16.dp
+
   // Inline progress spinners (task chips / Task Manager rows)
   val ProgressIndicatorSize = 14.dp
   val ProgressStroke = 2.dp
