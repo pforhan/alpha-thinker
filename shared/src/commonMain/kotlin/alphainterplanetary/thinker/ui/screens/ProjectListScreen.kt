@@ -81,6 +81,7 @@ fun ProjectListScreen(
     ProjectListViewModel(
       appComponent.projectRepository,
       appComponent.taskRunner,
+      appComponent.sampleProjectGenerator,
       appComponent.appScope,
     )
   }

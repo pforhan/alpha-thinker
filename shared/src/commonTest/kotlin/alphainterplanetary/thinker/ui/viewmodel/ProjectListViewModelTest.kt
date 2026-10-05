@@ -11,6 +11,7 @@ import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.testutil.defaultTestInstant
+import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -21,9 +22,10 @@ import kotlin.test.assertTrue
 class ProjectListViewModelTest {
 
   /** Builds a VM on the test scheduler and guarantees [ProjectListViewModel.close]. */
-  private fun TestScope.withViewModel(
+  private suspend fun TestScope.withViewModel(
     storage: Storage = FakeStorage(),
-    block: (ProjectListViewModel) -> Unit,
+    generator: SampleProjectGenerator = SampleProjectGenerator(storage),
+    block: suspend (ProjectListViewModel) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     val repository = ProjectRepository(
@@ -32,7 +34,12 @@ class ProjectListViewModelTest {
       runner,
       RecordingActivityLogger(),
     )
-    val vm = ProjectListViewModel(repository, runner, CoroutineScope(coroutineContext))
+    val vm = ProjectListViewModel(
+      repository,
+      runner,
+      generator,
+      CoroutineScope(coroutineContext),
+    )
     try {
       block(vm)
     } finally {
@@ -97,6 +104,27 @@ class ProjectListViewModelTest {
       testScheduler.advanceUntilIdle()
 
       assertEquals(0, (vm.uiState.value as ProjectListUiState.Success).projects.size)
+    }
+  }
+
+  @Test
+  fun `a sample-project run reloads the list already on screen`() = runTest {
+    val storage = FakeStorage()
+    val generator = SampleProjectGenerator(storage)
+    withViewModel(storage, generator) { vm ->
+      vm.loadProjects()
+      testScheduler.advanceUntilIdle()
+      assertTrue((vm.uiState.value as ProjectListUiState.Success).projects.isEmpty())
+
+      // The run is started from the header, over this screen — nothing here
+      // asks for the reload, so the generator's completion count is the only
+      // thing that can put these projects in front of the user.
+      generator.generate()
+      testScheduler.advanceUntilIdle()
+
+      val ids = (vm.uiState.value as ProjectListUiState.Success).projects.map { it.id }
+      assertEquals(generator.count(), ids.size)
+      assertTrue("sample-scope" in ids)
     }
   }
 

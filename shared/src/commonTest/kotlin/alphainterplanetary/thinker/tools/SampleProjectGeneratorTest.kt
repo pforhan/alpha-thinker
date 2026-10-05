@@ -145,6 +145,22 @@ class SampleProjectGeneratorTest {
   }
 
   @Test
+  fun `generationCount advances once per completed run`() = runTest {
+    val storage = FakeStorage()
+    val generator = SampleProjectGenerator(storage)
+    assertEquals(0, generator.generationCount.value)
+
+    generator.generate()
+    assertEquals(1, generator.generationCount.value)
+
+    // The count is what a project list reloads on, so it has to advance again
+    // for a second run — a reload keyed on a StateFlow that never changes would
+    // show the samples once and never again.
+    generator.generate()
+    assertEquals(2, generator.generationCount.value)
+  }
+
+@Test
   fun `every answer id is unique across all projects`() = runTest {
     val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage)

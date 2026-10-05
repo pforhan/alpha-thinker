@@ -400,6 +400,7 @@ Companion design notes: ENG-DESIGN.md "Planning context & the token budget"; PRD
 - [ ] Implement background notification for long-running LLM tasks
 
 ## Phase 5: Refinement & UX
+- [x] reload project list when generating sample projects completes — the generator counts completed runs and the project list reloads in place on each one, so samples land in a list the user is already looking at.
 - [ ] PhaseAdvanceDialog: if you select a new phase while old phases still are animating nothing will happen.
 - [ ] move generate sample projects into the testing sheet
 - [ ] Shuffle doesn't really shuffle, as in randomize -- it just take the three visible questions and places them at the end of the list, like three ask laters in a row.  Should we make a list without the visible three, actually shuffle it, then add the visible three to the end?
