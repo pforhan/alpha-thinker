@@ -24,6 +24,12 @@ import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/**
+ * The swipe background's inset, mirroring the [PhaseCard] it sits behind so a
+ * revealed action lines up with the card's edges rather than the screen's.
+ */
+private val RowInset = Modifier.padding(horizontal = Dimens.ScreenPadding)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeableCard(
@@ -65,7 +71,7 @@ fun SwipeableCard(
         Box(
           modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = Dimens.ScreenPadding)
+            .then(RowInset)
             .clip(CardDefaults.shape)
             .background(action.background()),
           contentAlignment = alignment,
