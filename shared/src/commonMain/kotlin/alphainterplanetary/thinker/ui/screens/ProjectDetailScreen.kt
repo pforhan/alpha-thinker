@@ -17,7 +17,7 @@ import alphainterplanetary.thinker.ui.components.ConfettiBurst
 import alphainterplanetary.thinker.ui.components.ContextCompactionDialog
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.PhaseAdvanceDialog
-import alphainterplanetary.thinker.ui.components.PhaseBadge
+import alphainterplanetary.thinker.ui.components.PhaseBadgeCell
 import alphainterplanetary.thinker.ui.components.PhasePill
 import alphainterplanetary.thinker.ui.components.PhaseSectionHeader
 import alphainterplanetary.thinker.ui.components.SpinnerLabel
@@ -29,7 +29,6 @@ import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.LocalExtendedColors
-import alphainterplanetary.thinker.ui.theme.PhaseStyles
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import alphainterplanetary.thinker.util.formatDuration
@@ -95,8 +94,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.CoroutineScope
@@ -104,6 +102,9 @@ import kotlinx.coroutines.CoroutineScope
 private const val SubtleCheckIntensity = 10
 
 private const val SubtleCheckDurationMs = 1000
+
+/** Scale the completed-phase badge pops in from, before its confetti burst. */
+private const val CelebratedHeaderStartScale = 0.82f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -692,8 +693,7 @@ private fun QuestionEmptyState(
 
 @Composable
 private fun CelebratedPhaseHeader(stats: PhaseStats) {
-  val style = PhaseStyles.forPhase(stats.phase)
-  val scale = remember { Animatable(0.82f) }
+  val scale = remember { Animatable(CelebratedHeaderStartScale) }
   var showBurst by remember { mutableStateOf(false) }
 
   LaunchedEffect(Unit) {
@@ -710,21 +710,18 @@ private fun CelebratedPhaseHeader(stats: PhaseStats) {
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
-    Box(
-      modifier = Modifier.size(Dimens.ConfettiBurstWidth, Dimens.ConfettiBurstHeight),
-      contentAlignment = Alignment.Center,
-    ) {
-      PhaseBadge(phase = stats.phase)
-      if (showBurst) {
-        ConfettiBurst(
-          colors = listOf(style.container, style.content),
-          intensity = SubtleCheckIntensity,
-          durationMs = SubtleCheckDurationMs,
-          burstPoint = Offset(0.5f, 0.5f),
-          modifier = Modifier.size(Dimens.ConfettiBurstWidth, Dimens.ConfettiBurstHeight),
-        )
-      }
-    }
+    PhaseBadgeCell(
+      phase = stats.phase,
+      burstVisible = showBurst,
+      intensity = SubtleCheckIntensity,
+      durationMs = SubtleCheckDurationMs,
+      cellWidth = Dimens.ConfettiBurstWidth,
+      modifier = Modifier.graphicsLayer {
+        scaleX = scale.value
+        scaleY = scale.value
+        alpha = scale.value.coerceAtMost(1f)
+      },
+    )
     Text(
       text = "${stats.phase.label} complete",
       textAlign = TextAlign.Center,

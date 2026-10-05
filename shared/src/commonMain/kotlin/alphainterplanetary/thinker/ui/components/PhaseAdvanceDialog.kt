@@ -61,7 +61,6 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 
 private const val RowZoomStart = 0.12f
 
@@ -77,13 +76,6 @@ private const val CompletedBurstDurationMs = 2000
 
 /** Rightward skew of the timeline-row confetti, as canvas-width fractions per second. */
 private const val PhaseRowBurstHorizontalBias = 0.15f
-
-/**
- * The x-fraction of [burstWidth] at a [badgeSize]-wide badge's center, i.e. where a
- * [ConfettiBurst] pinned to the badge's edge should originate.
- */
-private fun badgeCenterFraction(badgeSize: Dp, burstWidth: Dp): Float =
-  (badgeSize.value / 2f) / burstWidth.value
 
 /**
  * Which way a callout's arrow points. [Left] is a side callout (arrow on the
@@ -281,7 +273,6 @@ private fun PhaseTimelineRow(
   isCompleted: Boolean,
   modifier: Modifier = Modifier,
 ) {
-  val style = PhaseStyles.forPhase(stats.phase)
   val accent = LocalExtendedColors.current.celebrationAccent
   val scale = remember { Animatable(RowZoomStart) }
   var showBurst by remember { mutableStateOf(false) }
@@ -317,35 +308,16 @@ private fun PhaseTimelineRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Box(
-          modifier = Modifier.size(
-            Dimens.PhaseTimelineBurstWidth,
-            Dimens.PhaseTimelineBurstHeight,
-          ),
-          contentAlignment = Alignment.CenterStart,
-        ) {
-          PhaseBadge(phase = stats.phase)
-          if (showBurst) {
-            ConfettiBurst(
-              colors = if (isCompleted) {
-                listOf(style.container, style.content, accent)
-              } else {
-                listOf(style.container, style.content)
-              },
-              intensity = if (isCompleted) CompletedBurstIntensity else SmallBurstIntensity,
-              durationMs = if (isCompleted) CompletedBurstDurationMs else SmallBurstDurationMs,
-              burstPoint = Offset(
-                x = badgeCenterFraction(Dimens.BadgeSize, Dimens.PhaseTimelineBurstWidth),
-                y = 0.5f,
-              ),
-              horizontalBias = PhaseRowBurstHorizontalBias,
-              modifier = Modifier.size(
-                Dimens.PhaseTimelineBurstWidth,
-                Dimens.PhaseTimelineBurstHeight,
-              ),
-            )
-          }
-        }
+        PhaseBadgeCell(
+          phase = stats.phase,
+          burstVisible = showBurst,
+          intensity = if (isCompleted) CompletedBurstIntensity else SmallBurstIntensity,
+          durationMs = if (isCompleted) CompletedBurstDurationMs else SmallBurstDurationMs,
+          cellWidth = Dimens.PhaseTimelineBurstWidth,
+          anchor = BadgeCellAnchor.Start,
+          extraBurstColors = if (isCompleted) listOf(accent) else emptyList(),
+          horizontalBias = PhaseRowBurstHorizontalBias,
+        )
         Column {
           Text(
             text = stats.phase.label,

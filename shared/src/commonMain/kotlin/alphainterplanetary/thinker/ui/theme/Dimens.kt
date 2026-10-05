@@ -87,14 +87,14 @@ object Dimens {
 
   // Celebration confetti
   val ConfettiPieceSize = 3.dp
-  val ConfettiBurstWidth = 80.dp
-  val ConfettiBurstHeight = 56.dp
 
-  // Confetti cell for a phase-timeline row: badge flush to the row's start,
-  // burst originating just right of the badge so particles fill the gap
-  // toward the row's label instead of padding the badge on both sides.
+  // Phase-badge confetti cell (PhaseBadgeCell). The burst canvas is the whole
+  // cell, so its width is per call site — wide enough to fill the wrap-up
+  // header's headline, or just past a timeline row's badge — while the height
+  // only has to clear the badge itself.
+  val PhaseBadgeCellHeight = 56.dp
+  val ConfettiBurstWidth = 80.dp
   val PhaseTimelineBurstWidth = 44.dp
-  val PhaseTimelineBurstHeight = 56.dp
 
   // Next-phase choice callout
   val NextPhaseChoicesMinHeight = 92.dp
