@@ -16,6 +16,7 @@ import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.ConfettiBurst
 import alphainterplanetary.thinker.ui.components.ContextCompactionDialog
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
+import alphainterplanetary.thinker.ui.components.EmptyState
 import alphainterplanetary.thinker.ui.components.PhaseAdvanceDialog
 import alphainterplanetary.thinker.ui.components.PhaseBadgeCell
 import alphainterplanetary.thinker.ui.components.PhasePill
@@ -737,17 +738,12 @@ private fun ProjectDetailError(
   onRetry: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  Column(
+  EmptyState(
+    message = message,
+    actionLabel = "Retry",
+    onAction = onRetry,
     modifier = modifier,
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally
-  ) {
-    Text(message)
-    Spacer(modifier = Modifier.height(Dimens.MessageActionGap))
-    Button(onClick = onRetry) {
-      Text("Retry")
-    }
-  }
+  )
 }
 
 @Composable

@@ -1,20 +1,14 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.ui.theme.BadgeShape
+import alphainterplanetary.thinker.ui.components.Pill
 import alphainterplanetary.thinker.ui.theme.Dimens
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 
@@ -63,30 +57,20 @@ internal fun StatusPill(
   modifier: Modifier = Modifier,
 ) {
   val content = slot.state.onContainerColor()
-  Row(
-    modifier = modifier
-      .clip(BadgeShape)
-      .background(slot.state.containerColor())
-      // Transparent for a filled state, so the outline is a single call site
-      // rather than a branch in every state that draws a pill.
-      .border(Dimens.OutlineStroke, slot.state.borderColor(), BadgeShape)
-      .padding(
-        horizontal = Dimens.StatusPillHorizontalPadding,
-        vertical = Dimens.PillVerticalPadding,
-      ),
-    horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-    verticalAlignment = Alignment.CenterVertically,
+  Pill(
+    text = slot.capability.displayName(),
+    containerColor = slot.state.containerColor(),
+    contentColor = content,
+    // Transparent for a filled state, so the outline is a single call site
+    // rather than a branch in every state that draws a pill.
+    borderColor = slot.state.borderColor(),
+    modifier = modifier,
   ) {
     Icon(
       imageVector = slot.state.glyph(),
       contentDescription = null,
       tint = content,
       modifier = Modifier.size(Dimens.IconSizeSmall),
-    )
-    Text(
-      text = slot.capability.displayName(),
-      style = MaterialTheme.typography.labelSmall,
-      color = content,
     )
   }
 }

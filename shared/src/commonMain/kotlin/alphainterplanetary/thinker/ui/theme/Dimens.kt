@@ -23,8 +23,7 @@ object Dimens {
   val FormGap = 16.dp
   val TightGap = 4.dp
 
-  // Gap between an element and its primary action
-  val MessageActionGap = 16.dp
+  // Gap between an empty state's message and its action button
   val EmptyStateActionGap = 22.dp
 
   // Bar/chip layout
@@ -35,18 +34,19 @@ object Dimens {
 
   // Header engine-status cluster: the pill row collapses to a single status
   // button before the title would be squeezed, so the collapse point reserves
-  // this much for the title. The pills carry a leading state glyph, so their
-  // horizontal padding is tighter than the phase pill's — three of them share
-  // one actions slot, and inside the flyout's menu item as well.
+  // this much for the title.
   val StatusPillGap = 6.dp
-  val StatusPillHorizontalPadding = 8.dp
   val StatusDotSize = 10.dp
   val StatusDotInset = 12.dp
   val HeaderTitleReserve = 96.dp
 
-  // Phase badge / pill
+  // Phase badge / pill. A pill carrying a leading glyph reads as padded by the
+  // glyph already, so it takes the tighter inset — which is what lets the three
+  // engine-status pills, and the flyout's copy of them, share one actions slot.
+  // See Pill, which picks between the two.
   val BadgeSize = 28.dp
   val PillHorizontalPadding = 12.dp
+  val PillGlyphHorizontalPadding = 8.dp
   val PillVerticalPadding = 4.dp
 
   // Phase row coloring

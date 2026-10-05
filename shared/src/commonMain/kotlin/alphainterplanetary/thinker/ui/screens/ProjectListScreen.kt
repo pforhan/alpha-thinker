@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.chrome.ChromeSheet
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
+import alphainterplanetary.thinker.ui.components.EmptyState
 import alphainterplanetary.thinker.ui.components.GenerationProblemKind
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.PhaseCard
@@ -40,7 +41,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -200,21 +200,6 @@ private fun ProjectListLoading() {
   }
 }
 
-@Composable
-private fun ProjectListEmpty(onCreateClick: () -> Unit) {
-  Column(
-    modifier = Modifier.fillMaxSize(),
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally,
-  ) {
-    Text("No projects yet.")
-    Spacer(modifier = Modifier.height(Dimens.MessageActionGap))
-    Button(onClick = onCreateClick) {
-      Text("Create your first project")
-    }
-  }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProjectListItem(
@@ -344,7 +329,11 @@ private fun ProjectListSuccess(
   onDeleteConfirmed: (Project) -> Unit,
 ) {
   if (projects.isEmpty()) {
-    ProjectListEmpty(onCreateClick = onCreateClick)
+    EmptyState(
+      message = "No projects yet.",
+      actionLabel = "Create your first project",
+      onAction = onCreateClick,
+    )
   } else {
     LazyColumn(
       modifier = Modifier.fillMaxSize(),
@@ -446,15 +435,9 @@ private fun ProjectListError(
   message: String,
   onRetry: () -> Unit,
 ) {
-  Column(
-    modifier = Modifier.fillMaxSize(),
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally,
-  ) {
-    Text(message)
-    Spacer(modifier = Modifier.height(Dimens.MessageActionGap))
-    Button(onClick = onRetry) {
-      Text("Retry")
-    }
-  }
+  EmptyState(
+    message = message,
+    actionLabel = "Retry",
+    onAction = onRetry,
+  )
 }

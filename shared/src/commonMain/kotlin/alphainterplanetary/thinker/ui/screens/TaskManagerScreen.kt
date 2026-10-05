@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.TaskManagerRow
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
+import alphainterplanetary.thinker.ui.components.EmptyState
 import alphainterplanetary.thinker.ui.components.TaskSpinner
 import alphainterplanetary.thinker.ui.viewmodel.TaskManagerViewModel
 import alphainterplanetary.thinker.util.now
@@ -71,15 +72,10 @@ fun TaskManagerScreen(
     onBack = onBack,
   ) { paddingValues ->
     if (rows.isEmpty()) {
-      Column(
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(paddingValues),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-      ) {
-        Text("No generation tasks yet.")
-      }
+      EmptyState(
+        message = "No generation tasks yet.",
+        modifier = Modifier.padding(paddingValues),
+      )
     } else {
       LazyColumn(
         modifier = Modifier

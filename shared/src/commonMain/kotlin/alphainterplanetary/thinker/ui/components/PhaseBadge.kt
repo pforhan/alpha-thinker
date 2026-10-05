@@ -6,7 +6,6 @@ import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.theme.PhaseStyles
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,19 +43,10 @@ fun PhasePill(
   modifier: Modifier = Modifier,
 ) {
   val style = PhaseStyles.forPhase(phase)
-  Box(
-    modifier = modifier
-      .clip(BadgeShape)
-      .background(style.container),
-  ) {
-    Text(
-      text = "Phase ${phase.order}: ${phase.label}",
-      style = MaterialTheme.typography.labelSmall,
-      color = style.content,
-      modifier = Modifier.padding(
-        horizontal = Dimens.PillHorizontalPadding,
-        vertical = Dimens.PillVerticalPadding,
-      ),
-    )
-  }
+  Pill(
+    text = "Phase ${phase.order}: ${phase.label}",
+    containerColor = style.container,
+    contentColor = style.content,
+    modifier = modifier,
+  )
 }

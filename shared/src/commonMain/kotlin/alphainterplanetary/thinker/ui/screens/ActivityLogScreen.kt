@@ -3,11 +3,12 @@ package alphainterplanetary.thinker.ui.screens
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.activitylog.LogMarkers
-import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogItem
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
+import alphainterplanetary.thinker.ui.components.EmptyState
+import alphainterplanetary.thinker.ui.components.Pill
 import alphainterplanetary.thinker.ui.platform.toClipEntry
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
 import alphainterplanetary.thinker.util.formatTaskDuration
@@ -38,7 +39,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -99,26 +99,11 @@ fun ActivityLogScreen(
     },
   ) { paddingValues ->
     if (items.isEmpty()) {
-      Column(
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(paddingValues)
-          .padding(Dimens.EmptyStatePadding),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-      ) {
-        Icon(
-          imageVector = Icons.Default.Info,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        Text(
-          text = "No activity yet. Generation tasks and planning-engine interactions will appear here.",
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
+      EmptyState(
+        message = "No activity yet. Generation tasks and planning-engine interactions will appear here.",
+        icon = Icons.Default.Info,
+        modifier = Modifier.padding(paddingValues),
+      )
     } else {
       LazyColumn(
         modifier = Modifier
@@ -343,20 +328,11 @@ private fun SourceChip(
   } else {
     MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
   }
-  Surface(
-    color = container,
+  Pill(
+    text = label,
+    containerColor = container,
     contentColor = content,
-    shape = BadgeShape,
-  ) {
-    Text(
-      text = label,
-      style = MaterialTheme.typography.labelSmall,
-      modifier = Modifier.padding(
-        horizontal = Dimens.PillHorizontalPadding,
-        vertical = Dimens.PillVerticalPadding,
-      ),
-    )
-  }
+  )
 }
 
 private fun formatInstant(instant: Instant): String {
