@@ -325,7 +325,7 @@ private fun PhaseTimelineRow(
             color = MaterialTheme.colorScheme.onSurface,
           )
           Text(
-            text = "${stats.resolved} of ${stats.total} answered · ${formatDuration(stats.spent)}",
+            text = "${stats.answered} of ${stats.total} answered · ${formatDuration(stats.spent)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )

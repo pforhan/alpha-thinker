@@ -659,7 +659,7 @@ private fun QuestionEmptyState(
             if (completedStats != null) {
               CelebratedPhaseHeader(stats = completedStats)
               Text(
-                text = "Answered ${completedStats.resolved} of ${completedStats.total} over ${formatDuration(completedStats.spent)}",
+                text = "Answered ${completedStats.answered} of ${completedStats.total} over ${formatDuration(completedStats.spent)}",
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

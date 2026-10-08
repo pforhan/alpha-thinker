@@ -6,15 +6,19 @@ import kotlin.time.Instant
 
 /**
  * A phase's planning footprint on a project: how many of its questions were
- * resolved (answered or ignored) out of the total asked, and how long the
- * project spent in the phase.
+ * answered or ignored out of the total asked, and how long the project spent
+ * in the phase.
  */
 data class PhaseStats(
   val phase: Phase,
-  val resolved: Int,
+  val ignored: Int,
+  val answered: Int,
   val total: Int,
   val spent: Duration,
-)
+) {
+  /** Count of answered and ignored. */
+  val resolved: Int = answered + ignored
+}
 
 /**
  * Per-phase aggregates over the project's visited phases (those with at least
@@ -30,7 +34,8 @@ fun Project.phaseStats(now: Instant): List<PhaseStats> {
       val phaseQuestions = questions.filter { phaseForQuestion(it) == phase }
       PhaseStats(
         phase = phase,
-        resolved = phaseQuestions.count { it.isAnswered || it.isIgnored },
+        ignored = phaseQuestions.count { it.isIgnored },
+        answered = phaseQuestions.count { it.isAnswered },
         total = phaseQuestions.size,
         spent = roundsByPhase.getValue(phase).fold(Duration.ZERO) { acc, round ->
           acc + ((round.completedAt ?: now) - round.startedAt).coerceAtLeast(Duration.ZERO)
