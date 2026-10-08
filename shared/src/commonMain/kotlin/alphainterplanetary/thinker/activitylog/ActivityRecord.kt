@@ -1,6 +1,8 @@
 package alphainterplanetary.thinker.activitylog
 
 import alphainterplanetary.thinker.tasks.TaskKind
+import alphainterplanetary.thinker.tasks.TaskRunner
+import alphainterplanetary.thinker.tasks.activityLabel
 import kotlin.time.Duration
 
 /**
@@ -72,7 +74,7 @@ class ActivityRecord private constructor(
       titleSummary()?.let { return it }
 
       if (kind != null && succeededRow() != null) {
-        return "${kind.activityLabel()} succeeded"
+        return "${kind.activityLabel} succeeded"
       }
 
       return lastResponseLine()?.log ?: latest.log
@@ -94,7 +96,7 @@ class ActivityRecord private constructor(
    */
   private fun failureHeadline(): String? {
     val line = entries.lastOrNull { it.isFailureLine() } ?: return null
-    val subject = taskKind()?.activityLabel()
+    val subject = taskKind()?.activityLabel
     return when {
       line.log == LogMarkers.Cancelled -> if (subject != null) "$subject cancelled" else line.log
       else -> {
@@ -186,14 +188,6 @@ private fun LogEntry.isSucceededRow(): Boolean =
 
 private val TaskKind.isGeneration: Boolean
   get() = this == TaskKind.QuestionGeneration
-
-/** Human phrase for the kind, used in failure/success headlines. */
-private fun TaskKind.activityLabel(): String = when (this) {
-  TaskKind.QuestionGeneration -> "Question generation"
-  TaskKind.TitleRecommendation -> "Title recommendation"
-  TaskKind.SynopsisRewrite -> "Synopsis rewrite"
-  TaskKind.AutoArchive -> "Auto-archive"
-}
 
 /** Canned summary for a produced batch, e.g. "Generated 3 questions". */
 private fun batchSummary(count: Int): String = when {

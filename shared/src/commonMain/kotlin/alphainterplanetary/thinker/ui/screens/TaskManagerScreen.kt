@@ -2,14 +2,13 @@ package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.tasks.TaskStatus
-import alphainterplanetary.thinker.ui.format.durationText
-import alphainterplanetary.thinker.ui.format.title
-import alphainterplanetary.thinker.ui.theme.Dimens
-import alphainterplanetary.thinker.ui.viewmodel.TaskManagerRow
+import alphainterplanetary.thinker.tasks.title
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.components.EmptyState
 import alphainterplanetary.thinker.ui.components.TaskSpinner
+import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.viewmodel.TaskManagerRow
 import alphainterplanetary.thinker.ui.viewmodel.TaskManagerViewModel
 import alphainterplanetary.thinker.util.now
 import androidx.compose.foundation.layout.Arrangement
@@ -23,11 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,9 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskManagerScreen(
   appComponent: AppComponent,
@@ -97,7 +92,7 @@ private fun rememberTickerNow(active: Boolean): Instant {
   var at by remember { mutableStateOf(now()) }
   LaunchedEffect(active) {
     while (active) {
-      delay(1000)
+      delay(1000.milliseconds)
       at = now()
     }
   }
@@ -127,7 +122,7 @@ private fun TaskManagerRowItem(row: TaskManagerRow, at: Instant) {
         }
         Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
         Text(
-          text = task.status.title,
+          text = task.status.name,
           style = MaterialTheme.typography.labelSmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

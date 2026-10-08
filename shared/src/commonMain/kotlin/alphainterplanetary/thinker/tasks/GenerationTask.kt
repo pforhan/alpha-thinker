@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.tasks
 
+import alphainterplanetary.thinker.util.formatTaskDuration
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
@@ -94,4 +96,15 @@ data class GenerationTask(
     error = message,
     finishedAt = at,
   )
+
+  /**
+   * Elapsed time to show for a task: wall-clock while [TaskStatus.Running], the
+   * total execution time once finished (from [GenerationTask.startedAt]). Tasks
+   * that never started have no duration yet.
+   */
+  fun durationText(at: Instant): String? {
+    if (status == TaskStatus.Queued || startedAt == null) return null
+    val end = finishedAt ?: at
+    return formatTaskDuration((end - startedAt).coerceAtLeast(Duration.ZERO))
+  }
 }

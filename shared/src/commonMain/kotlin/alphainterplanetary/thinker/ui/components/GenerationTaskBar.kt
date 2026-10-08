@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskRunner
-import alphainterplanetary.thinker.ui.format.progressLabel
+import alphainterplanetary.thinker.tasks.progressLabel
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
