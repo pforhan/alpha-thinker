@@ -35,6 +35,7 @@ import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import alphainterplanetary.thinker.util.formatDuration
 import alphainterplanetary.thinker.util.normalizeWhitespace
 import alphainterplanetary.thinker.util.now
+import kotlin.time.Clock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Animatable
@@ -227,9 +228,16 @@ fun ProjectDetailScreen(
       }
 
       is ProjectDetailUiState.Success -> {
+        val now = remember { Clock.System.now() }
+        val phaseStatsAll = remember(ui.project, now) { ui.project.phaseStats(now) }
+        val phaseStatsCurrent = remember(phaseStatsAll, ui.project.currentPhase) {
+          phaseStatsAll.firstOrNull { it.phase == ui.project.currentPhase }
+        }
         val nextPhases = remember(ui.project) { ui.project.nextPhaseSuggestions }
         ProjectDetailContent(
           project = ui.project,
+          phaseStatsAll = phaseStatsAll,
+          phaseStatsCurrent = phaseStatsCurrent,
           selectedView = selectedView,
           canGenerateMore = ui.canGenerateMoreInPhase,
           activeTaskLabel = activeTasksLabel,
@@ -281,11 +289,13 @@ fun ProjectDetailScreen(
   }
 
   if (showPhaseAdvanceDialog) {
-    val project = (uiState as? ProjectDetailUiState.Success)?.project
-    if (project != null) {
+    val state = uiState
+    if (state is ProjectDetailUiState.Success) {
+      val nowDialog = remember { Clock.System.now() }
+      val dialogStats = remember(state.project, nowDialog) { state.project.phaseStats(nowDialog) }
       PhaseAdvanceDialog(
-        phaseStats = remember(project) { project.phaseStats(now()) },
-        completedPhase = project.currentPhase,
+        phaseStats = dialogStats,
+        completedPhase = state.project.currentPhase,
         suggestions = phaseSuggestions.orEmpty(),
         suggestionsLoading = phaseSuggestions == null,
         onAdvance = { viewModel.requestPhaseAdvance(projectId, it) },
@@ -343,6 +353,8 @@ fun ProjectDetailScreen(
 @Composable
 private fun ProjectDetailContent(
   project: Project,
+  phaseStatsAll: List<alphainterplanetary.thinker.model.PhaseStats>,
+  phaseStatsCurrent: alphainterplanetary.thinker.model.PhaseStats?,
   selectedView: QuestionViewMode,
   canGenerateMore: Boolean,
   /** Short label of the active generation task(s), e.g. "Generating title…"; null when idle. */
@@ -361,7 +373,7 @@ private fun ProjectDetailContent(
   modifier: Modifier = Modifier,
 ) {
   var showPhaseOverview by remember { mutableStateOf(false) }
-  val phaseSummaries = remember(project) { project.priorPhaseStats() }
+  val phaseSummaries = remember(project, phaseStatsAll) { project.priorPhaseStats(phaseStatsAll) }
   // Round → phase resolved once for the whole screen: the sections below and
   // every row's card tint read the same lookup rather than each scanning rounds.
   val phaseForQuestion = remember(project) { project.phaseLookup() }
@@ -466,9 +478,7 @@ private fun ProjectDetailContent(
         }
       }
 
-      val completedStats = remember(project) {
-        project.phaseStats(now()).firstOrNull { it.phase == project.currentPhase }
-      }
+      val completedStats = phaseStatsCurrent
 
       Box(modifier = Modifier.fillMaxSize()) {
         if (visibleQuestions.isEmpty()) {
@@ -863,9 +873,9 @@ private fun PhaseSummaryRow(
  * appear. Counts mirror the current-phase summary line (resolved = answered or
  * ignored).
  */
-private fun Project.priorPhaseStats(): List<PhaseStats> {
+private fun Project.priorPhaseStats(allStats: List<PhaseStats>): List<PhaseStats> {
   val currentOrder = currentPhase.order
-  return phaseStats(now())
+  return allStats
     .filter { it.phase.order < currentOrder }
     .sortedByDescending { it.phase.order }
 }
