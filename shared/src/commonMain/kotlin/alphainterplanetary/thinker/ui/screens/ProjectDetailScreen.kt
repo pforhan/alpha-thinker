@@ -107,6 +107,8 @@ private const val SubtleCheckDurationMs = 1000
 /** Scale the completed-phase badge pops in from, before its confetti burst. */
 private const val CelebratedHeaderStartScale = 0.82f
 
+private const val UnansweredBatchSize = 3
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectDetailScreen(
@@ -360,6 +362,10 @@ private fun ProjectDetailContent(
 ) {
   var showPhaseOverview by remember { mutableStateOf(false) }
   val phaseSummaries = remember(project) { project.priorPhaseStats() }
+  // Round → phase resolved once for the whole screen: the sections below and
+  // every row's card tint read the same lookup rather than each scanning rounds.
+  val phaseForQuestion = remember(project) { project.phaseLookup() }
+  val unansweredCount = remember(project) { project.unansweredCount }
 
   Column(modifier = modifier) {
     Box(
@@ -433,25 +439,30 @@ private fun ProjectDetailContent(
       contentKey = { it },
       label = "FilterContent",
     ) { view ->
-      val filteredQuestions = remember(project, view) {
-        val all = view.apply(project.questions)
-        if (view == QuestionViewMode.Unanswered) all.take(3) else all
+      // One filter+sort pass per (project, view). Everything below reads off
+      // these: the visible rows, the phase sections, and the shuffle row's
+      // remaining count. `applied` stays whole because the sections group it;
+      // only the unanswered view trims to the visible batch.
+      val applied = remember(project, view) { view.apply(project.questions) }
+      val visibleQuestions = remember(applied, view) {
+        if (view == QuestionViewMode.Unanswered) applied.take(UnansweredBatchSize) else applied
+      }
+      val sections = remember(applied, view) {
+        view.sections(applied, phaseForQuestion)
+      }
+      val recommendedViews = remember(project, view) {
+        view.recommendedViews(project.questions)
       }
 
-      val sections = remember(project, view) {
-        view.sections(project.questions, project::phaseForQuestion)
-      }
-
-      val showShuffle = remember(project, view, canGenerateMore) {
+      val showShuffle = remember(view, unansweredCount, canGenerateMore) {
         if (view != QuestionViewMode.Unanswered) {
           false
         } else {
-          val unansweredCount = project.unansweredQuestions.size
           // With a full batch (more than 3 unanswered) shuffle rotates the
           // visible cards; when the batch is exhausted (<= 3 unanswered) the
           // same affordance becomes "synthesize a fresh batch" via the
           // follow-up generation task when the pool still has questions.
-          unansweredCount > 3 || (unansweredCount <= 3 && canGenerateMore)
+          unansweredCount > UnansweredBatchSize || canGenerateMore
         }
       }
 
@@ -460,10 +471,10 @@ private fun ProjectDetailContent(
       }
 
       Box(modifier = Modifier.fillMaxSize()) {
-        if (filteredQuestions.isEmpty()) {
+        if (visibleQuestions.isEmpty()) {
           QuestionEmptyState(
             title = view.emptyMessage,
-            recommendedViews = view.recommendedViews(project.questions),
+            recommendedViews = recommendedViews,
             onViewSelected = onViewSelected,
             onGenerateMore = if (view == QuestionViewMode.Unanswered) onGenerateMore else null,
             canGenerateMore = view == QuestionViewMode.Unanswered && canGenerateMore,
@@ -498,11 +509,12 @@ private fun ProjectDetailContent(
                     onUnignore = onUnignore,
                     onDeleteAnswer = onDeleteAnswer,
                     onAnswerClick = onAnswerClick,
+                    phaseForQuestion = phaseForQuestion,
                   )
                 }
               }
             } else {
-              items(filteredQuestions, key = { it.id }) { question ->
+              items(visibleQuestions, key = { it.id }) { question ->
                 QuestionListRow(
                   project = project,
                   question = question,
@@ -513,15 +525,15 @@ private fun ProjectDetailContent(
                   onUnignore = onUnignore,
                   onDeleteAnswer = onDeleteAnswer,
                   onAnswerClick = onAnswerClick,
+                  phaseForQuestion = phaseForQuestion,
                 )
               }
             }
             if (showShuffle) {
-              val unansweredCount = project.unansweredQuestions.size
-              val shuffleGenerates = unansweredCount <= 3
+              val shuffleGenerates = unansweredCount <= UnansweredBatchSize
               item {
                 ShuffleRow(
-                  remainingCount = if (shuffleGenerates) null else unansweredCount - filteredQuestions.size,
+                  remainingCount = if (shuffleGenerates) null else unansweredCount - visibleQuestions.size,
                   generatingLabel = activeTaskLabel,
                   generateFresh = shuffleGenerates,
                   onClick = if (shuffleGenerates) onGenerateMore else onShuffle,
@@ -547,9 +559,10 @@ private fun QuestionListRow(
   onUnignore: (String) -> Unit,
   onDeleteAnswer: (Question) -> Unit,
   onAnswerClick: (Question) -> Unit,
+  phaseForQuestion: (Question) -> Phase,
 ) {
   val dismissState = rememberSwipeToDismissBoxState()
-  val phase = project.phaseForQuestion(question)
+  val phase = phaseForQuestion(question)
   SwipeableCard(
     state = dismissState,
     startAction = view.startAction,

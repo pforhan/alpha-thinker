@@ -196,7 +196,10 @@ class QuestionViewModeTest {
       ),
     )
 
-    val sections = QuestionViewMode.Answered.sections(questions, scopeGoalsSections)
+    val sections = QuestionViewMode.Answered.sections(
+      QuestionViewMode.Answered.apply(questions),
+      scopeGoalsSections,
+    )
     assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), sections.map { it.phase })
     // each section keeps the answered-by-date ordering
     assertEquals(listOf("scopeRecent"), sections[0].questions.map { it.id })
@@ -211,7 +214,10 @@ class QuestionViewModeTest {
       question("scopeIgnored2", roundId = "r-scope", ignoredAt = middle),
     )
 
-    val sections = QuestionViewMode.Ignored.sections(questions, scopeGoalsSections)
+    val sections = QuestionViewMode.Ignored.sections(
+      QuestionViewMode.Ignored.apply(questions),
+      scopeGoalsSections,
+    )
     assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), sections.map { it.phase })
     assertEquals(listOf("scopeIgnored", "scopeIgnored2"), sections[0].questions.map { it.id })
     assertEquals(listOf("researchIgnored"), sections[1].questions.map { it.id })
@@ -244,11 +250,36 @@ class QuestionViewModeTest {
       ),
     )
 
-    val sections = QuestionViewMode.Answered.sections(questions, scopeGoalsSections)
+    val sections = QuestionViewMode.Answered.sections(
+      QuestionViewMode.Answered.apply(questions),
+      scopeGoalsSections,
+    )
     assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), sections.map { it.phase })
     // both visits of Scope Goals collapse into one header, still sorted by answer date
     assertEquals(listOf("secondVisit", "firstVisit"), sections[0].questions.map { it.id })
     assertEquals(listOf("research"), sections[1].questions.map { it.id })
+  }
+
+  @Test
+  fun `sections preserves the caller's order instead of re-sorting`() {
+    val questions = listOf(
+      question(
+        "older",
+        roundId = "r-scope",
+        answers = listOf(answer("older", "A", id = "a1", createdAt = earliest)),
+      ),
+      question(
+        "newer",
+        roundId = "r-scope",
+        answers = listOf(answer("newer", "A", id = "a2", createdAt = latest)),
+      ),
+    )
+
+    val sections = QuestionViewMode.Answered.sections(questions, scopeGoalsSections)
+
+    assertEquals(1, sections.size)
+    // the view's comparator would reverse this; sections groups the list as given
+    assertEquals(listOf("older", "newer"), sections[0].questions.map { it.id })
   }
 
   @Test

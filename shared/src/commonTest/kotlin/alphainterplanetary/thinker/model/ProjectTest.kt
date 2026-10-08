@@ -154,6 +154,21 @@ class ProjectTest {
     assertEquals(listOf("c", "d"), p.unansweredQuestions.map { it.id })
   }
 
+  @Test
+  fun `unansweredCount matches unansweredQuestions on a mixed project`() {
+    val p = project(answeredQuestion("a"), ignoredQuestion("b"), question("c"), draftQuestion("d"))
+
+    assertEquals(2, p.unansweredCount)
+    assertEquals(p.unansweredQuestions.size, p.unansweredCount)
+  }
+
+  @Test
+  fun `unansweredCount is zero when every question is settled`() {
+    val p = project(answeredQuestion("a"), ignoredQuestion("b"))
+
+    assertEquals(0, p.unansweredCount)
+  }
+
   // ---------- rounds ----------
 
   @Test
@@ -250,6 +265,38 @@ class ProjectTest {
     val p = project(question("q1", roundId = "r-unknown"))
 
     assertEquals(BuiltInPhase.ScopeGoals, p.phaseForQuestion(p.questions.first()))
+  }
+
+  @Test
+  fun `phaseLookup resolves through rounds and falls back to the current phase`() {
+    val p = Project(
+      id = "p",
+      synopsis = "s",
+      editableTitle = "t",
+      status = "Draft",
+      questions = listOf(
+        question("q1", roundId = "r1"),
+        question("q2", roundId = "r-unknown"),
+      ),
+      rounds = listOf(
+        round(id = "r1", projectId = "p", phase = BuiltInPhase.Research, roundNumber = 1),
+        round(id = "r2", projectId = "p", phase = BuiltInPhase.Design, roundNumber = 2),
+      ),
+      createdAt = Instant.fromEpochMilliseconds(0),
+      updatedAt = Instant.fromEpochMilliseconds(0),
+    )
+    val lookup = p.phaseLookup()
+
+    assertEquals(BuiltInPhase.Research, lookup(p.questions[0]))
+    assertEquals(BuiltInPhase.Design, lookup(p.questions[1]))
+  }
+
+  @Test
+  fun `phaseLookup falls back to the first phase when there are no rounds`() {
+    val p = project(question("q1", roundId = "r-unknown"))
+    val lookup = p.phaseLookup()
+
+    assertEquals(BuiltInPhase.ScopeGoals, lookup(p.questions.first()))
   }
 
   // ---------- phase completion ----------

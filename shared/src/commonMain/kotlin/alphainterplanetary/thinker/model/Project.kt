@@ -33,6 +33,18 @@ data class Project(
     rounds.find { it.id == question.roundId }?.phase ?: currentPhase
 
   /**
+   * [phaseForQuestion] as a reusable lookup, for callers resolving a whole
+   * list at once (the question list resolves every visible row's phase, the
+   * phase stats filter every question): building the round → phase map once
+   * beats a scan of [rounds] per question.
+   */
+  fun phaseLookup(): (Question) -> Phase {
+    val phaseByRoundId = rounds.associate { it.id to it.phase }
+    val fallback = currentPhase
+    return { question -> phaseByRoundId[question.roundId] ?: fallback }
+  }
+
+  /**
    * Candidate "what's next?" phases to nudge the project toward once its
    * current round is wrapped up. The first suggestion is always the immediate
    * successor in the library ordering ([currentPhase] + 1); the following
@@ -101,6 +113,10 @@ data class Project(
 
   val unansweredQuestions: List<Question>
     get() = questions.filter { it.isUnanswered }
+
+  /** How many questions are unanswered — [unansweredQuestions].size without building the list. */
+  val unansweredCount: Int
+    get() = questions.count { it.isUnanswered }
 
   val questionOrderIds: List<String>
     get() = questions.map { it.id }

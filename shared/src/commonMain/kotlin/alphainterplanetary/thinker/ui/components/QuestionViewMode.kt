@@ -63,26 +63,40 @@ enum class QuestionViewMode(
     endAction = SwipeAction("Unignore", Icons.Default.Visibility, SwipeActionStyle.Unignore),
   );
 
-  fun apply(questions: List<Question>): List<Question> {
-    return when (this) {
-      Unanswered -> questions.filter { it.isUnanswered }
-      Answered -> questions
-        .filter { it.isAnswered && !it.isIgnored }
-        .sortedWith(answerDateComparator)
-
-      Draft -> questions
-        .filter { it.isDraft && !it.isIgnored }
-        .sortedWith(answerDateComparator)
-
-      Ignored -> questions
-        .filter { it.isIgnored }
-        .sortedWith(ignoredDateComparator)
-    }
+  /** Whether [question] belongs in this view, before any ordering. */
+  fun includes(question: Question): Boolean = when (this) {
+    Unanswered -> question.isUnanswered
+    Answered -> question.isAnswered && !question.isIgnored
+    Draft -> question.isDraft && !question.isIgnored
+    Ignored -> question.isIgnored
   }
 
+  /**
+   * The order this view's questions render in, or null to keep the project's
+   * own order — [Unanswered] does, since its list is the persisted shuffled
+   * order the 3-card rotation reads from.
+   */
+  private val ordering: Comparator<Question>?
+    get() = when (this) {
+      Unanswered -> null
+      Answered, Draft -> answerDateComparator
+      Ignored -> ignoredDateComparator
+    }
+
+  fun apply(questions: List<Question>): List<Question> {
+    val included = questions.filter { includes(it) }
+    return ordering?.let { included.sortedWith(it) } ?: included
+  }
+
+  /**
+   * The other views that have questions to show, [Unanswered] first — what an
+   * empty list recommends switching to. Answers "does this view have
+   * anything?" via [includes] rather than by building and sorting each view's
+   * full list, so the ordering in [apply] is irrelevant here.
+   */
   fun recommendedViews(questions: List<Question>): List<QuestionViewMode> {
     return entries
-      .filter { it != this && it.apply(questions).isNotEmpty() }
+      .filter { it != this && questions.any(it::includes) }
       .sortedBy { if (it == Unanswered) 0 else 1 }
   }
 
@@ -98,14 +112,17 @@ enum class QuestionViewMode(
     }
 
   /**
-   * Groups the view's questions by the phase they were asked in, for the
+   * Groups a view's questions by the phase they were asked in, for the
    * phase-section headers shown in the Answered and Ignored lists.
    *
-   * Sections come out most-recently-active first — the questions are already
-   * sorted by date ([apply]) before grouping, so a phase's first occurrence
-   * marks its most recent activity — while questions within each section keep
-   * that date ordering. Returns an empty list for views without headers
-   * ([Unanswered], [Draft]).
+   * [questions] must be this view's own [apply] output — already filtered and
+   * in render order — so callers that have it don't pay for a second pass;
+   * [sections] neither re-filters nor re-sorts. That ordering is load-bearing:
+   * sections come out most-recently-active first, because a phase's first
+   * occurrence in a date-ordered list marks its most recent activity, while
+   * questions within a section keep that order.
+   *
+   * Returns an empty list for views without headers ([Unanswered], [Draft]).
    */
   fun sections(
     questions: List<Question>,
@@ -113,7 +130,7 @@ enum class QuestionViewMode(
   ): List<PhaseSection> {
     if (this != Answered && this != Ignored) return emptyList()
     val byPhase = LinkedHashMap<Phase, MutableList<Question>>()
-    for (question in apply(questions)) {
+    for (question in questions) {
       byPhase.getOrPut(phaseFor(question)) { mutableListOf() }.add(question)
     }
     return byPhase.map { (phase, phaseQuestions) -> PhaseSection(phase, phaseQuestions) }
