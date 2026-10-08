@@ -71,6 +71,12 @@ class ProjectDetailViewModel(
   private val _pendingUndo = MutableStateFlow<PendingUndo?>(null)
   val pendingUndo: StateFlow<PendingUndo?> = _pendingUndo.asStateFlow()
 
+  /**
+   * Candidate next phases for the wrap-up chooser, owned here so the empty
+   * state and the advance dialog read one list. `null` while unresolved (today
+   * the derivation is synchronous in [refresh]; the nullable flow is the seam
+   * for a future async, engine-proposed recommendation).
+   */
   private val _nextPhaseSuggestions = MutableStateFlow<List<Phase>?>(null)
   val nextPhaseSuggestions: StateFlow<List<Phase>?> = _nextPhaseSuggestions.asStateFlow()
 
@@ -106,6 +112,7 @@ class ProjectDetailViewModel(
   fun loadProject(id: String) {
     _projectId.value = id
     _uiState.value = ProjectDetailUiState.Loading
+    _nextPhaseSuggestions.value = null
     refresh()
   }
 
@@ -118,6 +125,9 @@ class ProjectDetailViewModel(
         if (loaded == null) {
           _uiState.value = ProjectDetailUiState.Error("Failed to load project: project not found")
         } else {
+          // Publish the suggestions before the project so the empty state's
+          // wrap-up block never renders against a stale/absent list.
+          _nextPhaseSuggestions.value = loaded.nextPhaseSuggestions
           // Availability is a fact about the project's newest round, so it
           // needs no engine call and can't go stale within a session.
           _uiState.value = ProjectDetailUiState.Success(
@@ -247,20 +257,6 @@ class ProjectDetailViewModel(
         _uiState.value = ProjectDetailUiState.Error(
           "Failed to advance phase: ${e.message ?: "Unknown error"}"
         )
-      }
-    }
-  }
-
-  /** (Re)computes the next-phase suggestions, `null` in the flow while computing. */
-  fun loadNextPhaseSuggestions(projectId: String) {
-    _nextPhaseSuggestions.value = null
-    vmScope.launch {
-      try {
-        val project = repository.getProject(projectId)
-        _nextPhaseSuggestions.value = project?.nextPhaseSuggestions ?: emptyList()
-      } catch (e: Exception) {
-        // TODO(phase-3): surface a recommendation failure; degrade to none for now
-        _nextPhaseSuggestions.value = emptyList()
       }
     }
   }

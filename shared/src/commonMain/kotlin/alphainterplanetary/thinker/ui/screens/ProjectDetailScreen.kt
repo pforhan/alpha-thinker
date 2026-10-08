@@ -173,14 +173,6 @@ fun ProjectDetailScreen(
     }
   }
 
-  LaunchedEffect(showPhaseAdvanceDialog) {
-    // Kick off the suggestion load as the level-up timeline plays so the
-    // chooser is ready when it finishes (slow to become a real LLM call).
-    if (showPhaseAdvanceDialog) {
-      viewModel.loadNextPhaseSuggestions(projectId)
-    }
-  }
-
   AppScaffold(
     title = {
       val title = when (val ui = uiState) {
@@ -233,7 +225,6 @@ fun ProjectDetailScreen(
         val phaseStatsCurrent = remember(phaseStatsAll, ui.project.currentPhase) {
           phaseStatsAll.firstOrNull { it.phase == ui.project.currentPhase }
         }
-        val nextPhases = remember(ui.project) { ui.project.nextPhaseSuggestions }
         ProjectDetailContent(
           project = ui.project,
           phaseStatsAll = phaseStatsAll,
@@ -241,7 +232,7 @@ fun ProjectDetailScreen(
           selectedView = selectedView,
           canGenerateMore = ui.canGenerateMoreInPhase,
           activeTaskLabel = activeTasksLabel,
-          nextPhases = nextPhases,
+          nextPhases = phaseSuggestions.orEmpty(),
           onViewSelected = { selectedView = it },
           onShuffle = { viewModel.shuffle() },
           onAskLater = { viewModel.askLater(it) },
