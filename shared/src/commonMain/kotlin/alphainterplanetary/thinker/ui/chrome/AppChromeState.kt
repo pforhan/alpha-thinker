@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.tools.SimulationState
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
+import alphainterplanetary.thinker.ui.navigation.Navigation
 import alphainterplanetary.thinker.ui.viewmodel.SettingsViewModel
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -60,12 +61,12 @@ enum class ChromeSheet {
  * ViewModel — hoisted here so a long-running tool action's progress survives
  * navigating away from the screen that started it.
  *
- * It also owns the [stack], because the stack and the sheet are the same state:
- * a sheet is an entry in it, so the flyout's rows and the header's status cluster
- * can open one without knowing how the stack is stored, and back means the same
- * thing on every screen. The stack itself lives in `ui.navigation`; only this
- * controller writes to it, so nothing else has to reason about a sheet outliving
- * the screen that opened it.
+ * It also carries the [stack], and delegates its [Navigation] API to it: a sheet
+ * is an entry in the stack, so the flyout's rows and the header's status cluster
+ * open one without knowing how the stack is stored, and back means the same
+ * thing on every screen. The stack is the single owner of the logic — nothing
+ * here mirrors its members; screens just say `chrome.navigate(...)` instead of
+ * reaching through to it.
  *
  * It carries the one piece of live data the header reflects, the latest
  * activity, so the status dot can react to a failure and so the failure can be
@@ -92,55 +93,15 @@ class AppChromeState internal constructor(
    * owns all three of those call sites — is the single collector.
    */
   val engineStatus: StateFlow<EngineStatus>,
+  /**
+   * The app's back stack, delegated onto the chrome as its [Navigation] surface
+   * and otherwise private — the one owner of where the user is and how they got
+   * there, reached only through the methods the chrome exposes.
+   */
   private val stack: NavStack,
-) {
+) : Navigation by stack {
   /** The app's single snackbar host (undo on ProjectDetail, tool results). */
   val snackbarHostState = SnackbarHostState()
-
-  /** The screen being shown, under any open sheet. */
-  internal val route: AppRoute
-    get() = stack.route
-
-  /** The open settings subscreen, or null when none is. */
-  internal val sheet: ChromeSheet?
-    get() = stack.sheet
-
-  /** Whether a settings subscreen is covering the screen. */
-  internal val isSheetOpen: Boolean
-    get() = stack.sheet != null
-
-  /**
-   * Whether the open sheet replaced another sheet — the difference between the
-   * sheet's back glyph (return to the sheet underneath) and its close one
-   * (return to the screen).
-   */
-  internal val hasSheetBelow: Boolean
-    get() = stack.hasSheetBelow
-
-  /** Whether there is anywhere to go back to. */
-  internal val canGoBack: Boolean
-    get() = stack.canGoBack
-
-  /**
-   * Opens [target]; opening a sheet while one is open stacks it on top, so back
-   * from the new sheet returns to the old one.
-   */
-  internal fun openSheet(target: ChromeSheet) {
-    stack.openSheet(target)
-  }
-
-  /**
-   * Pushes a screen, dropping any open sheet. This is the flyout's Tools rows'
-   * route to the Activity Log and the Task Manager: they are app-chrome
-   * destinations, so they hang off the chrome controller rather than being
-   * threaded through every screen's signature.
-   */
-  internal fun navigate(route: AppRoute) {
-    stack.navigate(route)
-  }
-
-  /** Pops one entry — a sheet if one is up, else the current screen. */
-  internal fun goBack(): Boolean = stack.pop()
 
   /**
    * Puts [projectId]'s detail in front of the user with nothing behind it but

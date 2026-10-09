@@ -74,7 +74,7 @@ internal sealed interface NavEntry {
 @Stable
 internal class NavStack(
   entries: List<NavEntry> = listOf(NavEntry.Screen(AppRoute.ProjectList)),
-) {
+) : Navigation {
   private val entries = mutableStateListOf<NavEntry>().apply {
     // A restore that decoded nothing usable (an old saved key, an empty list)
     // must still leave a root behind: every getter below reads the last entry.
@@ -89,23 +89,31 @@ internal class NavStack(
    * The screen being shown — the last screen on the stack, so a sheet reports the
    * screen it is covering rather than hiding it.
    */
-  val route: AppRoute
+  override val route: AppRoute
     get() = (entries.last { it is NavEntry.Screen } as NavEntry.Screen).route
 
   /** The open settings subscreen, or null when the top entry is a screen. */
-  val sheet: ChromeSheet?
+  override val sheet: ChromeSheet?
     get() = (entries.last() as? NavEntry.Sheet)?.target
+
+  /**
+   * Whether a settings subscreen is covering the current screen. The one
+   * spelling of the predicate, so callers cannot drift between `sheet != null`
+   * and a second copy of it.
+   */
+  override val isSheetOpen: Boolean
+    get() = sheet != null
 
   /**
    * Whether the open sheet replaced another sheet, which is what tells the sheet
    * to offer a back glyph (return to the sheet underneath) rather than a close
    * one (return to the screen).
    */
-  val hasSheetBelow: Boolean
+  override val hasSheetBelow: Boolean
     get() = entries.getOrNull(entries.size - 2) is NavEntry.Sheet
 
   /** Whether there is anything to go back to. False only at the root screen. */
-  val canGoBack: Boolean
+  override val canGoBack: Boolean
     get() = entries.size > 1
 
   /**
@@ -116,7 +124,7 @@ internal class NavStack(
    * building a stack of identical screens (the old Jetpack graph's
    * `launchSingleTop`).
    */
-  fun navigate(route: AppRoute) {
+  override fun navigate(route: AppRoute) {
     while (entries.last() is NavEntry.Sheet) {
       entries.removeLast()
     }
@@ -146,7 +154,7 @@ internal class NavStack(
    * already up. Re-opening the sheet already on top does nothing, so a double
    * tap cannot stack two copies of it.
    */
-  fun openSheet(target: ChromeSheet) {
+  override fun openSheet(target: ChromeSheet) {
     if (sheet == target) return
     entries.add(NavEntry.Sheet(target))
   }
@@ -155,7 +163,7 @@ internal class NavStack(
    * Pops one entry — a sheet if one is up, otherwise the current screen —
    * returning false when the root is all that is left.
    */
-  fun pop(): Boolean {
+  override fun goBack(): Boolean {
     if (!canGoBack) return false
     entries.removeLast()
     return true

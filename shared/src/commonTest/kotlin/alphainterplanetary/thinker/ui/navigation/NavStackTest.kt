@@ -16,7 +16,7 @@ class NavStackTest {
     assertEquals(AppRoute.ProjectList, stack.route)
     assertNull(stack.sheet)
     assertFalse(stack.canGoBack)
-    assertFalse(stack.pop())
+    assertFalse(stack.goBack())
   }
 
   @Test
@@ -26,7 +26,7 @@ class NavStackTest {
     stack.navigate(AppRoute.ProjectDetail("project-1"))
     assertTrue(stack.canGoBack)
 
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertEquals(AppRoute.ProjectList, stack.route)
   }
 
@@ -40,7 +40,7 @@ class NavStackTest {
     stack.navigate(AppRoute.ActivityLog)
     assertEquals(AppRoute.ActivityLog, stack.route)
 
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertEquals(AppRoute.ProjectDetail("project-1"), stack.route)
   }
 
@@ -50,7 +50,7 @@ class NavStackTest {
     stack.navigate(AppRoute.ActivityLog)
 
     stack.navigate(AppRoute.TaskManager)
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
 
     assertEquals(AppRoute.ActivityLog, stack.route)
   }
@@ -64,7 +64,7 @@ class NavStackTest {
     // another copy of the same screen behind it.
     stack.navigate(AppRoute.ActivityLog)
 
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertEquals(AppRoute.ProjectList, stack.route)
     assertFalse(stack.canGoBack)
   }
@@ -80,7 +80,7 @@ class NavStackTest {
     assertEquals(AppRoute.ProjectDetail("project-1"), stack.route)
     assertFalse(stack.hasSheetBelow)
 
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertNull(stack.sheet)
     assertEquals(AppRoute.ProjectDetail("project-1"), stack.route)
   }
@@ -93,7 +93,7 @@ class NavStackTest {
 
     // System back with a sheet up closes the sheet; it does not leave the screen
     // the sheet was covering.
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertNull(stack.sheet)
     assertEquals(AppRoute.ActivityLog, stack.route)
     assertTrue(stack.canGoBack)
@@ -108,7 +108,7 @@ class NavStackTest {
     assertEquals(ChromeSheet.Intelligence, stack.sheet)
     assertTrue(stack.hasSheetBelow)
 
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertEquals(ChromeSheet.Status, stack.sheet)
     assertFalse(stack.hasSheetBelow)
   }
@@ -120,7 +120,7 @@ class NavStackTest {
 
     stack.openSheet(ChromeSheet.PhaseColors)
 
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertNull(stack.sheet)
     assertEquals(AppRoute.ProjectList, stack.route)
   }
@@ -138,13 +138,13 @@ class NavStackTest {
 
     assertNull(stack.sheet)
     assertEquals(AppRoute.ActivityLog, stack.route)
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertEquals(AppRoute.ProjectDetail("project-1"), stack.route)
     // The sheet is gone from the history, not merely hidden: the log sits
     // directly on the project screen, so popping it lands there and not on a
     // sheet floating over nothing.
     assertNull(stack.sheet)
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertEquals(AppRoute.ProjectList, stack.route)
   }
 
@@ -162,7 +162,7 @@ class NavStackTest {
     assertNull(stack.sheet)
     assertEquals(AppRoute.ProjectDetail("project-2"), stack.route)
 
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertNull(stack.sheet)
     assertEquals(AppRoute.ProjectList, stack.route)
     assertFalse(stack.canGoBack)
@@ -196,9 +196,9 @@ class NavStackTest {
     assertEquals(ChromeSheet.Status, restored.sheet)
     assertEquals(AppRoute.ProjectDetail("project-1"), restored.route)
 
-    assertTrue(restored.pop())
+    assertTrue(restored.goBack())
     assertNull(restored.sheet)
-    assertTrue(restored.pop())
+    assertTrue(restored.goBack())
     assertEquals(AppRoute.ProjectList, restored.route)
     assertFalse(restored.canGoBack)
   }
@@ -229,7 +229,7 @@ class NavStackTest {
     )
 
     assertEquals(AppRoute.TaskManager, stack.route)
-    assertTrue(stack.pop())
+    assertTrue(stack.goBack())
     assertEquals(AppRoute.ProjectDetail("project-1"), stack.route)
   }
 

@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 
 /**
- * Hosts whichever settings subscreen [AppChromeState.sheet] names.
+ * Hosts whichever settings subscreen the back stack's open sheet names.
  *
  * A `ModalBottomSheet` rather than a route: a sheet is modal over the screen
  * beneath it, and it is a back-stack entry ([chrome.goBack] closes it) rather
