@@ -7,13 +7,35 @@ import alphainterplanetary.thinker.engine.QuestionBatch
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 
-class FakePlanningEngine : PlanningEngine {
+/**
+ * The general-purpose [PlanningEngine] double, and the base every hand-rolled
+ * double in the suite extends: it owns the three self-describing properties the
+ * engine contract forces everyone to declare — [source],
+ * [contextWindowTokens], and [canSummarize] — as constructor parameters, so a
+ * subclass states only the interaction it actually scripts.
+ *
+ * A test scripts behavior through the vars below: [recommendedTitle], [done],
+ * [questions], [batchFor], [summaries], and [generationFailure]; it reads back
+ * [calls], [titleCalls], and [summarizeCalls].
+ */
+open class FakePlanningEngine(
+  override var source: LogSource = LogSource.Lite,
+  /** The window a budget is a share of; null means the engine composes no prompt. */
+  override var contextWindowTokens: Int? = 8192,
+  /** What the engine reports it can do; drives whether the summarize choice is offered. */
+  override var canSummarize: Boolean = false,
+) : PlanningEngine {
   var recommendedTitle: String = "Recommended"
   var done: Boolean = false
+
   /** Thrown from question generation when set (a [kotlinx.coroutines.CancellationException] to simulate cancellation). */
   var generationFailure: Throwable? = null
   val questions: MutableList<Question> = mutableListOf()
   var calls: MutableList<Call> = mutableListOf()
+
+  /** How many times [recommendTitle] was invoked. */
+  var titleCalls: Int = 0
+    private set
 
   /**
    * Supplies a call's batch instead of [questions] when set, which is what a
@@ -27,19 +49,14 @@ class FakePlanningEngine : PlanningEngine {
    */
   var batchFor: ((callIndex: Int, roundId: String) -> List<Question>)? = null
 
-  /** The window a budget is a share of; null means the engine composes no prompt. */
-  override var contextWindowTokens: Int? = 8192
-
-  /** What the engine reports it can do; drives whether the summarize choice is offered. */
-  override var canSummarize: Boolean = false
-
   /** The summary returned for [summarizePriorAnswers], keyed by phase. */
   val summaries: MutableMap<Phase, String> = mutableMapOf()
   val summarizeCalls: MutableList<SummarizeCall> = mutableListOf()
 
-  override var source: LogSource = LogSource.Lite
-
-  override suspend fun recommendTitle(synopsis: String, activityId: String): String = recommendedTitle
+  override suspend fun recommendTitle(synopsis: String, activityId: String): String {
+    titleCalls += 1
+    return recommendedTitle
+  }
 
   override suspend fun summarizePriorAnswers(
     title: String,

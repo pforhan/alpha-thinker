@@ -6,10 +6,7 @@ import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.PlanningEngine
-import alphainterplanetary.thinker.engine.PlanningEngineSelector
-import alphainterplanetary.thinker.engine.QuestionBatch
 import alphainterplanetary.thinker.model.Project
-import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.model.RoundOutcome
@@ -161,23 +158,8 @@ class ProjectRepositoryTest {
 
   @Test
   fun `createProject keeps the shell when initial generation fails`() = runTest {
-    val failing = object : PlanningEngine {
-      override val source: LogSource = LogSource.Lite
-      override val contextWindowTokens: Int? = 8192
-
-      override suspend fun recommendTitle(synopsis: String, activityId: String): String = "Title"
-
-      override suspend fun generateQuestions(
-        title: String,
-        synopsis: String,
-        previousQuestions: List<Question>,
-        roundId: String,
-        phase: Phase,
-        activityId: String,
-        priorSummaries: List<PlanningContext.PhaseSummary>,
-      ): QuestionBatch {
-        throw PlanningEngine.AnalysisFailure("no model")
-      }
+    val failing = FakePlanningEngine().apply {
+      generationFailure = PlanningEngine.AnalysisFailure("no model")
     }
     val storage = FakeStorage()
     val repository = repo(storage = storage, generator = failing)

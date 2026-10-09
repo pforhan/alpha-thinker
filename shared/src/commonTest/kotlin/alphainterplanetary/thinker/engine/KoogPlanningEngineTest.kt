@@ -1,23 +1,20 @@
 package alphainterplanetary.thinker.engine
 
-import ai.koog.agents.core.tools.ToolDescriptor
-import ai.koog.prompt.Prompt
-import ai.koog.prompt.dsl.ModerationResult
 import ai.koog.prompt.executor.clients.LLMClient
-import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
-import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
-import ai.koog.prompt.message.ResponseMetaInfo
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.testutil.FakeLlmClient
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
+import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.util.now
-import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlin.test.Test
@@ -44,7 +41,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `recommendTitle returns the model's plain text reply trimmed`() = runTest {
-    val client = FakeClient(provider, "  Mobile Menu Planner  ")
+    val client = FakeLlmClient(provider, "  Mobile Menu Planner  ")
     val engine = engine(client)
 
     val title = engine.recommendTitle("A menu planner for phone screenshots", activityId = "t1")
@@ -54,7 +51,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `recommendTitle fails when the model returns an empty title`() = runTest {
-    val engine = engine(FakeClient(provider, "   "))
+    val engine = engine(FakeLlmClient(provider, "   "))
 
     try {
       engine.recommendTitle("something", activityId = "t1")
@@ -66,7 +63,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `questions parse a JSON array reply into a batch with the round id`() = runTest {
-    val client = FakeClient(provider,
+    val client = FakeLlmClient(provider,
       """["Who is this building for?","What is the MVP?"]""",
     )
     val engine = engine(client)
@@ -88,7 +85,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `questions inside a markdown fence still parse`() = runTest {
-    val client = FakeClient(provider,
+    val client = FakeLlmClient(provider,
       "```json\n[\"What data flows through the system?\"]\n```",
     )
     val engine = engine(client)
@@ -108,7 +105,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `an empty JSON array produces no questions and signals done`() = runTest {
-    val client = FakeClient(provider, "[]")
+    val client = FakeLlmClient(provider, "[]")
     val engine = engine(client)
 
     val batch = engine.generateQuestions(
@@ -139,7 +136,7 @@ class KoogPlanningEngineTest {
     )
 
     for ((reply, expected) in replies) {
-      val engine = engine(FakeClient(provider, reply))
+      val engine = engine(FakeLlmClient(provider, reply))
       val batch = engine.generateQuestions(
         title = "T",
         synopsis = "S",
@@ -171,7 +168,7 @@ class KoogPlanningEngineTest {
     )
 
     for (reply in replies) {
-      val engine = engine(FakeClient(provider, reply))
+      val engine = engine(FakeLlmClient(provider, reply))
       try {
         engine.generateQuestions(
           title = "T",
@@ -193,7 +190,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `an unreadable reply is a failure rather than a signal that the phase is done`() = runTest {
-    val engine = engine(FakeClient(provider, "I am not able to help with that request."))
+    val engine = engine(FakeLlmClient(provider, "I am not able to help with that request."))
 
     val failure = try {
       engine.generateQuestions(
@@ -219,7 +216,7 @@ class KoogPlanningEngineTest {
    */
   @Test
   fun `a request files the prompt it sent and the reply it read`() = runTest {
-    val client = FakeClient(provider, """["What is the MVP?"]""")
+    val client = FakeLlmClient(provider, """["What is the MVP?"]""")
     val log = RecordingActivityLogger()
 
     logged(log) {
@@ -251,7 +248,7 @@ class KoogPlanningEngineTest {
 
     try {
       logged(log) {
-        engine(FakeClient(provider, unreadable)).generateQuestions(
+        engine(FakeLlmClient(provider, unreadable)).generateQuestions(
           title = "T",
           synopsis = "S",
           previousQuestions = emptyList(),
@@ -277,7 +274,7 @@ class KoogPlanningEngineTest {
     val log = RecordingActivityLogger()
 
     try {
-      logged(log) { engine(FakeClient(provider, "   ")).recommendTitle("something", activityId = "t1") }
+      logged(log) { engine(FakeLlmClient(provider, "   ")).recommendTitle("something", activityId = "t1") }
       fail("expected the empty title to fail")
     } catch (e: PlanningEngine.AnalysisFailure) {
       assertTrue(e.message.orEmpty().contains("empty title"))
@@ -293,7 +290,7 @@ class KoogPlanningEngineTest {
 
     try {
       logged(log) {
-        engine(ThrowingClient(provider)).generateQuestions(
+        engine(FakeLlmClient(provider).apply { failure = IllegalStateException("model exploded") }).generateQuestions(
           title = "T",
           synopsis = "S",
           previousQuestions = emptyList(),
@@ -314,7 +311,7 @@ class KoogPlanningEngineTest {
   /** Nothing observes an undecorated call, so the engine runs and records nothing. */
   @Test
   fun `an engine with no scope installed still produces its batch`() = runTest {
-    val client = FakeClient(provider, """["What is the MVP?"]""")
+    val client = FakeLlmClient(provider, """["What is the MVP?"]""")
 
     val batch = engine(client).generateQuestions(
       title = "T",
@@ -330,9 +327,9 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `the questions prompt carries the title and the phase and the already asked questions`() = runTest {
-    val client = FakeClient(provider, """["A fresh question"]""")
+    val client = FakeLlmClient(provider, """["A fresh question"]""")
     val engine = engine(client)
-    val previous = listOf(question("Already asked"))
+    val previous = listOf(question(id = "Already asked"))
 
     val batch = engine.generateQuestions(
       title = "Menu Planner",
@@ -363,16 +360,16 @@ class KoogPlanningEngineTest {
    */
   @Test
   fun `the questions prompt renders the interview so far with each answer state`() = runTest {
-    val client = FakeClient(provider, """["A fresh question"]""")
+    val client = FakeLlmClient(provider, """["A fresh question"]""")
     val engine = engine(client)
     val previous = listOf(
-      question("What is the MVP?").withAnswer(
+      question(id = "What is the MVP?").withAnswer(
         Answer(questionId = "What is the MVP?", text = "A menu planner", createdAt = now()),
       ),
-      question("Who is this for?").withDraft("home cooks", now()),
-      question("How much will it cost?").withIgnored(now()),
-      question("What is the timeline?"),
-      question("Who owns this?").asCompacted(),
+      question(id = "Who is this for?").withDraft("home cooks", now()),
+      question(id = "How much will it cost?").withIgnored(now()),
+      question(id = "What is the timeline?"),
+      question(id = "Who owns this?").asCompacted(),
     )
 
     engine.generateQuestions(
@@ -397,7 +394,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `the questions prompt renders a none marker when nothing has been asked yet`() = runTest {
-    val client = FakeClient(provider, """["A first question"]""")
+    val client = FakeLlmClient(provider, """["A first question"]""")
     val engine = engine(client)
 
     engine.generateQuestions(
@@ -424,8 +421,8 @@ class KoogPlanningEngineTest {
    */
   @Test
   fun `the engine reports the window off its model`() = runTest {
-    assertEquals(32_000, engine(FakeClient(provider, "hi"), contextLength = 32_000).contextWindowTokens)
-    assertEquals(4_096, engine(FakeClient(provider, "hi"), contextLength = 4_096).contextWindowTokens)
+    assertEquals(32_000, engine(FakeLlmClient(provider, "hi"), contextLength = 32_000).contextWindowTokens)
+    assertEquals(4_096, engine(FakeLlmClient(provider, "hi"), contextLength = 4_096).contextWindowTokens)
   }
 
   /**
@@ -435,12 +432,12 @@ class KoogPlanningEngineTest {
    */
   @Test
   fun `a model with no declared window reports none`() = runTest {
-    assertNull(engine(FakeClient(provider, "hi")).contextWindowTokens)
+    assertNull(engine(FakeLlmClient(provider, "hi")).contextWindowTokens)
   }
 
   @Test
   fun `a model-backed engine can summarize`() = runTest {
-    assertTrue(engine(FakeClient(provider, "hi")).canSummarize)
+    assertTrue(engine(FakeLlmClient(provider, "hi")).canSummarize)
   }
 
   // ---------- summarizing a past phase ----------
@@ -452,7 +449,7 @@ class KoogPlanningEngineTest {
    */
   @Test
   fun `summarizePriorAnswers returns the summary as written`() = runTest {
-    val client = FakeClient(provider, "A menu planner for home cooks, on a shoestring budget.")
+    val client = FakeLlmClient(provider, "A menu planner for home cooks, on a shoestring budget.")
     val engine = engine(client)
 
     val summary = engine.summarizePriorAnswers(
@@ -471,7 +468,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `summarizePriorAnswers fails when the model returns an empty summary`() = runTest {
-    val engine = engine(FakeClient(provider, "  "))
+    val engine = engine(FakeLlmClient(provider, "  "))
 
     try {
       engine.summarizePriorAnswers(
@@ -490,7 +487,7 @@ class KoogPlanningEngineTest {
   /** The summarize request is a request like any other: its own row pair. */
   @Test
   fun `a summarize request files the prompt it sent and the summary it read`() = runTest {
-    val client = FakeClient(provider, "the project is a menu planner for home cooks")
+    val client = FakeLlmClient(provider, "the project is a menu planner for home cooks")
     val log = RecordingActivityLogger()
     val engine = engine(client)
 
@@ -519,9 +516,9 @@ class KoogPlanningEngineTest {
    */
   @Test
   fun `the questions prompt carries the prior summaries in place of their answers`() = runTest {
-    val client = FakeClient(provider, """["Another question"]""")
+    val client = FakeLlmClient(provider, """["Another question"]""")
     val engine = engine(client)
-    val summarized = question("What is the MVP?").let {
+    val summarized = question(id = "What is the MVP?").let {
       Question(
         id = it.id,
         text = it.text,
@@ -534,7 +531,7 @@ class KoogPlanningEngineTest {
     engine.generateQuestions(
       title = "T",
       synopsis = "S",
-      previousQuestions = listOf(summarized, question("And now?")),
+      previousQuestions = listOf(summarized, question(id = "And now?")),
       roundId = "r2",
       phase = BuiltInPhase.Design,
       activityId = "t1",
@@ -565,7 +562,7 @@ class KoogPlanningEngineTest {
    */
   @Test
   fun `the prompt id separates a project's opening round from a later one`() = runTest {
-    val client = FakeClient(provider, """["A question"]""", """["Another question"]""")
+    val client = FakeLlmClient(provider, """["A question"]""", """["Another question"]""")
     val engine = engine(client)
 
     engine.generateQuestions(
@@ -581,7 +578,7 @@ class KoogPlanningEngineTest {
     engine.generateQuestions(
       title = "T",
       synopsis = "S",
-      previousQuestions = listOf(question("Already asked")),
+      previousQuestions = listOf(question(id = "Already asked")),
       roundId = "r2",
       phase = BuiltInPhase.ScopeGoals,
       activityId = "t1",
@@ -598,14 +595,14 @@ class KoogPlanningEngineTest {
    */
   @Test
   fun `the logged prompt is the prompt the request sent`() = runTest {
-    val client = FakeClient(provider, """["A question"]""")
+    val client = FakeLlmClient(provider, """["A question"]""")
     val log = RecordingActivityLogger()
 
     logged(log) {
       engine(client).generateQuestions(
         title = "Menu Planner",
         synopsis = "S",
-        previousQuestions = listOf(question("Already asked")),
+        previousQuestions = listOf(question(id = "Already asked")),
         roundId = "r2",
         phase = BuiltInPhase.ScopeGoals,
         activityId = "t1",
@@ -624,7 +621,7 @@ class KoogPlanningEngineTest {
 
   @Test
   fun `an executor failure surfaces as an analysis failure`() = runTest {
-    val engine = engine(ThrowingClient(provider))
+    val engine = engine(FakeLlmClient(provider).apply { failure = IllegalStateException("model exploded") })
 
     try {
       engine.generateQuestions(
@@ -641,9 +638,6 @@ class KoogPlanningEngineTest {
     }
   }
 
-  private fun question(text: String): Question =
-    Question(id = text, text = text, timestamp = now(), roundId = "r0")
-
   /**
    * Runs [block] with the interaction's log scope installed, the way the
    * decorator does — the engine is not given a logger of its own.
@@ -652,48 +646,4 @@ class KoogPlanningEngineTest {
     withContext(LogScope { log.context("t1", LogCategory.QuestionGeneration, LogSource.RemoteLLM) }) {
       block()
     }
-
-  /** A Koog [LLMClient] answering from a canned queue, capturing each built [Prompt]. */
-private class FakeClient(
-    private val provider: LLMProvider,
-    vararg responses: String,
-  ) : LLMClient() {
-    private val queue = ArrayDeque(responses.toList())
-    var lastPrompt: Prompt = ai.koog.prompt.dsl.prompt("unset") { }
-      private set
-
-    override fun llmProvider(): LLMProvider = provider
-
-    override suspend fun execute(
-      prompt: Prompt,
-      model: LLModel,
-      tools: List<ToolDescriptor>,
-    ): Message.Assistant {
-      lastPrompt = prompt
-      val text = queue.removeFirstOrNull() ?: ""
-      return Message.Assistant(text, ResponseMetaInfo(Instant.fromEpochMilliseconds(0)))
-    }
-
-    override suspend fun moderate(prompt: Prompt, model: LLModel): ModerationResult =
-      ModerationResult(false, emptyMap())
-
-    override fun close() = Unit
-  }
-
-  private class ThrowingClient(
-    private val provider: LLMProvider,
-  ) : LLMClient() {
-    override fun llmProvider(): LLMProvider = provider
-
-    override suspend fun execute(
-      prompt: Prompt,
-      model: LLModel,
-      tools: List<ToolDescriptor>,
-    ): Message.Assistant = throw IllegalStateException("model exploded")
-
-    override suspend fun moderate(prompt: Prompt, model: LLModel): ModerationResult =
-      ModerationResult(false, emptyMap())
-
-    override fun close() = Unit
-  }
 }

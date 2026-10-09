@@ -1,16 +1,10 @@
 package alphainterplanetary.thinker.engine
 
-import ai.koog.agents.core.tools.ToolDescriptor
-import ai.koog.prompt.Prompt
-import ai.koog.prompt.dsl.ModerationResult
-import ai.koog.prompt.executor.clients.LLMClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
-import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.llm.LLMProvider
-import ai.koog.prompt.message.Message
-import ai.koog.prompt.message.ResponseMetaInfo
+import ai.koog.prompt.llm.LLModel
 import alphainterplanetary.thinker.activitylog.LogSource
-import kotlin.time.Instant
+import alphainterplanetary.thinker.testutil.FakeLlmClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -24,7 +18,7 @@ class DynamicKoogPlanningBackendTest {
 
   private fun backend(model: LLModel, kind: LogSource = LogSource.LocalLLM): KoogPlanningBackend =
     object : KoogPlanningBackend {
-      override val executor = MultiLLMPromptExecutor(StaticClient(provider))
+      override val executor = MultiLLMPromptExecutor(FakeLlmClient(provider))
       override val model: LLModel = model
       override val source: LogSource = kind
     }
@@ -62,22 +56,5 @@ class DynamicKoogPlanningBackendTest {
 
     val error = assertFailsWith<IllegalStateException> { dynamic.executor }
     assertTrue(error.message.orEmpty().contains("OnDevice"), "the error names the unbound mode")
-  }
-
-  private class StaticClient(
-    private val provider: LLMProvider,
-  ) : LLMClient() {
-    override fun llmProvider(): LLMProvider = provider
-
-    override suspend fun execute(
-      prompt: Prompt,
-      model: LLModel,
-      tools: List<ToolDescriptor>,
-    ): Message.Assistant = Message.Assistant("", ResponseMetaInfo(Instant.fromEpochMilliseconds(0)))
-
-    override suspend fun moderate(prompt: Prompt, model: LLModel): ModerationResult =
-      ModerationResult(false, emptyMap())
-
-    override fun close() = Unit
   }
 }

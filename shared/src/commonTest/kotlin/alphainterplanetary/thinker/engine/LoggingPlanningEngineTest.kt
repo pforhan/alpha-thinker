@@ -8,7 +8,7 @@ import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
-import alphainterplanetary.thinker.util.now
+import alphainterplanetary.thinker.testutil.question
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,8 +45,8 @@ class LoggingPlanningEngineTest {
   @Test
   fun `questions record the produced texts in the response row`() = runTest {
     val delegate = FakePlanningEngine()
-    delegate.questions += question("first")
-    delegate.questions += question("second")
+    delegate.questions += question(id = "first")
+    delegate.questions += question(id = "second")
     val log = RecordingActivityLogger()
     val engine = LoggingPlanningEngine(delegate = delegate, log = log)
 
@@ -104,7 +104,12 @@ class LoggingPlanningEngineTest {
   @Test
   fun `a throwing engine records a failed row and still propagates`() = runTest {
     val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = ThrowingEngine(), log = log)
+    val engine = LoggingPlanningEngine(
+      delegate = FakePlanningEngine().apply {
+        generationFailure = PlanningEngine.AnalysisFailure("model exploded")
+      },
+      log = log,
+    )
 
     try {
       engine.generateQuestions(
@@ -339,14 +344,8 @@ class LoggingPlanningEngineTest {
    * The compaction shape the near-limit choice produces: a summarize request
    * per phase, oldest first, then the question batch they were making room for.
    */
-  private class SummarizingTwiceThenGenerating : PlanningEngine {
-    override val source: LogSource = LogSource.RemoteLLM
-    override val contextWindowTokens: Int? = 8192
-    override val canSummarize: Boolean = true
-
-    override suspend fun recommendTitle(synopsis: String, activityId: String): String =
-      throw PlanningEngine.AnalysisFailure("not used")
-
+  private class SummarizingTwiceThenGenerating :
+    FakePlanningEngine(source = LogSource.RemoteLLM, canSummarize = true) {
     override suspend fun summarizePriorAnswers(
       title: String,
       synopsis: String,
@@ -375,7 +374,11 @@ class LoggingPlanningEngineTest {
       summarizePriorAnswers(title, synopsis, BuiltInPhase.Research, "", activityId)
       val request = logRequest("SYSTEM\nQuestions")
       val batch = QuestionBatch(
-        listOf(question("one", roundId), question("two", roundId), question("three", roundId)),
+        listOf(
+          question(id = "one", roundId = roundId),
+          question(id = "two", roundId = roundId),
+          question(id = "three", roundId = roundId),
+        ),
         false,
       )
       request?.responded(batch.summary(), """["one","two","three"]""")
@@ -383,32 +386,11 @@ class LoggingPlanningEngineTest {
     }
   }
 
-  private class ThrowingEngine : PlanningEngine {
-    override val source: LogSource = LogSource.Lite
-    override val contextWindowTokens: Int? = 8192
-
-    override suspend fun recommendTitle(synopsis: String, activityId: String): String =
-      throw PlanningEngine.AnalysisFailure("model exploded")
-
-    override suspend fun generateQuestions(
-      title: String,
-      synopsis: String,
-      previousQuestions: List<Question>,
-      roundId: String,
-      phase: Phase,
-      activityId: String,
-      priorSummaries: List<PlanningContext.PhaseSummary>,
-    ): QuestionBatch = throw PlanningEngine.AnalysisFailure("model exploded")
-  }
-
   /**
    * Stands in for an LLM-backed engine: files one request the way
    * [KoogPlanningEngine] does, reporting the reply it read.
    */
-  private class ReplyingEngine : PlanningEngine {
-    override val source: LogSource = LogSource.RemoteLLM
-    override val contextWindowTokens: Int? = 8192
-
+  private class ReplyingEngine : FakePlanningEngine(source = LogSource.RemoteLLM) {
     override suspend fun recommendTitle(synopsis: String, activityId: String): String {
       val request = logRequest("SYSTEM\nTitle system\n\nUSER\n$synopsis")
       val reply = "Mobile Menu Planner"
@@ -434,13 +416,7 @@ class LoggingPlanningEngineTest {
    */
   private class SummarizingThenGenerating(
     private val failSummary: Boolean = false,
-  ) : PlanningEngine {
-    override val source: LogSource = LogSource.RemoteLLM
-    override val contextWindowTokens: Int? = 8192
-
-    override suspend fun recommendTitle(synopsis: String, activityId: String): String =
-      throw PlanningEngine.AnalysisFailure("not used")
-
+  ): FakePlanningEngine(source = LogSource.RemoteLLM) {
     override suspend fun generateQuestions(
       title: String,
       synopsis: String,
@@ -459,7 +435,11 @@ class LoggingPlanningEngineTest {
 
       val request = logRequest("SYSTEM\nQuestions")
       val batch = QuestionBatch(
-        listOf(question("one", roundId), question("two", roundId), question("three", roundId)),
+        listOf(
+          question(id = "one", roundId = roundId),
+          question(id = "two", roundId = roundId),
+          question(id = "three", roundId = roundId),
+        ),
         false,
       )
       request?.responded(batch.summary(), """["one","two","three"]""")
@@ -467,6 +447,3 @@ class LoggingPlanningEngineTest {
     }
   }
 }
-
-private fun question(text: String, roundId: String = "r1"): Question =
-  Question(id = text, text = text, timestamp = now(), roundId = roundId)

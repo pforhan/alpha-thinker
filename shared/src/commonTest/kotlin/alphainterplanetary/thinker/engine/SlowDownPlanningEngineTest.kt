@@ -1,9 +1,8 @@
 package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
-import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -21,7 +20,7 @@ class SlowDownPlanningEngineTest {
 
   @Test
   fun `does not delay when the slow-down flag is off`() = runTest {
-    val delegate = TrackingPlanningEngine()
+    val delegate = FakePlanningEngine()
     val generator = SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(EngineDelayConfig(enabled = false)),
@@ -35,7 +34,7 @@ class SlowDownPlanningEngineTest {
   @Test
   fun `reports the delegated engine's source`() {
     val generator = SlowDownPlanningEngine(
-      delegate = TrackingPlanningEngine(source = LogSource.RemoteLLM),
+      delegate = FakePlanningEngine(source = LogSource.RemoteLLM),
       config = MutableStateFlow(EngineDelayConfig(enabled = false)),
     )
 
@@ -44,7 +43,7 @@ class SlowDownPlanningEngineTest {
 
   @Test
   fun `delays before delegating when enabled`() = runTest {
-    val delegate = TrackingPlanningEngine()
+    val delegate = FakePlanningEngine()
     val generator = SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(
@@ -65,7 +64,7 @@ class SlowDownPlanningEngineTest {
 
   @Test
   fun `every interaction is slowed with its own delay`() = runTest {
-    val delegate = TrackingPlanningEngine()
+    val delegate = FakePlanningEngine()
     val generator = SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(
@@ -84,22 +83,22 @@ class SlowDownPlanningEngineTest {
       generator.generateQuestions("title", "synopsis", emptyList(), "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
     }
     testScheduler.runCurrent()
-    assertEquals(0, delegate.totalCalls())
+    assertEquals(0, delegate.calls.size + delegate.titleCalls)
 
     testScheduler.advanceTimeBy(2_000)
     testScheduler.runCurrent()
     assertEquals(1, delegate.titleCalls)
-    assertEquals(0, delegate.questionCalls)
+    assertEquals(0, delegate.calls.size)
     testScheduler.advanceTimeBy(5_000)
     testScheduler.runCurrent()
-    assertEquals(1, delegate.questionCalls)
+    assertEquals(1, delegate.calls.size)
 
     job.join()
   }
 
   @Test
   fun `a zero delay for an interaction means no delay`() = runTest {
-    val delegate = TrackingPlanningEngine()
+    val delegate = FakePlanningEngine()
     val generator = SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(
@@ -119,11 +118,11 @@ class SlowDownPlanningEngineTest {
     }
     testScheduler.runCurrent()
     assertEquals(1, delegate.titleCalls)
-    assertEquals(0, delegate.questionCalls)
+    assertEquals(0, delegate.calls.size)
 
     testScheduler.advanceTimeBy(2_000)
     testScheduler.runCurrent()
-    assertEquals(1, delegate.questionCalls)
+    assertEquals(1, delegate.calls.size)
 
     job.join()
   }
@@ -133,7 +132,7 @@ class SlowDownPlanningEngineTest {
     val config = MutableStateFlow(
       EngineDelayConfig(enabled = true, secondsByInteraction = defaultSecondsByInteraction),
     )
-    val delegate = TrackingPlanningEngine()
+    val delegate = FakePlanningEngine()
     val generator = SlowDownPlanningEngine(delegate = delegate, config = config)
 
     val first = launch { generator.recommendTitle("a", activityId = "test-activity") }
@@ -149,35 +148,5 @@ class SlowDownPlanningEngineTest {
     testScheduler.runCurrent()
     assertEquals(2, delegate.titleCalls)
     second.join()
-  }
-}
-
-/** Counts calls into each [PlanningEngine] interaction. */
-private class TrackingPlanningEngine(
-  override val source: LogSource = LogSource.Lite,
-) : PlanningEngine {
-  override val contextWindowTokens: Int? = 8192
-
-  var titleCalls: Int = 0
-  var questionCalls: Int = 0
-
-  fun totalCalls(): Int = titleCalls + questionCalls
-
-  override suspend fun recommendTitle(synopsis: String, activityId: String): String {
-    titleCalls++
-    return "title"
-  }
-
-  override suspend fun generateQuestions(
-    title: String,
-    synopsis: String,
-    previousQuestions: List<Question>,
-    roundId: String,
-    phase: Phase,
-    activityId: String,
-    priorSummaries: List<PlanningContext.PhaseSummary>,
-  ): QuestionBatch {
-    questionCalls++
-    return QuestionBatch(emptyList(), done = true)
   }
 }
