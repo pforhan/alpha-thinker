@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,7 +71,7 @@ fun QuestionItem(
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyLarge,
           )
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+          QuestionInlineActions(view = view, swipeTo = ::swipeTo)
         }
       }
 
@@ -106,7 +104,7 @@ fun QuestionItem(
               )
             }
           }
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+          QuestionInlineActions(view = view, swipeTo = ::swipeTo)
         }
       } else if (question.currentAnswer != null) {
         Spacer(modifier = Modifier.height(Dimens.ContentGap))
@@ -119,7 +117,7 @@ fun QuestionItem(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+          QuestionInlineActions(view = view, swipeTo = ::swipeTo)
         }
       } else if (question.isDraft) {
         Spacer(modifier = Modifier.height(Dimens.ContentGap))
@@ -147,7 +145,7 @@ fun QuestionItem(
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
           }
-          QuestionInlineActions(question = question, view = view, swipeTo = ::swipeTo)
+          QuestionInlineActions(view = view, swipeTo = ::swipeTo)
         }
       }
     }
@@ -156,27 +154,24 @@ fun QuestionItem(
 
 @Composable
 private fun QuestionInlineActions(
-  question: Question,
   view: QuestionViewMode,
   swipeTo: (SwipeToDismissBoxValue) -> Unit,
 ) {
-  if (view == QuestionViewMode.Unanswered && !question.isAnswered && !question.isIgnored) {
-    IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.StartToEnd) }) {
-      Icon(Icons.AutoMirrored.Filled.RotateLeft, contentDescription = "Ask later")
+  view.startAction?.let { action ->
+    InlineAction(action) { swipeTo(SwipeToDismissBoxValue.StartToEnd) }
+  }
+  // Only Unanswered offers its end action inline; for the other views that
+  // action is the destructive delete, which stays swipe-only.
+  if (view == QuestionViewMode.Unanswered) {
+    view.endAction?.let { action ->
+      InlineAction(action) { swipeTo(SwipeToDismissBoxValue.EndToStart) }
     }
-    IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.EndToStart) }) {
-      Icon(Icons.Default.VisibilityOff, contentDescription = "Ignore")
-    }
-  } else if (
-    view == QuestionViewMode.Answered ||
-    view == QuestionViewMode.Draft ||
-    view == QuestionViewMode.Ignored
-  ) {
-    IconButton(onClick = { swipeTo(SwipeToDismissBoxValue.StartToEnd) }) {
-      Icon(
-        if (question.isIgnored) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-        contentDescription = if (question.isIgnored) "Unignore" else "Ignore"
-      )
-    }
+  }
+}
+
+@Composable
+private fun InlineAction(action: SwipeAction, onClick: () -> Unit) {
+  IconButton(onClick = onClick) {
+    Icon(action.icon, contentDescription = action.label)
   }
 }
