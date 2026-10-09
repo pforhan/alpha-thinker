@@ -32,7 +32,7 @@ enum class ConfettiOrigin {
   /** Pieces rain from the top edge of the canvas. */
   TopRain,
 
-  /** Pieces explode outward from [ConfettiBurst.burstPoint]. */
+  /** Pieces explode outward from the burst point. */
   CenterBurst,
 }
 

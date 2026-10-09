@@ -241,7 +241,7 @@ internal fun shouldAnnounceFailure(
  * write that the effect itself made.
  */
 @Composable
-internal fun AppChromeState.announceFailures() {
+internal fun AppChromeState.AnnounceFailures() {
   val latestActivity by latestActivity.collectAsState()
   val announcedActivityId by settings.announcedFailureActivityId.collectAsState()
   val currentProjectId = (route as? AppRoute.ProjectDetail)?.projectId
@@ -286,7 +286,7 @@ internal fun shouldOpenSimulatedProject(
  * Opens the project a simulator run has finished creating, wherever the user is
  * when the run lands.
  *
- * Called by the nav root for the same reason [announceFailures] is: the finished
+ * Called by the nav root for the same reason [AnnounceFailures] is: the finished
  * project is a fact about the run rather than about the screen that started it.
  * The jump replaces the stack (see [openProjectFromList]), so whatever was over
  * the project list closes with it and the list reloads when back returns.
@@ -296,7 +296,7 @@ internal fun shouldOpenSimulatedProject(
  * handled, so a run is acted on exactly once either way.
  */
 @Composable
-internal fun AppChromeState.openSimulatedProject() {
+internal fun AppChromeState.OpenSimulatedProject() {
   val simulation by settings.simulation.collectAsState()
   val finished = (simulation as? SimulationState.Finished)?.projectId
   var handledProjectId by remember { mutableStateOf<String?>(null) }

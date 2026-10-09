@@ -10,10 +10,8 @@ import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
-import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.components.AnswerDialog
 import alphainterplanetary.thinker.ui.components.AnswerDialogResult
-import alphainterplanetary.thinker.ui.components.ConfettiBurst
 import alphainterplanetary.thinker.ui.components.ContextCompactionDialog
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.EmptyState
@@ -21,23 +19,20 @@ import alphainterplanetary.thinker.ui.components.PhaseAdvanceDialog
 import alphainterplanetary.thinker.ui.components.PhaseBadgeCell
 import alphainterplanetary.thinker.ui.components.PhasePill
 import alphainterplanetary.thinker.ui.components.PhaseSectionHeader
-import alphainterplanetary.thinker.ui.components.SpinnerLabel
 import alphainterplanetary.thinker.ui.components.QuestionItem
 import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
 import alphainterplanetary.thinker.ui.components.ScrollableOverflowText
+import alphainterplanetary.thinker.ui.components.SpinnerLabel
 import alphainterplanetary.thinker.ui.components.SwipeableCard
 import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
+import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.theme.Dimens
-import alphainterplanetary.thinker.ui.theme.LocalExtendedColors
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectDetailViewModel
 import alphainterplanetary.thinker.util.formatDuration
 import alphainterplanetary.thinker.util.normalizeWhitespace
-import alphainterplanetary.thinker.util.now
-import kotlin.time.Clock
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -64,7 +59,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
@@ -100,6 +94,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.CoroutineScope
+import kotlin.time.Clock
 
 private const val SubtleCheckIntensity = 10
 
@@ -340,12 +335,11 @@ fun ProjectDetailScreen(
   }
 }
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun ProjectDetailContent(
   project: Project,
-  phaseStatsAll: List<alphainterplanetary.thinker.model.PhaseStats>,
-  phaseStatsCurrent: alphainterplanetary.thinker.model.PhaseStats?,
+  phaseStatsAll: List<PhaseStats>,
+  phaseStatsCurrent: PhaseStats?,
   selectedView: QuestionViewMode,
   canGenerateMore: Boolean,
   /** Short label of the active generation task(s), e.g. "Generating title…"; null when idle. */
@@ -458,18 +452,12 @@ private fun ProjectDetailContent(
       }
 
       val showShuffle = remember(view, unansweredCount, canGenerateMore) {
-        if (view != QuestionViewMode.Unanswered) {
-          false
-        } else {
-          // With a full batch (more than 3 unanswered) shuffle rotates the
-          // visible cards; when the batch is exhausted (<= 3 unanswered) the
-          // same affordance becomes "synthesize a fresh batch" via the
-          // follow-up generation task when the pool still has questions.
-          unansweredCount > UnansweredBatchSize || canGenerateMore
-        }
+        view == QuestionViewMode.Unanswered && (unansweredCount > UnansweredBatchSize || canGenerateMore)
+        // With a full batch (more than 3 unanswered) shuffle rotates the
+        // visible cards; when the batch is exhausted (<= 3 unanswered) the
+        // same affordance becomes "synthesize a fresh batch" via the
+        // follow-up generation task when the pool still has questions.
       }
-
-      val completedStats = phaseStatsCurrent
 
       Box(modifier = Modifier.fillMaxSize()) {
         if (visibleQuestions.isEmpty()) {
@@ -482,7 +470,7 @@ private fun ProjectDetailContent(
             generatingLabel = activeTaskLabel.takeIf { view == QuestionViewMode.Unanswered },
             nextPhases = if (view == QuestionViewMode.Unanswered) nextPhases else emptyList(),
             onBeginWrapUp = if (view == QuestionViewMode.Unanswered) onBeginWrapUp else null,
-            completedStats = completedStats,
+            completedStats = phaseStatsCurrent,
             modifier = Modifier.fillMaxSize(),
           )
         } else {
@@ -548,7 +536,6 @@ private fun ProjectDetailContent(
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuestionListRow(
   project: Project,

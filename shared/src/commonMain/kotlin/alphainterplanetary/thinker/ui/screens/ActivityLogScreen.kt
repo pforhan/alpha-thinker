@@ -3,13 +3,13 @@ package alphainterplanetary.thinker.ui.screens
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.activitylog.LogMarkers
-import alphainterplanetary.thinker.ui.theme.Dimens
-import alphainterplanetary.thinker.ui.viewmodel.ActivityLogItem
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.components.EmptyState
 import alphainterplanetary.thinker.ui.components.Pill
 import alphainterplanetary.thinker.ui.platform.toClipEntry
+import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.viewmodel.ActivityLogItem
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
 import alphainterplanetary.thinker.util.formatTaskDuration
 import androidx.compose.animation.AnimatedVisibility
@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -80,7 +79,6 @@ import kotlin.time.Instant
  * It is read-only; the delete action wipes the whole log (no confirmation) and
  * nothing else is mutated.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityLogScreen(
   viewModel: ActivityLogViewModel,

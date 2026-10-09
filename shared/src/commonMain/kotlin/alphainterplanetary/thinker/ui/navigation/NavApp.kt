@@ -1,8 +1,8 @@
 package alphainterplanetary.thinker.ui.navigation
 
 import alphainterplanetary.thinker.di.AppComponent
-import alphainterplanetary.thinker.ui.chrome.announceFailures
-import alphainterplanetary.thinker.ui.chrome.openSimulatedProject
+import alphainterplanetary.thinker.ui.chrome.AnnounceFailures
+import alphainterplanetary.thinker.ui.chrome.OpenSimulatedProject
 import alphainterplanetary.thinker.ui.chrome.rememberAppChromeState
 import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
@@ -49,11 +49,11 @@ internal fun NavApp(appComponent: AppComponent) {
   // Failures are announced from here rather than from the screen they happen on:
   // the nav root is the one place that outlives every screen, so a failure is
   // raised once per activity no matter how often its project is re-entered.
-  chrome.announceFailures()
+  chrome.AnnounceFailures()
 
   // Likewise the jump to a finished simulation's project: the run started in a
   // settings sheet and ends minutes later, usually on some other screen.
-  chrome.openSimulatedProject()
+  chrome.OpenSimulatedProject()
 
   // Hardware/gesture back pops the same stack the app bar's arrow does, so a
   // back gesture closes a sheet when one is up and otherwise returns to the

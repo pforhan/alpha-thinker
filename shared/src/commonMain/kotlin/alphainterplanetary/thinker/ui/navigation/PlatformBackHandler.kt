@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
  *
  * Only Android has one: the system back button and gesture. The other targets
  * have no back event to intercept, so their actuals do nothing and the app bar's
- * back arrow — which calls the same [NavStack.pop] — is the affordance, exactly
+ * back arrow — which calls the same [NavStack.goBack] — is the affordance, exactly
  * as it was before this seam existed. The seam is here so a target that gains a
  * back key later is a one-file change rather than a second nav root.
  *

@@ -32,8 +32,8 @@ import androidx.compose.ui.Modifier
  *
  * The planning-context budget used to live here too, which was the wrong drawer
  * for it — it shapes what a real generation is sent, not how the app behaves
- * under test. It is [ChromeSheet.PlanningContext] now, next to the engine whose
- * window it is a share of.
+ * under test. It is [alphainterplanetary.thinker.engine.PlanningContext] now,
+ * next to the engine whose window it is a share of.
  *
  * Turning the delay on reveals the per-interaction pickers below the toggle, and
  * this scrolls just enough to bring them into view. The reveal is measured

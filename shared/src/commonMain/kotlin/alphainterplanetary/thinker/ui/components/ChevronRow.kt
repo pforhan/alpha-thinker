@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.ui.components
 
+import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import alphainterplanetary.thinker.ui.theme.Dimens
 
 /** A row that opens another destination: title, optional current value, chevron. */
 @Composable

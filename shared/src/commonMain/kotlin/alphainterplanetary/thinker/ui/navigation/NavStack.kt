@@ -67,7 +67,7 @@ internal sealed interface NavEntry {
  * the screen that opened it — leaving it in history would pop back onto a sheet
  * floating over a screen that is no longer there.
  *
- * The root is never popped, so [pop] returning false is the signal that there is
+ * The root is never popped, so [goBack] returning false is the signal that there is
  * nothing left to go back to and the platform should handle the event itself
  * (on Android, leaving the app).
  */

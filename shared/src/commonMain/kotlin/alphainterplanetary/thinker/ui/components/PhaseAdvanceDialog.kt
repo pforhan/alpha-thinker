@@ -372,8 +372,8 @@ private fun PhaseTimelineRow(
 private fun CompletedPhaseCallout(
   phase: Phase,
   arrow: CalloutArrow,
-  arrowCoordinate: Float = 0f,
   modifier: Modifier = Modifier,
+  arrowCoordinate: Float = 0f,
 ) {
   val tint = PhaseStyles.rowTint(phase)
   Box(

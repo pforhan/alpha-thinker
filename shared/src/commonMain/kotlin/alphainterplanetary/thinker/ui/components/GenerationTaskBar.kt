@@ -35,8 +35,7 @@ fun GenerationTaskBar(
   modifier: Modifier = Modifier,
 ) {
   val tasks by taskRunner.tasks.collectAsState()
-  val label = activeTaskSummary(tasks)
-  if (label == null) return
+  val label = activeTaskSummary(tasks) ?: return
 
   Surface(
     color = MaterialTheme.colorScheme.secondaryContainer,

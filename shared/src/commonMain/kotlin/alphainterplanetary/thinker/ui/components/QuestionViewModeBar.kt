@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuestionViewModeBar(
   selectedView: QuestionViewMode,
@@ -48,7 +46,7 @@ fun QuestionViewModeBar(
         horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        QuestionViewMode.values().forEach { mode ->
+        QuestionViewMode.entries.forEach { mode ->
           FilterChip(
             selected = selectedView == mode,
             onClick = { onViewSelected(mode) },
@@ -101,7 +99,7 @@ private fun WideViewModeBar(
       horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      QuestionViewMode.values().forEach { mode ->
+      QuestionViewMode.entries.forEach { mode ->
         FilterChip(
           selected = selectedView == mode,
           onClick = { onViewSelected(mode) },
@@ -113,7 +111,6 @@ private fun WideViewModeBar(
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CompactViewModeBar(
   selectedView: QuestionViewMode,
@@ -147,7 +144,7 @@ private fun CompactViewModeBar(
         expanded = expanded,
         onDismissRequest = { expanded = false },
       ) {
-        QuestionViewMode.values().forEach { mode ->
+        QuestionViewMode.entries.forEach { mode ->
           DropdownMenuItem(
             text = { Text(mode.displayName) },
             onClick = {

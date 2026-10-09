@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Project
-import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskStatus
