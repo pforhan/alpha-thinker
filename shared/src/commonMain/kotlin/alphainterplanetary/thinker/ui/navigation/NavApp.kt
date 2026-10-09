@@ -83,7 +83,6 @@ internal fun NavApp(appComponent: AppComponent) {
             appComponent = appComponent,
             chrome = chrome,
             projectId = route.projectId,
-            onBack = { chrome.goBack() },
           )
         }
 
@@ -91,7 +90,6 @@ internal fun NavApp(appComponent: AppComponent) {
           TaskManagerScreen(
             appComponent = appComponent,
             chrome = chrome,
-            onBack = { chrome.goBack() },
           )
         }
 
@@ -104,7 +102,6 @@ internal fun NavApp(appComponent: AppComponent) {
           ActivityLogScreen(
             viewModel = vm,
             chrome = chrome,
-            onBack = { chrome.goBack() },
           )
         }
       }

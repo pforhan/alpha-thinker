@@ -21,9 +21,12 @@ import androidx.compose.ui.Modifier
  * app-wide pieces (status cluster, settings flyout, settings sheets) have a
  * single place to live.
  *
- * A screen supplies only what is specific to it: its [title] slot, an optional
- * [onBack] (null on the root screen, which then has no navigation icon), any
- * [actions] of its own, a [floatingActionButton] if it has one, and its content.
+ * A screen supplies only what is specific to it: its [title] slot, whether to
+ * offer back ([backEnabled], which defaults to `chrome.canGoBack` so the root
+ * screen has no navigation icon), any [actions] of its own, a
+ * [floatingActionButton] if it has one, and its content. The back action itself
+ * is never supplied: it is always `chrome.goBack()`, the same stack the
+ * platform's back gesture pops.
  * The bar's order is fixed — navigation icon, title, the screen's actions, the
  * status cluster, the flyout button — so the chrome's controls are the trailing
  * edge on every screen.
@@ -38,7 +41,7 @@ fun AppScaffold(
   title: @Composable () -> Unit,
   chrome: AppChromeState,
   modifier: Modifier = Modifier,
-  onBack: (() -> Unit)? = null,
+  backEnabled: Boolean = chrome.canGoBack,
   actions: @Composable RowScope.() -> Unit = {},
   floatingActionButton: @Composable () -> Unit = {},
   content: @Composable (PaddingValues) -> Unit,
@@ -51,8 +54,8 @@ fun AppScaffold(
       TopAppBar(
         title = title,
         navigationIcon = {
-          if (onBack != null) {
-            IconButton(onClick = onBack) {
+          if (backEnabled) {
+            IconButton(onClick = { chrome.goBack() }) {
               Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
           }

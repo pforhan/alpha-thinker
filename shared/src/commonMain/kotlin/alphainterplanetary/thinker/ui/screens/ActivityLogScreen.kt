@@ -83,13 +83,11 @@ import kotlin.time.Instant
 fun ActivityLogScreen(
   viewModel: ActivityLogViewModel,
   chrome: AppChromeState,
-  onBack: () -> Unit,
 ) {
   val items by viewModel.items.collectAsState()
   AppScaffold(
     title = { Text("Activity Log") },
     chrome = chrome,
-    onBack = onBack,
     actions = {
       IconButton(onClick = viewModel::clear) {
         Icon(Icons.Default.Delete, contentDescription = "Clear log")

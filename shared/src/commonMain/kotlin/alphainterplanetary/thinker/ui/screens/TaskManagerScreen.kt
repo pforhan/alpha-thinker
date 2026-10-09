@@ -44,7 +44,6 @@ import kotlin.time.Instant
 fun TaskManagerScreen(
   appComponent: AppComponent,
   chrome: AppChromeState,
-  onBack: () -> Unit,
 ) {
   val viewModel = remember {
     TaskManagerViewModel(
@@ -64,7 +63,6 @@ fun TaskManagerScreen(
   AppScaffold(
     title = { Text("Task Manager") },
     chrome = chrome,
-    onBack = onBack,
   ) { paddingValues ->
     if (rows.isEmpty()) {
       EmptyState(

@@ -109,7 +109,6 @@ fun ProjectDetailScreen(
   appComponent: AppComponent,
   chrome: AppChromeState,
   projectId: String,
-  onBack: () -> Unit,
 ) {
   val viewModel = remember {
     ProjectDetailViewModel(
@@ -186,7 +185,6 @@ fun ProjectDetailScreen(
       )
     },
     chrome = chrome,
-    onBack = onBack,
     actions = {
       // Only while the project has no title and nothing is producing one: once a
       // title lands (or a retry is running) the action has nothing to do.

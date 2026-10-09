@@ -77,7 +77,7 @@ fun SimulatorScreen(
   AppScaffold(
     title = { Text("Simulate a project") },
     chrome = chrome,
-    onBack = if (running) null else ({ chrome.goBack() }),
+    backEnabled = !running,
   ) { paddingValues ->
     SimulatorForm(
       state = simulation,
