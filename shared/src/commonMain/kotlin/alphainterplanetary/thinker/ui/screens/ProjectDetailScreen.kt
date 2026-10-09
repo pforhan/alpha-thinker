@@ -67,7 +67,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -105,7 +104,6 @@ private const val CelebratedHeaderStartScale = 0.82f
 
 private const val UnansweredBatchSize = 3
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectDetailScreen(
   appComponent: AppComponent,
@@ -236,7 +234,6 @@ fun ProjectDetailScreen(
           onAnswerClick = { selectedQuestion = it },
           onDeleteAnswer = { viewModel.saveAnswer(projectId, it.id, "", completed = false) },
           onGenerateMore = { viewModel.requestMoreQuestions(projectId) },
-          onAdvancePhase = { viewModel.requestPhaseAdvance(projectId, it) },
           onBeginWrapUp = { showPhaseAdvanceDialog = true },
           modifier = Modifier
             .fillMaxSize()
@@ -353,7 +350,6 @@ private fun ProjectDetailContent(
   onAnswerClick: (Question) -> Unit,
   onDeleteAnswer: (Question) -> Unit,
   onGenerateMore: () -> Unit,
-  onAdvancePhase: (Phase) -> Unit,
   onBeginWrapUp: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
