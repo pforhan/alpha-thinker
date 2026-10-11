@@ -36,14 +36,15 @@ class DynamicKoogPlanningBackendTest {
   }
 
   @Test
-  fun `source reflects the bound mode`() {
-    val remote = backend(remoteModel)
+  fun `source delegates to the bound backend not the mode`() {
+    val remote = backend(remoteModel, kind = LogSource.LocalLLM)
     val dynamic = DynamicKoogPlanningBackend(
       mode = EngineMode.Remote,
       backends = mapOf(EngineMode.Remote to remote),
     )
 
-    assertEquals(LogSource.RemoteLLM, dynamic.source)
+    assertEquals(remote.source, dynamic.source)
+    assertEquals(LogSource.LocalLLM, dynamic.source)
   }
 
   @Test

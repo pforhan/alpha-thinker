@@ -13,8 +13,8 @@ import alphainterplanetary.thinker.activitylog.LogSource
  * lets a generation task keep the engine it was enqueued under: one of these
  * is built per selectable mode and handed to a [KoogPlanningEngine], and the
  * outer selection ([PlanningEngineSelector]) freezes which one a task runs.
- * The bound [EngineMode] also drives the [source] an engine over this backend
- * reports on the activity log.
+ * [source] likewise comes from the bound backend, so the backend stays the
+ * single statement of where its inference egresses.
  */
 class DynamicKoogPlanningBackend(
   private val mode: EngineMode,
@@ -22,7 +22,7 @@ class DynamicKoogPlanningBackend(
 ) : KoogPlanningBackend {
 
   override val source: LogSource
-    get() = mode.logSource
+    get() = backend().source
 
   override val executor: PromptExecutor
     get() = backend().executor

@@ -40,9 +40,10 @@ import kotlin.coroutines.coroutineContext
 class LogScope internal constructor(
   private val newContext: () -> LogContext,
 ) : AbstractCoroutineContextElement(Key) {
-  // A request may be opened from parallel branches of one interaction, so the
-  // flag is mutex-guarded rather than a plain flag; it is read once, after the
-  // interaction has returned.
+  // Requests may be opened from parallel branches of one interaction, so the
+  // flag is written concurrently and is mutex-guarded for cross-thread
+  // visibility; it is read once per interaction, after the block that opened the
+  // requests has returned.
   private val reportedLock = Mutex()
   private var reported = false
 
@@ -75,25 +76,25 @@ class LogScope internal constructor(
  * the verbatim reply riding along on that row as its raw payload either way. A
  * [LogScope] opens one per request, so an interaction files exactly one prompt
  * row and one outcome row for every request it makes.
+ *
+ * It deliberately narrows [LogContext] to that one job: the engine gets back
+ * only the outcome handle for the request it opened, never the broader
+ * activity-writer surface. The blank-payload rule lives on [LogContext] with
+ * the rest of the raw semantics.
  */
 class LogRequest internal constructor(
   private val context: LogContext,
 ) {
-  /**
-   * The outcome row for a request that produced [summary], with [raw] — the
-   * reply as it came back — as the row's payload. A blank [raw] is dropped
-   * rather than filed: there is nothing to show, and an empty payload reads as
-   * a truncated one.
-   */
+  /** The outcome row for a request that produced [summary], with [raw] as its payload. */
   suspend fun responded(summary: String, raw: String? = null) =
-    context.response(summary, raw?.ifBlank { null })
+    context.response(summary, raw)
 
   /**
    * The outcome row for a request that failed, keeping [raw] — the reply that
    * caused the failure, or nothing at all for a send that never got one.
    */
   suspend fun failed(message: String, raw: String? = null) =
-    context.closeFailed(message, raw?.ifBlank { null })
+    context.closeFailed(message, raw)
 
   /** The outcome row for a request that was cancelled before it produced anything. */
   suspend fun cancelled() = context.closeCancelled()

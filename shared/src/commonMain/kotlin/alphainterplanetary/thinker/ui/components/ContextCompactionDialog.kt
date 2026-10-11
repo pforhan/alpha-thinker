@@ -87,7 +87,7 @@ fun ContextCompactionDialog(
         if (check.canSummarize) {
           ContextChoiceRow(
             title = "Summarize the earlier phases",
-            detail = "Asks the model to condense ${phaseList(check)}, one phase at a " +
+            detail = "Asks the engine to condense ${phaseList(check)}, one phase at a " +
               "time, oldest first. Keeps their substance, costs an extra moment per " +
               "phase.",
             isDefault = false,

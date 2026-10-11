@@ -67,6 +67,32 @@ class ActivityRecordTest {
   }
 
   @Test
+  fun `source prefers the engine over the task-runner wrapper`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration, LogSource.RemoteLLM),
+        entry(3, "task-1", "response: 1 questions, done=false", LogCategory.QuestionGeneration, LogSource.RemoteLLM),
+        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals(LogSource.RemoteLLM, activity.source)
+  }
+
+  @Test
+  fun `source falls back to the wrapper when no engine row filed one`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals(LogSource.TaskRunner, activity.source)
+  }
+
+  @Test
   fun `summary prefers the last response row else the newest row`() {
     val activity = titleActivity(
       listOf(
@@ -131,15 +157,44 @@ class ActivityRecordTest {
   }
 
   @Test
-  fun `category is the activity's shared category`() {
+  fun `category aggregates the distinct work categories in order`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "input: x", LogCategory.TitleRecommendation),
-        entry(2, "task-1", "response: Title", LogCategory.TitleRecommendation),
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "prompt: SYSTEM\nSummarize", LogCategory.PriorSummary),
+        entry(3, "task-1", "response: a summary", LogCategory.PriorSummary),
+        entry(4, "task-1", "prompt: SYSTEM\nQuestions", LogCategory.QuestionGeneration),
+        entry(5, "task-1", "response: 4 questions, done=false", LogCategory.QuestionGeneration),
+        entry(6, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
-    assertEquals(LogCategory.TitleRecommendation, activity.category)
+    assertEquals("Prior-phase summary • Question generation", activity.category)
+  }
+
+  @Test
+  fun `category omits the task-run lifecycle wrapper`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "response: 1 questions, done=false", LogCategory.QuestionGeneration),
+        entry(3, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Question generation", activity.category)
+  }
+
+  @Test
+  fun `category falls back to Task for a pure lifecycle activity`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals(LogCategory.TaskRun.label, activity.category)
   }
 
   @Test

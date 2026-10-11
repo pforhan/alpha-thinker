@@ -24,17 +24,37 @@ class ActivityRecord private constructor(
   val latest: LogEntry
     get() = entries.maxBy { it.id ?: 0L }
 
-  /** The activity's topic — all rows of an activity share one category. */
-  val category: LogCategory
-    get() = entries.first().category
+  /**
+   * The activity's topics as a display string: the distinct work categories its
+   * rows carry, in the order they first appear, joined by `" • "`. The
+   * [LogCategory.TaskRun] lifecycle wrapper is omitted (every task has one), so
+   * a generation activity reads "Question generation" or, for a fan-out,
+   * "Prior-phase summary • Question generation"; a pure lifecycle activity
+   * falls back to "Task".
+   */
+  val category: String
+    get() = workCategories().joinToString(CATEGORY_SEPARATOR) { it.label }
+      .ifEmpty { entries.first().category.label }
+
+  /** The distinct, non-lifecycle categories the activity's rows carry, in order. */
+  private fun workCategories(): List<LogCategory> =
+    entries.map { it.category }.filter { it != LogCategory.TaskRun }.distinct()
 
   /** The activity's project — the first populated project id across its rows, if any. */
   val projectId: String?
     get() = entries.firstNotNullOfOrNull { it.projectId }
 
-  /** The first populated source across the activity's rows. */
+  /**
+   * The producer behind the activity. Task-runner lifecycle rows bracket every
+   * task (the `started:`/terminal rows, and the repository's compaction notes),
+   * so the first populated source would always read "Task runner"; prefer the
+   * first non-[LogSource.TaskRunner] source — the engine that did the work —
+   * falling back to the wrapper when the activity has no engine rows.
+   */
   val source: LogSource?
-    get() = entries.firstNotNullOfOrNull { it.source }
+    get() = entries.firstNotNullOfOrNull { row ->
+      row.source?.takeIf { it != LogSource.TaskRunner }
+    } ?: entries.firstNotNullOfOrNull { it.source }
 
   /**
    * Elapsed time across the activity, derived solely from the clumped rows'
@@ -67,7 +87,7 @@ class ActivityRecord private constructor(
       failureHeadline()?.let { return it }
 
       val kind = taskKind()
-      if (kind?.isGeneration == true || category == LogCategory.QuestionGeneration) {
+      if (kind?.isGeneration == true || entries.any { it.category == LogCategory.QuestionGeneration }) {
         batchCount()?.let { count -> return batchSummary(count) }
       }
 
@@ -126,7 +146,7 @@ class ActivityRecord private constructor(
   /** A title recommendation headline from the activity's `response:` row, if any. */
   private fun titleSummary(): String? {
     val isTitleActivity = taskKind() == TaskKind.TitleRecommendation ||
-      category == LogCategory.TitleRecommendation
+      entries.any { it.category == LogCategory.TitleRecommendation }
     if (!isTitleActivity) return null
     val text = entries.lastOrNull { it.isDetailResponse() }
       ?.log
@@ -162,6 +182,9 @@ class ActivityRecord private constructor(
       "standalone-${entries.indexOf(entry)}"
   }
 }
+
+/** Joins an activity's distinct topic labels into its [ActivityRecord.category]. */
+private const val CATEGORY_SEPARATOR = " • "
 
 private val RESPONSE_PREFIXES = listOf(
   LogMarkers.Response,

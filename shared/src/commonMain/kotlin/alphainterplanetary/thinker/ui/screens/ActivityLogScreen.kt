@@ -140,7 +140,7 @@ private fun ActivityLogCard(item: ActivityLogItem) {
         Column(modifier = Modifier.weight(1f)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-              text = activity.category.label,
+              text = activity.category,
               style = MaterialTheme.typography.titleSmall,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis,

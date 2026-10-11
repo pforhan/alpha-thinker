@@ -22,7 +22,8 @@ import alphainterplanetary.thinker.util.now
  * [response] and [closeFailed] also take the verbatim payload behind their
  * message ([LogEntry.raw]) — the unparsed model reply — which rides along on
  * the row rather than becoming a row of its own, so the outcome rows stay one
- * line each in the viewer.
+ * line each in the viewer. A blank payload is dropped rather than filed: there
+ * is nothing to show, and an empty payload reads as a truncated one.
  */
 class LogContext internal constructor(
   private val log: ActivityLogger,
@@ -78,7 +79,7 @@ class LogContext internal constructor(
         source = source,
         log = text,
         timestamp = now(),
-        raw = raw,
+        raw = raw?.ifBlank { null },
       )
     )
   }

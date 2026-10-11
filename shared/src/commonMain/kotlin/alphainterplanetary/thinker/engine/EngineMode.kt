@@ -1,7 +1,5 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.LogSource
-
 /**
  * The selectable planning backends (ENG-DESIGN.md "Engine modes"). `Lite` is
  * the built-in fallback ([HardcodedPlanningEngine]); the other modes host LLM
@@ -14,7 +12,6 @@ enum class EngineMode(
   val key: String,
   val label: String,
   val description: String,
-  val logSource: LogSource,
   /**
    * The capabilities implied by choosing this mode. [EngineMode.Lite] runs the
    * built-in question library entirely on device, so it has none; the LLM modes
@@ -31,28 +28,24 @@ enum class EngineMode(
     key = "lite",
     label = "Offline",
     description = "Built-in question library. Runs entirely on this device — no network, no language model.",
-    logSource = LogSource.Lite,
     emptySet(),
   ),
   OnDevice(
     key = "on-device",
     label = "On device",
     description = "System models (Gemini Nano / Apple Foundation) running locally.",
-    logSource = LogSource.LocalLLM,
     setOf(EngineCapability.Llm),
   ),
   Remote(
     key = "remote",
     label = "Remote",
     description = "A cloud or localhost endpoint (OpenAI-compatible / Ollama).",
-    logSource = LogSource.RemoteLLM,
     setOf(EngineCapability.Network, EngineCapability.Llm),
   ),
   Downloaded(
     key = "downloaded",
     label = "Downloaded",
     description = "An in-process model installed on this device (LiteRT-LM).",
-    logSource = LogSource.LocalLLM,
     setOf(EngineCapability.Llm),
   ),
   ;
