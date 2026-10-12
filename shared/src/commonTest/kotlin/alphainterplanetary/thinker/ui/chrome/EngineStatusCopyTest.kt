@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
  * announces and the value printed in the row beside it cannot call the same state
  * two different things.
  */
-class EngineStatusTextTest {
+class EngineStatusCopyTest {
   @Test
   fun aValuelessSlotIsDescribedInTheSameWordsAsItsSentence() {
     val status = engineStatus(mode = EngineMode.Remote, remoteBaseUrl = "   ")
