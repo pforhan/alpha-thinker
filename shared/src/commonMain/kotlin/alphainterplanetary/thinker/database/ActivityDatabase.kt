@@ -14,7 +14,7 @@ import kotlinx.coroutines.Dispatchers
  */
 @Database(
   entities = [LogEntryEntity::class],
-  version = 3,
+  version = 4,
   exportSchema = false,
 )
 @ConstructedBy(ActivityDatabaseConstructor::class)

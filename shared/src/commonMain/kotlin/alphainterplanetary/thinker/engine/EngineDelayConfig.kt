@@ -5,7 +5,7 @@ import kotlin.time.Duration.Companion.seconds
 
 /** One [PlanningEngine] interaction that the artificial testing delay can target. */
 enum class EngineInteraction(val label: String) {
-  RecommendTitle("Recommend title"),
+  TitleRecommendation("Title recommendation"),
   QuestionGeneration("Question generation"),
 }
 

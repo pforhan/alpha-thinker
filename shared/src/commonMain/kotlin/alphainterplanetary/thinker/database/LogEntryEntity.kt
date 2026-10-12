@@ -6,16 +6,15 @@ import androidx.room3.PrimaryKey
 
 /**
  * Append-only storage row for the app-wide activity log. Timestamps persist as
- * epoch millis like every other entity in this app's schema; enums are stored
- * as their names (the app-wide convention). Domain mapping lives in `Mappers.kt`
- * alongside the other entities.
+ * epoch millis like every other entity in this app's schema; [category] and
+ * [source] persist as enum names, decoded in `Mappers.kt` alongside the other
+ * entities.
  */
 @Entity(
   tableName = "log_events",
   indices = [
     Index("activityId"),
     Index("projectId"),
-    Index(value = ["activityId", "id"]),
   ],
 )
 data class LogEntryEntity(

@@ -11,7 +11,7 @@ enum class SettingsKey(val storageKey: String) {
   PhaseTheme("phase-theme"),
   EngineMode("engine-mode"),
   SlowDownPlanningEngine("slow-down-planning-engine"),
-  EngineRecommendTitleDelay("engine-delay-recommend-title"),
+  EngineTitleRecommendationDelay("engine-delay-recommend-title"),
   EngineQuestionGenerationDelay("engine-delay-question-generation"),
   ActivityLoggerRetentionDays("activity-log-retention-days"),
   AnnouncedFailureActivityId("announced-failure-activity-id"),

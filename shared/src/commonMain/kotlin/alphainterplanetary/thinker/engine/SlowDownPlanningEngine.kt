@@ -18,7 +18,7 @@ class SlowDownPlanningEngine(
 ) : ForwardingPlanningEngine(delegate) {
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
-    maybeDelay(EngineInteraction.RecommendTitle)
+    maybeDelay(EngineInteraction.TitleRecommendation)
     return delegate.recommendTitle(synopsis, activityId)
   }
 

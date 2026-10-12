@@ -71,7 +71,7 @@ class SlowDownPlanningEngineTest {
         EngineDelayConfig(
           enabled = true,
           secondsByInteraction = mapOf(
-            EngineInteraction.RecommendTitle to 2,
+            EngineInteraction.TitleRecommendation to 2,
             EngineInteraction.QuestionGeneration to 5,
           ),
         ),
@@ -105,7 +105,7 @@ class SlowDownPlanningEngineTest {
         EngineDelayConfig(
           enabled = true,
           secondsByInteraction = mapOf(
-            EngineInteraction.RecommendTitle to 0,
+            EngineInteraction.TitleRecommendation to 0,
             EngineInteraction.QuestionGeneration to 2,
           ),
         ),

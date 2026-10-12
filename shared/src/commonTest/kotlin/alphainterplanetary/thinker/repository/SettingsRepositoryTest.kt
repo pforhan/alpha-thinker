@@ -212,7 +212,7 @@ class SettingsRepositoryTest {
   fun `engineDelay loads the persisted enable flag and delays at startup`() = runTest {
     val storage = FakeStorage()
     storage.saveSetting(SettingsKey.SlowDownPlanningEngine, "true")
-    storage.saveSetting(SettingsKey.EngineRecommendTitleDelay, "5")
+    storage.saveSetting(SettingsKey.EngineTitleRecommendationDelay, "5")
     storage.saveSetting(SettingsKey.EngineQuestionGenerationDelay, "30")
 
     val repo = repository(storage)
@@ -220,7 +220,7 @@ class SettingsRepositoryTest {
 
     val config = repo.engineDelay.value
     assertEquals(true, config.enabled)
-    assertEquals(5, config.secondsByInteraction[EngineInteraction.RecommendTitle])
+    assertEquals(5, config.secondsByInteraction[EngineInteraction.TitleRecommendation])
     assertEquals(30, config.secondsByInteraction[EngineInteraction.QuestionGeneration])
   }
 
@@ -250,14 +250,14 @@ class SettingsRepositoryTest {
   @Test
   fun `engineDelay loads a persisted zero delay at startup`() = runTest {
     val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.EngineRecommendTitleDelay, "0")
+    storage.saveSetting(SettingsKey.EngineTitleRecommendationDelay, "0")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
 
     assertEquals(
       0,
-      repo.engineDelay.value.secondsByInteraction[EngineInteraction.RecommendTitle],
+      repo.engineDelay.value.secondsByInteraction[EngineInteraction.TitleRecommendation],
     )
   }
 
@@ -302,25 +302,25 @@ class SettingsRepositoryTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setEngineDelay(EngineInteraction.RecommendTitle, 2)
+    repo.setEngineDelay(EngineInteraction.TitleRecommendation, 2)
 
     assertEquals(
       null,
-      storage.settings[SettingsKey.EngineRecommendTitleDelay.storageKey],
+      storage.settings[SettingsKey.EngineTitleRecommendationDelay.storageKey],
     )
   }
 
   @Test
   fun `an unknown persisted delay falls back to the default seconds`() = runTest {
     val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.EngineRecommendTitleDelay, "nope")
+    storage.saveSetting(SettingsKey.EngineTitleRecommendationDelay, "nope")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
 
     assertEquals(
       2,
-      repo.engineDelay.value.secondsByInteraction[EngineInteraction.RecommendTitle],
+      repo.engineDelay.value.secondsByInteraction[EngineInteraction.TitleRecommendation],
     )
   }
 

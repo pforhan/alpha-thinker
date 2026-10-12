@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.tasks
 
-/** Human title for a task kind, e.g. for the Task Manager rows. */
+/** Human title for a task kind, e.g. for the Task Manager rows and activity headlines. */
 val TaskKind.title: String
   get() = when (this) {
     TaskKind.QuestionGeneration -> "Question generation"
@@ -16,13 +16,4 @@ val TaskKind.progressLabel: String
     TaskKind.TitleRecommendation -> "Generating title"
     TaskKind.SynopsisRewrite -> "Rewriting synopsis"
     TaskKind.AutoArchive -> "Reviewing answers"
-  }
-
-/** Human phrase for the kind, used in failure/success headlines. */
-val TaskKind.activityLabel: String
-  get() = when (this) {
-    TaskKind.QuestionGeneration -> "Question generation"
-    TaskKind.TitleRecommendation -> "Title recommendation"
-    TaskKind.SynopsisRewrite -> "Synopsis rewrite"
-    TaskKind.AutoArchive -> "Auto-archive"
   }

@@ -587,7 +587,7 @@ class ProjectDetailViewModelTest {
         config = MutableStateFlow(
           EngineDelayConfig(
             enabled = true,
-            secondsByInteraction = mapOf(EngineInteraction.RecommendTitle to 5),
+            secondsByInteraction = mapOf(EngineInteraction.TitleRecommendation to 5),
           )
         ),
       ),

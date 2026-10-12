@@ -263,7 +263,7 @@ class SettingsRepository @Inject constructor(
 
   private val EngineInteraction.settingsKey: SettingsKey
     get() = when (this) {
-      EngineInteraction.RecommendTitle -> SettingsKey.EngineRecommendTitleDelay
+      EngineInteraction.TitleRecommendation -> SettingsKey.EngineTitleRecommendationDelay
       EngineInteraction.QuestionGeneration -> SettingsKey.EngineQuestionGenerationDelay
     }
 

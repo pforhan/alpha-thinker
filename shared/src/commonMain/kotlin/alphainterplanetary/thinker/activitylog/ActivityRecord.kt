@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.activitylog
 
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
-import alphainterplanetary.thinker.tasks.activityLabel
+import alphainterplanetary.thinker.tasks.title
 import kotlin.time.Duration
 
 /**
@@ -97,7 +97,7 @@ class ActivityRecord private constructor(
       titleSummary()?.let { return it }
 
       if (kind != null && succeededRow() != null) {
-        return "${kind.activityLabel} succeeded"
+        return "${kind.title} succeeded"
       }
 
       return lastResponseLine()?.log ?: latest.log
@@ -136,7 +136,7 @@ class ActivityRecord private constructor(
    */
   private fun failureHeadline(): String? {
     val line = entries.lastOrNull { it.isFailureLine() } ?: return null
-    val subject = taskKind()?.activityLabel
+    val subject = taskKind()?.title
     return when {
       line.log == LogMarkers.Cancelled -> if (subject != null) "$subject cancelled" else line.log
       else -> {
