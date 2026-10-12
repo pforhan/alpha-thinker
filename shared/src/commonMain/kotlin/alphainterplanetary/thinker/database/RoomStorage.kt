@@ -48,7 +48,8 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
     val existingQuestionIds = database.questionDao()
       .getQuestionsForProject(project.id)
       .map { it.id }
-    val orphanedQuestionIds = existingQuestionIds.filterNot { it in savedQuestionIds.toSet() }
+    val savedQuestionIdSet = savedQuestionIds.toSet()
+    val orphanedQuestionIds = existingQuestionIds.filterNot { it in savedQuestionIdSet }
     if (orphanedQuestionIds.isNotEmpty()) {
       database.questionDao().deleteQuestionsByIds(orphanedQuestionIds)
     }
@@ -58,11 +59,11 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
       database.answerDao().deleteAnswersByIds(orphanedAnswerIds)
     }
 
-    val savedRoundIds = project.rounds.map { it.id }
+    val savedRoundIds = project.rounds.map { it.id }.toSet()
     val orphanedRoundIds = database.roundDao()
       .getRoundsForProject(project.id)
       .map { it.id }
-      .filterNot { it in savedRoundIds.toSet() }
+      .filterNot { it in savedRoundIds }
     if (orphanedRoundIds.isNotEmpty()) {
       database.roundDao().deleteRoundsByIds(orphanedRoundIds)
     }
