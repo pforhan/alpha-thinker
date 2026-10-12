@@ -1,5 +1,8 @@
 package alphainterplanetary.thinker.database
 
+import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogEntry
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
@@ -38,44 +41,6 @@ fun Answer.toEntity() = AnswerEntity(
   createdAt = createdAt.toEpochMilliseconds(),
 )
 
-fun ProjectWithQuestions.toDomainModel(
-  answers: List<AnswerEntity>,
-  rounds: List<RoundEntity>,
-): Project =
-  answers.groupBy { it.questionId }.let { answersByQuestionId ->
-    Project(
-      id = project.id,
-      synopsis = project.synopsis,
-      editableTitle = project.editableTitle,
-      status = project.status,
-      questions = questions
-        .sortedBy { it.sortOrder }
-        .map { question -> question.toDomainModel(answersByQuestionId[question.id].orEmpty()) },
-      rounds = rounds.map { it.toDomainModel() },
-      createdAt = Instant.fromEpochMilliseconds(project.createdAt),
-      updatedAt = Instant.fromEpochMilliseconds(project.updatedAt)
-    )
-  }
-
-fun QuestionEntity.toDomainModel(answers: List<AnswerEntity>): Question = Question(
-  id = id,
-  text = text,
-  timestamp = Instant.fromEpochMilliseconds(createdAt),
-  roundId = roundId,
-  ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
-  answerId = answerId,
-  draftText = draftText,
-  draftUpdatedAt = draftUpdatedAt?.let { Instant.fromEpochMilliseconds(it) },
-  answers = answers.map { it.toDomainModel() }
-)
-
-fun AnswerEntity.toDomainModel() = Answer(
-  id = id,
-  questionId = questionId,
-  text = text,
-  createdAt = Instant.fromEpochMilliseconds(createdAt)
-)
-
 fun Round.toEntity() = RoundEntity(
   id = id,
   projectId = projectId,
@@ -88,7 +53,56 @@ fun Round.toEntity() = RoundEntity(
   outcomeDetail = outcomeDetail,
 )
 
-fun RoundEntity.toDomainModel() = Round(
+fun LogEntry.toEntity(): LogEntryEntity = LogEntryEntity(
+  id = id ?: 0,
+  projectId = projectId,
+  activityId = activityId,
+  category = category.name,
+  source = source?.name,
+  log = log,
+  timestampMillis = timestamp.toEpochMilliseconds(),
+  raw = raw,
+)
+
+fun ProjectWithQuestions.toModel(
+  answers: List<AnswerEntity>,
+  rounds: List<RoundEntity>,
+): Project =
+  answers.groupBy { it.questionId }.let { answersByQuestionId ->
+    Project(
+      id = project.id,
+      synopsis = project.synopsis,
+      editableTitle = project.editableTitle,
+      status = project.status,
+      questions = questions
+        .sortedBy { it.sortOrder }
+        .map { question -> question.toModel(answersByQuestionId[question.id].orEmpty()) },
+      rounds = rounds.map { it.toModel() },
+      createdAt = Instant.fromEpochMilliseconds(project.createdAt),
+      updatedAt = Instant.fromEpochMilliseconds(project.updatedAt)
+    )
+  }
+
+fun QuestionEntity.toModel(answers: List<AnswerEntity>): Question = Question(
+  id = id,
+  text = text,
+  timestamp = Instant.fromEpochMilliseconds(createdAt),
+  roundId = roundId,
+  ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
+  answerId = answerId,
+  draftText = draftText,
+  draftUpdatedAt = draftUpdatedAt?.let { Instant.fromEpochMilliseconds(it) },
+  answers = answers.map { it.toModel() }
+)
+
+fun AnswerEntity.toModel() = Answer(
+  id = id,
+  questionId = questionId,
+  text = text,
+  createdAt = Instant.fromEpochMilliseconds(createdAt)
+)
+
+fun RoundEntity.toModel() = Round(
   id = id,
   projectId = projectId,
   phase = requireNotNull(Phase.fromKey(phase)) { "Unknown phase key: $phase" },
@@ -99,3 +113,21 @@ fun RoundEntity.toDomainModel() = Round(
   outcome = RoundOutcome.valueOf(outcome),
   outcomeDetail = outcomeDetail,
 )
+
+fun LogEntryEntity.toModel(): LogEntry = LogEntry(
+  id = id,
+  projectId = projectId,
+  activityId = activityId,
+  category = parseCategory(category),
+  source = source?.let(::parseSource),
+  log = log,
+  timestamp = Instant.fromEpochMilliseconds(timestampMillis),
+  raw = raw,
+)
+
+/** Unknown stored categories degrade to [LogCategory.Info] rather than crash. */
+private fun parseCategory(name: String): LogCategory =
+  runCatching { LogCategory.valueOf(name) }.getOrElse { LogCategory.Info }
+
+private fun parseSource(name: String): LogSource? =
+  runCatching { LogSource.valueOf(name) }.getOrNull()

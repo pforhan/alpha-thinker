@@ -5,7 +5,7 @@ import alphainterplanetary.thinker.database.LogDao
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.toEntity
-import alphainterplanetary.thinker.database.toEntry
+import alphainterplanetary.thinker.database.toModel
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.coroutines.flow.Flow
@@ -108,14 +108,14 @@ class RoomActivityLogger(
   }
 
   override fun entries(): Flow<List<LogEntry>> =
-    dao.observeAll().map { entities -> entities.map { it.toEntry() } }
+    dao.observeAll().map { entities -> entities.map { it.toModel() } }
 
   override fun latestActivity(): Flow<ActivityRecord?> =
     dao.observeRecent(ActivityLogger.RecentActivityRowLimit)
-      .map { entities -> ActivityRecord.groupByActivity(entities.map { it.toEntry() }).firstOrNull() }
+      .map { entities -> ActivityRecord.groupByActivity(entities.map { it.toModel() }).firstOrNull() }
 
   override suspend fun entriesForProject(projectId: String): List<LogEntry> =
-    dao.allForProject(projectId).map { it.toEntry() }
+    dao.allForProject(projectId).map { it.toModel() }
 
   override suspend fun prune(retentionDays: Int, now: Instant): Int {
     val cutoff = now.minus(retentionDays.days)

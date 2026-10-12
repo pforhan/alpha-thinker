@@ -70,7 +70,7 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
 
   override suspend fun getProject(id: String): Project? {
     val data = database.projectDao().getProjectWithQuestions(id) ?: return null
-    return data.toDomainModel(
+    return data.toModel(
       database.answerDao().getAnswersForQuestions(data.questions.map { it.id }),
       database.roundDao().getRoundsForProject(id)
     )
@@ -82,7 +82,7 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
         .getAnswersForQuestions(rows.flatMap { row -> row.questions.map { it.id } })
       val roundsByProject = database.roundDao().getAllRounds().groupBy { it.projectId }
       return rows.map { row ->
-        row.toDomainModel(answers, roundsByProject[row.project.id].orEmpty())
+        row.toModel(answers, roundsByProject[row.project.id].orEmpty())
       }
     }
 

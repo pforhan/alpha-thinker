@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.model
 
-import alphainterplanetary.thinker.database.toDomainModel
 import alphainterplanetary.thinker.database.toEntity
+import alphainterplanetary.thinker.database.toModel
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -71,20 +71,20 @@ class RoundTest {
       origin = RoundOrigin.UserRequested,
       completedAt = Instant.fromEpochMilliseconds(500),
     )
-    assertEquals(original, original.toEntity().toDomainModel())
+    assertEquals(original, original.toEntity().toModel())
   }
 
   @Test
   fun `toEntity and back preserves an in-progress round`() {
     val original = round()
-    assertEquals(original, original.toEntity().toDomainModel())
+    assertEquals(original, original.toEntity().toModel())
   }
 
   @Test
   fun `an unknown phase key on entity load is rejected`() {
     val entity = round().toEntity().copy(phase = "not-a-phase")
     assertFailsWith<IllegalArgumentException> {
-      entity.toDomainModel()
+      entity.toModel()
     }
   }
 }

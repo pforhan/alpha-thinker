@@ -1,18 +1,14 @@
 package alphainterplanetary.thinker.database
 
-import alphainterplanetary.thinker.activitylog.LogCategory
-import alphainterplanetary.thinker.activitylog.LogEntry
-import alphainterplanetary.thinker.activitylog.LogSource
 import androidx.room3.Entity
 import androidx.room3.Index
 import androidx.room3.PrimaryKey
-import kotlin.time.Instant
 
 /**
- * Append-only storage row for the app-wide activity log (see [LogEntry]).
- * Timestamps persist as epoch millis like every other entity in this app's
- * schema; enums are stored as their names (the app-wide convention, see
- * [ProjectEntity.status]).
+ * Append-only storage row for the app-wide activity log. Timestamps persist as
+ * epoch millis like every other entity in this app's schema; enums are stored
+ * as their names (the app-wide convention). Domain mapping lives in `Mappers.kt`
+ * alongside the other entities.
  */
 @Entity(
   tableName = "log_events",
@@ -30,35 +26,6 @@ data class LogEntryEntity(
   val source: String? = null,
   val log: String,
   val timestampMillis: Long,
-  /** The verbatim payload behind [log] (see [LogEntry.raw]); rarely null. */
+  /** The verbatim payload behind [log] (see `LogEntry.raw`); rarely null. */
   val raw: String? = null,
 )
-
-fun LogEntry.toEntity(): LogEntryEntity = LogEntryEntity(
-  id = id ?: 0,
-  projectId = projectId,
-  activityId = activityId,
-  category = category.name,
-  source = source?.name,
-  log = log,
-  timestampMillis = timestamp.toEpochMilliseconds(),
-  raw = raw,
-)
-
-fun LogEntryEntity.toEntry(): LogEntry = LogEntry(
-  id = id,
-  projectId = projectId,
-  activityId = activityId,
-  category = parseCategory(category),
-  source = source?.let(::parseSource),
-  log = log,
-  timestamp = Instant.fromEpochMilliseconds(timestampMillis),
-  raw = raw,
-)
-
-/** Unknown stored categories degrade to [LogCategory.Info] rather than crash. */
-private fun parseCategory(name: String): LogCategory =
-  runCatching { LogCategory.valueOf(name) }.getOrElse { LogCategory.Info }
-
-private fun parseSource(name: String): LogSource? =
-  runCatching { LogSource.valueOf(name) }.getOrNull()
