@@ -339,9 +339,9 @@ configurable budget. Over budget, it trims by dropping answers while keeping
 question text, phase by phase from the earliest (resolved from each question's
 round; the current phase's answers are never dropped), and the repository hands
 the engine the already-trimmed list — the engine stays budget-ignorant, and the
-same decision is available to the UI. This renderer is the phase-grouped Q&A
-source the Markdown export rewrite (IMPLEMENTATION-PLAN.md item 283) should
-reuse, so one transcript serves both the prompts and the exported plan.
+same decision is available to the UI. The human-facing Markdown export (Phase 4)
+is expected to reuse the same state semantics and phase grouping rather than
+re-derive them; it stays a detailed document, not this terse transcript.
 
 Trimming is lossy, so a project that has outgrown the budget gets to choose
 instead: `ProjectRepository.checkContext` measures the transcript against the

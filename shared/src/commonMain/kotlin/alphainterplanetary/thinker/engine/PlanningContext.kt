@@ -20,9 +20,11 @@ import alphainterplanetary.thinker.phases.Phase
  * question is [SkippedNote] and nothing else, and an omitted answer keeps the
  * answer slot rather than reading as one the user never gave.
  *
- * This is the single transcript the app renders: the question prompt sends it
- * ([KoogPlanningEngine]), and the phase-grouped export is expected to build on
- * the same [line]s rather than write a second format.
+ * The question prompt sends this transcript ([KoogPlanningEngine]); the
+ * human-facing export (`ProjectRepository.exportProject`, rebuilt in Phase 4)
+ * is expected to share its state semantics and phase grouping rather than
+ * re-derive them, though the export renders a detailed document rather than
+ * these terse [line]s.
  *
  * Edge models have small context windows and answers run long, so a transcript
  * is measured against a budget ([estimateTokens], ~1 token ≈ [CharsPerToken]
