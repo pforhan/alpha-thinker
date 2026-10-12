@@ -100,9 +100,14 @@ enum class QuestionViewMode(
       .sortedBy { if (it == Unanswered) 0 else 1 }
   }
 
+  /** Whether this view renders per-phase section headers — [Answered]/[Ignored]. */
+  val hasSections: Boolean
+    get() = this == Answered || this == Ignored
+
   /**
    * The word a per-phase section header uses for its resolved count
-   * ("Phase 2: Research — 5 answered"). Empty for views without headers.
+   * ("Phase 2: Research — 5 answered"). Empty for views without headers, so
+   * its emptiness agrees with [hasSections].
    */
   val resolvedCountLabel: String
     get() = when (this) {
@@ -128,7 +133,7 @@ enum class QuestionViewMode(
     questions: List<Question>,
     phaseFor: (Question) -> Phase,
   ): List<PhaseSection> {
-    if (this != Answered && this != Ignored) return emptyList()
+    if (!hasSections) return emptyList()
     val byPhase = LinkedHashMap<Phase, MutableList<Question>>()
     for (question in questions) {
       byPhase.getOrPut(phaseFor(question)) { mutableListOf() }.add(question)

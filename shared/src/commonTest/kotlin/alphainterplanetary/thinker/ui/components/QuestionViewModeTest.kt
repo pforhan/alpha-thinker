@@ -289,4 +289,11 @@ class QuestionViewModeTest {
     assertEquals("", QuestionViewMode.Unanswered.resolvedCountLabel)
     assertEquals("", QuestionViewMode.Draft.resolvedCountLabel)
   }
+
+  @Test
+  fun `section headers and their resolved count label agree`() {
+    QuestionViewMode.entries.forEach { view ->
+      assertEquals(view.hasSections, view.resolvedCountLabel.isNotEmpty(), "for $view")
+    }
+  }
 }

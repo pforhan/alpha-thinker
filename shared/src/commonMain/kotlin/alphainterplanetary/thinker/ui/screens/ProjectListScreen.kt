@@ -250,10 +250,11 @@ private fun ProjectListItem(
     }
   }
 
+  val deleteAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete)
   SwipeableCard(
     state = dismissState,
-    startAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete),
-    endAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete),
+    startAction = deleteAction,
+    endAction = deleteAction,
     onSwipeStart = handleSwipeDismiss,
     onSwipeEnd = handleSwipeDismiss,
     settleAfterDismiss = false,
