@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.tools
 
+import alphainterplanetary.thinker.engine.ForwardingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.PlanningEngine
 import alphainterplanetary.thinker.engine.QuestionBatch
@@ -451,16 +452,12 @@ class ProjectSimulatorTest {
  * observed at are the ones a fake that finishes instantly never reaches.
  */
 private class ScriptedPlanningEngine(
-  private val delegate: PlanningEngine,
+  delegate: PlanningEngine,
   private val parkOnCall: Int? = null,
   private val gate: CompletableDeferred<Unit>? = null,
   private val failFromCall: Int? = null,
-) : PlanningEngine {
+) : ForwardingPlanningEngine(delegate) {
   private var calls = 0
-
-  override val source get() = delegate.source
-  override val contextWindowTokens get() = delegate.contextWindowTokens
-  override val canSummarize get() = delegate.canSummarize
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String =
     delegate.recommendTitle(synopsis, activityId)
@@ -505,14 +502,10 @@ private class ScriptedPlanningEngine(
  * the rest, so a run's second ask at a phase can be the one that lands.
  */
 private class FailFirstPlanningEngine(
-  private val delegate: PlanningEngine,
+  delegate: PlanningEngine,
   private val failures: Int,
-) : PlanningEngine {
+) : ForwardingPlanningEngine(delegate) {
   private var calls = 0
-
-  override val source get() = delegate.source
-  override val contextWindowTokens get() = delegate.contextWindowTokens
-  override val canSummarize get() = delegate.canSummarize
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String =
     delegate.recommendTitle(synopsis, activityId)

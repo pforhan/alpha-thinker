@@ -2,7 +2,6 @@ package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.LogCategory
-import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.PlanningContext.PhaseSummary
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
@@ -25,7 +24,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * log. An engine that did report gets exactly one row pair per request and no
  * second, duplicate summary.
  *
- * [LogCategory] is chosen per interaction and [LogSource] reflects whichever
+ * [LogCategory] is chosen per interaction and [source] reflects whichever
  * engine actually ran. Other decorators need no change: a plain `suspend`
  * delegation (as [SlowDownPlanningEngine] does) carries the scope through.
  *
@@ -37,25 +36,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * activity's own story.
  */
 class LoggingPlanningEngine(
-  private val delegate: PlanningEngine,
+  delegate: PlanningEngine,
   private val log: ActivityLogger,
-) : PlanningEngine {
-
-  override val source: LogSource
-    get() = delegate.source
-
-  /**
-   * The delegate's answer, not this decorator's: the window is a fact about the
-   * model the delegate would call, and this decorator only observes.
-   */
-  override val contextWindowTokens: Int?
-    get() = delegate.contextWindowTokens
-
-  /**
-   * The delegate's answer; logging an engine adds no capability to it.
-   */
-  override val canSummarize: Boolean
-    get() = delegate.canSummarize
+) : ForwardingPlanningEngine(delegate) {
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String =
     logged(

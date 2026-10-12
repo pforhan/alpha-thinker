@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import kotlinx.coroutines.delay
@@ -14,20 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
  * on the Task Manager long enough to exercise and inspect its UI and code paths.
  */
 class SlowDownPlanningEngine(
-  private val delegate: PlanningEngine,
+  delegate: PlanningEngine,
   private val config: StateFlow<EngineDelayConfig>,
-) : PlanningEngine {
-
-  override val source: LogSource
-    get() = delegate.source
-
-  /** The delegate's answer; delaying an engine doesn't change its window. */
-  override val contextWindowTokens: Int?
-    get() = delegate.contextWindowTokens
-
-  /** The delegate's answer; delaying an engine adds no capability to it. */
-  override val canSummarize: Boolean
-    get() = delegate.canSummarize
+) : ForwardingPlanningEngine(delegate) {
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     maybeDelay(EngineInteraction.RecommendTitle)
