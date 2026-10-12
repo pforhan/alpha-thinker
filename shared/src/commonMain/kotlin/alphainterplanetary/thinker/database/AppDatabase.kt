@@ -13,7 +13,7 @@ import kotlinx.coroutines.Dispatchers
  */
 @Database(
   entities = [ProjectEntity::class, QuestionEntity::class, AnswerEntity::class, RoundEntity::class, SettingsEntity::class],
-  version = 10,
+  version = 11,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)

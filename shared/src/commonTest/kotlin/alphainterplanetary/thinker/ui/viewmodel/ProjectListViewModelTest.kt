@@ -50,7 +50,7 @@ class ProjectListViewModelTest {
   private fun project(id: String = "p1"): Project = Project(
     id = id,
     synopsis = "Synopsis for $id",
-    editableTitle = "Title $id",
+    title = "Title $id",
     status = "Draft",
     questions = emptyList(),
     createdAt = defaultTestInstant,

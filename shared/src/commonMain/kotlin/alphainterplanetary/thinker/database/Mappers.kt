@@ -15,7 +15,7 @@ import kotlin.time.Instant
 fun Project.toEntity() = ProjectEntity(
   id = id,
   synopsis = synopsis,
-  editableTitle = editableTitle,
+  title = title,
   createdAt = createdAt.toEpochMilliseconds(),
   updatedAt = updatedAt.toEpochMilliseconds(),
   status = status
@@ -72,7 +72,7 @@ fun ProjectWithQuestions.toModel(
     Project(
       id = project.id,
       synopsis = project.synopsis,
-      editableTitle = project.editableTitle,
+      title = project.title,
       status = project.status,
       questions = questions
         .sortedBy { it.sortOrder }

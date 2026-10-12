@@ -254,12 +254,12 @@ class KoogPlanningEngine(
      * written against exactly the transcript it is meant to replace.
      */
     fun summarizeUserPrompt(
-      editableTitle: String,
+      title: String,
       synopsis: String,
       phase: Phase,
       transcript: String,
     ): String =
-      "Planning a project titled \"$editableTitle\".\n" +
+      "Planning a project titled \"$title\".\n" +
         "Project synopsis:\n$synopsis\n\n" +
         "This planning phase (${phase.label}) is finished:\n" +
         "$transcript\n\n" +
@@ -277,13 +277,13 @@ class KoogPlanningEngine(
      * omitted, so a model never re-asks what the summary already answers.
      */
     fun questionsUserPrompt(
-      editableTitle: String,
+      title: String,
       synopsis: String,
       phase: Phase,
       previousQuestions: List<Question>,
       priorSummaries: List<PhaseSummary> = emptyList(),
     ): String =
-      "Planning a project titled \"$editableTitle\".\n" +
+      "Planning a project titled \"$title\".\n" +
         "Project synopsis:\n$synopsis\n\n" +
         "The interview so far:\n" +
         PlanningContext.render(previousQuestions, priorSummaries).ifEmpty { "(none)" } + "\n\n" +

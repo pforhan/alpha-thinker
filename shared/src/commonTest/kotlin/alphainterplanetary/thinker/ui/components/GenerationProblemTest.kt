@@ -34,7 +34,7 @@ class GenerationProblemTest {
 
   @Test
   fun `a failed title task on a project with no title is a title problem`() {
-    val project = project(editableTitle = "")
+    val project = project(title = "")
 
     val failed = task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Failed, error = "boom")
 
@@ -43,7 +43,7 @@ class GenerationProblemTest {
 
   @Test
   fun `a failed title task is not a problem once the project has a title`() {
-    val project = project(editableTitle = "User typed this")
+    val project = project(title = "User typed this")
 
     val failed = task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Failed, error = "boom")
 
@@ -93,7 +93,7 @@ class GenerationProblemTest {
 
   @Test
   fun `tasks belonging to another project are ignored`() {
-    val project = project(editableTitle = "")
+    val project = project(title = "")
 
     val otherProjectFailed = task(
       projectId = "p2",
@@ -108,7 +108,7 @@ class GenerationProblemTest {
   @Test
   fun `a missing title problem wins over a question problem`() {
     val project = project(
-      editableTitle = "",
+      title = "",
       rounds = listOf(round("r1", outcome = RoundOutcome.Failed, outcomeDetail = "boom")),
     )
 
@@ -124,13 +124,13 @@ class GenerationProblemTest {
   }
 
   private fun project(
-    editableTitle: String = "A project",
+    title: String = "A project",
     questions: List<Question> = emptyList(),
     rounds: List<Round> = emptyList(),
   ): Project = Project(
     id = "p1",
     synopsis = "Synopsis",
-    editableTitle = editableTitle,
+    title = title,
     status = "Draft",
     questions = questions,
     rounds = rounds,

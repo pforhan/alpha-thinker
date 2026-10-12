@@ -60,7 +60,7 @@ class ProjectRepositoryTest {
     val project = repository.createProject("My synopsis", title = longTitle)
     testScheduler.advanceUntilIdle()
 
-    assertEquals(longTitle.take(30), project.editableTitle)
+    assertEquals(longTitle.take(30), project.title)
     assertEquals("My synopsis", project.synopsis)
     assertEquals("Draft", project.status)
   }
@@ -73,13 +73,13 @@ class ProjectRepositoryTest {
       val repository = repo(storage = storage, generator = generator)
 
       val project = repository.createProject("My synopsis")
-      assertEquals("", project.editableTitle, "the shell returns before the title lands")
+      assertEquals("", project.title, "the shell returns before the title lands")
 
       testScheduler.advanceUntilIdle()
 
       val persisted = storage.getProject(project.id)
       assertNotNull(persisted)
-      assertEquals("From Generator", persisted.editableTitle)
+      assertEquals("From Generator", persisted.title)
       assertEquals("My synopsis", persisted.synopsis)
       assertEquals("Draft", persisted.status)
     }
@@ -92,7 +92,7 @@ class ProjectRepositoryTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals("leading and trailing", project.synopsis)
-    assertEquals("My Title", project.editableTitle)
+    assertEquals("My Title", project.title)
   }
 
   @Test
@@ -109,7 +109,7 @@ class ProjectRepositoryTest {
 
     assertEquals(1, generator.calls.size)
     val call = generator.calls.single()
-    assertEquals("Recommended Title", call.editableTitle)
+    assertEquals("Recommended Title", call.title)
     assertEquals("My synopsis", call.synopsis)
   }
 
@@ -200,7 +200,7 @@ class ProjectRepositoryTest {
 
       val persisted = storage.getProject(project.id)
       assertNotNull(persisted)
-      assertEquals("Enqueued Engine", persisted.editableTitle)
+      assertEquals("Enqueued Engine", persisted.title)
       assertEquals(listOf("qa"), persisted.questions.map { it.id })
       assertEquals(1, enqueued.calls.size)
       assertTrue(later.calls.isEmpty(), "the later engine never touches the locked task")
@@ -218,21 +218,21 @@ class ProjectRepositoryTest {
     repository.recommendTitle("p1")
     testScheduler.advanceUntilIdle()
 
-    assertEquals("Second Try", storage.getProject("p1")?.editableTitle)
+    assertEquals("Second Try", storage.getProject("p1")?.title)
     assertEquals(TaskStatus.Succeeded, runner.tasks.value.single().status)
   }
 
   @Test
   fun `recommendTitle never overwrites a title the project already has`() = runTest {
     val generator = FakePlanningEngine().apply { recommendedTitle = "Should Not Land" }
-    val storage = FakeStorage(mutableMapOf("p1" to untitledProject().copy(editableTitle = "Mine")))
+    val storage = FakeStorage(mutableMapOf("p1" to untitledProject().copy(title = "Mine")))
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     val repository = repo(storage = storage, generator = generator, runner = runner)
 
     repository.recommendTitle("p1")
     testScheduler.advanceUntilIdle()
 
-    assertEquals("Mine", storage.getProject("p1")?.editableTitle)
+    assertEquals("Mine", storage.getProject("p1")?.title)
   }
 
   // ---------- updateProject ----------
@@ -242,7 +242,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "old synopsis",
-      editableTitle = "old title",
+      title = "old title",
       status = "Draft",
       questions = listOf(
         question("q1", answers = listOf(answer("q1", "Answer", id = "1"))),
@@ -262,7 +262,7 @@ class ProjectRepositoryTest {
     )
 
     assertNotNull(updated)
-    assertEquals("New Title", updated.editableTitle)
+    assertEquals("New Title", updated.title)
     assertEquals("New Synopsis", updated.synopsis)
     assertEquals(1, updated.questions[0].answers.size)
     assertTrue(updated.questions[0].isAnswered)
@@ -274,7 +274,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "synopsis",
-      editableTitle = "title",
+      title = "title",
       status = "Draft",
       questions = listOf(
         question("q1", answers = listOf(answer("q1", "Answer", id = "7"))),
@@ -323,7 +323,7 @@ class ProjectRepositoryTest {
     val project = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(
         question("answered", answers = listOf(answer("answered", "A", id = "1"))),
@@ -346,7 +346,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1")),
       createdAt = now,
@@ -374,7 +374,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1")),
       createdAt = now,
@@ -401,7 +401,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1", draftText = "in progress", draftUpdatedAt = now)),
       createdAt = now,
@@ -428,7 +428,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(
         question("q1", answers = listOf(answer("q1", "Answer", id = "1"))),
@@ -460,7 +460,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(
         question("q1", answers = listOf(answer("q1", "Answer", id = "1"))),
@@ -490,7 +490,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(
         question("q1", answers = listOf(answer("q1", "First", id = "1"))),
@@ -520,7 +520,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1")),
       createdAt = now,
@@ -551,7 +551,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1")),
       createdAt = now,
@@ -579,7 +579,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1"), question("q2")),
       createdAt = now,
@@ -606,7 +606,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1", ignoredAt = now)),
       createdAt = now,
@@ -633,7 +633,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1")),
       createdAt = now,
@@ -698,7 +698,7 @@ class ProjectRepositoryTest {
         "p1" to Project(
           id = "p1",
           synopsis = "s",
-          editableTitle = "t",
+          title = "t",
           status = "Draft",
           questions = listOf(
             question(
@@ -821,7 +821,7 @@ class ProjectRepositoryTest {
         "p1" to Project(
           id = "p1",
           synopsis = "s",
-          editableTitle = "t",
+          title = "t",
           status = "Draft",
           questions = listOf(
             question(
@@ -917,7 +917,7 @@ class ProjectRepositoryTest {
         "p1" to Project(
           id = "p1",
           synopsis = "s",
-          editableTitle = "t",
+          title = "t",
           status = "Draft",
           questions = listOf(question("q1", "A short question?")),
           rounds = listOf(round("r1", phase = BuiltInPhase.ScopeGoals)),
@@ -1036,7 +1036,7 @@ class ProjectRepositoryTest {
       "the oldest phase goes first, and one summary is enough to fit here",
     )
     val summary = generator.summarizeCalls.single()
-    assertEquals("t", summary.editableTitle)
+    assertEquals("t", summary.title)
     assertEquals("s", summary.synopsis)
     assertTrue(
       summary.transcript.contains(PhasedAnswerText),
@@ -1352,7 +1352,7 @@ class ProjectRepositoryTest {
   private fun phaseProject(round: Round): Project = Project(
     id = "p1",
     synopsis = "s",
-    editableTitle = "t",
+    title = "t",
     status = "Draft",
     questions = listOf(question("q1")),
     rounds = listOf(round),
@@ -1363,7 +1363,7 @@ class ProjectRepositoryTest {
   private fun untitledProject(): Project = Project(
     id = "p1",
     synopsis = "s",
-    editableTitle = "",
+    title = "",
     status = "Draft",
     questions = emptyList(),
     rounds = emptyList(),
@@ -1381,7 +1381,7 @@ class ProjectRepositoryTest {
   private fun phasedProject(): Project = Project(
     id = "p1",
     synopsis = "s",
-    editableTitle = "t",
+    title = "t",
     status = "Draft",
     questions = listOf(
       question("q1", "Q1?", answers = listOf(answer("q1", PhasedAnswerText, id = "a1")), roundId = "r1"),
@@ -1610,7 +1610,7 @@ class ProjectRepositoryTest {
         "p1" to Project(
           id = "p1",
           synopsis = "s",
-          editableTitle = "t",
+          title = "t",
           status = "Draft",
           questions = listOf(question("q1")),
           rounds = listOf(
@@ -1714,7 +1714,7 @@ class ProjectRepositoryTest {
       val call = generator.calls.single()
       assertEquals(newRound.id, call.roundId)
       assertEquals(BuiltInPhase.Research, call.phase)
-      assertEquals("t", call.editableTitle)
+      assertEquals("t", call.title)
       assertEquals("s", call.synopsis)
     }
 
@@ -1723,7 +1723,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = emptyList(),
       rounds = listOf(
@@ -1751,7 +1751,7 @@ class ProjectRepositoryTest {
       Project(
         id = "p1",
         synopsis = "s",
-        editableTitle = "t",
+        title = "t",
         status = "Draft",
         questions = listOf(question("q1", "Already asked?")),
         rounds = listOf(
@@ -1783,7 +1783,7 @@ class ProjectRepositoryTest {
   private fun revisitedProject(): Project = Project(
     id = "p1",
     synopsis = "s",
-    editableTitle = "t",
+    title = "t",
     status = "Draft",
     questions = listOf(
       question("oldOpen"),
@@ -1916,7 +1916,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1")),
       createdAt = now,
@@ -1936,7 +1936,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1", ignoredAt = now)),
       createdAt = now,
@@ -1958,7 +1958,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(
         question("q1", answers = listOf(answer("q1", "A", id = "7"))),
@@ -1984,7 +1984,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1", draftText = "in progress", draftUpdatedAt = now)),
       createdAt = now,
@@ -2009,7 +2009,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1")),
       createdAt = now,
@@ -2034,7 +2034,7 @@ class ProjectRepositoryTest {
     val original = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(
         question("q1", answers = listOf(answer("q1", "A", id = "7"))),
@@ -2060,7 +2060,7 @@ class ProjectRepositoryTest {
     val project = Project(
       id = "p1",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1")),
       createdAt = now,
@@ -2080,7 +2080,7 @@ class ProjectRepositoryTest {
     val project = Project(
       id = "p1",
       synopsis = "Build a thing",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(
         question("q1", "What is it?", answers = listOf(answer("q1", "A thing"))),

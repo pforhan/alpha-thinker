@@ -142,7 +142,7 @@ fun ProjectDetailScreen(
   // derived failure, so it also covers a title that came back empty.
   val untitled = (uiState as? ProjectDetailUiState.Success)
     ?.project
-    ?.editableTitle
+    ?.title
     ?.isBlank() == true
 
   var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
@@ -168,10 +168,10 @@ fun ProjectDetailScreen(
       val title = when (val ui = uiState) {
         ProjectDetailUiState.Loading -> "Loading..."
         is ProjectDetailUiState.Success -> {
-          if (titleGenerating && ui.project.editableTitle.isBlank()) {
+          if (titleGenerating && ui.project.title.isBlank()) {
             "Generating title…"
           } else {
-            ui.project.editableTitle.ifBlank { UntitledProjectLabel }
+            ui.project.title.ifBlank { UntitledProjectLabel }
           }
         }
         is ProjectDetailUiState.Error -> "Error"

@@ -12,7 +12,7 @@ import alphainterplanetary.thinker.model.RoundOutcome
 data class ProjectEntity(
   @PrimaryKey val id: String,
   val synopsis: String,
-  val editableTitle: String,
+  val title: String,
   val createdAt: Long,
   val updatedAt: Long,
   val status: String,

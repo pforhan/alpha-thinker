@@ -121,7 +121,7 @@ class SampleProjectGeneratorTest {
     generator.generate()
 
     val stress = storage.projects.getValue("sample-stress")
-    assertTrue(stress.editableTitle.length > 100, "stress title should be very long")
+    assertTrue(stress.title.length > 100, "stress title should be very long")
     assertTrue(stress.synopsis.length > 1000, "stress synopsis should be very long")
     assertTrue(
       stress.questions.all { it.text.length > 100 },

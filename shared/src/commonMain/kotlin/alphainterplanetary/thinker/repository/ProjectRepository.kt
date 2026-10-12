@@ -92,7 +92,7 @@ class ProjectRepository @Inject constructor(
     val project = Project(
       id = projectId,
       synopsis = synopsis.trim(),
-      editableTitle = resolvedTitle,
+      title = resolvedTitle,
       status = "Draft",
       questions = emptyList(),
       rounds = listOf(round),
@@ -131,12 +131,12 @@ class ProjectRepository @Inject constructor(
       // Re-checked here, not just at the call site: the project may have been
       // titled (by the user, or by a recommendation that did land) between the
       // enqueue and the run.
-      if (reloaded.editableTitle.isNotBlank()) return@enqueue
+      if (reloaded.title.isNotBlank()) return@enqueue
       val recommended = engine.recommendTitle(reloaded.synopsis, activityId = taskId)
       if (recommended.isNotBlank()) {
         storage.saveProject(
           reloaded.copy(
-            editableTitle = recommended.take(30),
+            title = recommended.take(30),
             updatedAt = now(),
           )
         )
@@ -202,7 +202,7 @@ class ProjectRepository @Inject constructor(
       }
       val generated = try {
         engine.generateQuestions(
-          title = reloaded.editableTitle,
+          title = reloaded.title,
           synopsis = reloaded.synopsis,
           previousQuestions = context.questions,
           roundId = round.id,
@@ -298,7 +298,7 @@ class ProjectRepository @Inject constructor(
 
     val updatedProject = project.copy(
       synopsis = synopsis.trim(),
-      editableTitle = title.trim().substring(0, title.trim().length.coerceAtMost(30)),
+      title = title.trim().substring(0, title.trim().length.coerceAtMost(30)),
       questions = updatedQuestions,
       updatedAt = now
     )
@@ -479,7 +479,7 @@ class ProjectRepository @Inject constructor(
           break
         }
         val summary = engine.summarizePriorAnswers(
-          title = project.editableTitle,
+          title = project.title,
           synopsis = project.synopsis,
           phase = unit.phase,
           transcript = unit.transcript,

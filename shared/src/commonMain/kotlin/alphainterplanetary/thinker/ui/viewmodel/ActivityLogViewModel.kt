@@ -63,7 +63,7 @@ class ActivityLogViewModel(
   private suspend fun titleFor(projectId: String): String {
     projectTitles[projectId]?.let { return it }
     val project = repository.getProject(projectId)
-    val title = project?.editableTitle?.trim()?.takeIf { it.isNotEmpty() } ?: projectId
+    val title = project?.title?.trim()?.takeIf { it.isNotEmpty() } ?: projectId
     projectTitles[projectId] = title
     return title
   }

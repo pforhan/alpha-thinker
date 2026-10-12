@@ -8,7 +8,7 @@ import kotlin.time.Instant
 data class Project(
   val id: String,
   val synopsis: String,
-  val editableTitle: String,
+  val title: String,
   val status: String,
   val questions: List<Question>,
   val rounds: List<Round> = emptyList(),

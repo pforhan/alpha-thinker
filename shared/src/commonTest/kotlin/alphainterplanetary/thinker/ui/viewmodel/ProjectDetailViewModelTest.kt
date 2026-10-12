@@ -85,7 +85,7 @@ class ProjectDetailViewModelTest {
   ): Project = Project(
     id = id,
     synopsis = "synopsis",
-    editableTitle = "Title",
+    title = "Title",
     status = "Draft",
     questions = questions,
     createdAt = testInstant,
@@ -435,7 +435,7 @@ class ProjectDetailViewModelTest {
   private fun overlongProject(): Project = Project(
     id = "p1",
     synopsis = "synopsis",
-    editableTitle = "Title",
+    title = "Title",
     status = "Draft",
     questions = listOf(
       question(
@@ -574,7 +574,7 @@ class ProjectDetailViewModelTest {
     val untitled = Project(
       id = "p1",
       synopsis = "synopsis",
-      editableTitle = "",
+      title = "",
       status = "Draft",
       questions = emptyList(),
       createdAt = testInstant,
@@ -606,7 +606,7 @@ class ProjectDetailViewModelTest {
       testScheduler.advanceUntilIdle()
 
       val state = vm.uiState.value as ProjectDetailUiState.Success
-      assertEquals("Second Try", state.project.editableTitle)
+      assertEquals("Second Try", state.project.title)
     }
   }
 

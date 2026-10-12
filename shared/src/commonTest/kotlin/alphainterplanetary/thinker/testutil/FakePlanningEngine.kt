@@ -87,7 +87,7 @@ open class FakePlanningEngine(
 
   /** One recorded call, carrying the whole context the engine was handed. */
   data class Call(
-    val editableTitle: String,
+    val title: String,
     val synopsis: String,
     val previousQuestions: List<Question>,
     val roundId: String,
@@ -97,7 +97,7 @@ open class FakePlanningEngine(
 
   /** One recorded summarize request, carrying the phase transcript it was asked about. */
   data class SummarizeCall(
-    val editableTitle: String,
+    val title: String,
     val synopsis: String,
     val phase: Phase,
     val transcript: String,

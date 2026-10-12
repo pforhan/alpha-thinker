@@ -231,7 +231,7 @@ class ProjectSimulator @Inject constructor(
   suspend fun previousSimulatedProjectTitle(): String? {
     val id = storage.getSetting(SettingsKey.SimulatedProjectId, "").takeIf { it.isNotBlank() }
       ?: return null
-    return storage.getProject(id)?.editableTitle?.takeIf { it.isNotBlank() }
+    return storage.getProject(id)?.title?.takeIf { it.isNotBlank() }
       ?: storage.getProject(id)?.synopsis?.lineSequence()?.first()?.trim()?.take(40)
   }
 

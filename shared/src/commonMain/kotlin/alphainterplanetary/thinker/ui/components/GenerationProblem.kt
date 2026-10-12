@@ -56,7 +56,7 @@ fun generationProblemKind(project: Project, tasks: List<GenerationTask>): Genera
 
   // Only a project still lacking a title has a title problem — a failed
   // recommendation that the user then typed over is history, not a problem.
-  if (project.editableTitle.isBlank() &&
+  if (project.title.isBlank() &&
     failed.any { it.kind == TaskKind.TitleRecommendation }
   ) {
     return GenerationProblemKind.Title

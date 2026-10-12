@@ -19,7 +19,7 @@ class ProjectTest {
   private fun project(vararg qs: Question) = Project(
     id = "p",
     synopsis = "s",
-    editableTitle = "t",
+    title = "t",
     status = "Draft",
     questions = qs.toList(),
     createdAt = Instant.fromEpochMilliseconds(0),
@@ -176,7 +176,7 @@ class ProjectTest {
     val p = Project(
       id = "p",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = emptyList(),
       rounds = listOf(
@@ -196,7 +196,7 @@ class ProjectTest {
     val p = Project(
       id = "p",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = emptyList(),
       rounds = listOf(
@@ -229,7 +229,7 @@ class ProjectTest {
     val p = Project(
       id = "p",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1", roundId = "r1")),
       rounds = listOf(
@@ -247,7 +247,7 @@ class ProjectTest {
     val p = Project(
       id = "p",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(question("q1", roundId = "r-unknown")),
       rounds = listOf(
@@ -272,7 +272,7 @@ class ProjectTest {
     val p = Project(
       id = "p",
       synopsis = "s",
-      editableTitle = "t",
+      title = "t",
       status = "Draft",
       questions = listOf(
         question("q1", roundId = "r1"),
@@ -309,7 +309,7 @@ class ProjectTest {
   ): Project = Project(
     id = "p",
     synopsis = "s",
-    editableTitle = "t",
+    title = "t",
     status = "Draft",
     questions = questions,
     rounds = List(roundCount) { i ->
@@ -384,7 +384,7 @@ class ProjectTest {
   private fun projectWithVisitHistory(): Project = Project(
     id = "p",
     synopsis = "s",
-    editableTitle = "t",
+    title = "t",
     status = "Draft",
     questions = emptyList(),
     rounds = listOf(

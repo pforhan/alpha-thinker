@@ -35,7 +35,7 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
 1. **Project:**
     *   `projectId` (Unique ID)
     *   `synopsis` (String: Initial project idea provided by the user.)
-    *   `editableTitle` (String: Title generated/edited during the process.)
+    *   `title` (String: Title generated/edited during the process.)
     *   `creationDate` (Timestamp)
     *   `lastUpdated` (Timestamp)
     *   `status` (Enum: Draft, Complete, InReview)
@@ -312,7 +312,7 @@ observable background task.
   result (e.g., new questions appended). The UI observes task completion and
   reloads the affected project.
 - `PlanningEngine` is invoked statelessly with the project context it
-  needs: `generateQuestions(editableTitle, synopsis, previousQuestions, roundId,
+  needs: `generateQuestions(title, synopsis, previousQuestions, roundId,
   phase, activityId)` is the *only* question-generation call, and
   `previousQuestions` is the project's questions on every path (completed
   answers via `Question.currentAnswer`, drafts via `draftText`, skipped ones via

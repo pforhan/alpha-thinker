@@ -47,7 +47,7 @@ class TaskManagerViewModel(
 
   private suspend fun titleFor(projectId: String): String {
     projectTitles[projectId]?.let { return it }
-    val title = repository.getProject(projectId)?.editableTitle ?: projectId
+    val title = repository.getProject(projectId)?.title ?: projectId
     projectTitles[projectId] = title
     return title
   }

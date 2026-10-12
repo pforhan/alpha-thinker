@@ -563,7 +563,7 @@ class PlanningContextTest {
     return Project(
       id = "p1",
       synopsis = "A synopsis",
-      editableTitle = "A title",
+      title = "A title",
       status = "Draft",
       questions = entries.map { (phase, q) -> q.copy(roundId = "r-${phase.key}") },
       rounds = rounds.mapIndexed { index, r ->

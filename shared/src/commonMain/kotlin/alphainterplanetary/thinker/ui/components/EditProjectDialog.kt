@@ -36,7 +36,7 @@ fun EditProjectDialog(
   onDismiss: () -> Unit,
   onSave: (String, String, ProjectUpdateMode) -> Unit,
 ) {
-  var title by remember { mutableStateOf(project.editableTitle) }
+  var title by remember { mutableStateOf(project.title) }
   var synopsis by remember { mutableStateOf(project.synopsis) }
   var updateMode by remember { mutableStateOf(ProjectUpdateMode.KEEP) }
 

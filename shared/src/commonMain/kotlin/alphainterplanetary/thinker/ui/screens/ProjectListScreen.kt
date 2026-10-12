@@ -260,7 +260,7 @@ private fun ProjectListItem(
     PhaseCard(phase = project.currentPhase, onClick = onClick) {
       Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          val titleGenerating = project.editableTitle.isBlank() &&
+          val titleGenerating = project.title.isBlank() &&
             activeTasks.any { it.kind == TaskKind.TitleRecommendation }
           Text(
             // A title that never landed would otherwise render the card blank;
@@ -268,7 +268,7 @@ private fun ProjectListItem(
             text = if (titleGenerating) {
               "Generating title…"
             } else {
-              project.editableTitle.normalizeWhitespace().ifBlank { UntitledProjectLabel }
+              project.title.normalizeWhitespace().ifBlank { UntitledProjectLabel }
             },
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
@@ -407,7 +407,7 @@ private fun ConfirmDeleteProjectDialog(
     text = {
       Column {
         Text(
-          text = project.editableTitle.normalizeWhitespace(),
+          text = project.title.normalizeWhitespace(),
           maxLines = 2,
           overflow = TextOverflow.Ellipsis,
         )

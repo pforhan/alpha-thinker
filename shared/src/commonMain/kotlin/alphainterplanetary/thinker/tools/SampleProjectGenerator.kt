@@ -69,7 +69,7 @@ class SampleProjectGenerator @Inject constructor(
     return Project(
       id = SCOPE_PROJECT_ID,
       synopsis = "A no-fuss method for making cold brew coffee concentrate at home.",
-      editableTitle = "Cold brew",
+      title = "Cold brew",
       status = "Draft",
       questions = listOf(
         sampleQuestion(
@@ -127,7 +127,7 @@ class SampleProjectGenerator @Inject constructor(
       synopsis = "Cook more plant-based dinners the whole family actually eats, without " +
         "reaching for pricey meat substitutes or landing on cheese-heavy standbys. I want " +
         "a short list of reliable, fast recipes before committing to it as a habit.",
-      editableTitle = "Plant-based dinners",
+      title = "Plant-based dinners",
       status = "Draft",
       questions = listOf(
         answeredQuestion(
@@ -231,7 +231,7 @@ class SampleProjectGenerator @Inject constructor(
         "one short travel-phrase lesson a day, decent pronunciation audio, and no streaks " +
         "or subscription guilt. I want to hold a stumbling real conversation, not finish " +
         "a leaderboard.",
-      editableTitle = "Trip Portuguese app",
+      title = "Trip Portuguese app",
       status = "Draft",
       questions = listOf(
         answeredQuestion(
@@ -360,7 +360,7 @@ class SampleProjectGenerator @Inject constructor(
         "houses, take measurements, and hand owners one prioritized sheet of upgrades. " +
         "Right now the open question is the launch plan — tools, pricing, scheduling, and " +
         "the first handful of paid clients.",
-      editableTitle = "Home energy audits",
+      title = "Home energy audits",
       status = "Draft",
       questions = listOf(
         answeredQuestion(
@@ -552,7 +552,7 @@ class SampleProjectGenerator @Inject constructor(
         "the city. The plan is to prove it's worth continuing next season: how many " +
         "households actually tend plots, how much food comes out, and whether volunteers " +
         "keep showing up past July.",
-      editableTitle = "Block community garden",
+      title = "Block community garden",
       status = "Draft",
       questions = listOf(
         answeredQuestion(
@@ -767,7 +767,7 @@ class SampleProjectGenerator @Inject constructor(
         "a print-ready zine PDF. It builds locally and I use it myself, but it needs to be " +
         "good enough that a stranger can install and run it — so the current focus is " +
         "acceptance criteria, docs, and a release path.",
-      editableTitle = "Zine-maker CLI",
+      title = "Zine-maker CLI",
       status = "Draft",
       questions = listOf(
         answeredQuestion(
@@ -988,7 +988,7 @@ class SampleProjectGenerator @Inject constructor(
         "I want to ship a polished MVP on the Play Store within the next two quarters while " +
         "keeping my day job, using weekend time and a small budget. The biggest challenge is " +
         "staying honest about scope: keeping the game tiny while still making it feel complete.",
-      editableTitle = "Ship my tiny puzzle game",
+      title = "Ship my tiny puzzle game",
       status = "Draft",
       questions = listOf(
         answeredQuestion(
@@ -1215,7 +1215,7 @@ class SampleProjectGenerator @Inject constructor(
     return Project(
       id = STRESS_PROJECT_ID,
       synopsis = lipsum(5),
-      editableTitle = lipsum(1),
+      title = lipsum(1),
       status = "Draft",
       questions = listOf(
         sampleQuestion(id = "stress-q1", text = lipsum(2), timestamp = daysAgo(3), roundId = roundId),

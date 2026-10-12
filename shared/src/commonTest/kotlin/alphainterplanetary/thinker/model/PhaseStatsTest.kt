@@ -22,7 +22,7 @@ class PhaseStatsTest {
   ): Project = Project(
     id = "p",
     synopsis = "s",
-    editableTitle = "t",
+    title = "t",
     status = "Draft",
     questions = questions,
     rounds = rounds,
