@@ -74,7 +74,7 @@ fun TaskManagerScreen(
         modifier = Modifier
           .fillMaxSize()
           .padding(paddingValues),
-        verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
+        verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
       ) {
         items(rows, key = { it.task.id }) { row ->
           TaskManagerRowItem(row = row, at = at)

@@ -105,7 +105,7 @@ fun ActivityLogScreen(
         modifier = Modifier
           .fillMaxSize()
           .padding(paddingValues),
-        verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
+        verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
       ) {
         items(items, key = { it.activity.activityId }) { item ->
           ActivityLogCard(item = item)

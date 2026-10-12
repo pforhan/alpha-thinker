@@ -47,7 +47,7 @@ internal fun OptionHeader(
         style = MaterialTheme.typography.bodyMedium,
       )
     }
-    Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
+    Spacer(modifier = Modifier.width(Dimens.ContentGap))
     trailing()
   }
 }

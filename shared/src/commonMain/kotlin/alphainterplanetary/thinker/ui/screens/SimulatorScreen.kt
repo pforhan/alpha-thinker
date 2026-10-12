@@ -254,7 +254,7 @@ private fun ToggleRow(
         )
       }
     }
-    Spacer(modifier = Modifier.width(Dimens.ControlLabelGap))
+    Spacer(modifier = Modifier.width(Dimens.ContentGap))
     Switch(checked = checked, onCheckedChange = onCheckedChange)
   }
 }

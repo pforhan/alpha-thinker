@@ -79,7 +79,7 @@ private fun ThemePreviewRow(
         .fillMaxWidth()
         .clip(MaterialTheme.shapes.medium)
         .background(surface)
-        .padding(Dimens.ThemePreviewPadding),
+        .padding(Dimens.ContentGap),
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Text(
@@ -88,7 +88,7 @@ private fun ThemePreviewRow(
         color =
           if (dark) DarkColorScheme.onSurfaceVariant else LightColorScheme.onSurfaceVariant,
       )
-      Spacer(modifier = Modifier.width(Dimens.ToolIconLabelGap))
+      Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
       BuiltInPhase.entries.forEachIndexed { index, phase ->
         if (index > 0) {
           Spacer(modifier = Modifier.width(Dimens.ThemeSwatchGap))

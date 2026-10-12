@@ -335,7 +335,7 @@ private fun ProjectListSuccess(
   } else {
     LazyColumn(
       modifier = Modifier.fillMaxSize(),
-      verticalArrangement = Arrangement.spacedBy(Dimens.ListGap),
+      verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
     ) {
       items(projects, key = { it.id }) { project ->
         ProjectListItem(

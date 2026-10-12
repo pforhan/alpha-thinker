@@ -12,14 +12,12 @@ import androidx.compose.ui.unit.dp
 object Dimens {
   // Layout insets
   val ScreenPadding = 16.dp
-  val SectionPadding = 16.dp
   val CardPadding = 16.dp
   val EmptyStatePadding = 24.dp
 
   // Vertical rhythm
   val ContentGap = 8.dp
   val SectionGap = 12.dp
-  val ListGap = 8.dp
   val FormGap = 16.dp
   val TightGap = 4.dp
 
@@ -29,7 +27,6 @@ object Dimens {
   // Bar/chip layout
   val ChipGap = 8.dp
   val LabelChipGap = 8.dp
-  val ModeBarVerticalPadding = 8.dp
   val OutlineStroke = 1.dp
 
   // Header engine-status cluster: the pill row collapses to a single status
@@ -54,8 +51,6 @@ object Dimens {
 
   // Icon / control adjacencies
   val IconLabelGap = 8.dp
-  val ToolIconLabelGap = 12.dp
-  val ControlLabelGap = 8.dp
   val ActionRowVerticalPadding = 12.dp
   val ButtonHorizontalPadding = 8.dp
 
@@ -86,7 +81,6 @@ object Dimens {
 
   // Theme picker preview
   val ThemeSwatchGap = 6.dp
-  val ThemePreviewPadding = 8.dp
 
   // Celebration confetti
   val ConfettiPieceSize = 3.dp

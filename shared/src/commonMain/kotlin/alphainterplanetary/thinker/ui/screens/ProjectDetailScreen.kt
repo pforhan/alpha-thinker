@@ -466,7 +466,7 @@ private fun ProjectDetailContent(
         } else {
           LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(Dimens.ListGap)
+            verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap)
           ) {
             if (sections.isNotEmpty()) {
               sections.forEach { section ->
@@ -738,7 +738,7 @@ private fun ProjectSynopsis(synopsis: String) {
   Column(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(Dimens.SectionPadding),
+      .padding(Dimens.ScreenPadding),
   ) {
     Text("Synopsis:", style = MaterialTheme.typography.titleSmall)
     ScrollableOverflowText(

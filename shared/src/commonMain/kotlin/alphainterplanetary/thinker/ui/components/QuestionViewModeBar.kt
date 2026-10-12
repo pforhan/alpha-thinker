@@ -89,7 +89,7 @@ private fun WideViewModeBar(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.ModeBarVerticalPadding),
+      .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.ContentGap),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -121,7 +121,7 @@ private fun CompactViewModeBar(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.ModeBarVerticalPadding),
+      .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.ContentGap),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
