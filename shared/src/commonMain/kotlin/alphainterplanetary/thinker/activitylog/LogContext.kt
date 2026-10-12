@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.activitylog
 
-import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.repository.ContextCheck
+import alphainterplanetary.thinker.util.formatTokens
 import alphainterplanetary.thinker.util.now
 
 /**
@@ -121,12 +121,12 @@ class LogContext internal constructor(
    * a budget of zero.
    */
   private fun contextCheckText(check: ContextCheck): String {
-    val estimated = "${PlanningContext.formatTokens(check.estimatedTokens)} tokens"
+    val estimated = "${formatTokens(check.estimatedTokens)} tokens"
     val budget = check.budgetTokens
       ?: return "context checked: $estimated estimated, no window to fill"
     val standing = if (check.nearLimit) "over" else "within"
     return "context checked: $estimated estimated, $standing the " +
-      "${PlanningContext.formatTokens(budget)} budget"
+      "${formatTokens(budget)} budget"
   }
 
   /**

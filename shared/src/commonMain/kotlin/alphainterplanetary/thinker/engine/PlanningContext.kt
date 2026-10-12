@@ -81,10 +81,6 @@ object PlanningContext {
   fun budgetTokens(contextWindowTokens: Int): Int =
     (contextWindowTokens * TranscriptSharePercent).coerceAtLeast(0) / 100
 
-  /** [budgetTokens] as a display string, e.g. `2048` → `2k`. */
-  fun formatTokens(tokens: Int): String =
-    if (tokens >= 1000) "${(tokens / 100) / 10.0}k".removeSuffix(".0k") else "$tokens"
-
   /** Marks a question the user chose to skip rather than answer. */
   const val SkippedNote: String = "skipped"
 

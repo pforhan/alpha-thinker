@@ -22,6 +22,7 @@ import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.testutil.round
+import alphainterplanetary.thinker.util.formatTokens
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -980,8 +981,8 @@ class ProjectRepositoryTest {
     assertEquals(LogCategory.Info, row.category)
     assertEquals(LogSource.App, row.source)
     assertEquals(
-      "context checked: ${PlanningContext.formatTokens(check.estimatedTokens)} tokens estimated, " +
-        "over the ${PlanningContext.formatTokens(500)} budget",
+      "context checked: ${formatTokens(check.estimatedTokens)} tokens estimated, " +
+        "over the ${formatTokens(500)} budget",
       row.log,
     )
   }
@@ -1004,7 +1005,7 @@ class ProjectRepositoryTest {
     val check = assertNotNull(repository.checkContext("p1"))
 
     assertEquals(
-      "context checked: ${PlanningContext.formatTokens(check.estimatedTokens)} tokens estimated, " +
+      "context checked: ${formatTokens(check.estimatedTokens)} tokens estimated, " +
         "no window to fill",
       log.entries.single().log,
     )

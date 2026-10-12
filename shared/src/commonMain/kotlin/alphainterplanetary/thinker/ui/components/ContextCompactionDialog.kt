@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.ui.components
 
-import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.repository.ContextCheck
 import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.util.formatTokens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -55,11 +55,11 @@ fun ContextCompactionDialog(
       Column(verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap)) {
         Text(
           text = "This project's questions and answers are about " +
-            "${PlanningContext.formatTokens(check.estimatedTokens)} tokens — " +
+            "${formatTokens(check.estimatedTokens)} tokens — " +
             "more than the " +
-            "${check.budgetTokens?.let(PlanningContext::formatTokens) ?: "0"} " +
+            "${check.budgetTokens?.let(::formatTokens) ?: "0"} " +
             "that fit in this engine's " +
-            "${check.windowTokens?.let(PlanningContext::formatTokens) ?: "0"}-token " +
+            "${check.windowTokens?.let(::formatTokens) ?: "0"}-token " +
             "context. What should the planner do with the overflow?",
           style = MaterialTheme.typography.bodyMedium,
         )
