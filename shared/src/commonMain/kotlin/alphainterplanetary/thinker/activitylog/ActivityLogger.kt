@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.toEntity
 import alphainterplanetary.thinker.database.toEntry
 import alphainterplanetary.thinker.util.now
+import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.time.Duration.Companion.days
@@ -30,11 +31,22 @@ interface ActivityLogger {
    * the sibling fields or hand-builds a `log` string.
    */
   fun context(
-    activityId: String,
+    activityId: String = randomUUID(),
     category: LogCategory,
     source: LogSource?,
     projectId: String? = null,
   ): LogContext = LogContext(this, activityId, category, source, projectId)
+
+  /** Creates a scoped writer for a task-based activity. */
+  fun taskContext(
+    activityId: String,
+    projectId: String,
+  ): LogContext = context(
+    activityId = activityId,
+    category = LogCategory.TaskRun,
+    source = LogSource.TaskRunner,
+    projectId = projectId,
+    )
 
   /** All rows in append order (drives the Activity Log viewer). */
   fun entries(): Flow<List<LogEntry>>

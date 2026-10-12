@@ -6,7 +6,6 @@ import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,7 +68,8 @@ class TaskRunner(
   private val _tasks = MutableStateFlow<List<GenerationTask>>(emptyList())
 
   /** Per-resource concurrency gate; see [ConcurrencyGroup]. */
-  private val groupGates: Map<ConcurrencyGroup, Gate> = ConcurrencyGroup.entries.associateWith { Gate(it.concurrency) }
+  private val groupGates: Map<ConcurrencyGroup, Gate> =
+    ConcurrencyGroup.entries.associateWith { Gate(it.concurrency) }
 
   /** Guards the [projectGuards] map so lookups are safe on any dispatcher. */
   private val projectGuardsLock = Mutex()
@@ -129,23 +129,23 @@ class TaskRunner(
       source = LogSource.TaskRunner,
       projectId = task.projectId,
     )
-scope.launch {
-        logContext?.started(task.kind.name)
-        val guard = projectGuard(task.projectId)
-        val groupGate = groupGates.getValue(task.group)
-        guard.withLock {
-          groupGate.withLock {
-            val startedAt = now()
-            _tasks.update { it.replace(task.asStarted(startedAt)) }
-            var cancelled = false
-            var failure: String? = null
-            try {
-              // Installed for the body only — and only once both locks are held,
-              // which is exactly the window [await] refuses to suspend in.
-              withContext(TaskBodyContext(projectId = task.projectId, group = task.group)) {
-                produce(task.id)
-              }
-            } catch (e: CancellationException) {
+    scope.launch {
+      logContext?.started(task.kind.name)
+      val guard = projectGuard(task.projectId)
+      val groupGate = groupGates.getValue(task.group)
+      guard.withLock {
+        groupGate.withLock {
+          val startedAt = now()
+          _tasks.update { it.replace(task.asStarted(startedAt)) }
+          var cancelled = false
+          var failure: String? = null
+          try {
+            // Installed for the body only — and only once both locks are held,
+            // which is exactly the window [await] refuses to suspend in.
+            withContext(TaskBodyContext(projectId = task.projectId, group = task.group)) {
+              produce(task.id)
+            }
+          } catch (e: CancellationException) {
             cancelled = true
           } catch (e: Exception) {
             failure = e.message ?: e.toString()

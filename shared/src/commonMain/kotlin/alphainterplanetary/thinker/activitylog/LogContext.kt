@@ -1,5 +1,9 @@
 package alphainterplanetary.thinker.activitylog
 
+import alphainterplanetary.thinker.engine.PlanningContext
+import alphainterplanetary.thinker.model.Round
+import alphainterplanetary.thinker.model.RoundOrigin
+import alphainterplanetary.thinker.repository.ContextCheck
 import alphainterplanetary.thinker.util.now
 
 /**
@@ -64,6 +68,77 @@ class LogContext internal constructor(
 
   /** Files a row verbatim — the escape hatch for text that has no marker. */
   suspend fun append(text: String) = file(text)
+
+  /**
+   * The generation's `context checked:` note: the transcript's estimated cost
+   * and the budget it was measured against, in the same "tokens … budget" words
+   * the near-limit dialog uses. Obtained from a fresh standalone context — the
+   * check is taken before any task is enqueued, so it has no task activity to
+   * join — and the note is plain text, so the read model's started/terminal
+   * parsing is unaffected.
+   */
+  suspend fun contextChecked(check: ContextCheck) = append(contextCheckText(check))
+
+  /**
+   * The generation's round note — `Action: more questions` for a "Get more
+   * questions" round, `Action: advance phase` for a wrap-up into a new phase,
+   * each under a `Phase:` line. Might be a standalone context sharing the task's
+   * activity without its lifecycle, and is plain text under the
+   * [LogMarkers.Action] prefix, so the read model's started/terminal parsing is
+   * unaffected and [ActivityRecord] can headline an advance off it. Nothing is
+   * filed for a round with no action (the project's opening round).
+   */
+  suspend fun round(round: Round) {
+    val action = roundAction(round) ?: return
+    append("${LogMarkers.Action} $action\n${LogMarkers.Phase} ${round.phase.label}")
+  }
+
+  /**
+   * The context's "compacted … dropped" note: how many answers the transcript
+   * had to drop to fit the budget, which the engine (and its prompt) never sees.
+   * Deliberately phrased so the near-limit compaction choice can extend it
+   * without a breaking change; uses the same "answers" words the summarized note
+   * does, so the two read as one story in the log.
+   */
+  suspend fun contextCompacted(dropped: Int) {
+    val noun = if (dropped == 1) "answer" else "answers"
+    append("context compacted: $dropped $noun dropped to fit budget")
+  }
+
+  suspend fun contextCompacted(phaseLabel: String, count: Int, oldEstTokens: Int, newEstTokens: Int) {
+    val noun = if (count == 1) "answer" else "answers"
+    append(
+      "context compacted: $phaseLabel summarized, $count $noun replaced " +
+        "($oldEstTokens t → $newEstTokens t)"
+    )
+  }
+
+  /**
+   * The one-line shape of a check row: the transcript's estimated cost and the
+   * budget it was measured against, in the same "tokens … budget" words the
+   * near-limit dialog uses. An engine that composes no prompt has no window to
+   * measure against, so it reads as measured-but-unbudgeted instead of claiming
+   * a budget of zero.
+   */
+  private fun contextCheckText(check: ContextCheck): String {
+    val estimated = "${PlanningContext.formatTokens(check.estimatedTokens)} tokens"
+    val budget = check.budgetTokens
+      ?: return "context checked: $estimated estimated, no window to fill"
+    val standing = if (check.nearLimit) "over" else "within"
+    return "context checked: $estimated estimated, $standing the " +
+      "${PlanningContext.formatTokens(budget)} budget"
+  }
+
+  /**
+   * The action a round's origin reads as, or null for a round the user didn't
+   * choose — a project's opening round. The [RoundOrigin.Initial] case splits on
+   * round number because both an opening round and a wrap-up into a new phase
+   * open an Initial round: only the latter is an advance.
+   */
+  private fun roundAction(round: Round): String? = when (round.origin) {
+    RoundOrigin.UserRequested, RoundOrigin.FollowUp -> LogMarkers.ActionMoreQuestions
+    RoundOrigin.Initial -> if (round.roundNumber == 1) null else LogMarkers.ActionAdvancePhase
+  }
 
   private fun checkOpen() {
     check(!closed) { "activity $activityId already terminated; no further rows accepted" }

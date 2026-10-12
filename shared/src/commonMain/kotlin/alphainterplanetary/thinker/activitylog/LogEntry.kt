@@ -86,6 +86,23 @@ object LogMarkers {
    */
   const val Input = "input:"
 
+  /**
+   * The first line of a round note — what the generation is for, one of the
+   * `Action` values below; the note's second line names the phase ([Phase]). A
+   * plain note (no interaction payload); [ActivityRecord] reads the
+   * [ActionAdvancePhase] form to headline an opening into a new phase.
+   */
+  const val Action = "Action:"
+
+  /** The second line of a round note, naming the round's phase: `Phase: Design`. */
+  const val Phase = "Phase:"
+
+  /** [Action] value for a "Get more questions" round in the current phase. */
+  const val ActionMoreQuestions = "more questions"
+
+  /** [Action] value for a wrap-up into a new phase. */
+  const val ActionAdvancePhase = "advance phase"
+
   /** A rendered prompt, verbatim. */
   const val Prompt = "prompt:"
 

@@ -777,6 +777,40 @@ class ProjectRepositoryTest {
     )
   }
 
+  /**
+   * The round note says which round the generation is for and how it came to be,
+   * so a "Get more questions" round and a wrap-up into a new phase read apart in
+   * the log even though both are the same QuestionGeneration task.
+   */
+  @Test
+  fun `the round note distinguishes a phase advance from more questions`() = runTest {
+    val log = RecordingActivityLogger()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), log)
+    val storage = storageWith(
+      phaseProject(round(id = "r1", phase = BuiltInPhase.ScopeGoals))
+    )
+    val repository = repo(
+      storage = storage,
+      runner = runner,
+      activityLogger = log,
+    )
+
+    repository.generateMoreQuestions("p1")
+    testScheduler.advanceUntilIdle()
+    assertEquals(
+      "Action: more questions\nPhase: Scope & Goals",
+      log.entries.single { it.log.startsWith("Action:") }.log,
+    )
+
+    log.clear()
+    repository.advanceToPhase("p1", BuiltInPhase.Research)
+    testScheduler.advanceUntilIdle()
+    assertEquals(
+      "Action: advance phase\nPhase: Research",
+      log.entries.single { it.log.startsWith("Action:") }.log,
+    )
+  }
+
   /** A failing run still reports its compaction — the note files before the engine call. */
   @Test
   fun `a failed generation still logs the compaction that preceded it`() = runTest {
@@ -832,6 +866,7 @@ class ProjectRepositoryTest {
     assertEquals(
       listOf(
         "started: QuestionGeneration",
+        "Action: more questions\nPhase: Design",
         "context compacted: 1 answer dropped to fit budget",
         "failed: model exploded",
       ),
@@ -839,7 +874,7 @@ class ProjectRepositoryTest {
       "the note files before the engine call, so it survives a failed run",
     )
     assertTrue(
-      log.entries.take(3).all { it.activityId == activityId },
+      log.entries.take(4).all { it.activityId == activityId },
       "the note joins the failed task's activity",
     )
   }
@@ -923,6 +958,56 @@ class ProjectRepositoryTest {
   @Test
   fun `checkContext is null for a project that is gone`() = runTest {
     assertNull(repo().checkContext("nope"))
+  }
+
+  /**
+   * The measurement is filed even when the check stays silent to the user, so a
+   * project inside its budget still leaves a row saying how big the transcript
+   * was and what budget it was measured against.
+   */
+  @Test
+  fun `checkContext files the measurement in the log`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val generator = FakePlanningEngine()
+    budgetedFor(generator, 500)
+    val log = RecordingActivityLogger()
+    val repository = repo(storage = storage, generator = generator, activityLogger = log)
+
+    val check = assertNotNull(repository.checkContext("p1"))
+
+    val row = log.entries.single()
+    assertEquals("p1", row.projectId)
+    assertEquals(LogCategory.Info, row.category)
+    assertEquals(LogSource.App, row.source)
+    assertEquals(
+      "context checked: ${PlanningContext.formatTokens(check.estimatedTokens)} tokens estimated, " +
+        "over the ${PlanningContext.formatTokens(500)} budget",
+      row.log,
+    )
+  }
+
+  /**
+   * An engine that composes no prompt has no window to measure against, so its
+   * row says the transcript was measured and left unbudgeted rather than
+   * claiming a zero budget.
+   */
+  @Test
+  fun `checkContext notes an engine with no window`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
+    val log = RecordingActivityLogger()
+    val repository = repo(
+      storage = storage,
+      generator = FakePlanningEngine(contextWindowTokens = null),
+      activityLogger = log,
+    )
+
+    val check = assertNotNull(repository.checkContext("p1"))
+
+    assertEquals(
+      "context checked: ${PlanningContext.formatTokens(check.estimatedTokens)} tokens estimated, " +
+        "no window to fill",
+      log.entries.single().log,
+    )
   }
 
   /**

@@ -185,6 +185,11 @@ class ProjectRepository @Inject constructor(
     return taskRunner.enqueue(projectId, TaskKind.QuestionGeneration) { taskId ->
       val reloaded = storage.getProject(projectId) ?: return@enqueue
       val round = reloaded.rounds.find { it.id == roundId } ?: return@enqueue
+      val logContext = activityLogger.taskContext(
+        activityId = taskId,
+        projectId = reloaded.id,
+      )
+      logContext.round(round)
       // The engine renders whatever transcript it is handed, so the budget is
       // applied here: an over-long project reaches it with the earlier phases'
       // compacted away — the current phase's answers always intact, whether
@@ -193,7 +198,7 @@ class ProjectRepository @Inject constructor(
       // "already asked" set.
       val context = buildContext(reloaded, engine, compaction, budgetTokens(engine), taskId)
       if (context.droppedAnswers > 0) {
-        logContextCompacted(taskId, reloaded.id, context.droppedAnswers)
+        logContext.contextCompacted(context.droppedAnswers)
       }
       val generated = try {
         engine.generateQuestions(
@@ -381,7 +386,8 @@ class ProjectRepository @Inject constructor(
     // enable is reported as unavailable rather than offered and then performed
     // for an engine that was never going to read the result.
     val window = engine.contextWindowTokens
-      ?: return ContextCheck(
+    val check = if (window == null) {
+      ContextCheck(
         estimatedTokens = estimatedTokens,
         windowTokens = null,
         budgetTokens = null,
@@ -390,20 +396,31 @@ class ProjectRepository @Inject constructor(
         summarizablePhases = emptyList(),
         canSummarize = false,
       )
-    val budgetTokens = PlanningContext.budgetTokens(window)
-    val phases = PlanningContext.summarizablePhases(project)
-    return ContextCheck(
-      estimatedTokens = estimatedTokens,
-      windowTokens = window,
-      budgetTokens = budgetTokens,
-      nearLimit = PlanningContext.nearLimit(
+    } else {
+      val budgetTokens = PlanningContext.budgetTokens(window)
+      val phases = PlanningContext.summarizablePhases(project)
+      ContextCheck(
         estimatedTokens = estimatedTokens,
+        windowTokens = window,
         budgetTokens = budgetTokens,
-      ),
-      droppableAnswers = PlanningContext.trim(project, budgetTokens).droppedAnswers,
-      summarizablePhases = phases.map { it.phase },
-      canSummarize = engine.canSummarize && phases.isNotEmpty(),
-    )
+        nearLimit = PlanningContext.nearLimit(
+          estimatedTokens = estimatedTokens,
+          budgetTokens = budgetTokens,
+        ),
+        droppableAnswers = PlanningContext.trim(project, budgetTokens).droppedAnswers,
+        summarizablePhases = phases.map { it.phase },
+        canSummarize = engine.canSummarize && phases.isNotEmpty(),
+      )
+    }
+    // Filed as its own standalone event: taken before any task is enqueued, so
+    // it has no task activity to join, and a fresh context gives each check one
+    // line rather than folding unrelated checks into one activity.
+    activityLogger.context(
+      category = LogCategory.Info,
+      source = LogSource.App,
+      projectId = projectId,
+    ).contextChecked(check)
+    return check
   }
 
   /**
@@ -479,7 +496,15 @@ class ProjectRepository @Inject constructor(
         questions = questions.map { question ->
           if (question.id in unit.coveredQuestionIds) question.asCompacted() else question
         }
-        logPhaseSummarized(taskId, project.id, unit, summary)
+        activityLogger.taskContext(
+          activityId = taskId,
+          projectId = project.id,
+        ).contextCompacted(
+          phaseLabel = unit.phase.label,
+          count = unit.questions.size,
+          oldEstTokens = unit.estimatedTokens,
+          newEstTokens = PlanningContext.estimateTokens(summary),
+        )
       }
       PlanningContext.trim(project.copy(questions = questions), budgetTokens, summaries)
     }
@@ -689,54 +714,6 @@ class ProjectRepository @Inject constructor(
       appendLine(answerBlock)
       appendLine()
     }
-  }
-
-  /**
-   * Files one note on the task's activity that the context the engine was given
-   * had to be compacted to fit the configured budget — how many answers were
-   * dropped, which the engine (and its prompt) never sees. A standalone
-   * [LogContext] per call keeps the note in the task's activity (grouped by
-   * `activityId` in the read model) without sharing lifecycle state with the
-   * task's own context; the note is plain text, so the read model's
-   * started/terminal parsing is unaffected. Deliberately phrased as
-   * "compacted … dropped" so the near-limit compaction choice can extend it
-   * without a breaking change — which it does, in [logPhaseSummarized].
-   */
-  private suspend fun logContextCompacted(taskId: String, projectId: String, dropped: Int) {
-    val noun = if (dropped == 1) "answer" else "answers"
-    activityLogger.context(
-      activityId = taskId,
-      category = LogCategory.TaskRun,
-      source = LogSource.TaskRunner,
-      projectId = projectId,
-    ).append("context compacted: $dropped $noun dropped to fit budget")
-  }
-
-  /**
-   * Files one note per summarized phase, alongside that phase's own
-   * `prompt:`/`response:` pair. The pair carries the text itself; this carries
-   * the fact and the size of the trade, in the same words the
-   * dropped-answers note uses so the two read as one story in the log — a
-   * compacted context says how many answers it lost, whichever way it lost
-   * them.
-   */
-  private suspend fun logPhaseSummarized(
-    taskId: String,
-    projectId: String,
-    unit: PlanningContext.PhaseTranscript,
-    summary: String,
-  ) {
-    val count = unit.questions.size
-    val noun = if (count == 1) "answer" else "answers"
-    activityLogger.context(
-      activityId = taskId,
-      category = LogCategory.TaskRun,
-      source = LogSource.TaskRunner,
-      projectId = projectId,
-    ).append(
-      "context compacted: ${unit.phase.label} summarized, $count $noun replaced " +
-        "(${unit.estimatedTokens}t → ${PlanningContext.estimateTokens(summary)}t)"
-    )
   }
 
   private companion object {

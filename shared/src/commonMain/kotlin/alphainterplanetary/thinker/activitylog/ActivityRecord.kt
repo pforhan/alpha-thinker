@@ -88,7 +88,10 @@ class ActivityRecord private constructor(
 
       val kind = taskKind()
       if (kind?.isGeneration == true || entries.any { it.category == LogCategory.QuestionGeneration }) {
-        batchCount()?.let { count -> return batchSummary(count) }
+        batchCount()?.let { count ->
+          advancedToPhase()?.let { phase -> return "Advanced to $phase — ${generatedClause(count)}" }
+          return batchSummary(count)
+        }
       }
 
       titleSummary()?.let { return it }
@@ -108,6 +111,23 @@ class ActivityRecord private constructor(
       ?.get(1)
       ?.toIntOrNull() ?: return null
     return count
+  }
+
+  /**
+   * The phase an `Action: advance phase` note names on its `Phase:` line, if the
+   * activity carries one: a generation that opened a new phase rather than
+   * adding questions to the current one. Null for any other action ("more
+   * questions") or a round note without an advance action, so only a real
+   * advance changes the headline.
+   */
+  private fun advancedToPhase(): String? {
+    val note = entries.lastOrNull { it.log.startsWith(LogMarkers.Action) } ?: return null
+    val action = note.log.substringBefore('\n').removePrefix(LogMarkers.Action).trim()
+    if (action != LogMarkers.ActionAdvancePhase) return null
+    return note.log.lineSequence()
+      .firstOrNull { it.startsWith(LogMarkers.Phase) }
+      ?.removePrefix(LogMarkers.Phase)
+      ?.trim()
   }
 
   /**
@@ -213,10 +233,14 @@ private val TaskKind.isGeneration: Boolean
   get() = this == TaskKind.QuestionGeneration
 
 /** Canned summary for a produced batch, e.g. "Generated 3 questions". */
-private fun batchSummary(count: Int): String = when {
-  count == 0 -> "No further questions generated"
-  count == 1 -> "Generated 1 question"
-  else -> "Generated $count questions"
+private fun batchSummary(count: Int): String =
+  generatedClause(count).replaceFirstChar { it.uppercaseChar() }
+
+/** [batchSummary]'s outcome mid-sentence, e.g. after "Advanced to Design — ". */
+private fun generatedClause(count: Int): String = when {
+  count == 0 -> "no further questions generated"
+  count == 1 -> "generated 1 question"
+  else -> "generated $count questions"
 }
 
 private val batchCountRegex = Regex("""(\d+) questions?""")

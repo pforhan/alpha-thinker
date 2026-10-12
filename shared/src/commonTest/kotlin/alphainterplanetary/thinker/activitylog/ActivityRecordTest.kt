@@ -216,6 +216,54 @@ class ActivityRecordTest {
     assertEquals("Generated 3 questions", activity.summary)
   }
 
+  /**
+   * A round note that names a phase advance merges into the headline, so the
+   * activity reads as the move it was rather than an anonymous batch.
+   */
+  @Test
+  fun `a phase advance summarizes the new phase and the produced count`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "Action: advance phase\nPhase: Design", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(3, "task-1", "response: 4 questions, done=false", LogCategory.QuestionGeneration),
+        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Advanced to Design — generated 4 questions", activity.summary)
+  }
+
+  /** A "more questions" round is not an advance: the headline stays the batch alone. */
+  @Test
+  fun `a more-questions round is not read as an advance`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "Action: more questions\nPhase: Design", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(3, "task-1", "response: 2 questions, done=false", LogCategory.QuestionGeneration),
+        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Generated 2 questions", activity.summary)
+  }
+
+  /** An advance that found nothing still names where it moved to. */
+  @Test
+  fun `an advance that generated nothing still names the phase`() {
+    val activity = titleActivity(
+      listOf(
+        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "Action: advance phase\nPhase: Research", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(3, "task-1", "response: 0 questions, done=true", LogCategory.QuestionGeneration),
+        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+      )
+    ).single()
+
+    assertEquals("Advanced to Research — no further questions generated", activity.summary)
+  }
+
   @Test
   fun `an exhausted follow-up batch summarizes the no-further signal`() {
     val activity = titleActivity(
