@@ -18,17 +18,18 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
         database.questionDao().upsertQuestion(q.toEntity(project.id, index))
       }
 
-      reconcileChildren(project)
+      reconcileAggregateChildren(project)
     }
   }
 
   /**
-   * Brings the questions and answers tables back in line with the saved
-   * aggregate: answers already stored (immutable history) are left untouched,
-   * only new versions are inserted, and any question/answer rows not present in
-   * the aggregate are deleted so a projected question can never orphan its rows.
+   * Brings the questions, answers, and rounds tables back in line with the saved
+   * aggregate: answers already stored (immutable history — see `Answer`) are left
+   * untouched, only new versions are inserted, and any question/answer/round rows
+   * not present in the aggregate are deleted so a projected question can never
+   * orphan its rows.
    */
-  private suspend fun reconcileChildren(project: Project) {
+  private suspend fun reconcileAggregateChildren(project: Project) {
     val savedQuestionIds = project.questions.map { it.id }
     val savedAnswerIds = project.questions.flatMap { it.answers }.map { it.id }.toSet()
 
