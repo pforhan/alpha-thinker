@@ -24,7 +24,7 @@ import alphainterplanetary.thinker.ui.components.QuestionViewMode
 import alphainterplanetary.thinker.ui.components.QuestionViewModeBar
 import alphainterplanetary.thinker.ui.components.ScrollableOverflowText
 import alphainterplanetary.thinker.ui.components.SpinnerLabel
-import alphainterplanetary.thinker.ui.components.SwipeableCard
+import alphainterplanetary.thinker.ui.components.SwipeableFrame
 import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
 import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.theme.Dimens
@@ -84,7 +84,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,7 +91,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import kotlinx.coroutines.CoroutineScope
 import kotlin.time.Clock
 
 private const val SubtleCheckIntensity = 10
@@ -419,8 +417,6 @@ private fun ProjectDetailContent(
       onViewSelected = onViewSelected,
     )
 
-    val dismissScope = rememberCoroutineScope()
-
     AnimatedContent(
       targetState = selectedView,
       transitionSpec = {
@@ -486,7 +482,6 @@ private fun ProjectDetailContent(
                     project = project,
                     question = question,
                     view = view,
-                    dismissScope = dismissScope,
                     onAskLater = onAskLater,
                     onIgnore = onIgnore,
                     onUnignore = onUnignore,
@@ -497,12 +492,11 @@ private fun ProjectDetailContent(
                 }
               }
             } else {
-              items(visibleQuestions, key = { it.id }) { question ->
+                items(visibleQuestions, key = { it.id }) { question ->
                 QuestionListRow(
                   project = project,
                   question = question,
                   view = view,
-                  dismissScope = dismissScope,
                   onAskLater = onAskLater,
                   onIgnore = onIgnore,
                   onUnignore = onUnignore,
@@ -535,7 +529,6 @@ private fun QuestionListRow(
   project: Project,
   question: Question,
   view: QuestionViewMode,
-  dismissScope: CoroutineScope,
   onAskLater: (String) -> Unit,
   onIgnore: (String) -> Unit,
   onUnignore: (String) -> Unit,
@@ -545,11 +538,10 @@ private fun QuestionListRow(
 ) {
   val dismissState = rememberSwipeToDismissBoxState()
   val phase = phaseForQuestion(question)
-  SwipeableCard(
+  SwipeableFrame(
     state = dismissState,
     startAction = view.startAction,
     endAction = view.endAction,
-    resetScope = dismissScope,
     onSwipeStart = {
       when (view) {
         QuestionViewMode.Unanswered -> onAskLater(question.id)

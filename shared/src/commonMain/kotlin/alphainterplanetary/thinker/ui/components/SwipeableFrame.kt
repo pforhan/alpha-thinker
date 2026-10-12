@@ -16,11 +16,11 @@ import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -30,16 +30,16 @@ import kotlinx.coroutines.launch
 private val RowInset = Modifier.padding(horizontal = Dimens.ScreenPadding)
 
 @Composable
-fun SwipeableCard(
+fun SwipeableFrame(
   state: SwipeToDismissBoxState,
   startAction: SwipeAction?,
   endAction: SwipeAction?,
   onSwipeStart: (() -> Unit)?,
   onSwipeEnd: (() -> Unit)?,
   settleAfterDismiss: Boolean = true,
-  resetScope: CoroutineScope,
   content: @Composable () -> Unit,
 ) {
+  val resetScope = rememberCoroutineScope()
   SwipeToDismissBox(
     state = state,
     enableDismissFromStartToEnd = startAction != null,

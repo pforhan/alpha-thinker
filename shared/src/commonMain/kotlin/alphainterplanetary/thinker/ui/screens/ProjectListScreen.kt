@@ -15,7 +15,7 @@ import alphainterplanetary.thinker.ui.components.PhaseCard
 import alphainterplanetary.thinker.ui.components.SpinnerLabel
 import alphainterplanetary.thinker.ui.components.SwipeAction
 import alphainterplanetary.thinker.ui.components.SwipeActionStyle
-import alphainterplanetary.thinker.ui.components.SwipeableCard
+import alphainterplanetary.thinker.ui.components.SwipeableFrame
 import alphainterplanetary.thinker.ui.components.UntitledProjectLabel
 import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.components.generationProblemKind
@@ -58,7 +58,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -215,7 +214,6 @@ private fun ProjectListItem(
   onDeleteConfirmed: (Project) -> Unit,
 ) {
   val dismissState = rememberSwipeToDismissBoxState()
-  val scope = rememberCoroutineScope()
 
   // Gesture-initiated deletes leave the card swiped out while the dialog is open.
   // When the dialog closes without confirming, slide the card back into place.
@@ -251,14 +249,13 @@ private fun ProjectListItem(
   }
 
   val deleteAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete)
-  SwipeableCard(
+  SwipeableFrame(
     state = dismissState,
     startAction = deleteAction,
     endAction = deleteAction,
     onSwipeStart = handleSwipeDismiss,
     onSwipeEnd = handleSwipeDismiss,
     settleAfterDismiss = false,
-    resetScope = scope,
   ) {
     PhaseCard(phase = project.currentPhase, onClick = onClick) {
       Column {

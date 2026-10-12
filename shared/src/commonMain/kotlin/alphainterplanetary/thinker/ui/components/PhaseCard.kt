@@ -25,7 +25,7 @@ import androidx.compose.ui.geometry.Size
  * the project detail question cards — so the tint, the bar, and the card's
  * screen inset are one definition rather than a chain each call site has to
  * keep in agreement. The row's inset is the one place the swipe background in
- * [SwipeableCard] mirrors, and both lists sit at the same offset for that reason.
+ * [SwipeableFrame] mirrors, and both lists sit at the same offset for that reason.
  */
 @Composable
 fun PhaseCard(
