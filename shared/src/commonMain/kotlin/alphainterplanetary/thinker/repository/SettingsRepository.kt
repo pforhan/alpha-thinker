@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,15 +40,23 @@ class SettingsRepository @Inject constructor(
   private val _engineMode = MutableStateFlow(EngineMode.Default)
   val engineMode: StateFlow<EngineMode> = _engineMode.asStateFlow()
 
-  /** The OpenAI-compatible endpoint the Remote backend talks to. */
+  /**
+   * Which remote protocol the Remote backend speaks, and so which Koog client
+   * it builds ([RemoteProvider]). The connection fields below it are shared:
+   * a provider only changes their defaults and which of them is used.
+   */
+  private val _remoteLlmProvider = MutableStateFlow(RemoteProvider.Default)
+  val remoteLlmProvider: StateFlow<RemoteProvider> = _remoteLlmProvider.asStateFlow()
+
+  /** The endpoint the Remote backend talks to. */
   private val _remoteLlmBaseUrl = MutableStateFlow(DefaultRemoteLlmBaseUrl)
   val remoteLlmBaseUrl: StateFlow<String> = _remoteLlmBaseUrl.asStateFlow()
 
-  /** The API key for the remote endpoint; empty for localhost (Ollama). */
+  /** The API key for the remote endpoint; empty for providers that need none. */
   private val _remoteLlmApiKey = MutableStateFlow(DefaultRemoteLlmApiKey)
   val remoteLlmApiKey: StateFlow<String> = _remoteLlmApiKey.asStateFlow()
 
-  /** The model name the remote endpoint serves. */
+  /** The model the remote endpoint serves, or an id from its catalogue. */
   private val _remoteLlmModel = MutableStateFlow(DefaultRemoteLlmModel)
   val remoteLlmModel: StateFlow<String> = _remoteLlmModel.asStateFlow()
 
@@ -57,7 +66,9 @@ class SettingsRepository @Inject constructor(
    * A model named in a settings field is a bare id with no metadata attached, so
    * unlike a registry-known model its window cannot be read off anything — this
    * is the number the app budgets against, resolved into the same
-   * `LLModel.contextLength` a Koog-catalogued model would already carry.
+   * `LLModel.contextLength` a Koog-catalogued model would already carry. It is a
+   * fallback rather than the only source: a provider whose catalogue is reachable
+   * (Anthropic, Ollama) fills this in from the real model.
    */
   private val _remoteLlmContextTokens =
     MutableStateFlow(DefaultRemoteLlmContextTokens)
@@ -96,6 +107,16 @@ class SettingsRepository @Inject constructor(
       // different mode, so a startup load never clobbers their selection.
       if (_engineMode.value == EngineMode.Default) {
         _engineMode.value = loaded
+      }
+    }
+    scope.launch {
+      val loaded = storage.getSetting(SettingsKey.RemoteLlmProvider, RemoteProvider.Default.key)
+        .let(RemoteProvider::fromKey)
+        ?: RemoteProvider.Default
+      // Only apply the persisted value while the user hasn't already picked a
+      // different provider, so a startup load never clobbers their selection.
+      if (_remoteLlmProvider.value == RemoteProvider.Default) {
+        _remoteLlmProvider.value = loaded
       }
     }
     scope.launch {
@@ -177,7 +198,36 @@ class SettingsRepository @Inject constructor(
     }
   }
 
-  /** Sets the OpenAI-compatible base URL the Remote backend connects to. */
+  /**
+   * Selects the remote protocol ([RemoteProvider]) and re-seeds the connection
+   * fields that are still on the previous provider's starter values.
+   *
+   * A provider switch has to move the endpoint and the model with it: an Ollama
+   * endpoint means nothing to Anthropic, and an Ollama model name is not a model
+   * Anthropic serves, so carrying them across would leave the backend pointed at
+   * a connection that cannot work. But a value the user typed is theirs, so only
+   * the untouched starters are replaced — the same "never clobber an edit" rule
+   * the startup loads follow.
+   */
+  fun setRemoteLlmProvider(provider: RemoteProvider) {
+    val previous = _remoteLlmProvider.value
+    if (provider == previous) return
+    _remoteLlmProvider.value = provider
+    scope.launch {
+      storage.saveSetting(SettingsKey.RemoteLlmProvider, provider.key)
+    }
+    if (_remoteLlmBaseUrl.value == previous.defaultBaseUrl) {
+      setRemoteLlmBaseUrl(provider.defaultBaseUrl)
+    }
+    if (_remoteLlmModel.value == previous.defaultModel) {
+      setRemoteLlmModel(provider.defaultModel)
+    }
+    if (_remoteLlmContextTokens.value == previous.defaultContextTokens) {
+      setRemoteLlmContextTokens(provider.defaultContextTokens)
+    }
+  }
+
+  /** Sets the base URL the Remote backend connects to. */
   fun setRemoteLlmBaseUrl(url: String) {
     if (url == _remoteLlmBaseUrl.value) return
     _remoteLlmBaseUrl.value = url
@@ -186,7 +236,7 @@ class SettingsRepository @Inject constructor(
     }
   }
 
-  /** Sets the API key the Remote backend authenticates with (empty for Ollama). */
+  /** Sets the API key the Remote backend authenticates with (empty for providers that need none). */
   fun setRemoteLlmApiKey(key: String) {
     if (key == _remoteLlmApiKey.value) return
     _remoteLlmApiKey.value = key
@@ -268,14 +318,19 @@ class SettingsRepository @Inject constructor(
     }
 
   companion object {
-    /** The OpenAI-compatible endpoint of a local Ollama install (v1 API root). */
-    const val DefaultRemoteLlmBaseUrl: String = "http://localhost:11434/v1"
+    /**
+     * The starter connection values, read off the default provider
+     * ([RemoteProvider.OpenAiCompatible]) so the two can never disagree. They
+     * name a local Ollama install's `/v1` root and the model a fresh Ollama
+     * exposes over it, because that is the default endpoint this app documents.
+     */
+    val DefaultRemoteLlmBaseUrl: String = RemoteProvider.Default.defaultBaseUrl
 
-    /** Ollama serves requests unauthenticated, so the default key is empty. */
+    /** The default providers serve requests unauthenticated, so the key starts empty. */
     const val DefaultRemoteLlmApiKey: String = ""
 
     /** The default model a fresh Ollama install exposes over that endpoint. */
-    const val DefaultRemoteLlmModel: String = "llama3.2:latest"
+    val DefaultRemoteLlmModel: String = RemoteProvider.Default.defaultModel
 
     /**
      * The window assumed for a user-named OpenAI-compatible model.
@@ -288,6 +343,6 @@ class SettingsRepository @Inject constructor(
      * interview early while too high lets the endpoint reject the request. The
      * field sits next to the model it describes, so the fix is one tap away.
      */
-    const val DefaultRemoteLlmContextTokens: Int = 8192
+    val DefaultRemoteLlmContextTokens: Int = RemoteProvider.Default.defaultContextTokens
   }
 }

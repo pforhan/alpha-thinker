@@ -25,10 +25,12 @@ import androidx.compose.ui.Modifier
 @Composable
 internal fun IntelligenceSheetContent(chrome: AppChromeState) {
   val engineMode by chrome.settings.engineMode.collectAsState()
+  val provider by chrome.settings.remoteLlmProvider.collectAsState()
   val baseUrl by chrome.settings.remoteLlmBaseUrl.collectAsState()
   val apiKey by chrome.settings.remoteLlmApiKey.collectAsState()
   val model by chrome.settings.remoteLlmModel.collectAsState()
   val contextTokens by chrome.settings.remoteLlmContextTokens.collectAsState()
+  val remoteModels by chrome.settings.remoteModels.collectAsState()
   val settings = chrome.settings
 
   Column(
@@ -47,10 +49,13 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
         content = {
           if (mode == EngineMode.Remote) {
             RemoteConnectionFields(
+              provider = provider,
+              onProviderChange = settings::selectRemoteProvider,
               baseUrl = baseUrl,
               apiKey = apiKey,
               model = model,
               contextTokens = contextTokens.toString(),
+              models = remoteModels,
               onBaseUrlChange = settings::setRemoteLlmBaseUrl,
               onApiKeyChange = settings::setRemoteLlmApiKey,
               onModelChange = settings::setRemoteLlmModel,
@@ -62,6 +67,10 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
                   .toIntOrNull()
                   ?.takeIf { it > 0 }
                   ?.let(settings::setRemoteLlmContextTokens)
+              },
+              onBrowseModels = settings::refreshRemoteModels,
+              onModelSelected = { info ->
+                settings.selectRemoteModel(info.id, info.contextLength)
               },
             )
           }

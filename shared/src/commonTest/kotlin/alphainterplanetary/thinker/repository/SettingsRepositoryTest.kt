@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
@@ -197,6 +198,92 @@ class SettingsRepositoryTest {
     repo.setRemoteLlmModel(SettingsRepository.DefaultRemoteLlmModel)
 
     assertEquals(0, storage.settings.size)
+  }
+
+  @Test
+  fun `remoteProvider starts at the default before the saved value loads`() = runTest {
+    val repo = repository()
+
+    assertEquals(RemoteProvider.Default, repo.remoteLlmProvider.value)
+  }
+
+  @Test
+  fun `remoteProvider loads the persisted provider at startup`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.RemoteLlmProvider, RemoteProvider.Anthropic.key)
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(RemoteProvider.Anthropic, repo.remoteLlmProvider.value)
+  }
+
+  @Test
+  fun `an unknown persisted provider falls back to the default`() = runTest {
+    val storage = FakeStorage()
+    storage.saveSetting(SettingsKey.RemoteLlmProvider, "nope")
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(RemoteProvider.Default, repo.remoteLlmProvider.value)
+  }
+
+  @Test
+  fun `setRemoteLlmProvider updates state and persists the choice`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setRemoteLlmProvider(RemoteProvider.Ollama)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(RemoteProvider.Ollama, repo.remoteLlmProvider.value)
+    assertEquals(
+      RemoteProvider.Ollama.key,
+      storage.settings[SettingsKey.RemoteLlmProvider.storageKey],
+    )
+  }
+
+  @Test
+  fun `setRemoteLlmProvider ignores the already-selected provider`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setRemoteLlmProvider(RemoteProvider.Default)
+
+    assertEquals(0, storage.settings.size)
+  }
+
+  @Test
+  fun `switching provider re-seeds connection fields still on the old starter values`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+
+    repo.setRemoteLlmProvider(RemoteProvider.OpenAiCompatible)
+    testScheduler.advanceUntilIdle()
+    repo.setRemoteLlmProvider(RemoteProvider.Anthropic)
+    testScheduler.advanceUntilIdle()
+
+    // OpenAiCompatible's starters are the app defaults, so the switch re-seeds
+    // the base URL to Anthropic's fixed origin and the model to its default.
+    assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, repo.remoteLlmBaseUrl.value)
+    assertEquals(RemoteProvider.Anthropic.defaultModel, repo.remoteLlmModel.value)
+    assertEquals(RemoteProvider.Anthropic.defaultContextTokens, repo.remoteLlmContextTokens.value)
+  }
+
+  @Test
+  fun `switching provider keeps connection fields the user customized`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+    repo.setRemoteLlmBaseUrl("http://my-proxy:8080/v1")
+    repo.setRemoteLlmModel("custom-model")
+
+    repo.setRemoteLlmProvider(RemoteProvider.Anthropic)
+    testScheduler.advanceUntilIdle()
+
+    // The user's own endpoint and model are theirs, not the previous starter.
+    assertEquals("http://my-proxy:8080/v1", repo.remoteLlmBaseUrl.value)
+    assertEquals("custom-model", repo.remoteLlmModel.value)
   }
 
   // ---------- engine slow-down delays ----------

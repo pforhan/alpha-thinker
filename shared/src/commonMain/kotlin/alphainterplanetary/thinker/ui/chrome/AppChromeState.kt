@@ -146,6 +146,8 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
   val settings = remember(appComponent) {
     SettingsViewModel(
       settingsRepository = appComponent.settingsRepository,
+      modelCatalog = appComponent.remoteModelCatalog,
+      scope = appComponent.appScope,
     )
   }
   val tools = remember(appComponent) {
@@ -169,7 +171,11 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
       settings.engineMode,
       settings.remoteLlmBaseUrl,
       settings.remoteLlmModel,
-    ) { mode, baseUrl, model -> engineStatus(mode, baseUrl, model) }
+      settings.remoteLlmProvider,
+      settings.remoteLlmApiKey,
+    ) { mode, baseUrl, model, provider, apiKey ->
+      engineStatus(mode, baseUrl, model, provider, apiKey)
+    }
       .stateIn(
         scope = appComponent.appScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -177,6 +183,8 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
           settings.engineMode.value,
           settings.remoteLlmBaseUrl.value,
           settings.remoteLlmModel.value,
+          settings.remoteLlmProvider.value,
+          settings.remoteLlmApiKey.value,
         ),
       )
   }

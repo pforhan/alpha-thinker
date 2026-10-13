@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.RemoteProvider
 
 /** How a header slot is rendering, from the active mode's capabilities alone. */
 enum class CapabilityState {
@@ -62,16 +63,21 @@ data class EngineStatus(
 /**
  * Derives the status the chrome displays for [mode].
  *
- * [remoteBaseUrl] and [remoteModel] are the raw settings values, and only
- * [EngineMode.Remote] reads them. The base URL is shown as configured rather
- * than re-normalized here: the `/v1` strip in
+ * [remoteBaseUrl], [remoteModel], [remoteProvider], and [remoteApiKey] are the
+ * raw settings values, and only [EngineMode.Remote] reads them. The base URL is
+ * shown as configured rather than re-normalized here: the `/v1` strip in
  * [alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend] is the one rule for
- * that, and a second copy here would be free to drift from it.
+ * that, and a second copy here would be free to drift from it. A provider whose
+ * endpoint is not user-configurable ([RemoteProvider.configurableBaseUrl] =
+ * false) is always "configured" at its fixed origin, so it is shown as active
+ * even when the stored URL field is empty or stale from a previous provider.
  */
 fun engineStatus(
   mode: EngineMode,
   remoteBaseUrl: String = "",
   remoteModel: String = "",
+  remoteProvider: RemoteProvider = RemoteProvider.Default,
+  remoteApiKey: String = "",
 ): EngineStatus {
   val url = remoteBaseUrl.trim()
   val model = remoteModel.trim()
@@ -79,7 +85,14 @@ fun engineStatus(
   // null means "the mode needs this and the app does not have it".
   val networkDetail: String? = when (mode) {
     EngineMode.Offline -> null
-    EngineMode.Remote -> url.ifBlank { null }
+    EngineMode.Remote -> when {
+      // A provider that requires a key has nothing to send until one is set.
+      remoteProvider.requiresApiKey && remoteApiKey.isBlank() -> null
+      // A fixed origin is always reachable-looking; the model and key carry the
+      // incompleteness. Anthropic's endpoint shows its own origin.
+      !remoteProvider.configurableBaseUrl -> remoteProvider.defaultBaseUrl
+      else -> url.ifBlank { null }
+    }
     // No endpoint is involved at all: only Remote egresses.
     EngineMode.OnDevice, EngineMode.Downloaded -> mode.label
   }

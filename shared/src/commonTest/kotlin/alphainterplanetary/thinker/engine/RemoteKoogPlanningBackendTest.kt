@@ -121,6 +121,73 @@ class RemoteKoogPlanningBackendTest {
     assertEquals("https://api.openai.com", factory.creations.last().baseUrl)
   }
 
+  // ---------- provider dispatch ----------
+
+  @Test
+  fun `the ollama provider builds an unauthenticated native client at the origin`() = runTest {
+    val repo = repository()
+    repo.setRemoteLlmProvider(RemoteProvider.Ollama)
+    repo.setRemoteLlmBaseUrl("http://localhost:11434/v1")
+    val factory = RecordingFactory()
+    val backend = RemoteKoogPlanningBackend(repo, factory)
+
+    backend.executor
+
+    val creation = factory.creations.single()
+    assertEquals("http://localhost:11434", creation.baseUrl)
+    assertTrue("Authorization" !in creation.headers)
+    assertEquals(LLMProvider.Ollama, backend.model.provider)
+  }
+
+  @Test
+  fun `the ollama provider rides the declared window`() = runTest {
+    val repo = repository()
+    repo.setRemoteLlmProvider(RemoteProvider.Ollama)
+    repo.setRemoteLlmContextTokens(4_096)
+    val backend = RemoteKoogPlanningBackend(repo, RecordingFactory())
+
+    assertEquals(4_096L, backend.model.contextLength)
+  }
+
+  @Test
+  fun `the anthropic provider sends the api key header to its fixed origin`() = runTest {
+    val repo = repository()
+    repo.setRemoteLlmProvider(RemoteProvider.Anthropic)
+    repo.setRemoteLlmApiKey("secret")
+    repo.setRemoteLlmModel(RemoteProvider.Anthropic.defaultModel)
+    val factory = RecordingFactory()
+    val backend = RemoteKoogPlanningBackend(repo, factory)
+
+    backend.executor
+
+    val creation = factory.creations.single()
+    assertEquals("https://api.anthropic.com", creation.baseUrl)
+    assertEquals("secret", creation.headers["x-api-key"])
+    assertEquals(LLMProvider.Anthropic, backend.model.provider)
+  }
+
+  @Test
+  fun `the anthropic provider advertises the catalogue models window`() = runTest {
+    val repo = repository()
+    repo.setRemoteLlmProvider(RemoteProvider.Anthropic)
+    repo.setRemoteLlmModel("claude-opus-4-7")
+    val backend = RemoteKoogPlanningBackend(repo, RecordingFactory())
+
+    assertEquals(1_000_000L, backend.model.contextLength)
+  }
+
+  @Test
+  fun `an unknown anthropic model carries the declared window`() = runTest {
+    val repo = repository()
+    repo.setRemoteLlmProvider(RemoteProvider.Anthropic)
+    repo.setRemoteLlmModel("claude-custom-1")
+    repo.setRemoteLlmContextTokens(48_000)
+    val backend = RemoteKoogPlanningBackend(repo, RecordingFactory())
+
+    assertEquals("claude-custom-1", backend.model.id)
+    assertEquals(48_000L, backend.model.contextLength)
+  }
+
   /** Records each configured endpoint the backend requests from [KoogHttpClient.Factory]. */
   private class RecordingFactory : KoogHttpClient.Factory {
     val creations = mutableListOf<Creation>()

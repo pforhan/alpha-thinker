@@ -90,6 +90,8 @@ kotlin {
       implementation(libs.kotlin.inject)
       implementation(libs.room.runtime)
       implementation(libs.koog.agents)
+      implementation(libs.koog.prompt.executor.ollama.client)
+      implementation(libs.koog.prompt.executor.anthropic.client)
     }
 
     androidMain.dependencies {

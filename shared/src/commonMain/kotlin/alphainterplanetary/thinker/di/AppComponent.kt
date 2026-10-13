@@ -11,9 +11,11 @@ import alphainterplanetary.thinker.engine.DynamicKoogPlanningBackend
 import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.engine.OfflinePlanningEngine
 import alphainterplanetary.thinker.engine.KoogPlanningEngine
+import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend
+import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
 import alphainterplanetary.thinker.engine.resolveSelectedEngine
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -44,6 +46,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   abstract val projectSimulator: ProjectSimulator
 
   abstract val engineSelector: PlanningEngineSelector
+
+  abstract val remoteModelCatalog: RemoteModelCatalog
 
   abstract val taskRunner: TaskRunner
 
@@ -82,6 +86,10 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
     scope: CoroutineScope,
     activityLogger: ActivityLogger,
   ): TaskRunner = TaskRunner(scope, activityLogger)
+
+  @AppScope
+  @Provides
+  fun providesRemoteModelCatalog(): RemoteModelCatalog = KoogRemoteModelCatalog()
 
   @AppScope
   @Provides

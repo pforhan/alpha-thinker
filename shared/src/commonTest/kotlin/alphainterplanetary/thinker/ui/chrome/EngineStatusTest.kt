@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.RemoteProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -65,6 +66,46 @@ class EngineStatusTest {
     assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
     assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
     assertTrue(status.needsAttention)
+  }
+
+  @Test
+  fun aKeyedProviderWithoutAKeyIsIncompleteEvenAtItsFixedOrigin() {
+    val status = engineStatus(
+      mode = EngineMode.Remote,
+      remoteModel = "claude-sonnet-4-5",
+      remoteProvider = RemoteProvider.Anthropic,
+      remoteApiKey = "",
+    )
+
+    assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
+    assertTrue(status.needsAttention)
+  }
+
+  @Test
+  fun aKeyedProviderShowsItsFixedOriginOnceKeyed() {
+    val status = engineStatus(
+      mode = EngineMode.Remote,
+      remoteModel = "claude-sonnet-4-5",
+      remoteProvider = RemoteProvider.Anthropic,
+      remoteApiKey = "sk-ant",
+    )
+
+    assertEquals(CapabilityState.Active, status.slot(EngineCapability.Network).state)
+    assertEquals("https://api.anthropic.com", status.slot(EngineCapability.Network).detail)
+    assertFalse(status.needsAttention)
+  }
+
+  @Test
+  fun aKeylessProviderNeedsNoKey() {
+    val status = engineStatus(
+      mode = EngineMode.Remote,
+      remoteBaseUrl = "http://localhost:11434",
+      remoteModel = "llama3.2:latest",
+      remoteProvider = RemoteProvider.Ollama,
+      remoteApiKey = "",
+    )
+
+    assertEquals(CapabilityState.Active, status.slot(EngineCapability.Network).state)
   }
 
   @Test

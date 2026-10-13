@@ -19,6 +19,7 @@ enum class SettingsKey(val storageKey: String) {
   RemoteLlmApiKey("remote-llm-api-key"),
   RemoteLlmModel("remote-llm-model"),
   RemoteLlmContextTokens("remote-llm-context-tokens"),
+  RemoteLlmProvider("remote-llm-provider"),
 
   /**
    * The id of the project the project simulator last created, so a later run
