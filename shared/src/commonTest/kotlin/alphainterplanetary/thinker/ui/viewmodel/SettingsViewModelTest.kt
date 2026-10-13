@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
@@ -22,7 +23,7 @@ import kotlin.test.assertTrue
 
 class SettingsViewModelTest {
   val storage = FakeStorage()
-  val sampleProjectGenerator = SampleProjectGenerator(storage)
+  val sampleProjectGenerator = SampleProjectGenerator(storage, ProjectWrites())
 
   private fun TestScope.viewModel(): SettingsViewModel {
     val scope = CoroutineScope(coroutineContext)
@@ -36,7 +37,7 @@ class SettingsViewModelTest {
     return SettingsViewModel(
       settingsRepository = SettingsRepository(storage, scope),
       sampleProjectGenerator = sampleProjectGenerator,
-      projectSimulator = ProjectSimulator(repository, storage, scope),
+      projectSimulator = ProjectSimulator(repository, storage, scope, ProjectWrites()),
       scope = scope,
     )
   }

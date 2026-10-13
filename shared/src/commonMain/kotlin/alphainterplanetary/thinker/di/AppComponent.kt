@@ -17,6 +17,7 @@ import alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
 import alphainterplanetary.thinker.engine.resolveSelectedEngine
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tools.ProjectSimulator
@@ -35,6 +36,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   abstract val projectRepository: ProjectRepository
 
   abstract val settingsRepository: SettingsRepository
+
+  abstract val projectWrites: ProjectWrites
 
   abstract val sampleProjectGenerator: SampleProjectGenerator
 

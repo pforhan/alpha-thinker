@@ -1,18 +1,23 @@
 package alphainterplanetary.thinker.tools
 
 import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.testutil.FakeStorage
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SampleProjectGeneratorTest {
 
   @Test
   fun `generate creates all eight sample projects with the expected ids`() = runTest {
     val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
+    val generator = SampleProjectGenerator(storage, ProjectWrites())
 
     generator.generate()
 
@@ -35,7 +40,7 @@ class SampleProjectGeneratorTest {
   fun `scope project has a short synopsis with a couple answered and five unanswered questions`() =
     runTest {
       val storage = FakeStorage()
-      val generator = SampleProjectGenerator(storage)
+      val generator = SampleProjectGenerator(storage, ProjectWrites())
 
       generator.generate()
 
@@ -50,7 +55,7 @@ class SampleProjectGeneratorTest {
   @Test
   fun `phase sample projects each land on a distinct phase in library order`() = runTest {
     val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
+    val generator = SampleProjectGenerator(storage, ProjectWrites())
 
     generator.generate()
 
@@ -80,7 +85,7 @@ class SampleProjectGeneratorTest {
   @Test
   fun `execution and validation projects are ready to advance`() = runTest {
     val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
+    val generator = SampleProjectGenerator(storage, ProjectWrites())
 
     generator.generate()
 
@@ -96,7 +101,7 @@ class SampleProjectGeneratorTest {
   @Test
   fun `done project has wrapped up every phase and resolved all of its questions`() = runTest {
     val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
+    val generator = SampleProjectGenerator(storage, ProjectWrites())
 
     generator.generate()
 
@@ -116,7 +121,7 @@ class SampleProjectGeneratorTest {
   @Test
   fun `stress project uses very long text in every field`() = runTest {
     val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
+    val generator = SampleProjectGenerator(storage, ProjectWrites())
 
     generator.generate()
 
@@ -136,7 +141,7 @@ class SampleProjectGeneratorTest {
   @Test
   fun `generating twice does not grow the project count`() = runTest {
     val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
+    val generator = SampleProjectGenerator(storage, ProjectWrites())
 
     generator.generate()
     generator.generate()
@@ -145,25 +150,35 @@ class SampleProjectGeneratorTest {
   }
 
   @Test
-  fun `generationCount advances once per completed run`() = runTest {
+  fun `generate announces once per completed run on the write bus`() = runTest {
     val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
-    assertEquals(0, generator.generationCount.value)
+    val projectWrites = ProjectWrites()
+    val generator = SampleProjectGenerator(storage, projectWrites)
+
+    // Unconfined so the collector subscribes before the first emit — the bus has
+    // no replay, so an emit with no subscriber is deliberately dropped.
+    val announcements = mutableListOf<Unit>()
+    val collector = launch(UnconfinedTestDispatcher(testScheduler)) {
+      projectWrites.writes.collect { announcements += it }
+    }
 
     generator.generate()
-    assertEquals(1, generator.generationCount.value)
+    testScheduler.advanceUntilIdle()
+    assertEquals(1, announcements.size)
 
-    // The count is what a project list reloads on, so it has to advance again
-    // for a second run — a reload keyed on a StateFlow that never changes would
-    // show the samples once and never again.
+    // What a project list reloads on has to fire again for a second run — a
+    // signal that only ever fires once would show the samples and never update.
     generator.generate()
-    assertEquals(2, generator.generationCount.value)
+    testScheduler.advanceUntilIdle()
+    assertEquals(2, announcements.size)
+
+    collector.cancel()
   }
 
 @Test
   fun `every answer id is unique across all projects`() = runTest {
     val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
+    val generator = SampleProjectGenerator(storage, ProjectWrites())
 
     generator.generate()
 

@@ -9,6 +9,7 @@ import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.TaskFailed
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -53,12 +54,25 @@ import me.tatarka.inject.annotations.Inject
  * (see [deletePreviousRun]) — not by scanning for a marker on the project, which
  * is what this needed before the repository grew its `…AndWait` entry points and
  * a caller could no longer assume which project a background task was writing to.
+ *
+ * A run deliberately does not announce on `ProjectWrites`: its write is covered by
+ * navigation — a run either jumps to its new project (see `openSimulatedProject`) or
+ * reports its finish on `SimulatorScreen`, and backing out to the list re-creates that
+ * screen's ViewModel and reloads. A later writer with no navigation of its own is what
+ * the bus is for; announcing here would be redundant.
+ *
+ * Note: `announceWrite()` exists for consumers that want to explicitly signal that
+ * a simulation-created project should be visible to lists, but is not called by
+ * this class itself. Both sample generation and simulation write projects; if the
+ * semantics should be uniform, we could announce from here too. For now the
+ * existing navigation-driven behavior is preserved.
  */
 @AppScope
 class ProjectSimulator @Inject constructor(
   private val repository: ProjectRepository,
   private val storage: Storage,
   private val scope: CoroutineScope,
+  private val projectWrites: ProjectWrites,
 ) {
 
   private val _state = MutableStateFlow<SimulationState>(SimulationState.Idle)
@@ -429,6 +443,14 @@ class ProjectSimulator @Inject constructor(
       problems += e.message ?: e.toString()
     }
     return storage.getProject(projectId)?.currentPhaseQuestions?.isNotEmpty() == true
+  }
+
+  /**
+   * Announces that the project has changed, so UI that observes the bus (e.g., the
+   * project list) can reload even if navigation does not land there.
+   */
+  fun announceWrite() {
+    projectWrites.announce()
   }
 
   companion object {

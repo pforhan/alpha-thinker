@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ContextCheck
 import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.util.now
@@ -58,6 +59,7 @@ sealed interface ContextPrompt {
 class ProjectDetailViewModel(
   private val repository: ProjectRepository,
   private val taskRunner: TaskRunner,
+  private val projectWrites: ProjectWrites,
   scope: CoroutineScope,
 ) {
   /** Cancelled by [close] so UI teardown stops the per-VM work (e.g. the task collector). */
@@ -106,6 +108,14 @@ class ProjectDetailViewModel(
             }
           }
         }
+    }
+    // A write this screen did not make — the header flyout regenerating the
+    // sample projects, say — can replace the project under it. The screen has no
+    // other way to hear about it, so it would keep the copy it loaded until the
+    // user navigated away. [refresh] keeps whatever is on screen until the read
+    // lands, and is a no-op while no project is loaded.
+    vmScope.launch {
+      projectWrites.writes.collect { refresh() }
     }
   }
 

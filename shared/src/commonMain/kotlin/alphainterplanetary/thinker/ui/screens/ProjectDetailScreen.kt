@@ -112,6 +112,7 @@ fun ProjectDetailScreen(
     ProjectDetailViewModel(
       appComponent.projectRepository,
       appComponent.taskRunner,
+      appComponent.projectWrites,
       appComponent.appScope,
     )
   }

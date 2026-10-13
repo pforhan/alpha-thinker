@@ -5,13 +5,13 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.testutil.defaultTestInstant
-import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -24,7 +24,7 @@ class ProjectListViewModelTest {
   /** Builds a VM on the test scheduler and guarantees [ProjectListViewModel.close]. */
   private suspend fun TestScope.withViewModel(
     storage: Storage = FakeStorage(),
-    generator: SampleProjectGenerator = SampleProjectGenerator(storage),
+    projectWrites: ProjectWrites = ProjectWrites(),
     block: suspend (ProjectListViewModel) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
@@ -37,7 +37,7 @@ class ProjectListViewModelTest {
     val vm = ProjectListViewModel(
       repository,
       runner,
-      generator,
+      projectWrites,
       CoroutineScope(coroutineContext),
     )
     try {
@@ -108,23 +108,23 @@ class ProjectListViewModelTest {
   }
 
   @Test
-  fun `a sample-project run reloads the list already on screen`() = runTest {
-    val storage = FakeStorage()
-    val generator = SampleProjectGenerator(storage)
-    withViewModel(storage, generator) { vm ->
+  fun `a project write reloads the list already on screen`() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to project("p1")))
+    val projectWrites = ProjectWrites()
+    withViewModel(storage, projectWrites) { vm ->
       vm.loadProjects()
       testScheduler.advanceUntilIdle()
-      assertTrue((vm.uiState.value as ProjectListUiState.Success).projects.isEmpty())
+      assertEquals(1, (vm.uiState.value as ProjectListUiState.Success).projects.size)
 
-      // The run is started from the header, over this screen — nothing here
-      // asks for the reload, so the generator's completion count is the only
-      // thing that can put these projects in front of the user.
-      generator.generate()
+      // The write is made by something the list cannot see — the header flyout,
+      // say — so the list learns of it only from the bus. It must be able to
+      // react without naming the writer.
+      storage.projects["p2"] = project("p2")
+      projectWrites.announce()
       testScheduler.advanceUntilIdle()
 
       val ids = (vm.uiState.value as ProjectListUiState.Success).projects.map { it.id }
-      assertEquals(generator.count(), ids.size)
-      assertTrue("sample-scope" in ids)
+      assertEquals(setOf("p1", "p2"), ids.toSet())
     }
   }
 

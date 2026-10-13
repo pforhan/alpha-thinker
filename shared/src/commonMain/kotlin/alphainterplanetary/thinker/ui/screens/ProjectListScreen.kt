@@ -80,7 +80,7 @@ fun ProjectListScreen(
     ProjectListViewModel(
       appComponent.projectRepository,
       appComponent.taskRunner,
-      appComponent.sampleProjectGenerator,
+      appComponent.projectWrites,
       appComponent.appScope,
     )
   }

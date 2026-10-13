@@ -8,30 +8,16 @@ import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import me.tatarka.inject.annotations.Inject
 import kotlin.time.Instant
 
 class SampleProjectGenerator @Inject constructor(
   private val storage: Storage,
+  private val projectWrites: ProjectWrites,
 ) {
-
-  private val _generationCount = MutableStateFlow(0)
-
-  /**
-   * How many runs have finished writing their projects, which is what a project
-   * list that is already on screen waits on to reload.
-   *
-   * A run is started from the header flyout rather than from the list, so the
-   * list is on screen without having asked for the change and cannot know it
-   * happened. This is the generator saying so, and it only counts runs that
-   * landed: a failed run leaves nothing new to show.
-   */
-  val generationCount: StateFlow<Int> = _generationCount.asStateFlow()
 
   private val allIds = listOf(
     SCOPE_PROJECT_ID,
@@ -58,7 +44,7 @@ class SampleProjectGenerator @Inject constructor(
     storage.saveProject(dodProject())
     storage.saveProject(doneProject())
     storage.saveProject(stressProject())
-    _generationCount.value += 1
+    projectWrites.announce()
     return allIds.size
   }
 

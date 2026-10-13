@@ -2,9 +2,9 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskRunner
-import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -22,7 +22,7 @@ sealed interface ProjectListUiState {
 class ProjectListViewModel(
   private val repository: ProjectRepository,
   private val taskRunner: TaskRunner,
-  private val sampleProjectGenerator: SampleProjectGenerator,
+  private val projectWrites: ProjectWrites,
   private val scope: CoroutineScope,
 ) {
   private val vmJob = SupervisorJob(scope.coroutineContext[Job])
@@ -48,14 +48,13 @@ class ProjectListViewModel(
     }
     // Sample projects are generated from the header flyout, which is composed
     // over every screen — so the run happens while this list is on screen and
-    // without this list having asked for it. The generator's completion count is
-    // what says so, and the reload is the only way its projects reach the user.
-    // Skipped at zero, where there is nothing to reload for: the count of an
-    // app that has never generated is zero, and a reload there would race the
-    // screen's own initial load for no reason.
+    // without this list having asked for it. The write bus is what says so, and
+    // the reload is the only way its projects reach the user. The bus is inert
+    // on subscribe, so collecting it here cannot race the screen's own first
+    // load.
     vmScope.launch {
-      sampleProjectGenerator.generationCount.collect { runs ->
-        if (runs > 0) reloadProjects()
+      projectWrites.writes.collect {
+        reloadProjects()
       }
     }
   }

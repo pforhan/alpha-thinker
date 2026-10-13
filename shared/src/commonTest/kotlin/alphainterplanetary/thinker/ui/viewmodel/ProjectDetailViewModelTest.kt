@@ -10,6 +10,7 @@ import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
@@ -46,6 +47,7 @@ class ProjectDetailViewModelTest {
   private suspend fun TestScope.withViewModel(
     storage: FakeStorage = FakeStorage(),
     generator: PlanningEngine = FakePlanningEngine(),
+    projectWrites: ProjectWrites = ProjectWrites(),
     block: suspend (VmContext) -> Unit,
   ) {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
@@ -58,6 +60,7 @@ class ProjectDetailViewModelTest {
     val vm = ProjectDetailViewModel(
       repository = repository,
       taskRunner = runner,
+      projectWrites = projectWrites,
       scope = CoroutineScope(coroutineContext),
     )
     try {
@@ -669,4 +672,30 @@ class ProjectDetailViewModelTest {
         assertTrue(vm.tasks.value.all { it.isFinished })
       }
     }
+
+  // ---------- writes from outside the screen ----------
+
+  @Test
+  fun `a project write reloads the loaded project in place`() = runTest {
+    val before = project().copy(title = "Before")
+    val storage = FakeStorage(mutableMapOf("p1" to before))
+    val projectWrites = ProjectWrites()
+    withViewModel(storage = storage, projectWrites = projectWrites) { context ->
+      val vm = context.vm
+      vm.loadProject("p1")
+      testScheduler.advanceUntilIdle()
+      assertEquals("Before", (vm.uiState.value as ProjectDetailUiState.Success).project.title)
+
+      // The header flyout can regenerate the samples while this screen is open.
+      // The write bus is the screen's only signal that its copy went stale, and
+      // the reload keeps the screen on the project instead of a spinner.
+      storage.projects["p1"] = before.copy(title = "After")
+      projectWrites.announce()
+      testScheduler.advanceUntilIdle()
+
+      val state = vm.uiState.value
+      assertIs<ProjectDetailUiState.Success>(state)
+      assertEquals("After", state.project.title)
+    }
+  }
 }

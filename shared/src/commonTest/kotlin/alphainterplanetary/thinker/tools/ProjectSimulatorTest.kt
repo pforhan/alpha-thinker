@@ -11,6 +11,7 @@ import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
+import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
@@ -62,6 +63,7 @@ class ProjectSimulatorTest {
       repository = repository,
       storage = storage,
       scope = CoroutineScope(coroutineContext),
+      projectWrites = ProjectWrites(),
     )
     return Harness(simulator, storage, generator as? FakePlanningEngine)
   }
