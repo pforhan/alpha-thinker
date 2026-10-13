@@ -8,7 +8,7 @@ class EngineCapabilitiesTest {
 
   @Test
   fun `lite has no capabilities at all`() {
-    assertEquals(emptySet(), EngineMode.Lite.capabilities)
+    assertEquals(emptySet(), EngineMode.Offline.capabilities)
   }
 
   @Test
@@ -42,7 +42,7 @@ class EngineCapabilitiesTest {
   @Test
   fun `every model-backed mode runs an llm and lite does not`() {
     EngineMode.entries.forEach { mode ->
-      val expected = mode != EngineMode.Lite
+      val expected = mode != EngineMode.Offline
       assertEquals(expected, mode.capabilities.contains(EngineCapability.Llm), mode.name)
     }
   }

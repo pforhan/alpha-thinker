@@ -144,9 +144,10 @@ internal fun SettingsFlyoutButton(
       title = { Text("Generate sample projects?") },
       text = {
         Text(
-          "Creates three projects to explore the UI: one sparse, one mostly " +
-            "complete, and one with very long text in every field to " +
-            "stress-test the layout. Projects already in the list are kept.",
+          "Replaces the sample projects with eight fresh ones that walk the whole " +
+            "planning lifecycle, from a project just getting started to a finished " +
+            "one, plus a project full of very long text to stress-test the layout. " +
+            "Projects you created yourself are kept.",
         )
       },
       confirmButton = {

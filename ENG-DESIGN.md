@@ -23,6 +23,69 @@ This iteration proposes a clear separation of concerns:
 
 This model allows the KMP core to be the 'source of truth' for the application's business logic, decoupling it from UI platform specifics.
 
+### Tools vs. Product Code
+
+"Tools" are the helpers that exist to exercise and inspect the app — to put 
+content in front of the UI, or to drive the real pipeline end to end — not 
+to help a user plan a project. They ship in the current binary and are reached
+from the same header as everything else, so "is this a tool?" is a question
+about *purpose*, answered here rather than by build flavor or folder.
+
+**The tools:**
+
+- **Sample-project fixtures** — `tools/SampleProjectGenerator.kt`. Eight static
+  `Project` fixtures that never touch an engine, spanning the lifecycle from a
+  project just getting started, through mid-planning, to a finished one, plus a
+  long-text `sample-stress` fixture to stretch the layout. Reached from the
+  flyout's "Generate sample projects" row; a run replaces its own eight ids and
+  leaves user-created projects alone.
+- **The project simulator** — `tools/ProjectSimulator.kt` (with
+  `SimulationConfig` / `SimulationState`). Creates a project the way the
+  new-project dialog does, then walks one question round per phase *through*
+  `ProjectRepository`, against the currently selected engine, so the real
+  pipeline (task runner, per-round dedupe, `RoundOutcome` latching, context
+  compaction, activity log) runs in order.
+- **The artificial engine delay** — `engine/EngineDelayConfig.kt` (with
+  `EngineInteraction`), `engine/SlowDownPlanningEngine.kt`, and
+  `ui/chrome/DelayControl.kt`, persisted through `SettingsKey.SlowDownPlanningEngine`
+  plus the per-interaction keys and `SettingsRepository.engineDelay`. A
+  `PlanningEngine` decorator that holds each interaction open so generation tasks
+  linger on the Task Manager long enough to inspect.
+- **The surfaces that reach them** — `ui/screens/SimulatorScreen.kt`,
+  `ui/chrome/TestingSheet.kt` (`ChromeSheet.Testing`),
+  `ui/chrome/SettingsFlyout.kt`'s "Generate sample projects" / "Testing" rows,
+  `ui/tools/ToolsViewModel.kt`, and `ui/tools/OpenSimulatedProject.kt` (the
+  simulator's post-run jump policy and its handled-id ledger). Phase 4's
+  manual-LLM-chat screen is the next planned tool and joins the same inventory.
+
+**Not tools, despite the fixture smell:**
+
+- `OfflinePlanningEngine` — it is `EngineMode.Lite`, the product's Offline
+  mode, not a stand-in for one.
+- `TaskRunner` and `GenerationTaskBar` — generation progress is product UX.
+- `ActivityLogger` / `RoomActivityLogger` / `ActivityRecord` — the activity log
+  is product diagnostics, not a tool's output.
+- The failure-announcement machinery (`AppChromeState.announceFailures`,
+  `SettingsKey.AnnouncedFailureActivityId`) — the failure path is product behavior.
+
+**The seam.** Tools reach product code through named seams, not by reaching into
+it. A tool that writes projects announces on the app-scoped
+`repository/ProjectWrites` bus instead of product code naming the tool; tool
+surfaces enter through the `ChromeSheet.Testing` sheet and the `AppRoute.Simulator`
+route, with the nav root supplying only the route and the jump callback while the
+tool owns the policy (`ui/tools/OpenSimulatedProject.kt`); and tool state lives in
+`ToolsViewModel`, hoisted on `AppChromeState` beside the settings, never in a
+settings ViewModel. A new tool arrives behind one of these seams.
+
+**Naming and the build split.** These are called "tools", not "dev tools" or
+"debug tools": they are reachable from the shipped UI, so "dev" would describe a
+boundary the code does not actually have. The name is kept distinct from two
+unrelated uses of the word — `EngineCapability.Tools` (the LLM tool-calling pill)
+and `LogSource.Tool` (a log source). The tools stay in `commonMain`: the Phase 8
+"debug-build split" that would move them behind a Gradle property is **declined**
+as not worth the source-set and expect/actual complexity for an app this size
+(see Phase 8 in `IMPLEMENTATION-PLAN.md`).
+
 ### Data Persistence Layer: Room/Android Architecture Components
 Given the KMP logic core, the ideal solution for persistent storage is **Room KMP** (or a similar KMP wrapper for SQLite). This will provide a robust, type-safe abstraction over local persistence for our core entities (Projects, Questions, Answers).
 
@@ -116,7 +179,7 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     `cancelled` on resolution, with `activityId = taskId`). A
     **`LoggingPlanningEngine` decorator** — wrapping whichever engine is
     active, exactly as `SlowDownPlanningEngine` wraps
-    `HardcodedPlanningEngine` — installs a **`LogScope`** coroutine-context
+    `OfflinePlanningEngine` — installs a **`LogScope`** coroutine-context
     element for each interaction, and an LLM-backed engine reports into it from
     its one request call site (`logRequest`): one `prompt:` row carrying the
     prompt that was actually sent, then that request's terminal `response:` or
@@ -229,7 +292,7 @@ note). The set of phases the app can be in comes from a **code-defined
   options + "Finish the plan") stays the only phase surface the user meets,
   which bounds cognitive load. See PROJECT-FLOWS.md for the per-phase pool
   partition.
-- **Pool serving:** each phase owns a slice of `HardcodedPlanningEngine`
+- **Pool serving:** each phase owns a slice of `OfflinePlanningEngine`
   `questionPool`; the slice front holds the highest-value questions. Each round
   serves up to 5 questions from where the last round stopped. Pools are sized
   ~10-14 per phase so exhaustion (everything in the phase's pool has been asked)
@@ -320,7 +383,7 @@ observable background task.
   wrap-up advancing into a new phase and for every "Get more questions" round.
   The same call shape works for the hardcoded stand-in and a real LLM alike.
   (Implementors of the `PlanningEngine` interface:
-  `HardcodedPlanningEngine` today; a `KoogPlanningEngine` over the Koog
+  `OfflinePlanningEngine` today; a `KoogPlanningEngine` over the Koog
   `LLMClient`/executor seam in Phase 3, which hosts the on-device, remote, and
   downloaded-model backends.)
 
@@ -405,7 +468,7 @@ as `LogSource` on each activity-log row):
 
 | Mode | Backend | `LogSource` | Capabilities |
 |---|---|---|---|
-| Lite (default) | `HardcodedPlanningEngine` (unchanged) | `Lite` | — |
+| Lite (default) | `OfflinePlanningEngine` (unchanged) | `Lite` | — |
 | On-device | `OnDeviceLLMClient` — hand-rolled Koog `LLMClient` | `LocalLLM` | LLM |
 | Remote | Koog `OpenAILLMClient` / `OllamaClient` | `RemoteLLM` | Network, LLM |
 | Downloaded | Koog `LiteRTLLMClient` (Android) + own JVM adapter (desktop) | `LocalLLM` | LLM |

@@ -9,7 +9,7 @@ import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
 import alphainterplanetary.thinker.engine.DynamicKoogPlanningBackend
 import alphainterplanetary.thinker.engine.EngineMode
-import alphainterplanetary.thinker.engine.HardcodedPlanningEngine
+import alphainterplanetary.thinker.engine.OfflinePlanningEngine
 import alphainterplanetary.thinker.engine.KoogPlanningEngine
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
@@ -89,7 +89,7 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
     settingsRepository: SettingsRepository,
     activityLogger: ActivityLogger,
   ): PlanningEngineSelector {
-    val liteEngine = HardcodedPlanningEngine()
+    val liteEngine = OfflinePlanningEngine()
 
     // One Koog engine per selectable LLM mode, each bound to that mode's
     // backend. Binding at construction (rather than re-reading the live

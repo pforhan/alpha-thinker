@@ -62,7 +62,7 @@ Both Editions share the same general UI, but differ in source of question materi
 - Lookup and web search are reported to the user as a **capability** of the selected engine, not as a switch of their own: the header shows one read-only pill per capability (Network, LLM, Tools) and the Tools pill stays muted until an engine actually offers the tools. A per-capability on/off control is deliberately not planned — a switch the engine selection can override is a second source of truth, and it is not a security boundary (airplane mode is).
 
 ### 4.4 Seed Questions 
-The app ships with a large body of default questions; see [HardcodedQuestions.kt](shared/src/commonMain/kotlin/alphainterplanetary/thinker/engine/HardcodedPlanningEngine.kt)
+The app ships with a large body of default questions; see [HardcodedQuestions.kt](shared/src/commonMain/kotlin/alphainterplanetary/thinker/engine/OfflinePlanningEngine.kt)
 
 ### 5.1 Projects List
 - Display summary of all projects, including synopsis.

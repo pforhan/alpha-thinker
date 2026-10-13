@@ -12,9 +12,9 @@ import kotlin.test.assertTrue
 
 private const val COUNT = 3
 
-class HardcodedPlanningEngineTest {
+class OfflinePlanningEngineTest {
 
-  private val generator = HardcodedPlanningEngine(count = COUNT)
+  private val generator = OfflinePlanningEngine(count = COUNT)
 
   /**
    * The declaration the whole context-budget apparatus keys off: the pool
@@ -107,7 +107,7 @@ class HardcodedPlanningEngineTest {
 
   @Test
   fun `generateQuestions returns the configured number of questions`() = runTest {
-    val generator = HardcodedPlanningEngine(count = 5)
+    val generator = OfflinePlanningEngine(count = 5)
 
     val batch = generator.generateQuestions(
       title = "title",
@@ -149,7 +149,7 @@ class HardcodedPlanningEngineTest {
 
   @Test
   fun `generateQuestions reports done once the whole pool has been served`() = runTest {
-    val generator = HardcodedPlanningEngine(count = 12)
+    val generator = OfflinePlanningEngine(count = 12)
 
     val batch = generator.generateQuestions(
       title = "title",
@@ -205,7 +205,7 @@ class HardcodedPlanningEngineTest {
 
   @Test
   fun `generateQuestions reports done when the last of the remaining pool is served`() = runTest {
-    val generator = HardcodedPlanningEngine(count = 9)
+    val generator = OfflinePlanningEngine(count = 9)
     val opening = generate(phase = BuiltInPhase.ScopeGoals)
 
     val batch = generator.generateQuestions(
@@ -223,7 +223,7 @@ class HardcodedPlanningEngineTest {
 
   @Test
   fun `generateQuestions respects the configured count`() = runTest {
-    val generator = HardcodedPlanningEngine(count = 4)
+    val generator = OfflinePlanningEngine(count = 4)
     val opening = generate(phase = BuiltInPhase.ScopeGoals)
 
     val batch = generator.generateQuestions(
@@ -289,7 +289,7 @@ class HardcodedPlanningEngineTest {
   @Test
   fun `every built-in phase has a non-empty pool`() {
     assertTrue(BuiltInPhase.entries.all { phase ->
-      HardcodedPlanningEngine.questionPoolByPhase.containsKey(
+      OfflinePlanningEngine.questionPoolByPhase.containsKey(
         phase
       )
     })
@@ -301,7 +301,7 @@ class HardcodedPlanningEngineTest {
 
   @Test
   fun `pool texts are unique across phases`() {
-    val flattened = HardcodedPlanningEngine.questionPoolByPhase.values.flatten()
+    val flattened = OfflinePlanningEngine.questionPoolByPhase.values.flatten()
 
     assertEquals(flattened.size, flattened.toSet().size)
   }
@@ -310,7 +310,7 @@ class HardcodedPlanningEngineTest {
   private suspend fun generate(
     phase: BuiltInPhase,
     previousQuestions: List<Question> = emptyList(),
-    engine: HardcodedPlanningEngine = generator,
+    engine: OfflinePlanningEngine = generator,
   ) = engine.generateQuestions(
     title = "title",
     synopsis = "synopsis",
@@ -321,7 +321,7 @@ class HardcodedPlanningEngineTest {
   )
 
   private fun poolOf(phase: BuiltInPhase): List<String> =
-    requireNotNull(HardcodedPlanningEngine.questionPoolByPhase[phase]) {
+    requireNotNull(OfflinePlanningEngine.questionPoolByPhase[phase]) {
       "no pool for $phase"
     }
 }

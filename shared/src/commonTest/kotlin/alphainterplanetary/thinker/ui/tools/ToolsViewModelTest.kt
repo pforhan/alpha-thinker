@@ -35,7 +35,7 @@ class ToolsViewModelTest {
     return ToolsViewModel(
       settingsRepository = SettingsRepository(storage, scope),
       sampleProjectGenerator = sampleProjectGenerator,
-      projectSimulator = ProjectSimulator(repository, storage, scope, ProjectWrites()),
+      projectSimulator = ProjectSimulator(repository, storage, scope),
       scope = scope,
     )
   }
@@ -58,7 +58,7 @@ class ToolsViewModelTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals(
-      ToolsUiState.Success("Populated ${sampleProjectGenerator.count()} sample projects."),
+      ToolsUiState.Success("Populated 8 sample projects."),
       vm.uiState.value
     )
     assertTrue(

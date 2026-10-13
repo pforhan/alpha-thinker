@@ -76,7 +76,7 @@ enum class ChromeSheet {
 class AppChromeState internal constructor(
   /** The hoisted settings ViewModel driving the flyout values and the sheets. */
   val settings: SettingsViewModel,
-  /** The hoisted dev tools: the sample generator, the simulator, the engine delay. */
+  /** The hoisted tools: the sample generator, the simulator, the engine delay. */
   val tools: ToolsViewModel,
   /** The newest logged activity, or null on an empty log. */
   val latestActivity: StateFlow<ActivityRecord?>,

@@ -317,7 +317,7 @@ class LoggingPlanningEngineTest {
   @Test
   fun `an engine that cannot summarize fails the request rather than inventing one`() = runTest {
     val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = HardcodedPlanningEngine(), log = log)
+    val engine = LoggingPlanningEngine(delegate = OfflinePlanningEngine(), log = log)
 
     try {
       engine.summarizePriorAnswers(

@@ -42,7 +42,7 @@ fun QuestionBatch.summary(): String = buildString {
  * rounds and recommended titles. A [PlanningEngine] is invoked statelessly with
  * the project context it needs, so the same call shape works across every
  * backend: a local edge LLM, a remote HTTP/cloud model, or the hardcoded Lite
- * fallback ([HardcodedPlanningEngine]).
+ * fallback ([OfflinePlanningEngine]).
  *
  * There is one question-generation call rather than one per kind of round, so
  * every round is generated the same way and an engine never has to be told
@@ -82,7 +82,7 @@ fun QuestionBatch.summary(): String = buildString {
  *
  * [contextWindowTokens] is the other thing an engine has to say about itself,
  * and it comes first: an engine that draws its output from a fixed library
- * rather than a model ([HardcodedPlanningEngine]) never puts the interview in a
+ * rather than a model ([OfflinePlanningEngine]) never puts the interview in a
  * prompt, so nothing the user has written is ever a payload, there is no window
  * to overrun, and the whole context-budget apparatus — the measurement, the
  * near-limit question, the compaction, the phase summaries — is skipped for it

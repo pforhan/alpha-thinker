@@ -15,7 +15,7 @@ import me.tatarka.inject.annotations.Inject
 import org.jetbrains.annotations.VisibleForTesting
 import kotlin.time.Instant
 
-class HardcodedPlanningEngine @Inject constructor(
+class OfflinePlanningEngine @Inject constructor(
   private val count: Int = 5,
 ) : PlanningEngine {
 

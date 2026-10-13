@@ -21,7 +21,7 @@ import kotlin.time.Instant
  * seam (a `MultiLLMPromptExecutor` over whichever LLM client the active
  * backend supplies — on-device, remote, or downloaded; ENG-DESIGN.md
  * "LLM Inference Layer"). It is invoked statelessly, exactly like
- * [HardcodedPlanningEngine], so DI can swap Lite for an LLM backend without
+ * [OfflinePlanningEngine], so DI can swap Lite for an LLM backend without
  * touching the repository or tasks.
  *
  * Both question interactions ask the model for a JSON array of question strings

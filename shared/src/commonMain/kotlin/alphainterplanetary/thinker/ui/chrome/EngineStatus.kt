@@ -78,13 +78,13 @@ fun engineStatus(
 
   // null means "the mode needs this and the app does not have it".
   val networkDetail: String? = when (mode) {
-    EngineMode.Lite -> null
+    EngineMode.Offline -> null
     EngineMode.Remote -> url.ifBlank { null }
     // No endpoint is involved at all: only Remote egresses.
     EngineMode.OnDevice, EngineMode.Downloaded -> mode.label
   }
   val llmDetail: String? = when (mode) {
-    EngineMode.Lite -> null
+    EngineMode.Offline -> null
     EngineMode.Remote -> model.ifBlank { null }
     // The runtime names its own model; the mode is how the user selected it.
     EngineMode.OnDevice, EngineMode.Downloaded -> mode.label

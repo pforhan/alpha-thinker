@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 class EngineStatusTest {
   @Test
   fun liteReportsNothingActive() {
-    val status = engineStatus(EngineMode.Lite, remoteBaseUrl = "http://x", remoteModel = "m")
+    val status = engineStatus(EngineMode.Offline, remoteBaseUrl = "http://x", remoteModel = "m")
 
     assertEquals(EngineCapability.entries, status.slots.map { it.capability })
     assertTrue(status.slots.all { it.state == CapabilityState.Unused })
@@ -19,14 +19,14 @@ class EngineStatusTest {
 
   @Test
   fun liteIgnoresTheRemoteSettings() {
-    val lite = engineStatus(EngineMode.Lite)
+    val offline = engineStatus(EngineMode.Offline)
     val remote = engineStatus(EngineMode.Remote, remoteBaseUrl = "http://x", remoteModel = "m")
 
     // A leftover endpoint from a previous Remote choice must not light up a
     // slot on a mode that never egresses.
     assertEquals(
       listOf(CapabilityState.Unused, CapabilityState.Unused, CapabilityState.Unused),
-      lite.slots.map { it.state },
+      offline.slots.map { it.state },
     )
     assertEquals(
       listOf(CapabilityState.Active, CapabilityState.Active, CapabilityState.Unused),

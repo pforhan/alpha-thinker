@@ -108,9 +108,9 @@ class SettingsRepositoryTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setEngineMode(EngineMode.Lite)
+    repo.setEngineMode(EngineMode.Offline)
 
-    assertEquals(EngineMode.Lite, repo.engineMode.value)
+    assertEquals(EngineMode.Offline, repo.engineMode.value)
     assertEquals(null, storage.settings[SettingsKey.EngineMode.storageKey])
   }
 

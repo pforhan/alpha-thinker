@@ -21,7 +21,7 @@ class PlanningEngineSelectionTest {
 
   @Test
   fun `Lite mode resolves the lite engine`() {
-    assertSame(lite, resolve(mode = EngineMode.Lite))
+    assertSame(lite, resolve(mode = EngineMode.Offline))
   }
 
   @Test

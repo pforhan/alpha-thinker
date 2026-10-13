@@ -20,7 +20,7 @@ fun interface PlanningEngineSelector {
 
 /**
  * The pure selection policy: maps the chosen [EngineMode] to the engine that
- * should run. [EngineMode.Lite] carries no model dependency and is always
+ * should run. [EngineMode.Offline] carries no model dependency and is always
  * available; any other mode must name a configured Koog engine, and throws when
  * none is bound so an unconfigured backend fails loudly instead of silently
  * falling back to another mode.
@@ -37,7 +37,7 @@ fun resolveSelectedEngine(
   liteEngine: PlanningEngine,
   koogEngines: Map<EngineMode, PlanningEngine>,
 ): PlanningEngine =
-  if (selectedMode == EngineMode.Lite) {
+  if (selectedMode == EngineMode.Offline) {
     liteEngine
   } else {
     koogEngines[selectedMode]

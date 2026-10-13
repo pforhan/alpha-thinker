@@ -23,14 +23,14 @@ class EngineStatusCopyTest {
 
   @Test
   fun aValuelessSlotStatesTheModeVocabularyForEveryState() {
-    val lite = engineStatus(mode = EngineMode.Lite)
+    val offline = engineStatus(mode = EngineMode.Offline)
 
     // Unused across the board, so "not used" is the only word the column can show.
     assertEquals(
       listOf("Not used", "Not used", "Not used"),
-      lite.slots.map { it.displayDetail() },
+      offline.slots.map { it.displayDetail() },
     )
-    lite.slots.forEach { slot ->
+    offline.slots.forEach { slot ->
       assertTrue(
         slot.sentence().contains(slot.displayDetail().lowercase()),
         "sentence '${slot.sentence()}' should carry '${slot.displayDetail()}'",

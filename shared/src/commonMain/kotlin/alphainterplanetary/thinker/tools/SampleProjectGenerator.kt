@@ -30,8 +30,6 @@ class SampleProjectGenerator @Inject constructor(
     STRESS_PROJECT_ID,
   )
 
-  fun count(): Int = allIds.size
-
   suspend fun generate(): Int {
     allIds.forEach { id ->
       storage.deleteProject(id)

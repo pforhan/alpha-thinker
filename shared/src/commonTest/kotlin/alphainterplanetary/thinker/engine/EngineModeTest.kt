@@ -9,13 +9,13 @@ import kotlin.test.assertTrue
 class EngineModeTest {
 
   @Test
-  fun `Lite is the default mode`() {
-    assertEquals(EngineMode.Lite, EngineMode.Default)
+  fun `Offline is the default mode`() {
+    assertEquals(EngineMode.Offline, EngineMode.Default)
   }
 
   @Test
   fun `fromKey resolves known modes and ignores unknowns`() {
-    assertEquals(EngineMode.Lite, EngineMode.fromKey("lite"))
+    assertEquals(EngineMode.Offline, EngineMode.fromKey("offline"))
     assertEquals(EngineMode.OnDevice, EngineMode.fromKey("on-device"))
     assertEquals(EngineMode.Remote, EngineMode.fromKey("remote"))
     assertEquals(EngineMode.Downloaded, EngineMode.fromKey("downloaded"))
@@ -24,7 +24,7 @@ class EngineModeTest {
 
   @Test
   fun `Lite and Remote are selectable while the on-device modes are not yet`() {
-    assertTrue(EngineMode.Lite.available())
+    assertTrue(EngineMode.Offline.available())
     assertTrue(EngineMode.Remote.available())
     assertFalse(EngineMode.OnDevice.available())
     assertFalse(EngineMode.Downloaded.available())

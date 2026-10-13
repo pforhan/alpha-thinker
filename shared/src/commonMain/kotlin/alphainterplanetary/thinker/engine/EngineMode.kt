@@ -1,8 +1,8 @@
 package alphainterplanetary.thinker.engine
 
 /**
- * The selectable planning backends (ENG-DESIGN.md "Engine modes"). `Lite` is
- * the built-in fallback ([HardcodedPlanningEngine]); the other modes host LLM
+ * The selectable planning backends (ENG-DESIGN.md "Engine modes"). `Offline`
+ * is the built-in fallback ([OfflinePlanningEngine]); the other modes host LLM
  * inference via the Koog seam ([KoogPlanningEngine]) once their backend lands.
  *
  * The persisted [key] is the durable string stored by the settings table, so
@@ -13,7 +13,7 @@ enum class EngineMode(
   val label: String,
   val description: String,
   /**
-   * The capabilities implied by choosing this mode. [EngineMode.Lite] runs the
+   * The capabilities implied by choosing this mode. [EngineMode.Offline] runs the
    * built-in question library entirely on device, so it has none; the LLM modes
    * all run a model locally; only [EngineMode.Remote] egresses, because it talks
    * to a cloud or localhost endpoint.
@@ -24,8 +24,8 @@ enum class EngineMode(
    */
   val capabilities: Set<EngineCapability>,
 ) {
-  Lite(
-    key = "lite",
+  Offline(
+    key = "offline",
     label = "Offline",
     description = "Built-in question library. Runs entirely on this device — no network, no language model.",
     emptySet(),
@@ -51,7 +51,7 @@ enum class EngineMode(
   ;
 
   /**
-   * Whether this backend can be selected right now. [Lite] is always
+   * Whether this backend can be selected right now. [Offline] is always
    * available, and [Remote] is selectable once configured — it talks to any
    * OpenAI-compatible endpoint from the Settings fields. The on-device
    * backends report their runtime availability once implemented (the
@@ -60,14 +60,14 @@ enum class EngineMode(
    */
   fun available(): Boolean =
     when (this) {
-      Lite -> true
+      Offline -> true
       Remote -> true
       OnDevice, Downloaded -> false
     }
 
   companion object {
     /** A fresh install runs the built-in engine. */
-    val Default: EngineMode = Lite
+    val Default: EngineMode = Offline
 
     /** Resolves a stored string key back to a mode; null for unknown values. */
     fun fromKey(key: String): EngineMode? = entries.find { it.key == key }

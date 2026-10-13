@@ -31,7 +31,7 @@ class SettingsRepository @Inject constructor(
   val phaseTheme: StateFlow<PhaseTheme> = _phaseTheme.asStateFlow()
 
   /**
-   * The selected planning backend ([EngineMode]). [EngineMode.Lite] and
+   * The selected planning backend ([EngineMode]). [EngineMode.Offline] and
    * [EngineMode.Remote] are selectable today; the on-device backends are gated
    * off by [EngineMode.available] until they land (IMPLEMENTATION-PLAN.md
    * Phase 3).

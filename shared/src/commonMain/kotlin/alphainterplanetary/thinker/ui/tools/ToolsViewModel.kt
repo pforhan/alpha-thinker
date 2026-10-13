@@ -21,10 +21,10 @@ sealed interface ToolsUiState {
 }
 
 /**
- * The dev tools' ViewModel: the sample-project generator, the project simulator,
+ * The tools' ViewModel: the sample-project generator, the project simulator,
  * and the artificial engine delay. It exists so `SettingsViewModel` describes only
  * what settings *are*, and it lives in its own package rather than with the
- * settings ViewModel because the dev tools are a separate concern from the
+ * settings ViewModel because the tools are a separate concern from the
  * settings they happen to be reached through.
  *
  * Hoisted on `AppChromeState` like the settings, and for the same reason: a
