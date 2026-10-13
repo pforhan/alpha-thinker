@@ -11,11 +11,12 @@ import kotlin.test.assertTrue
 class RemoteProviderTest {
 
   @Test
-  fun `the default provider is the pre-provider wire format`() {
-    // A pre-provider install stored only a base URL and model, both written for
-    // the OpenAI-compatible path; loading with no provider key has to land back
-    // on that same wire format.
-    assertEquals(RemoteProvider.OpenAiCompatible, RemoteProvider.Default)
+  fun `the default provider is the local Ollama target and is listed first`() {
+    // A fresh install starts on a local Ollama server — the app's documented
+    // edge target, which needs no key and can be asked for its own models — and
+    // the picker lists it first so the default and the leading option agree.
+    assertEquals(RemoteProvider.Ollama, RemoteProvider.Default)
+    assertEquals(RemoteProvider.Default, RemoteProvider.entries.first())
   }
 
   @Test

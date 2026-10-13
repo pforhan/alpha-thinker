@@ -23,10 +23,10 @@ enum class RemoteProvider(
   val description: String,
   /**
    * The endpoint a freshly-chosen provider starts from, and — when
-   * [configurableBaseUrl] is false — the one it always uses. For
-   * [OpenAiCompatible] it names a local Ollama install's `/v1` root, so a fresh
-   * install still has somewhere to point; for [Anthropic] it is the fixed API
-   * origin.
+   * [configurableBaseUrl] is false — the one it always uses. [Ollama] and
+   * [OpenAiCompatible] both point at a local server out of the box (the native
+   * `/api` root and the `/v1` shim respectively), so a fresh install still has
+   * somewhere to point; for [Anthropic] it is the fixed API origin.
    */
   val defaultBaseUrl: String,
   /**
@@ -49,24 +49,8 @@ enum class RemoteProvider(
   val apiKeyUrl: String?,
 ) {
   /**
-   * The generic OpenAI-compatible connection. This is where a model typed into
-   * a settings field becomes the fact the app budgets against: the endpoint
-   * carries no catalogue to read a window from, so the user declares one.
-   */
-  OpenAiCompatible(
-    key = "openai-compatible",
-    label = "OpenAI-compatible",
-    description = "OpenAI, OpenRouter, Groq, LM Studio, and other /v1 servers.",
-    defaultBaseUrl = "http://localhost:11434/v1",
-    configurableBaseUrl = true,
-    defaultModel = "llama3.2:latest",
-    defaultContextTokens = 8_192,
-    requiresApiKey = false,
-    apiKeyUrl = null,
-  ),
-
-  /**
-   * A native Ollama server. The distinct client is worth carrying because
+   * A native Ollama server. Listed first because it is the app's documented
+   * local target and [Default]: the distinct client is worth carrying because
    * Ollama can be asked for its own model list and a model's real context
    * window ([RemoteModelCatalog]), neither of which the `/v1` shim exposes;
    * it also needs no key.
@@ -76,6 +60,24 @@ enum class RemoteProvider(
     label = "Ollama",
     description = "A local Ollama server. No API key; models are listed from the server.",
     defaultBaseUrl = "http://localhost:11434",
+    configurableBaseUrl = true,
+    defaultModel = "llama3.2:latest",
+    defaultContextTokens = 8_192,
+    requiresApiKey = false,
+    apiKeyUrl = null,
+  ),
+
+  /**
+   * The generic OpenAI-compatible connection, the escape hatch for the long
+   * tail of `/v1` servers. This is where a model typed into a settings field
+   * becomes the fact the app budgets against: the endpoint carries no catalogue
+   * to read a window from, so the user declares one.
+   */
+  OpenAiCompatible(
+    key = "openai-compatible",
+    label = "OpenAI-compatible",
+    description = "OpenAI, OpenRouter, Groq, LM Studio, and other /v1 servers.",
+    defaultBaseUrl = "http://localhost:11434/v1",
     configurableBaseUrl = true,
     defaultModel = "llama3.2:latest",
     defaultContextTokens = 8_192,
@@ -105,11 +107,12 @@ enum class RemoteProvider(
 
   companion object {
     /**
-     * The generic connection a fresh install starts on. It is also the mode
-     * every pre-provider install was already using, so loading a saved choice
-     * with no provider key lands back on the wire format it was written for.
+     * The connection a fresh install starts on, and the option the provider
+     * picker lists first: a local Ollama server, the app's documented local
+     * target. It serves unauthenticated and can be asked for its own model
+     * list, unlike the OpenAI-compatible shim.
      */
-    val Default: RemoteProvider = OpenAiCompatible
+    val Default: RemoteProvider = Ollama
 
     /** Resolves a stored string key back to a provider; null for unknown values. */
     fun fromKey(key: String): RemoteProvider? = entries.find { it.key == key }

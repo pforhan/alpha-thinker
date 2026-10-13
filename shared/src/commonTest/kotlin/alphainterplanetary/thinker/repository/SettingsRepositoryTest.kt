@@ -234,12 +234,12 @@ class SettingsRepositoryTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setRemoteLlmProvider(RemoteProvider.Ollama)
+    repo.setRemoteLlmProvider(RemoteProvider.OpenAiCompatible)
     testScheduler.advanceUntilIdle()
 
-    assertEquals(RemoteProvider.Ollama, repo.remoteLlmProvider.value)
+    assertEquals(RemoteProvider.OpenAiCompatible, repo.remoteLlmProvider.value)
     assertEquals(
-      RemoteProvider.Ollama.key,
+      RemoteProvider.OpenAiCompatible.key,
       storage.settings[SettingsKey.RemoteLlmProvider.storageKey],
     )
   }
@@ -264,8 +264,10 @@ class SettingsRepositoryTest {
     repo.setRemoteLlmProvider(RemoteProvider.Anthropic)
     testScheduler.advanceUntilIdle()
 
-    // OpenAiCompatible's starters are the app defaults, so the switch re-seeds
-    // the base URL to Anthropic's fixed origin and the model to its default.
+    // A fresh repo starts on the default Ollama provider; moving to
+    // OpenAiCompatible leaves the fields on its starters, so the switch to
+    // Anthropic re-seeds the base URL to its fixed origin and the model to its
+    // default.
     assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, repo.remoteLlmBaseUrl.value)
     assertEquals(RemoteProvider.Anthropic.defaultModel, repo.remoteLlmModel.value)
     assertEquals(RemoteProvider.Anthropic.defaultContextTokens, repo.remoteLlmContextTokens.value)

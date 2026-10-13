@@ -23,12 +23,12 @@ class RemoteKoogPlanningBackendTest {
     SettingsRepository(storage, CoroutineScope(coroutineContext))
 
   @Test
-  fun `defaults expose the Ollama model over the OpenAI provider`() = runTest {
+  fun `defaults expose the Ollama model over the native Ollama client`() = runTest {
     val backend = RemoteKoogPlanningBackend(repository(), RecordingFactory())
 
     assertEquals("llama3.2:latest", backend.model.id)
-    assertEquals(LLMProvider.OpenAI, backend.model.provider)
-    assertTrue(backend.model.supports(LLMCapability.OpenAIEndpoint.Completions))
+    assertEquals(LLMProvider.Ollama, backend.model.provider)
+    assertTrue(backend.model.supports(LLMCapability.Temperature))
     assertIs<MultiLLMPromptExecutor>(backend.executor)
   }
 
@@ -60,6 +60,7 @@ class RemoteKoogPlanningBackendTest {
   @Test
   fun `changing the api key rebuilds the client with the new Bearer token`() = runTest {
     val repo = repository()
+    repo.setRemoteLlmProvider(RemoteProvider.OpenAiCompatible)
     val factory = RecordingFactory()
     val backend = RemoteKoogPlanningBackend(repo, factory)
 

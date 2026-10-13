@@ -320,9 +320,9 @@ class SettingsRepository @Inject constructor(
   companion object {
     /**
      * The starter connection values, read off the default provider
-     * ([RemoteProvider.OpenAiCompatible]) so the two can never disagree. They
-     * name a local Ollama install's `/v1` root and the model a fresh Ollama
-     * exposes over it, because that is the default endpoint this app documents.
+     * ([RemoteProvider.Ollama]) so the two can never disagree. They name a local
+     * Ollama server's `/api` root and the model a fresh Ollama exposes, because
+     * that is the default endpoint this app documents.
      */
     val DefaultRemoteLlmBaseUrl: String = RemoteProvider.Default.defaultBaseUrl
 
