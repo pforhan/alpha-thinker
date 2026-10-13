@@ -1,32 +1,12 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.engine.EngineDelayConfig
-import alphainterplanetary.thinker.engine.EngineInteraction
 import alphainterplanetary.thinker.engine.EngineMode
 import alphainterplanetary.thinker.repository.SettingsRepository
-import alphainterplanetary.thinker.tools.ProjectSimulator
-import alphainterplanetary.thinker.tools.SampleProjectGenerator
-import alphainterplanetary.thinker.tools.SimulationConfig
-import alphainterplanetary.thinker.tools.SimulationState
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-
-sealed interface SettingsUiState {
-  data object Idle : SettingsUiState
-  data object Generating : SettingsUiState
-  data class Success(val message: String) : SettingsUiState
-  data class Error(val message: String) : SettingsUiState
-}
 
 class SettingsViewModel(
   private val settingsRepository: SettingsRepository,
-  private val sampleProjectGenerator: SampleProjectGenerator,
-  private val projectSimulator: ProjectSimulator,
-  private val scope: CoroutineScope,
 ) {
   /** The selected phase-color theme; changes apply immediately and persist. */
   val phaseTheme: StateFlow<PhaseTheme> = settingsRepository.phaseTheme
@@ -74,17 +54,6 @@ class SettingsViewModel(
     settingsRepository.setRemoteLlmContextTokens(tokens)
   }
 
-  /** Whether PlanningEngine interactions carry the artificial testing delay. */
-  val engineDelay: StateFlow<EngineDelayConfig> = settingsRepository.engineDelay
-
-  fun setEngineDelayEnabled(enabled: Boolean) {
-    settingsRepository.setEngineDelayEnabled(enabled)
-  }
-
-  fun setEngineDelay(interaction: EngineInteraction, seconds: Int) {
-    settingsRepository.setEngineDelay(interaction, seconds)
-  }
-
   /**
    * The newest failure activity already raised for the user, and the write that
    * records one. Hoisted here with the rest of the settings because the chrome
@@ -96,57 +65,5 @@ class SettingsViewModel(
 
   fun markFailureAnnounced(activityId: String) {
     settingsRepository.markFailureAnnounced(activityId)
-  }
-
-  private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Idle)
-  val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
-
-  /**
-   * Clears a finished tool result once it has been reported. Without this the
-   * same message would never be emitted twice: generating the same number of
-   * sample projects twice produces the same [SettingsUiState.Success], and a
-   * collector keyed on the state would not see the second one.
-   */
-  fun consumeUiState() {
-    _uiState.value = SettingsUiState.Idle
-  }
-
-  fun generateSampleProjects() {
-    _uiState.value = SettingsUiState.Generating
-    scope.launch {
-      try {
-        val count = sampleProjectGenerator.generate()
-        _uiState.value = SettingsUiState.Success("Populated $count sample projects.")
-      } catch (e: Exception) {
-        _uiState.value = SettingsUiState.Error(
-          "Failed to create sample projects: ${e.message ?: "Unknown error"}"
-        )
-      }
-    }
-  }
-
-  /**
-   * Where a project-simulator run has got to. Read straight off the simulator
-   * rather than mirrored here, so the Testing sheet's progress cannot drift from
-   * the run it is describing; a run outlives the sheet that started it, which is
-   * the whole reason this ViewModel is hoisted.
-   */
-  val simulation: StateFlow<SimulationState> = projectSimulator.state
-
-  suspend fun hasPreviousSimulation(): Boolean = projectSimulator.hasPreviousSimulatedProject()
-
-  suspend fun previousSimulationTitle(): String? = projectSimulator.previousSimulatedProjectTitle()
-
-  /** Starts a simulator run against the selected engine, replacing any in flight. */
-  fun simulateProject(config: SimulationConfig) {
-    projectSimulator.run(config)
-  }
-
-  /**
-   * Stops a run in progress. The round it was waiting on still lands; the run
-   * simply stops advancing (see `ProjectSimulator.cancel`).
-   */
-  fun cancelSimulation() {
-    projectSimulator.cancel()
   }
 }

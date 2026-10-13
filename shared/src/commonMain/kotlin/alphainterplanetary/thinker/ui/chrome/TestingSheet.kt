@@ -42,8 +42,8 @@ import androidx.compose.ui.Modifier
  */
 @Composable
 internal fun TestingSheetContent(chrome: AppChromeState) {
-  val engineDelay by chrome.settings.engineDelay.collectAsState()
-  val simulation by chrome.settings.simulation.collectAsState()
+  val engineDelay by chrome.tools.engineDelay.collectAsState()
+  val simulation by chrome.tools.simulation.collectAsState()
   val scrollState = rememberScrollState()
   var expandedHeight by remember { mutableIntStateOf(0) }
   var previousEnabled by remember { mutableStateOf(engineDelay.enabled) }
@@ -67,8 +67,8 @@ internal fun TestingSheetContent(chrome: AppChromeState) {
   ) {
     DelayControlItem(
       config = engineDelay,
-      onEnabledChange = chrome.settings::setEngineDelayEnabled,
-      onDelayChange = chrome.settings::setEngineDelay,
+      onEnabledChange = chrome.tools::setEngineDelayEnabled,
+      onDelayChange = chrome.tools::setEngineDelay,
       onExpandedHeightChange = { expandedHeight = it },
     )
 

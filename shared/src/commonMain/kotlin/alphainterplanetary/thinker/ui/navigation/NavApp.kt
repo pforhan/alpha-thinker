@@ -2,7 +2,6 @@ package alphainterplanetary.thinker.ui.navigation
 
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.ui.chrome.AnnounceFailures
-import alphainterplanetary.thinker.ui.chrome.OpenSimulatedProject
 import alphainterplanetary.thinker.ui.chrome.rememberAppChromeState
 import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
@@ -11,6 +10,7 @@ import alphainterplanetary.thinker.ui.screens.ProjectListScreen
 import alphainterplanetary.thinker.ui.screens.SimulatorScreen
 import alphainterplanetary.thinker.ui.screens.TaskManagerScreen
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.ui.tools.OpenSimulatedProject
 import alphainterplanetary.thinker.ui.viewmodel.ActivityLogViewModel
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,7 +39,7 @@ import androidx.compose.ui.Modifier
  * simulator run takes the user to the project it created, because being the
  * only always-composed screen is exactly the property both need: they are facts
  * about work that outlives the screen it started on. See
- * `AppChromeState.announceFailures` and `AppChromeState.openSimulatedProject`.
+ * `AppChromeState.AnnounceFailures` and `ToolsViewModel.OpenSimulatedProject`.
  */
 @Composable
 internal fun NavApp(appComponent: AppComponent) {
@@ -52,8 +52,13 @@ internal fun NavApp(appComponent: AppComponent) {
   chrome.AnnounceFailures()
 
   // Likewise the jump to a finished simulation's project: the run started in a
-  // settings sheet and ends minutes later, usually on some other screen.
-  chrome.OpenSimulatedProject()
+  // settings sheet and ends minutes later, usually on some other screen. The
+  // decision and the handled-id ledger are the simulator tool's; the nav root
+  // supplies only where the user is and how to get them to the project.
+  chrome.tools.OpenSimulatedProject(
+    route = route,
+    onOpenProject = chrome::openProjectFromList,
+  )
 
   // Hardware/gesture back pops the same stack the app bar's arrow does, so a
   // back gesture closes a sheet when one is up and otherwise returns to the

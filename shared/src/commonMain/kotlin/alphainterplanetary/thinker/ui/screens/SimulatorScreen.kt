@@ -62,7 +62,7 @@ import androidx.compose.ui.Modifier
 fun SimulatorScreen(
   chrome: AppChromeState,
 ) {
-  val simulation by chrome.settings.simulation.collectAsState()
+  val simulation by chrome.tools.simulation.collectAsState()
   val running = simulation is SimulationState.Running
 
   // Registered after the nav root's own handler, so it takes precedence over it
@@ -117,8 +117,8 @@ private fun SimulatorForm(
     // the *finished* part of the state rather than the whole state, because a
     // running state carries a progress tick on every emission and this would
     // then be a settings read per tick.
-    hasPreviousState = chrome.settings.hasPreviousSimulation()
-    previousTitleState = chrome.settings.previousSimulationTitle()
+    hasPreviousState = chrome.tools.hasPreviousSimulation()
+    previousTitleState = chrome.tools.previousSimulationTitle()
   }
 
   val config = {
@@ -148,12 +148,12 @@ private fun SimulatorForm(
     when (state) {
       is SimulationState.Running -> SimulatorRunningRow(
         state = state,
-        onCancel = chrome.settings::cancelSimulation,
+        onCancel = chrome.tools::cancelSimulation,
       )
 
       is SimulationState.Finished -> SimulatorResultRow(
         state = state,
-        onRunAgain = { chrome.settings.simulateProject(config()) },
+        onRunAgain = { chrome.tools.simulateProject(config()) },
         onOpenProject = chrome::openProjectFromList,
         onClose = chrome::goBack,
       )
@@ -225,7 +225,7 @@ private fun SimulatorForm(
       )
 
       Button(
-        onClick = { chrome.settings.simulateProject(config()) },
+        onClick = { chrome.tools.simulateProject(config()) },
         enabled = synopsis.isNotBlank(),
         modifier = Modifier.fillMaxWidth(),
       ) {

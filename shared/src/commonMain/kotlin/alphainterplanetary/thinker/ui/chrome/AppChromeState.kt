@@ -2,10 +2,10 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.di.AppComponent
-import alphainterplanetary.thinker.tools.SimulationState
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
 import alphainterplanetary.thinker.ui.navigation.Navigation
+import alphainterplanetary.thinker.ui.tools.ToolsViewModel
 import alphainterplanetary.thinker.ui.viewmodel.SettingsViewModel
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -15,10 +15,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -58,8 +56,8 @@ enum class ChromeSheet {
  *
  * It exists because three things outlive any single screen: the open settings
  * sheet, the app-wide snackbar (so there is exactly one host), and the settings
- * ViewModel — hoisted here so a long-running tool action's progress survives
- * navigating away from the screen that started it.
+ * and tools ViewModels — hoisted here so a long-running tool action's progress
+ * survives navigating away from the screen that started it.
  *
  * It also carries the [stack], and delegates its [Navigation] API to it: a sheet
  * is an entry in the stack, so the flyout's rows and the header's status cluster
@@ -78,6 +76,8 @@ enum class ChromeSheet {
 class AppChromeState internal constructor(
   /** The hoisted settings ViewModel driving the flyout values and the sheets. */
   val settings: SettingsViewModel,
+  /** The hoisted dev tools: the sample generator, the simulator, the engine delay. */
+  val tools: ToolsViewModel,
   /** The newest logged activity, or null on an empty log. */
   val latestActivity: StateFlow<ActivityRecord?>,
   /**
@@ -111,7 +111,8 @@ class AppChromeState internal constructor(
    * For a destination the user is going to want regardless of where they were —
    * the project a simulator run just finished making. The run's own surface is
    * either long gone by the time it lands (a run is minutes of real latency) or
-   * deliberately holding the result instead (see [shouldOpenSimulatedProject]),
+   * deliberately holding the result instead (see the tools'
+   * `ToolsViewModel.OpenSimulatedProject`),
    * and reaching the project through a list that may not even be showing it —
    * the run deleted the previous one — is a worse outcome than losing the place
    * they were standing.
@@ -138,12 +139,17 @@ class AppChromeState internal constructor(
 /**
  * Builds the root-owned [AppChromeState] for a navigation host. The single nav
  * root calls this, so the back stack survives process death along with the
- * hoisted settings ViewModel and the activity flow.
+ * hoisted settings and tools ViewModels and the activity flow.
  */
 @Composable
 fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
   val settings = remember(appComponent) {
     SettingsViewModel(
+      settingsRepository = appComponent.settingsRepository,
+    )
+  }
+  val tools = remember(appComponent) {
+    ToolsViewModel(
       settingsRepository = appComponent.settingsRepository,
       sampleProjectGenerator = appComponent.sampleProjectGenerator,
       projectSimulator = appComponent.projectSimulator,
@@ -175,9 +181,10 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
       )
   }
   val stack = rememberSaveable(saver = NavStack.Saver) { NavStack() }
-  return remember(appComponent, settings, latestActivity, status, stack) {
+  return remember(appComponent, settings, tools, latestActivity, status, stack) {
     AppChromeState(
       settings = settings,
+      tools = tools,
       latestActivity = latestActivity,
       engineStatus = status,
       stack = stack,
@@ -254,57 +261,5 @@ internal fun AppChromeState.AnnounceFailures() {
     }
     settings.markFailureAnnounced(activity.activityId)
     openSheet(ChromeSheet.Status)
-  }
-}
-
-/**
- * Whether a finished run should take the user to the project it created — the
- * whole rule, as a pure function so the policy is testable without a
- * composition and cannot drift between the two things that could act on it.
- *
- * - a finished run only, and only one the app has not already acted on
- *   ([handledProjectId]). Every run mints a fresh project id, so an id acts once
- *   and once only.
- * - not while the simulator screen is up ([route]). That screen *is* the result:
- *   it has to show the user what the run left behind, and a jump out from under
- *   it would replace the summary with the very thing the summary describes. A
- *   sheet up over it does not count — the sheet is not the result.
- *
- * Note what this does *not* decide: whether the user gets the jump afterwards.
- * Closing the simulator after a held finish leaves them where they were, because
- * the id is marked handled either way.
- */
-internal fun shouldOpenSimulatedProject(
-  finishedProjectId: String?,
-  handledProjectId: String?,
-  route: AppRoute,
-): Boolean = finishedProjectId != null &&
-  finishedProjectId != handledProjectId &&
-  route != AppRoute.Simulator
-
-/**
- * Opens the project a simulator run has finished creating, wherever the user is
- * when the run lands.
- *
- * Called by the nav root for the same reason [AnnounceFailures] is: the finished
- * project is a fact about the run rather than about the screen that started it.
- * The jump replaces the stack (see [openProjectFromList]), so whatever was over
- * the project list closes with it and the list reloads when back returns.
- *
- * The one place the jump is withheld is [AppRoute.Simulator], which reports the
- * finish itself; see [shouldOpenSimulatedProject]. Both cases mark the id
- * handled, so a run is acted on exactly once either way.
- */
-@Composable
-internal fun AppChromeState.OpenSimulatedProject() {
-  val simulation by settings.simulation.collectAsState()
-  val finished = (simulation as? SimulationState.Finished)?.projectId
-  var handledProjectId by remember { mutableStateOf<String?>(null) }
-
-  LaunchedEffect(finished) {
-    val projectId = finished ?: return@LaunchedEffect
-    val jump = shouldOpenSimulatedProject(projectId, handledProjectId, route)
-    handledProjectId = projectId
-    if (jump) openProjectFromList(projectId)
   }
 }

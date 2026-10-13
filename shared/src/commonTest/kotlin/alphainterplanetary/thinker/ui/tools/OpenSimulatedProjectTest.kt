@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.ui.chrome
+package alphainterplanetary.thinker.ui.tools
 
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import kotlin.test.Test

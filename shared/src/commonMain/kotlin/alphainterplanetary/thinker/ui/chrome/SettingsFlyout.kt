@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.ui.chrome
 import alphainterplanetary.thinker.ui.components.ChevronRow
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.theme.Dimens
-import alphainterplanetary.thinker.ui.viewmodel.SettingsUiState
+import alphainterplanetary.thinker.ui.tools.ToolsUiState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,26 +52,26 @@ internal fun SettingsFlyoutButton(
 ) {
   var expanded by remember { mutableStateOf(false) }
   val phaseTheme by chrome.settings.phaseTheme.collectAsState()
-  val engineDelay by chrome.settings.engineDelay.collectAsState()
-  val uiState by chrome.settings.uiState.collectAsState()
+  val engineDelay by chrome.tools.engineDelay.collectAsState()
+  val uiState by chrome.tools.uiState.collectAsState()
   var confirmingSampleProjects by remember { mutableStateOf(false) }
 
-  // The generator reports through the ViewModel's one-shot result, so the result
-  // is turned into a snackbar here — in the header, which is composed on every
-  // screen — rather than inside the row that started it.
+  // The generator reports through the tools ViewModel's one-shot result, so the
+  // result is turned into a snackbar here — in the header, which is composed on
+  // every screen — rather than inside the row that started it.
   LaunchedEffect(uiState) {
     when (val state = uiState) {
-      is SettingsUiState.Success -> {
+      is ToolsUiState.Success -> {
         chrome.showMessage(state.message)
-        chrome.settings.consumeUiState()
+        chrome.tools.consumeUiState()
       }
 
-      is SettingsUiState.Error -> {
+      is ToolsUiState.Error -> {
         chrome.showMessage(state.message)
-        chrome.settings.consumeUiState()
+        chrome.tools.consumeUiState()
       }
 
-      SettingsUiState.Idle, SettingsUiState.Generating -> Unit
+      ToolsUiState.Idle, ToolsUiState.Generating -> Unit
     }
   }
 
@@ -153,7 +153,7 @@ internal fun SettingsFlyoutButton(
         TextButton(
           onClick = {
             confirmingSampleProjects = false
-            chrome.settings.generateSampleProjects()
+            chrome.tools.generateSampleProjects()
           },
         ) {
           Text("Generate")
