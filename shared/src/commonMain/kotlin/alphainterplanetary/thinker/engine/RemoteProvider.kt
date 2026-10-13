@@ -51,9 +51,11 @@ enum class RemoteProvider(
   /**
    * A native Ollama server. Listed first because it is the app's documented
    * local target and [Default]: the distinct client is worth carrying because
-   * Ollama can be asked for its own model list and a model's real context
-   * window ([RemoteModelCatalog]), neither of which the `/v1` shim exposes;
-   * it also needs no key.
+   * Ollama can be asked for a model's real context window
+   * ([RemoteModelCatalog]) and told which window to allocate (`num_ctx`),
+   * neither of which the `/v1` shim exposes; it also needs no key. (It can list
+   * its own models, but so can the shim's standard `GET /v1/models`, so the
+   * window — not the list — is what earns the separate entry.)
    */
   Ollama(
     key = "ollama",
@@ -69,9 +71,11 @@ enum class RemoteProvider(
 
   /**
    * The generic OpenAI-compatible connection, the escape hatch for the long
-   * tail of `/v1` servers. This is where a model typed into a settings field
-   * becomes the fact the app budgets against: the endpoint carries no catalogue
-   * to read a window from, so the user declares one.
+   * tail of `/v1` servers. Its models can be listed through the standard
+   * `GET /v1/models`, but that wire format carries no window, so this is where
+   * a model typed into a settings field becomes the fact the app budgets
+   * against: the user declares the window unless the server happens to report
+   * one in the listing.
    */
   OpenAiCompatible(
     key = "openai-compatible",

@@ -83,17 +83,19 @@ class SettingsViewModel(
   /**
    * Reads the selected provider's model list for the current endpoint. Instant
    * for a provider with a bundled catalogue (Anthropic); a network round trip
-   * for one that has to be asked (Ollama). A failure is captured in the state
+   * for one that has to be asked (Ollama's management API, the generic
+   * OpenAI-compatible `GET /v1/models`). A failure is captured in the state
    * rather than thrown, because the browser is an affordance beside a field the
    * user can still type into.
    */
   fun refreshRemoteModels() {
     val provider = settingsRepository.remoteLlmProvider.value
     val baseUrl = settingsRepository.remoteLlmBaseUrl.value
+    val apiKey = settingsRepository.remoteLlmApiKey.value
     _remoteModels.value = RemoteModelListState.Loading
     scope.launch {
       _remoteModels.value = try {
-        RemoteModelListState.Loaded(modelCatalog.list(provider, baseUrl))
+        RemoteModelListState.Loaded(modelCatalog.list(provider, baseUrl, apiKey))
       } catch (e: CancellationException) {
         throw e
       } catch (e: Exception) {
@@ -105,7 +107,9 @@ class SettingsViewModel(
   /**
    * Picks [id] and, when its window is known, adopts it as the declared context.
    * The window is the reason to browse at all: a catalogue can say how big the
-   * model really is, so the budget stops guessing.
+   * model really is — when it can, the budget stops guessing. An
+   * OpenAI-compatible listing often cannot (its wire format carries no window),
+   * in which case [selectRemoteModel] still fills in the id.
    */
   fun selectRemoteModel(id: String, contextLength: Int?) {
     settingsRepository.setRemoteLlmModel(id)

@@ -67,8 +67,9 @@ class SettingsRepository @Inject constructor(
    * unlike a registry-known model its window cannot be read off anything — this
    * is the number the app budgets against, resolved into the same
    * `LLModel.contextLength` a Koog-catalogued model would already carry. It is a
-   * fallback rather than the only source: a provider whose catalogue is reachable
-   * (Anthropic, Ollama) fills this in from the real model.
+   * fallback rather than the only source: a reachable catalogue fills this in
+   * from the real model — Anthropic and Ollama always, and an
+   * OpenAI-compatible server when its listing happens to report a window.
    */
   private val _remoteLlmContextTokens =
     MutableStateFlow(DefaultRemoteLlmContextTokens)

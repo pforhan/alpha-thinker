@@ -159,15 +159,13 @@ internal fun RemoteConnectionFields(
     singleLine = true,
     isError = model.isBlank(),
   )
-  if (provider != RemoteProvider.OpenAiCompatible) {
-    Spacer(modifier = Modifier.height(Dimens.ContentGap))
-    ModelBrowser(
-      current = model,
-      state = models,
-      onBrowse = onBrowseModels,
-      onSelect = onModelSelected,
-    )
-  }
+  Spacer(modifier = Modifier.height(Dimens.ContentGap))
+  ModelBrowser(
+    current = model,
+    state = models,
+    onBrowse = onBrowseModels,
+    onSelect = onModelSelected,
+  )
   Spacer(modifier = Modifier.height(Dimens.ContentGap))
   OutlinedTextField(
     value = contextTokens,
@@ -179,11 +177,11 @@ internal fun RemoteConnectionFields(
     supportingText = {
       Text("Each generation fills up to ${PlanningContext.TranscriptSharePercent}% of " +
         "it with this project's questions and answers." +
-        if (provider != RemoteProvider.OpenAiCompatible) {
-          " Picking a model above fills it in from the model's real window."
+        if (provider == RemoteProvider.OpenAiCompatible) {
+          " Picking a model fills in its id, and a window too when the server " +
+            "reports one; otherwise tell the app how big the model is."
         } else {
-          " A model named here has no catalogue to read a window from, so tell " +
-            "the app how big it is."
+          " Picking a model above fills it in from the model's real window."
         })
     },
   )

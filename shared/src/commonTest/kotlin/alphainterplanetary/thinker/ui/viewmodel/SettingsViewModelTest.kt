@@ -93,6 +93,21 @@ class SettingsViewModelTest {
   }
 
   @Test
+  fun `browsing hands the configured api key to the catalogue`() = runTest {
+    // A server that gates its `/v1/models` listing needs the credential, so the
+    // browser cannot read a list from one without passing it along.
+    val catalog = FakeModelCatalog()
+    val vm = viewModel(catalog = catalog)
+
+    vm.setRemoteLlmApiKey("sk-secret")
+    testScheduler.advanceUntilIdle()
+    vm.refreshRemoteModels()
+    testScheduler.advanceUntilIdle()
+
+    assertEquals("sk-secret", catalog.lastApiKey)
+  }
+
+  @Test
   fun `a failed model probe is captured in the state`() = runTest {
     val vm = viewModel(catalog = FakeModelCatalog(throwOnList = true))
 
@@ -128,10 +143,14 @@ class SettingsViewModelTest {
   private class FakeModelCatalog(
     private val throwOnList: Boolean = false,
   ) : RemoteModelCatalog {
+    var lastApiKey: String? = null
+
     override suspend fun list(
       provider: RemoteProvider,
       baseUrl: String,
+      apiKey: String,
     ): List<RemoteModelInfo> {
+      lastApiKey = apiKey
       if (throwOnList) error("probe failed")
       return listOf(
         RemoteModelInfo(id = "model-a", contextLength = 32_768),

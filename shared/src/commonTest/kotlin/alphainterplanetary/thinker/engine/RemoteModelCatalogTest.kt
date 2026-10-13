@@ -16,7 +16,7 @@ class RemoteModelCatalogTest {
   fun `anthropic answers from koogs bundled catalogue without a request`() = runTest {
     val catalog = KoogRemoteModelCatalog(ThrowingFactory())
 
-    val models = catalog.list(RemoteProvider.Anthropic, "https://api.anthropic.com")
+    val models = catalog.list(RemoteProvider.Anthropic, "https://api.anthropic.com", "")
 
     assertEquals(AnthropicModels.models.map { it.id }, models.map { it.id })
     assertEquals(
@@ -26,12 +26,46 @@ class RemoteModelCatalogTest {
   }
 
   @Test
-  fun `the generic openai path offers no catalogue`() = runTest {
-    // `/v1/models` is optional across the long tail of OpenAI-compatible servers,
-    // so the browser is empty rather than a probe that mostly fails.
-    val catalog = KoogRemoteModelCatalog(ThrowingFactory())
+  fun `the generic openai path lists the servers v1 models`() = runTest {
+    // `/v1/models` is the one listing endpoint standard across the long tail —
+    // OpenAI itself, OpenRouter, Groq, LM Studio, vLLM, and Ollama's `/v1` shim
+    // all serve it — so the browser uses it and keeps the ids the server returns.
+    val client = FakeOpenAiHttpClient(
+      body = """{"object":"list","data":[
+        {"id":"gpt-4o-mini","object":"model","created":1,"owned_by":"openai"},
+        {"id":"llama-3.1-8b","object":"model","created":2,"owned_by":"vllm",
+         "max_model_len":131072}
+      ]}""",
+    )
+    val factory = RecordingFactory(client)
 
-    assertTrue(catalog.list(RemoteProvider.OpenAiCompatible, "http://localhost:11434/v1").isEmpty())
+    val models = KoogRemoteModelCatalog(factory)
+      .list(RemoteProvider.OpenAiCompatible, "http://localhost:8000/v1", "sk-secret")
+
+    assertEquals(
+      listOf(
+        RemoteModelInfo(id = "gpt-4o-mini", contextLength = null),
+        RemoteModelInfo(id = "llama-3.1-8b", contextLength = 131072),
+      ),
+      models,
+    )
+    // The `/v1` root is stripped and the client's own `v1/...` path supplied, so
+    // the segment is not doubled.
+    assertEquals("http://localhost:8000", factory.baseUrls.single())
+    assertEquals("Bearer sk-secret", client.lastGetHeaders["Authorization"])
+  }
+
+  @Test
+  fun `an openai compatible listing without a key sends no authorization header`() = runTest {
+    val client = FakeOpenAiHttpClient(
+      body = """{"object":"list","data":[{"id":"local-model","object":"model"}]}""",
+    )
+
+    val models = KoogRemoteModelCatalog(RecordingFactory(client))
+      .list(RemoteProvider.OpenAiCompatible, "http://localhost:8000", "")
+
+    assertEquals(listOf(RemoteModelInfo(id = "local-model", contextLength = null)), models)
+    assertTrue(client.lastGetHeaders.isEmpty())
   }
 
   @Test
@@ -48,7 +82,7 @@ class RemoteModelCatalogTest {
     )
     val factory = RecordingFactory(client)
 
-    val models = KoogRemoteModelCatalog(factory).list(RemoteProvider.Ollama, "http://localhost:11434/v1")
+    val models = KoogRemoteModelCatalog(factory).list(RemoteProvider.Ollama, "http://localhost:11434/v1", "")
 
     assertEquals(
       listOf(
@@ -82,7 +116,7 @@ class RemoteModelCatalogTest {
     )
 
     val models = KoogRemoteModelCatalog(RecordingFactory(client))
-      .list(RemoteProvider.Ollama, "http://localhost:11434")
+      .list(RemoteProvider.Ollama, "http://localhost:11434", "")
 
     assertEquals(listOf(RemoteModelInfo(id = "gemma3:4b", contextLength = 131072)), models)
   }
@@ -97,7 +131,7 @@ class RemoteModelCatalogTest {
     )
 
     val models = KoogRemoteModelCatalog(RecordingFactory(client))
-      .list(RemoteProvider.Ollama, "http://localhost:11434")
+      .list(RemoteProvider.Ollama, "http://localhost:11434", "")
 
     assertEquals(listOf(RemoteModelInfo(id = "c:3b", contextLength = 65536)), models)
     assertEquals(0, client.postCalls)
@@ -114,7 +148,7 @@ class RemoteModelCatalogTest {
     )
 
     val models = KoogRemoteModelCatalog(RecordingFactory(client))
-      .list(RemoteProvider.Ollama, "http://localhost:11434")
+      .list(RemoteProvider.Ollama, "http://localhost:11434", "")
 
     assertEquals(
       listOf(
@@ -135,9 +169,9 @@ class RemoteModelCatalogTest {
   }
 
   /**
-   * A factory that must never be asked to build a client: the providers that
-   * answer locally ([RemoteProvider.Anthropic], [RemoteProvider.OpenAiCompatible])
-   * should not touch the network at all.
+   * A factory that must never be asked to build a client: the provider that
+   * answers locally ([RemoteProvider.Anthropic]) should not touch the network
+   * at all.
    */
   private class ThrowingFactory : KoogHttpClient.Factory {
     override fun create(
@@ -171,6 +205,59 @@ class RemoteModelCatalogTest {
       baseUrls += baseUrl
       return client
     }
+  }
+
+  /**
+   * Answers the generic OpenAI-compatible `GET /v1/models` with one scripted
+   * body, and records the headers it was sent so a test can see the credential.
+   */
+  private class FakeOpenAiHttpClient(
+    private val body: String,
+  ) : KoogHttpClient {
+    override val clientName: String = "fake-openai"
+    var lastGetHeaders: Map<String, String> = emptyMap()
+
+    override suspend fun <R : Any> get(
+      path: String,
+      responseType: KClass<R>,
+      parameters: Map<String, String>,
+      headers: Map<String, String>,
+    ): R {
+      check(path == "v1/models") { "unexpected GET $path" }
+      lastGetHeaders = headers
+      @Suppress("UNCHECKED_CAST")
+      return body as R
+    }
+
+    override suspend fun <T : Any, R : Any> post(
+      path: String,
+      requestBody: T,
+      requestBodyType: KClass<T>,
+      responseType: KClass<R>,
+      parameters: Map<String, String>,
+      headers: Map<String, String>,
+    ): R = error("not exercised in tests")
+
+    override fun <T : Any, R : Any, O : Any> sse(
+      path: String,
+      requestBody: T,
+      requestBodyType: KClass<T>,
+      dataFilter: (String?) -> Boolean,
+      decodeStreamingResponse: (String) -> R,
+      processStreamingChunk: (R) -> O?,
+      parameters: Map<String, String>,
+      headers: Map<String, String>,
+    ): Flow<O> = error("not exercised in tests")
+
+    override fun <T : Any> lines(
+      path: String,
+      requestBody: T,
+      requestBodyType: KClass<T>,
+      parameters: Map<String, String>,
+      headers: Map<String, String>,
+    ): Flow<String> = error("not exercised in tests")
+
+    override fun close() = Unit
   }
 
   /**

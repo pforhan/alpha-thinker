@@ -28,42 +28,81 @@ data class RemoteModelInfo(
 /**
  * The models reachable from a [RemoteProvider]. An interface so the browser UI
  * and its tests can fake the provider's answer.
+ *
+ * [apiKey] is the credential the provider's listing needs; providers whose list
+ * is not gated on one ([RemoteProvider.Anthropic], [RemoteProvider.Ollama])
+ * ignore it.
  */
 fun interface RemoteModelCatalog {
-  suspend fun list(provider: RemoteProvider, baseUrl: String): List<RemoteModelInfo>
+  suspend fun list(
+    provider: RemoteProvider,
+    baseUrl: String,
+    apiKey: String,
+  ): List<RemoteModelInfo>
 }
 
 /**
  * The [RemoteModelCatalog] over the same HTTP transport the Koog clients use.
  *
  * Anthropic answers from Koog's bundled catalogue, so its list is instant and
- * complete. The generic OpenAI-compatible path has no reliable catalogue —
- * `/v1/models` is optional across the long tail of servers — so it returns
- * nothing and the user keeps typing the id, as before.
+ * complete.
  *
- * Ollama is asked over its management API, which is the whole reason
- * [RemoteProvider.Ollama] is a provider of its own: `GET /api/tags` names the
- * installed models and `POST /api/show` carries each one's `context_length`.
- * Those two calls are spoken directly rather than through Koog's `OllamaClient`
- * because its `/api/show` response types a model's `capabilities` as a closed
- * enum, so a server reporting one Koog does not know (Ollama's `decision`, and
- * whatever follows) fails the entire listing. The [KoogHttpClient] from
- * [httpClientFactory] is the transport underneath every Koog client, so a
+ * The generic OpenAI-compatible path asks the server's own `GET /v1/models`,
+ * the one endpoint that is standard across that long tail (OpenAI itself,
+ * OpenRouter, Groq, LM Studio, vLLM, and Ollama's `/v1` shim all serve it). It
+ * returns ids and, unlike the other paths, usually no context windows — a bare
+ * OpenAI listing carries none and there is no cross-vendor way to ask — so a
+ * model picked from it keeps whatever window the user has declared unless the
+ * server happened to report one (some, like vLLM, do).
+ *
+ * Ollama is asked over its management API: `GET /api/tags` names the installed
+ * models and `POST /api/show` carries each one's `context_length`. That real
+ * window is the reason [RemoteProvider.Ollama] is a provider of its own, since
+ * the `/v1` shim exposes neither it nor the `num_ctx` control the native client
+ * gets. Those two calls are spoken directly rather than through Koog's
+ * `OllamaClient` because its `/api/show` response types a model's `capabilities`
+ * as a closed enum, so a server reporting one Koog does not know (Ollama's
+ * `decision`, and whatever follows) fails the entire listing. The [KoogHttpClient]
+ * from [httpClientFactory] is the transport underneath every Koog client, so a
  * decorator wrapped around it one day would cover these calls too.
  */
 class KoogRemoteModelCatalog(
   private val httpClientFactory: KoogHttpClient.Factory = KtorKoogHttpClient.Factory(),
 ) : RemoteModelCatalog {
-  override suspend fun list(provider: RemoteProvider, baseUrl: String): List<RemoteModelInfo> =
-    when (provider) {
-      RemoteProvider.Anthropic -> AnthropicModels.models.map { model ->
-        RemoteModelInfo(id = model.id, contextLength = model.contextLength?.toInt())
-      }
-
-      RemoteProvider.Ollama -> ollamaModels(baseUrl)
-
-      RemoteProvider.OpenAiCompatible -> emptyList()
+  override suspend fun list(
+    provider: RemoteProvider,
+    baseUrl: String,
+    apiKey: String,
+  ): List<RemoteModelInfo> = when (provider) {
+    RemoteProvider.Anthropic -> AnthropicModels.models.map { model ->
+      RemoteModelInfo(id = model.id, contextLength = model.contextLength?.toInt())
     }
+
+    RemoteProvider.Ollama -> ollamaModels(baseUrl)
+
+    RemoteProvider.OpenAiCompatible -> openAiCompatibleModels(baseUrl, apiKey)
+  }
+
+  private suspend fun openAiCompatibleModels(
+    baseUrl: String,
+    apiKey: String,
+  ): List<RemoteModelInfo> {
+    val client = httpClientFactory.create(
+      clientName = "OpenAiModelCatalog",
+      baseUrl = normalizeRemoteBaseUrl(baseUrl),
+      json = catalogJson,
+    )
+    return try {
+      val listing = catalogJson.decodeFromString<OpenAiModels>(
+        client.get<String>(path = OpenAiModelsPath, headers = bearerHeaders(apiKey)),
+      )
+      listing.data
+        .filter { it.id.isNotBlank() }
+        .map { RemoteModelInfo(id = it.id, contextLength = it.contextLength) }
+    } finally {
+      client.close()
+    }
+  }
 
   private suspend fun ollamaModels(baseUrl: String): List<RemoteModelInfo> {
     val client = httpClientFactory.create(
@@ -113,8 +152,20 @@ class KoogRemoteModelCatalog(
 
 private const val OllamaTagsPath = "api/tags"
 private const val OllamaShowPath = "api/show"
+private const val OpenAiModelsPath = "v1/models"
 
 private val JsonHeaders = mapOf("Content-Type" to "application/json")
+
+/**
+ * The `Authorization` header a server that gates its listing needs; empty for
+ * one that does not (a local server, or an endpoint that asks for no key). The
+ * OpenAI-compatible path is the only one that can need a key, so it is the only
+ * caller.
+ */
+private fun bearerHeaders(apiKey: String): Map<String, String> =
+  apiKey.trim().takeIf { it.isNotEmpty() }
+    ?.let { mapOf("Authorization" to "Bearer $it") }
+    ?: emptyMap()
 
 /**
  * Lenient on purpose: Ollama's own fields grow between versions, and only the
@@ -169,6 +220,25 @@ private data class OllamaShow(
       ?: info.entries.firstOrNull { it.key.endsWith(".context_length") }?.value
     return (value as? JsonPrimitive)?.longOrNull?.toInt()
   }
+}
+
+@Serializable
+private data class OpenAiModels(val data: List<OpenAiModel> = emptyList())
+
+/**
+ * One entry of an OpenAI-compatible `/v1/models` listing. [id] is the standard
+ * field and the only one the wire format guarantees; the window keys are read
+ * opportunistically, since a server that reports one (vLLM's `max_model_len`
+ * being the common case) spares the user from declaring it.
+ */
+@Serializable
+private data class OpenAiModel(
+  val id: String = "",
+  @SerialName("max_model_len") val maxModelLen: Int? = null,
+  @SerialName("context_length") val declaredContextLength: Int? = null,
+  @SerialName("context_window") val contextWindow: Int? = null,
+) {
+  val contextLength: Int? get() = maxModelLen ?: declaredContextLength ?: contextWindow
 }
 
 /**
