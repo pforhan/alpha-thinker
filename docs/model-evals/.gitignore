@@ -1,0 +1,9 @@
+# Raw eval artifacts are local-only.
+#
+# Row files hold the verbatim model replies (large and noisy) and are written
+# one per (run, model). Commit readable markdown reports instead; regenerate
+# the rows at any time and aggregate them with:
+#
+#   python tools/eval_ollama_models.py report --out report.md
+#
+*.json
