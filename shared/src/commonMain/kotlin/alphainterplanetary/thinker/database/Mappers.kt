@@ -3,6 +3,11 @@ package alphainterplanetary.thinker.database
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.EngineState
+import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
@@ -131,3 +136,40 @@ private fun parseCategory(name: String): LogCategory =
 
 private fun parseSource(name: String): LogSource? =
   runCatching { LogSource.valueOf(name) }.getOrNull()
+
+fun EngineInstance.toEntity() = EngineInstanceEntity(
+  id = id,
+  kind = kind.key,
+  provider = provider?.key,
+  label = label,
+  baseUrl = baseUrl,
+  apiKey = apiKey,
+  model = model,
+  contextTokens = contextTokens,
+  localPath = localPath,
+)
+
+/** An unknown stored kind is a corrupt row; [EngineKind.fromKey] returning null here is a bug. */
+fun EngineInstanceEntity.toModel() = EngineInstance(
+  id = id,
+  kind = requireNotNull(EngineKind.fromKey(kind)) { "Unknown engine kind key: $kind" },
+  provider = provider?.let(RemoteProvider::fromKey),
+  label = label,
+  baseUrl = baseUrl,
+  apiKey = apiKey,
+  model = model,
+  contextTokens = contextTokens,
+  localPath = localPath,
+)
+
+fun EngineState.toEntity() = EngineStateEntity(
+  refKey = ref.storageKey,
+  selected = selected,
+  lastUsedAt = lastUsedAt,
+)
+
+fun EngineStateEntity.toModel() = EngineState(
+  ref = EngineRef.fromStorageKey(refKey),
+  selected = selected,
+  lastUsedAt = lastUsedAt,
+)

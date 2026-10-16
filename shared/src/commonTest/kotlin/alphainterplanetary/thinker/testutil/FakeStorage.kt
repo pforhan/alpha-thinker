@@ -2,6 +2,9 @@ package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
+import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.EngineState
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
 
@@ -11,6 +14,8 @@ import alphainterplanetary.thinker.util.now
 class FakeStorage(
   val projects: MutableMap<String, Project> = mutableMapOf(),
   val settings: MutableMap<String, String> = mutableMapOf(),
+  val engineInstances: MutableMap<String, EngineInstance> = mutableMapOf(),
+  val engineStates: MutableMap<String, EngineState> = mutableMapOf(),
 ) : Storage {
   override suspend fun saveProject(project: Project) {
     projects[project.id] = project
@@ -42,5 +47,31 @@ class FakeStorage(
 
   override suspend fun saveSetting(key: SettingsKey, value: String) {
     settings[key.storageKey] = value
+  }
+
+  override suspend fun getEngineInstances(): List<EngineInstance> = engineInstances.values.toList()
+
+  override suspend fun upsertEngineInstance(instance: EngineInstance) {
+    engineInstances[instance.id] = instance
+  }
+
+  override suspend fun deleteEngineInstance(id: String) {
+    engineInstances.remove(id)
+  }
+
+  override suspend fun getEngineStates(): List<EngineState> = engineStates.values.toList()
+
+  override suspend fun upsertEngineState(state: EngineState) {
+    engineStates[state.ref.storageKey] = state
+  }
+
+  override suspend fun setSelectedEngine(ref: EngineRef) {
+    val key = ref.storageKey
+    engineStates.keys.toList().forEach { storedKey ->
+      engineStates[storedKey] = engineStates.getValue(storedKey).copy(selected = storedKey == key)
+    }
+    if (key !in engineStates) {
+      engineStates[key] = EngineState(ref = ref, selected = true)
+    }
   }
 }

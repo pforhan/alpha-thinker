@@ -8,21 +8,21 @@ class EngineCapabilitiesTest {
 
   @Test
   fun `lite has no capabilities at all`() {
-    assertEquals(emptySet(), EngineMode.Offline.capabilities)
+    assertEquals(emptySet(), EngineKind.Offline.capabilities)
   }
 
   @Test
   fun `remote reaches the network and runs a model`() {
     assertEquals(
       setOf(EngineCapability.Network, EngineCapability.Llm),
-      EngineMode.Remote.capabilities,
+      EngineKind.Remote.capabilities,
     )
   }
 
   @Test
-  fun `local model modes run a model without reaching the network`() {
-    EngineMode.entries
-      .filter { it == EngineMode.OnDevice || it == EngineMode.Downloaded }
+  fun `local model kinds run a model without reaching the network`() {
+    EngineKind.entries
+      .filter { it == EngineKind.OnDevice || it == EngineKind.LocalFile }
       .forEach { mode ->
         assertEquals(setOf(EngineCapability.Llm), mode.capabilities, mode.name)
       }
@@ -30,9 +30,9 @@ class EngineCapabilitiesTest {
 
   @Test
   fun `only remote egresses over the network`() {
-    EngineMode.entries.forEach { mode ->
+    EngineKind.entries.forEach { mode ->
       assertEquals(
-        mode == EngineMode.Remote,
+        mode == EngineKind.Remote,
         mode.capabilities.contains(EngineCapability.Network),
         mode.name,
       )
@@ -40,16 +40,16 @@ class EngineCapabilitiesTest {
   }
 
   @Test
-  fun `every model-backed mode runs an llm and lite does not`() {
-    EngineMode.entries.forEach { mode ->
-      val expected = mode != EngineMode.Offline
+  fun `every model-backed kind runs an llm and lite does not`() {
+    EngineKind.entries.forEach { mode ->
+      val expected = mode != EngineKind.Offline
       assertEquals(expected, mode.capabilities.contains(EngineCapability.Llm), mode.name)
     }
   }
 
   @Test
-  fun `no mode calls tools until agentic lookup lands`() {
-    EngineMode.entries.forEach { mode ->
+  fun `no kind calls tools until agentic lookup lands`() {
+    EngineKind.entries.forEach { mode ->
       assertFalse(mode.capabilities.contains(EngineCapability.Tools), mode.name)
     }
   }

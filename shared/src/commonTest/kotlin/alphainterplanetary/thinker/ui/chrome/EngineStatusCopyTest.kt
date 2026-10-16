@@ -1,7 +1,8 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineCapability
-import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineRef
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -14,7 +15,7 @@ import kotlin.test.assertTrue
 class EngineStatusCopyTest {
   @Test
   fun aValuelessSlotIsDescribedInTheSameWordsAsItsSentence() {
-    val status = engineStatus(mode = EngineMode.Remote, remoteBaseUrl = "   ")
+    val status = engineStatus(ref = EngineRef.Builtin(EngineKind.Remote))
 
     val slot = status.slot(EngineCapability.Network)
     assertEquals("Needs setup", slot.displayDetail())
@@ -23,7 +24,7 @@ class EngineStatusCopyTest {
 
   @Test
   fun aValuelessSlotStatesTheModeVocabularyForEveryState() {
-    val offline = engineStatus(mode = EngineMode.Offline)
+    val offline = engineStatus(ref = EngineRef.Builtin(EngineKind.Offline))
 
     // Unused across the board, so "not used" is the only word the column can show.
     assertEquals(
@@ -41,9 +42,15 @@ class EngineStatusCopyTest {
   @Test
   fun aConfiguredSlotShowsItsValueNotItsState() {
     val status = engineStatus(
-      mode = EngineMode.Remote,
-      remoteBaseUrl = "http://localhost:11434",
-      remoteModel = "llama3",
+      ref = EngineRef.Builtin(EngineKind.Remote),
+      instance = alphainterplanetary.thinker.engine.EngineInstance(
+        id = "test",
+        kind = EngineKind.Remote,
+        label = "test",
+        provider = alphainterplanetary.thinker.engine.RemoteProvider.Ollama,
+        baseUrl = "http://localhost:11434",
+        model = "llama3",
+      ),
     )
 
     assertEquals("http://localhost:11434", status.slot(EngineCapability.Network).displayDetail())

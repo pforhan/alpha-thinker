@@ -20,7 +20,7 @@ import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.repository.SettingsRepository
 
 /**
- * The [KoogPlanningBackend] for [EngineMode.Remote]: a Koog client pointed at
+ * The [KoogPlanningBackend] for [EngineKind.Remote]: a Koog client pointed at
  * whichever provider, endpoint, API key, and model the user has configured in
  * [SettingsRepository], and rebuilt lazily whenever any of those settings change
  * so edits take effect from the next interaction without a restart. The previous
@@ -48,7 +48,7 @@ import alphainterplanetary.thinker.repository.SettingsRepository
  * the user to convert a model name into a token count.
  */
 class RemoteKoogPlanningBackend(
-  private val settings: SettingsRepository,
+  private val connection: RemoteConnection,
   private val httpClientFactory: KoogHttpClient.Factory = KtorKoogHttpClient.Factory(),
 ) : KoogPlanningBackend {
 
@@ -64,11 +64,11 @@ class RemoteKoogPlanningBackend(
 
   private fun state(): State {
     val target = Target(
-      provider = settings.remoteLlmProvider.value,
-      baseUrl = settings.remoteLlmBaseUrl.value,
-      apiKey = settings.remoteLlmApiKey.value,
-      model = settings.remoteLlmModel.value,
-      contextLength = settings.remoteLlmContextTokens.value,
+      provider = connection.provider,
+      baseUrl = connection.baseUrl,
+      apiKey = connection.apiKey,
+      model = connection.model,
+      contextLength = connection.contextLength,
     )
     val existing = current
     if (existing != null && existing.target == target) {
@@ -193,3 +193,14 @@ class RemoteKoogPlanningBackend(
       AnthropicModels.models.associateWith { it.id }
   }
 }
+
+/**
+ * Connection details for a remote LLM backend.
+ */
+data class RemoteConnection(
+  val provider: RemoteProvider,
+  val baseUrl: String,
+  val apiKey: String,
+  val model: String,
+  val contextLength: Int,
+)

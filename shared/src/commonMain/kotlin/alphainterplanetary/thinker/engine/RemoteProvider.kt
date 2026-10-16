@@ -2,14 +2,14 @@ package alphainterplanetary.thinker.engine
 
 /**
  * Which flavor of remote endpoint a [RemoteKoogPlanningBackend] talks to. The
- * mode is one ([EngineMode.Remote]) but the client that reaches it is not: a
+ * mode is one ([EngineKind.Remote]) but the client that reaches it is not: a
  * native Ollama server and Anthropic's API each speak a different protocol,
  * with different defaults and different ways to learn a model's name and
  * window, so the provider decides which Koog client the backend builds.
  *
  * This is deliberately a small, flat catalogue rather than a configurable
  * instance list: every entry here needs at most an endpoint, a key, and a model.
- * [EngineMode.Remote]'s `OpenAiCompatible` remains the escape hatch for the
+ * [EngineKind.Remote]'s `OpenAiCompatible` remains the escape hatch for the
  * long tail of `/v1` endpoints (OpenAI itself, OpenRouter, Groq, LM Studio,
  * vLLM, …) because they all speak the same wire format and so need no entry of
  * their own.

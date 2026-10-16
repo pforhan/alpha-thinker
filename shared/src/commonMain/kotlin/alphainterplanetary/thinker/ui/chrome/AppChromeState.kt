@@ -2,6 +2,10 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
 import alphainterplanetary.thinker.ui.navigation.Navigation
@@ -146,6 +150,7 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
   val settings = remember(appComponent) {
     SettingsViewModel(
       settingsRepository = appComponent.settingsRepository,
+      engineRepository = appComponent.engineRepository,
       modelCatalog = appComponent.remoteModelCatalog,
       scope = appComponent.appScope,
     )
@@ -168,23 +173,20 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
   }
   val status = remember(appComponent, settings) {
     combine(
-      settings.engineMode,
-      settings.remoteLlmBaseUrl,
-      settings.remoteLlmModel,
-      settings.remoteLlmProvider,
-      settings.remoteLlmApiKey,
-    ) { mode, baseUrl, model, provider, apiKey ->
-      engineStatus(mode, baseUrl, model, provider, apiKey)
+      settings.selectedRef,
+      appComponent.engineRepository.instances,
+    ) { ref, instances ->
+      val instance = if (ref is EngineRef.Instance) {
+        instances.find { it.id == ref.id }
+      } else null
+      engineStatus(ref, instance)
     }
       .stateIn(
         scope = appComponent.appScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = engineStatus(
-          settings.engineMode.value,
-          settings.remoteLlmBaseUrl.value,
-          settings.remoteLlmModel.value,
-          settings.remoteLlmProvider.value,
-          settings.remoteLlmApiKey.value,
+          ref = settings.selectedRef.value,
+          instance = null,
         ),
       )
   }

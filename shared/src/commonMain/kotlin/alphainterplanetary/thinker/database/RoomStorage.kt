@@ -1,5 +1,8 @@
 package alphainterplanetary.thinker.database
 
+import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.EngineState
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
 import androidx.room3.withWriteTransaction
@@ -107,5 +110,27 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
 
   override suspend fun saveSetting(key: SettingsKey, value: String) {
     database.settingsDao().upsertValue(SettingsEntity(key = key.storageKey, value = value))
+  }
+
+  override suspend fun getEngineInstances(): List<EngineInstance> =
+    database.engineInstanceDao().getAll().map { it.toModel() }
+
+  override suspend fun upsertEngineInstance(instance: EngineInstance) {
+    database.engineInstanceDao().upsert(instance.toEntity())
+  }
+
+  override suspend fun deleteEngineInstance(id: String) {
+    database.engineInstanceDao().deleteById(id)
+  }
+
+  override suspend fun getEngineStates(): List<EngineState> =
+    database.engineStateDao().getAll().map { it.toModel() }
+
+  override suspend fun upsertEngineState(state: EngineState) {
+    database.engineStateDao().upsert(state.toEntity())
+  }
+
+  override suspend fun setSelectedEngine(ref: EngineRef) {
+    database.engineStateDao().setSelected(ref.storageKey)
   }
 }

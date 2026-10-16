@@ -1,6 +1,9 @@
 package alphainterplanetary.thinker.database
 
 import alphainterplanetary.thinker.di.PlatformContext
+import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.EngineState
 import alphainterplanetary.thinker.model.Project
 
 /**
@@ -9,7 +12,7 @@ import alphainterplanetary.thinker.model.Project
  */
 enum class SettingsKey(val storageKey: String) {
   PhaseTheme("phase-theme"),
-  EngineMode("engine-mode"),
+  EngineKind("engine-mode"),
   SlowDownPlanningEngine("slow-down-planning-engine"),
   EngineTitleRecommendationDelay("engine-delay-recommend-title"),
   EngineQuestionGenerationDelay("engine-delay-question-generation"),
@@ -43,6 +46,24 @@ interface Storage {
 
   /** Persists an app-wide string setting by key. */
   suspend fun saveSetting(key: SettingsKey, value: String)
+
+  /** All user-created engine instances. Code-defined built-ins are not rows. */
+  suspend fun getEngineInstances(): List<EngineInstance>
+
+  /** Inserts or replaces one engine instance, addressed by its id. */
+  suspend fun upsertEngineInstance(instance: EngineInstance)
+
+  /** Deletes the engine instance with [id], if it exists. */
+  suspend fun deleteEngineInstance(id: String)
+
+  /** The selection/usage state of every engine that has one. */
+  suspend fun getEngineStates(): List<EngineState>
+
+  /** Inserts or replaces one engine's state row, addressed by its ref. */
+  suspend fun upsertEngineState(state: EngineState)
+
+  /** Marks [ref] as the sole selected engine, clearing every other selection. */
+  suspend fun setSelectedEngine(ref: EngineRef)
 }
 
 /**

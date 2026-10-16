@@ -12,8 +12,16 @@ import kotlinx.coroutines.Dispatchers
  * the activity log in another file.
  */
 @Database(
-  entities = [ProjectEntity::class, QuestionEntity::class, AnswerEntity::class, RoundEntity::class, SettingsEntity::class],
-  version = 11,
+  entities = [
+    ProjectEntity::class,
+    QuestionEntity::class,
+    AnswerEntity::class,
+    RoundEntity::class,
+    SettingsEntity::class,
+    EngineInstanceEntity::class,
+    EngineStateEntity::class,
+  ],
+  version = 12,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -23,6 +31,8 @@ abstract class AppDatabase : RoomDatabase() {
   abstract fun answerDao(): AnswerDao
   abstract fun roundDao(): RoundDao
   abstract fun settingsDao(): SettingsDao
+  abstract fun engineInstanceDao(): EngineInstanceDao
+  abstract fun engineStateDao(): EngineStateDao
 }
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")

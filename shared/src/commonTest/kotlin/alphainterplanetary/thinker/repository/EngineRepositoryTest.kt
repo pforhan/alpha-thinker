@@ -1,0 +1,185 @@
+package alphainterplanetary.thinker.repository
+
+import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.RemoteProvider
+import alphainterplanetary.thinker.testutil.FakeStorage
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+
+class EngineRepositoryTest {
+
+  private fun TestScope.repository(storage: FakeStorage = FakeStorage()): EngineRepository =
+    EngineRepository(storage, CoroutineScope(coroutineContext))
+
+  private val preset =
+    EngineInstance(
+      id = "conn-1",
+      kind = EngineKind.Remote,
+      provider = RemoteProvider.Anthropic,
+      label = "Claude",
+      baseUrl = "https://api.anthropic.com",
+      apiKey = "sk-ant",
+      model = "claude-sonnet-4-5",
+      contextTokens = 200_000,
+    )
+
+  @Test
+  fun `a fresh install seeds one default Remote instance`() = runTest {
+    val repo = repository()
+    testScheduler.advanceUntilIdle()
+
+    val seeded = repo.instances.value.single()
+    assertEquals(EngineKind.Remote, seeded.kind)
+    assertEquals(RemoteProvider.Default, seeded.provider)
+    assertEquals(RemoteProvider.Default.defaultBaseUrl, seeded.baseUrl)
+    assertEquals(RemoteProvider.Default.defaultModel, seeded.model)
+    assertEquals(RemoteProvider.Default.defaultContextTokens, seeded.contextTokens)
+  }
+
+  @Test
+  fun `the seeded default is not selected`() = runTest {
+    val repo = repository()
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineRef.Builtin(EngineKind.Offline), repo.selected.value)
+  }
+
+  @Test
+  fun `first read does not reseed an already-stored instance list`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(listOf(preset), repo.instances.value)
+  }
+
+  @Test
+  fun `selecting an instance persists across a fresh repository`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    repo.select(EngineRef.Instance("conn-1"))
+    testScheduler.advanceUntilIdle()
+
+    val reopened = repository(storage)
+    testScheduler.advanceUntilIdle()
+    assertEquals(EngineRef.Instance("conn-1"), reopened.selected.value)
+  }
+
+  @Test
+  fun `selecting the built-in Offline persists too`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+    repo.select(EngineRef.Builtin(EngineKind.Offline))
+    testScheduler.advanceUntilIdle()
+    repo.select(EngineRef.Builtin(EngineKind.OnDevice))
+    testScheduler.advanceUntilIdle()
+
+    val reopened = repository(storage)
+    testScheduler.advanceUntilIdle()
+    assertEquals(EngineRef.Builtin(EngineKind.OnDevice), reopened.selected.value)
+  }
+
+  @Test
+  fun `markUsed records and persists the timestamp`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    repo.markUsed(EngineRef.Instance("conn-1"), at = 1_000L)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(1_000L, repo.lastUsedAt.value[EngineRef.Instance("conn-1")])
+
+    val reopened = repository(storage)
+    testScheduler.advanceUntilIdle()
+    assertEquals(1_000L, reopened.lastUsedAt.value[EngineRef.Instance("conn-1")])
+  }
+
+  @Test
+  fun `markUsed keeps the engine selected`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+    repo.select(EngineRef.Instance("conn-1"))
+    testScheduler.advanceUntilIdle()
+
+    repo.markUsed(EngineRef.Instance("conn-1"), at = 5L)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineRef.Instance("conn-1"), repo.selected.value)
+  }
+
+  @Test
+  fun `addOrUpdate replaces an existing instance in place`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    val edited = preset.copy(model = "claude-opus-4-1")
+    repo.addOrUpdate(edited)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(listOf(edited), repo.instances.value)
+    assertEquals(edited, storage.engineInstances["conn-1"])
+  }
+
+  @Test
+  fun `addOrUpdate keeps an edited instance at its position`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val second = preset.copy(id = "conn-2", label = "Second")
+    storage.upsertEngineInstance(second)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    repo.addOrUpdate(preset.copy(label = "Renamed"))
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(listOf("conn-1", "conn-2"), repo.instances.value.map { it.id })
+  }
+
+  @Test
+  fun `addOrUpdate appends a new instance`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    val added = preset.copy(id = "conn-2", label = "Second")
+    repo.addOrUpdate(added)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(listOf("conn-1", "conn-2"), repo.instances.value.map { it.id })
+  }
+
+  @Test
+  fun `deleting the selected instance falls back to the built-in Offline`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+    repo.select(EngineRef.Instance("conn-1"))
+    testScheduler.advanceUntilIdle()
+
+    repo.delete("conn-1")
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(repo.instances.value.none { it.id == "conn-1" })
+    assertEquals(EngineRef.Builtin(EngineKind.Offline), repo.selected.value)
+  }
+}

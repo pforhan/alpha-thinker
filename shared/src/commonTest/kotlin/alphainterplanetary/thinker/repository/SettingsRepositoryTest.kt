@@ -3,17 +3,17 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
-import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 
 class SettingsRepositoryTest {
 
@@ -75,55 +75,55 @@ class SettingsRepositoryTest {
   // ---------- planning engine mode + LLM toggle ----------
 
   @Test
-  fun `engineMode starts at Lite before the saved value loads`() = runTest {
+  fun `engineKind starts at Lite before the saved value loads`() = runTest {
     val repo = repository()
 
-    assertEquals(EngineMode.Default, repo.engineMode.value)
+    assertEquals(EngineKind.Default, repo.engineKind.value)
   }
 
   @Test
-  fun `engineMode loads the persisted mode at startup`() = runTest {
+  fun `engineKind loads the persisted kind at startup`() = runTest {
     val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.EngineMode, "remote")
+    storage.saveSetting(SettingsKey.EngineKind, "remote")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
 
-    assertEquals(EngineMode.Remote, repo.engineMode.value)
+    assertEquals(EngineKind.Remote, repo.engineKind.value)
   }
 
   @Test
-  fun `setEngineMode updates state and persists the choice`() = runTest {
+  fun `setEngineKind updates state and persists the choice`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setEngineMode(EngineMode.OnDevice)
+    repo.setEngineKind(EngineKind.OnDevice)
     testScheduler.advanceUntilIdle()
 
-    assertEquals(EngineMode.OnDevice, repo.engineMode.value)
-    assertEquals("on-device", storage.settings[SettingsKey.EngineMode.storageKey])
+    assertEquals(EngineKind.OnDevice, repo.engineKind.value)
+    assertEquals("on-device", storage.settings[SettingsKey.EngineKind.storageKey])
   }
 
   @Test
-  fun `setEngineMode ignores the already-selected mode`() = runTest {
+  fun `setEngineKind ignores the already-selected kind`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)
 
-    repo.setEngineMode(EngineMode.Offline)
+    repo.setEngineKind(EngineKind.Offline)
 
-    assertEquals(EngineMode.Offline, repo.engineMode.value)
-    assertEquals(null, storage.settings[SettingsKey.EngineMode.storageKey])
+    assertEquals(EngineKind.Offline, repo.engineKind.value)
+    assertEquals(null, storage.settings[SettingsKey.EngineKind.storageKey])
   }
 
   @Test
-  fun `an unknown persisted mode falls back to Lite`() = runTest {
+  fun `an unknown persisted kind falls back to Lite`() = runTest {
     val storage = FakeStorage()
-    storage.saveSetting(SettingsKey.EngineMode, "nope")
+    storage.saveSetting(SettingsKey.EngineKind, "nope")
 
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
 
-    assertEquals(EngineMode.Default, repo.engineMode.value)
+    assertEquals(EngineKind.Default, repo.engineKind.value)
   }
 
   // ---------- remote LLM connection ----------

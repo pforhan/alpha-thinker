@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
@@ -8,22 +9,22 @@ import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 
 class SettingsViewModelTest {
-  val storage = FakeStorage()
-
   private fun TestScope.viewModel(
     catalog: RemoteModelCatalog = FakeModelCatalog(),
   ): SettingsViewModel {
     val scope = CoroutineScope(coroutineContext)
+    val fakeStorage = FakeStorage()
     return SettingsViewModel(
-      settingsRepository = SettingsRepository(storage, scope),
+      settingsRepository = SettingsRepository(fakeStorage, scope),
+      engineRepository = alphainterplanetary.thinker.repository.EngineRepository(fakeStorage, scope),
       modelCatalog = catalog,
       scope = scope,
     )
@@ -47,20 +48,23 @@ class SettingsViewModelTest {
   }
 
   @Test
-  fun `engineMode starts at Lite`() = runTest {
+  fun `selectedRef starts at Offline`() = runTest {
     val vm = viewModel()
 
-    assertEquals(EngineMode.Default, vm.engineMode.value)
+    assertEquals(EngineRef.Builtin(EngineKind.Default), vm.selectedRef.value)
   }
 
   @Test
-  fun `selectEngineMode updates the exposed mode`() = runTest {
+  fun `selectEngine updates the exposed ref`() = runTest {
     val vm = viewModel()
-
-    vm.selectEngineMode(EngineMode.OnDevice)
+    // Advance to allow asynchronous initial `load()` to complete before
+    // interacting with the repository.
     testScheduler.advanceUntilIdle()
 
-    assertEquals(EngineMode.OnDevice, vm.engineMode.value)
+    vm.selectEngine(EngineRef.Builtin(EngineKind.OnDevice))
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineRef.Builtin(EngineKind.OnDevice), vm.selectedRef.value)
   }
 
   @Test

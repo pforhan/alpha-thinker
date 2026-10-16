@@ -1,7 +1,9 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineCapability
-import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.RemoteProvider
 
 /** How a header slot is rendering, from the active mode's capabilities alone. */
@@ -34,16 +36,16 @@ data class CapabilityStatus(
 )
 
 /**
- * The app-wide engine status: what the selected [EngineMode] *will do*, derived
- * from the mode and the remote connection settings — never from a probe of the
+ * The app-wide engine status: what the selected [EngineKind] *will do*, derived
+ * from the ref and the remote connection settings — never from a probe of the
  * device, and never from a toggle, so it cannot disagree with
- * [alphainterplanetary.thinker.engine.resolveSelectedEngine].
+ * [alphainterplanetary.thinker.engine.EngineRegistry].
  *
  * The header cluster, the flyout's rows, and the Status sheet all read this one
  * derivation instead of each re-deriving the mode with its own `when`.
  */
 data class EngineStatus(
-  val mode: EngineMode,
+  val mode: EngineKind,
   val slots: List<CapabilityStatus>,
 ) {
   /** The slot for [capability]; every mode reports all three, so always found. */
@@ -61,10 +63,9 @@ data class EngineStatus(
 }
 
 /**
- * Derives the status the chrome displays for [mode].
+ * Derives the status the chrome displays for [ref].
  *
- * [remoteBaseUrl], [remoteModel], [remoteProvider], and [remoteApiKey] are the
- * raw settings values, and only [EngineMode.Remote] reads them. The base URL is
+ * [instance] is the configuration for [EngineRef.Instance] refs. The base URL is
  * shown as configured rather than re-normalized here: the `/v1` strip in
  * [alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend] is the one rule for
  * that, and a second copy here would be free to drift from it. A provider whose
@@ -73,34 +74,38 @@ data class EngineStatus(
  * even when the stored URL field is empty or stale from a previous provider.
  */
 fun engineStatus(
-  mode: EngineMode,
-  remoteBaseUrl: String = "",
-  remoteModel: String = "",
-  remoteProvider: RemoteProvider = RemoteProvider.Default,
-  remoteApiKey: String = "",
+  ref: EngineRef,
+  instance: EngineInstance? = null,
 ): EngineStatus {
-  val url = remoteBaseUrl.trim()
-  val model = remoteModel.trim()
+  val mode = when (ref) {
+    is EngineRef.Builtin -> ref.kind
+    is EngineRef.Instance -> instance?.kind ?: EngineKind.Remote
+  }
+
+  val url = instance?.baseUrl?.trim() ?: ""
+  val model = instance?.model?.trim() ?: ""
+  val provider = instance?.provider ?: RemoteProvider.Default
+  val apiKey = instance?.apiKey ?: ""
 
   // null means "the mode needs this and the app does not have it".
   val networkDetail: String? = when (mode) {
-    EngineMode.Offline -> null
-    EngineMode.Remote -> when {
+    EngineKind.Offline -> null
+    EngineKind.Remote -> when {
       // A provider that requires a key has nothing to send until one is set.
-      remoteProvider.requiresApiKey && remoteApiKey.isBlank() -> null
+      provider.requiresApiKey && apiKey.isBlank() -> null
       // A fixed origin is always reachable-looking; the model and key carry the
       // incompleteness. Anthropic's endpoint shows its own origin.
-      !remoteProvider.configurableBaseUrl -> remoteProvider.defaultBaseUrl
+      !provider.configurableBaseUrl -> provider.defaultBaseUrl
       else -> url.ifBlank { null }
     }
     // No endpoint is involved at all: only Remote egresses.
-    EngineMode.OnDevice, EngineMode.Downloaded -> mode.label
+    EngineKind.OnDevice, EngineKind.LocalFile -> mode.label
   }
   val llmDetail: String? = when (mode) {
-    EngineMode.Offline -> null
-    EngineMode.Remote -> model.ifBlank { null }
+    EngineKind.Offline -> null
+    EngineKind.Remote -> model.ifBlank { null }
     // The runtime names its own model; the mode is how the user selected it.
-    EngineMode.OnDevice, EngineMode.Downloaded -> mode.label
+    EngineKind.OnDevice, EngineKind.LocalFile -> mode.label
   }
 
   fun statusFor(capability: EngineCapability): CapabilityStatus {

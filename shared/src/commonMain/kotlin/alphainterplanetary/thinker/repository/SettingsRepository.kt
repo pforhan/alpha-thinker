@@ -5,7 +5,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
-import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
@@ -32,13 +32,13 @@ class SettingsRepository @Inject constructor(
   val phaseTheme: StateFlow<PhaseTheme> = _phaseTheme.asStateFlow()
 
   /**
-   * The selected planning backend ([EngineMode]). [EngineMode.Offline] and
-   * [EngineMode.Remote] are selectable today; the on-device backends are gated
-   * off by [EngineMode.available] until they land (IMPLEMENTATION-PLAN.md
+   * The selected planning backend ([EngineKind]). [EngineKind.Offline] and
+   * [EngineKind.Remote] are selectable today; the on-device backends are gated
+   * off by [EngineKind.available] until they land (IMPLEMENTATION-PLAN.md
    * Phase 3).
    */
-  private val _engineMode = MutableStateFlow(EngineMode.Default)
-  val engineMode: StateFlow<EngineMode> = _engineMode.asStateFlow()
+  private val _engineKind = MutableStateFlow(EngineKind.Default)
+  val engineKind: StateFlow<EngineKind> = _engineKind.asStateFlow()
 
   /**
    * Which remote protocol the Remote backend speaks, and so which Koog client
@@ -101,13 +101,13 @@ class SettingsRepository @Inject constructor(
       }
     }
     scope.launch {
-      val loaded = storage.getSetting(SettingsKey.EngineMode, EngineMode.Default.key)
-        .let(EngineMode::fromKey)
-        ?: EngineMode.Default
+      val loaded = storage.getSetting(SettingsKey.EngineKind, EngineKind.Default.key)
+        .let(EngineKind::fromKey)
+        ?: EngineKind.Default
       // Only apply the persisted value while the user hasn't already picked a
       // different mode, so a startup load never clobbers their selection.
-      if (_engineMode.value == EngineMode.Default) {
-        _engineMode.value = loaded
+      if (_engineKind.value == EngineKind.Default) {
+        _engineKind.value = loaded
       }
     }
     scope.launch {
@@ -191,11 +191,11 @@ class SettingsRepository @Inject constructor(
   }
 
   /** Selects the planning backend; unavailable modes are rejected by the picker UI. */
-  fun setEngineMode(mode: EngineMode) {
-    if (mode == _engineMode.value) return
-    _engineMode.value = mode
+  fun setEngineKind(mode: EngineKind) {
+    if (mode == _engineKind.value) return
+    _engineKind.value = mode
     scope.launch {
-      storage.saveSetting(SettingsKey.EngineMode, mode.key)
+      storage.saveSetting(SettingsKey.EngineKind, mode.key)
     }
   }
 

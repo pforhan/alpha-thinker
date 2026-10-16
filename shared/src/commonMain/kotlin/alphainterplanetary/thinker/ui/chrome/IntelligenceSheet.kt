@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,9 +15,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 
 /**
- * The planning-backend picker: one card per [EngineMode], with the Remote
+ * The planning-backend picker: one card per [EngineKind], with the Remote
  * connection fields nested inside the Remote card rather than listed below the
- * stack (see [EngineModeOption]'s content slot).
+ * stack (see [EngineKindOption]'s content slot).
  *
  * This is the only place the engine can change, which is what keeps the header
  * a projection: a switch here moves the single source of truth, and every pill,
@@ -24,7 +25,7 @@ import androidx.compose.ui.Modifier
  */
 @Composable
 internal fun IntelligenceSheetContent(chrome: AppChromeState) {
-  val engineMode by chrome.settings.engineMode.collectAsState()
+  val engineKind by chrome.settings.selectedRef.collectAsState()
   val provider by chrome.settings.remoteLlmProvider.collectAsState()
   val baseUrl by chrome.settings.remoteLlmBaseUrl.collectAsState()
   val apiKey by chrome.settings.remoteLlmApiKey.collectAsState()
@@ -40,14 +41,18 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
       .padding(bottom = Dimens.ScreenPadding),
     verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
   ) {
-    EngineMode.entries.forEach { mode ->
-      EngineModeOption(
+    EngineKind.entries.forEach { mode ->
+      val selected = when (val ref = engineKind) {
+        is EngineRef.Builtin -> ref.kind == mode
+        else -> false
+      }
+      EngineKindOption(
         mode = mode,
-        selected = engineMode == mode,
+        selected = selected,
         selectable = mode.available(),
-        onClick = { settings.selectEngineMode(mode) },
+        onClick = { settings.selectEngine(EngineRef.Builtin(mode)) },
         content = {
-          if (mode == EngineMode.Remote) {
+          if (mode == EngineKind.Remote) {
             RemoteConnectionFields(
               provider = provider,
               onProviderChange = settings::selectRemoteProvider,

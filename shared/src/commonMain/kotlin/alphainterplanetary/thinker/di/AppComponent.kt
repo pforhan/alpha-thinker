@@ -7,12 +7,12 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getActivityDatabase
 import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
-import alphainterplanetary.thinker.engine.DynamicKoogPlanningBackend
-import alphainterplanetary.thinker.engine.EngineMode
-import alphainterplanetary.thinker.engine.OfflinePlanningEngine
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.KoogPlanningEngine
 import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
+import alphainterplanetary.thinker.engine.OfflinePlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
@@ -38,6 +38,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   abstract val projectRepository: ProjectRepository
 
   abstract val settingsRepository: SettingsRepository
+
+  abstract val engineRepository: alphainterplanetary.thinker.repository.EngineRepository
 
   abstract val projectWrites: ProjectWrites
 
@@ -94,32 +96,16 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   @AppScope
   @Provides
   fun providesEngineSelector(
+    registry: EngineRegistry,
+    repository: alphainterplanetary.thinker.repository.EngineRepository,
     settingsRepository: SettingsRepository,
     activityLogger: ActivityLogger,
   ): PlanningEngineSelector {
-    val liteEngine = OfflinePlanningEngine()
-
-    // One Koog engine per selectable LLM mode, each bound to that mode's
-    // backend. Binding at construction (rather than re-reading the live
-    // engine-mode setting) is what lets [PlanningEngineSelector] freeze the
-    // selection into a task: a queued task keeps the engine it was created
-    // under even if the user changes modes before it runs.
-    val koogBackends = mapOf(
-      EngineMode.Remote to RemoteKoogPlanningBackend(settingsRepository),
-    )
-    val koogEngines = mapOf(
-      EngineMode.Remote to KoogPlanningEngine(
-        DynamicKoogPlanningBackend(EngineMode.Remote, koogBackends),
-      ),
-    )
-
     return PlanningEngineSelector {
       SlowDownPlanningEngine(
         delegate = LoggingPlanningEngine(
-          delegate = resolveSelectedEngine(
-            selectedMode = settingsRepository.engineMode.value,
-            liteEngine = liteEngine,
-            koogEngines = koogEngines,
+          delegate = registry.getEngine(
+            repository.selected.value,
           ),
           log = activityLogger,
         ),

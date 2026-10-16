@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
@@ -46,8 +46,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
  * would not make one.
  */
 @Composable
-internal fun EngineModeOption(
-  mode: EngineMode,
+internal fun EngineKindOption(
+  mode: EngineKind,
   selected: Boolean,
   selectable: Boolean,
   onClick: () -> Unit,

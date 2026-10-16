@@ -1,12 +1,12 @@
 package alphainterplanetary.thinker.database
 
+import alphainterplanetary.thinker.model.RoundOutcome
 import androidx.room3.Embedded
 import androidx.room3.Entity
 import androidx.room3.ForeignKey
 import androidx.room3.Index
 import androidx.room3.PrimaryKey
 import androidx.room3.Relation
-import alphainterplanetary.thinker.model.RoundOutcome
 
 @Entity(tableName = "projects")
 data class ProjectEntity(
@@ -94,6 +94,36 @@ data class AnswerEntity(
 data class SettingsEntity(
   @PrimaryKey val key: String,
   val value: String,
+)
+
+/**
+ * One user-created engine (a Remote connection or a downloaded local model).
+ * Code-defined built-ins have no row here; they are described by the catalog.
+ * See [alphainterplanetary.thinker.engine.EngineInstance].
+ */
+@Entity(tableName = "engine_instances")
+data class EngineInstanceEntity(
+  @PrimaryKey val id: String,
+  val kind: String,
+  val provider: String?,
+  val label: String,
+  val baseUrl: String,
+  val apiKey: String,
+  val model: String,
+  val contextTokens: Int,
+  val localPath: String?,
+)
+
+/**
+ * One engine's selection/usage state, keyed by the ref's durable string. A row
+ * exists only once an engine has been selected or used. See
+ * [alphainterplanetary.thinker.engine.EngineState].
+ */
+@Entity(tableName = "engine_state")
+data class EngineStateEntity(
+  @PrimaryKey val refKey: String,
+  val selected: Boolean,
+  val lastUsedAt: Long?,
 )
 
 data class ProjectWithQuestions(

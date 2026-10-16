@@ -2,6 +2,9 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
+import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.EngineState
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -12,12 +15,12 @@ import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.testutil.defaultTestInstant
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 
 class ProjectListViewModelTest {
 
@@ -169,6 +172,28 @@ class ProjectListViewModelTest {
       throw IllegalStateException("boom")
 
     override suspend fun saveSetting(key: SettingsKey, value: String) {
+      throw IllegalStateException("boom")
+    }
+
+    override suspend fun getEngineInstances(): List<EngineInstance> =
+      throw IllegalStateException("boom")
+
+    override suspend fun upsertEngineInstance(instance: EngineInstance) {
+      throw IllegalStateException("boom")
+    }
+
+    override suspend fun deleteEngineInstance(id: String) {
+      throw IllegalStateException("boom")
+    }
+
+    override suspend fun getEngineStates(): List<EngineState> =
+      throw IllegalStateException("boom")
+
+    override suspend fun upsertEngineState(state: EngineState) {
+      throw IllegalStateException("boom")
+    }
+
+    override suspend fun setSelectedEngine(ref: EngineRef) {
       throw IllegalStateException("boom")
     }
   }

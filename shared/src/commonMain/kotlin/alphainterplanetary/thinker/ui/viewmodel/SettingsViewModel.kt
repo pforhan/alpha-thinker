@@ -1,20 +1,22 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.engine.EngineMode
+import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.coroutines.cancellation.CancellationException
 
 class SettingsViewModel(
   private val settingsRepository: SettingsRepository,
+  private val engineRepository: alphainterplanetary.thinker.repository.EngineRepository,
   private val modelCatalog: RemoteModelCatalog,
   private val scope: CoroutineScope,
 ) {
@@ -26,10 +28,10 @@ class SettingsViewModel(
   }
 
   /** The selected planning backend; only available modes can be chosen. */
-  val engineMode: StateFlow<EngineMode> = settingsRepository.engineMode
+  val selectedRef: StateFlow<EngineRef> = engineRepository.selected
 
-  fun selectEngineMode(mode: EngineMode) {
-    settingsRepository.setEngineMode(mode)
+  fun selectEngine(ref: EngineRef) {
+    engineRepository.select(ref)
   }
 
   /** The remote protocol the Remote backend speaks; switching re-seeds its fields. */

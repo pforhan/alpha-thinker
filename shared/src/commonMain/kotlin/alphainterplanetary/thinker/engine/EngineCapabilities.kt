@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.engine
 
 /**
- * A thing the selected planning backend does, derived from its [EngineMode]
+ * A thing the selected planning backend does, derived from its [EngineKind]
  * rather than measured at runtime.
  *
  * The app's status chrome reports these so a user can see what the app *will
