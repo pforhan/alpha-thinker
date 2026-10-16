@@ -170,14 +170,27 @@ already applied to the DAOs.
 
 ### Stage 2 — Per-instance config & multi-endpoint
 
-- [ ] Per-instance `baseUrl` / `apiKey` / `model` / `contextTokens`; a provider
-      switch recomputes the default model and refreshes the context window from
-      metadata when known.
-- [ ] Advanced **Connections** list: add / edit / delete / select, one entry per
-      configured endpoint of any kind.
-- [ ] Per-ref self-validation for On-device and LocalFile (file present, runtime
-      available) feeding `CapabilityState`.
-- [ ] Deletion of the selected instance falls back to the built-in Offline.
+- [x] **2a1. Data access.** Add helpers on `EngineRepository`/`EngineInstance` to
+      read & update the selected instance's fields (`baseUrl`, `apiKey`, `model`,
+      `contextTokens`, `provider`), persisting via `addOrUpdate`, with no flat
+      settings reads.
+- [ ] **2a2. ViewModel migration.** Rewrite `SettingsViewModel` to expose the
+      selected instance's fields as `StateFlow`s and mutators that call 2a1;
+      keep `announcedFailureActivityId` from `SettingsRepository`.
+- [ ] **2a3. Provider-switch defaults.** On provider change of the selected
+      instance, recompute `model`/`contextTokens` from provider defaults when
+      the instance hasn't been hand-edited. "Provider defaults" means a
+      metadata lookup where the provider supports it (e.g., Ollama model
+      metadata) and code-defined defaults where it doesn't (e.g.,
+      OpenAI-compatible endpoints).
+- [ ] **2a4. Tests.** Rewrite `SettingsViewModelTest` for the above (and
+      `EngineRepositoryTest` coverage of field edits).
+- [ ] **2b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
+      select an instance; deletion of the selected falls back to
+      `EngineRef.Builtin(Offline)`.
+- [ ] **2c. Per-ref self-validation.** On-device and LocalFile availability feeds
+      `CapabilityState` (file present, runtime available).
+- [ ] **2d. Tests.** EngineStatusTest, EngineRegistryTest, RemoteKoog... etc per checklist.
   **Test checklist (Stage 2 deliverables):**
 - [ ] **EngineRepositoryTest** — create / update / delete; `addOrUpdate`
   replaces in place; selection persists across repository load (seeded

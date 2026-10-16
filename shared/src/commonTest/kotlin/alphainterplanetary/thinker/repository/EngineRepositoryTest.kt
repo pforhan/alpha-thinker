@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 
@@ -181,5 +182,112 @@ class EngineRepositoryTest {
 
     assertTrue(repo.instances.value.none { it.id == "conn-1" })
     assertEquals(EngineRef.Builtin(EngineKind.Offline), repo.selected.value)
+  }
+
+  @Test
+  fun `selectedInstance reflects the selected instance`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    // Initially it's the default (Builtin(Default)), so selectedInstance should be null
+    assertEquals(null, repo.selectedInstance.first())
+
+    repo.select(EngineRef.Instance("conn-1"))
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(preset, repo.selectedInstance.first())
+
+    repo.select(EngineRef.Builtin(EngineKind.Offline))
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(null, repo.selectedInstance.first())
+  }
+
+  @Test
+  fun `selectedInstance updates when instance is updated`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    repo.select(EngineRef.Instance("conn-1"))
+    testScheduler.advanceUntilIdle()
+    assertEquals(preset, repo.selectedInstance.first())
+
+    val edited = preset.copy(label = "New Label")
+    repo.addOrUpdate(edited)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(edited, repo.selectedInstance.first())
+  }
+
+  @Test
+  fun `selectedInstance becomes null when instance is deleted`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    repo.select(EngineRef.Instance("conn-1"))
+    testScheduler.advanceUntilIdle()
+    assertEquals(preset, repo.selectedInstance.first())
+
+    repo.delete("conn-1")
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(null, repo.selectedInstance.first())
+  }
+
+  @Test
+  fun `updateSelectedInstance persists field changes`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    repo.select(EngineRef.Instance("conn-1"))
+    testScheduler.advanceUntilIdle()
+
+    repo.updateSelectedInstance { it.copy(baseUrl = "https://new.example.com", model = "new-model") }
+    testScheduler.advanceUntilIdle()
+
+    val updated = repo.instances.value.single { it.id == "conn-1" }
+    assertEquals("https://new.example.com", updated.baseUrl)
+    assertEquals("new-model", updated.model)
+  }
+
+  @Test
+  fun `updateSelectedInstance is a no-op when builtin selected`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineRef.Builtin(EngineKind.Default), repo.selected.value)
+
+    repo.updateSelectedInstance { it.copy(label = "Should not persist") }
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(preset, repo.instances.value.single { it.id == "conn-1" })
+  }
+
+  @Test
+  fun `updateSelectedInstance is a no-op when selected instance missing`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    repo.select(EngineRef.Instance("conn-1"))
+    testScheduler.advanceUntilIdle()
+    repo.delete("conn-1")
+    testScheduler.advanceUntilIdle()
+
+    repo.updateSelectedInstance { it.copy(label = "Should not persist") }
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(emptyList(), repo.instances.value)
   }
 }

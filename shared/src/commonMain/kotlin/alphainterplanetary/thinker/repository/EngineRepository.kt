@@ -8,9 +8,11 @@ import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.EngineState
 import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Inject
@@ -41,6 +43,10 @@ class EngineRepository @Inject constructor(
   val instances: StateFlow<List<EngineInstance>> = _instances.asStateFlow()
 
   private val _selected = MutableStateFlow<EngineRef>(EngineRef.Builtin(EngineKind.Default))
+
+  val selectedInstance: Flow<EngineInstance?> = combine(_selected, _instances) { ref, instances ->
+    (ref as? EngineRef.Instance)?.let { r -> instances.find { it.id == r.id } }
+  }
 
   /** The engine a task will run on; the built-in `Offline` until chosen. */
   val selected: StateFlow<EngineRef> = _selected.asStateFlow()
@@ -84,6 +90,13 @@ class EngineRepository @Inject constructor(
         EngineState(ref = ref, selected = _selected.value == ref, lastUsedAt = at),
       )
     }
+  }
+
+  /** Updates the currently selected instance's fields via [transform] and persists. */
+  fun updateSelectedInstance(transform: (EngineInstance) -> EngineInstance) {
+    val ref = _selected.value as? EngineRef.Instance ?: return
+    val current = _instances.value.find { it.id == ref.id } ?: return
+    addOrUpdate(transform(current))
   }
 
   /** Inserts or replaces [instance]; a new id appends, an existing one updates in place. */
