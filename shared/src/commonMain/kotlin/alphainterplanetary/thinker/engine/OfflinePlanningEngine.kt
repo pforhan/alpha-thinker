@@ -11,9 +11,9 @@ import alphainterplanetary.thinker.phases.BuiltInPhase.ValidationPlan
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
+import kotlin.time.Instant
 import me.tatarka.inject.annotations.Inject
 import org.jetbrains.annotations.VisibleForTesting
-import kotlin.time.Instant
 
 class OfflinePlanningEngine @Inject constructor(
   private val count: Int = 5,

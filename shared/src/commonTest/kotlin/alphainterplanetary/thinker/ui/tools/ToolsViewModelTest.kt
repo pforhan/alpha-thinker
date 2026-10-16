@@ -12,12 +12,12 @@ import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.tools.ProjectSimulator
 import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import alphainterplanetary.thinker.tools.SimulationState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 
 class ToolsViewModelTest {
   val storage = FakeStorage()

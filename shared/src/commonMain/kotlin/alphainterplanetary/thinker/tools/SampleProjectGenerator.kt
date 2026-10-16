@@ -11,8 +11,8 @@ import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import me.tatarka.inject.annotations.Inject
 import kotlin.time.Instant
+import me.tatarka.inject.annotations.Inject
 
 class SampleProjectGenerator @Inject constructor(
   private val storage: Storage,

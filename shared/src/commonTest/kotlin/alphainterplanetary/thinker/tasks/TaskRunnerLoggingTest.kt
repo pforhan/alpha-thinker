@@ -3,11 +3,11 @@ package alphainterplanetary.thinker.tasks
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.runTest
 
 class TaskRunnerLoggingTest {
 

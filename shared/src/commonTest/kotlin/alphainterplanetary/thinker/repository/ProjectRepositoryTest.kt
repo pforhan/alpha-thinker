@@ -23,9 +23,6 @@ import alphainterplanetary.thinker.testutil.answer
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.testutil.round
 import alphainterplanetary.thinker.util.formatTokens
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,6 +33,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 
 class ProjectRepositoryTest {
 

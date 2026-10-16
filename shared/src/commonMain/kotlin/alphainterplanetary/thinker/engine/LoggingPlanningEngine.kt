@@ -5,8 +5,8 @@ import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.engine.PlanningContext.PhaseSummary
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
-import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.withContext
 
 /**
  * The interaction-detail writer half of the app-wide activity log (ENG-DESIGN.md

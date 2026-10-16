@@ -1,21 +1,21 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.repository.SettingsRepository
+import alphainterplanetary.thinker.testutil.FakeStorage
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
-import alphainterplanetary.thinker.repository.SettingsRepository
-import alphainterplanetary.thinker.testutil.FakeStorage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 
 class RemoteKoogPlanningBackendTest {
 

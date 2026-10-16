@@ -8,10 +8,10 @@ import alphainterplanetary.thinker.database.toEntity
 import alphainterplanetary.thinker.database.toModel
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * The app-scoped writer handle on the app-wide activity log (ENG-DESIGN.md

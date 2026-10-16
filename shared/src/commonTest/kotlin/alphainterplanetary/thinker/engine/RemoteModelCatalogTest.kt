@@ -2,13 +2,13 @@ package alphainterplanetary.thinker.engine
 
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 
 class RemoteModelCatalogTest {
 

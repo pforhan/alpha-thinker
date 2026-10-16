@@ -3,12 +3,12 @@ package alphainterplanetary.thinker.engine
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SlowDownPlanningEngineTest {

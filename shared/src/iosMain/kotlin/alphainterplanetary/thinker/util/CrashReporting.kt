@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.util
 
-import platform.Foundation.NSLog
 import kotlin.experimental.ExperimentalNativeApi
+import platform.Foundation.NSLog
 
 private var hookInstalled = false
 

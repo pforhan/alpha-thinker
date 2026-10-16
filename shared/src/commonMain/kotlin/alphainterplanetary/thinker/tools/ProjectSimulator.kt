@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.tools
 
-import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.SettingsKey
+import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question

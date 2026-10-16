@@ -4,7 +4,6 @@ import alphainterplanetary.thinker.di.PlatformContext
 import androidx.room3.Room
 import androidx.room3.RoomDatabase
 
-
 actual fun provideDatabaseBuilder(context: PlatformContext): RoomDatabase.Builder<AppDatabase> =
   Room.databaseBuilder<AppDatabase>(
     name = context.databaseFile(DATABASE_NAME),

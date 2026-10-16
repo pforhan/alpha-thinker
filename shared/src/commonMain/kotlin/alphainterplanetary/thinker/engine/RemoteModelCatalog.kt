@@ -2,9 +2,10 @@ package alphainterplanetary.thinker.engine
 
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.http.client.get
-import ai.koog.http.client.post
 import ai.koog.http.client.ktor.KtorKoogHttpClient
+import ai.koog.http.client.post
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -12,7 +13,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * One model a remote provider offers: the id to ask for and, when the provider

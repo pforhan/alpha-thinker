@@ -1,9 +1,5 @@
 package alphainterplanetary.thinker.engine
 
-import ai.koog.prompt.Prompt
-import ai.koog.prompt.dsl.prompt
-import ai.koog.prompt.executor.model.PromptExecutor
-import ai.koog.prompt.message.Message
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.PlanningContext.PhaseSummary
 import alphainterplanetary.thinker.model.Question
@@ -12,9 +8,13 @@ import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.util.jsonArray
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import kotlinx.serialization.json.Json
+import ai.koog.prompt.Prompt
+import ai.koog.prompt.dsl.prompt
+import ai.koog.prompt.executor.model.PromptExecutor
+import ai.koog.prompt.message.Message
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Instant
+import kotlinx.serialization.json.Json
 
 /**
  * The LLM-hosted [PlanningEngine], implemented over Koog's [PromptExecutor]
@@ -304,4 +304,3 @@ private fun Message.role(): String = when (this) {
   is Message.User -> "USER"
   is Message.Assistant -> "ASSISTANT"
 }
-

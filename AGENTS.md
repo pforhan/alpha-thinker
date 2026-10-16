@@ -25,6 +25,7 @@ The Kotlin codebase follows these formatting conventions:
 
 - **Indentation:** Two spaces. No tabs.
 - **Imports:**
+  - Use `tools/sort_all_imports.py` to apply these rules in bulk instead of visiting each file individually.
   - No wildcard (`*`) imports — always import explicitly.
   - Grouped and alphabetically sorted: project packages
     (`alphainterplanetary.*`) first, then external libraries

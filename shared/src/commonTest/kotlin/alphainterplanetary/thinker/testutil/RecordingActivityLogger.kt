@@ -3,9 +3,9 @@ package alphainterplanetary.thinker.testutil
 import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogEntry
+import kotlin.time.Instant
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import kotlin.time.Instant
 
 /**
  * In-memory [ActivityLogger] for tests: every [append] lands in [entries] in

@@ -22,9 +22,9 @@ import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
-import me.tatarka.inject.annotations.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Instant
+import me.tatarka.inject.annotations.Inject
 
 @AppScope
 class ProjectRepository @Inject constructor(

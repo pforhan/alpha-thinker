@@ -1,11 +1,11 @@
 package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.activitylog.LogContext
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The seam that lets an LLM-backed [PlanningEngine] record its requests on the
