@@ -98,7 +98,7 @@ or individual row files, and de-duplicates. It defaults to the **terminal** view
 a compact tab-separated table; `--full` prints the complete markdown report.
 
 ```bash
-# default: terminal table over every saved row (latest row per model)
+# default: terminal table, one line per model, every saved row pooled into it
 python tools/eval_ollama_models.py report
 
 # just one batch, by run id — older rows are filtered out, not deleted
@@ -107,8 +107,14 @@ python tools/eval_ollama_models.py report --run-id morning-20261015
 # one batch minus a model you bailed on (matched by id, display name, or family)
 python tools/eval_ollama_models.py report --run-id morning-20261015 --exclude qwq
 
-# compare two batches side by side (shows both rows per model)
-python tools/eval_ollama_models.py report --run-id overnight-20261014 --run-id morning-20261015 --per-model all
+# two batches, each model's runs side by side in one table (`run` column)
+python tools/eval_ollama_models.py report --run-id overnight-20261014 --run-id morning-20261015
+
+# only the newest batch's row per model, ignoring older measurements
+python tools/eval_ollama_models.py report --per-model latest
+
+# full markdown report over every batch (commit this)
+python tools/eval_ollama_models.py report --full --out all.md
 
 # hand-picked rows, or the full markdown report
 python tools/eval_ollama_models.py report docs/model-evals/llama3.2_3b-*.json
@@ -123,17 +129,30 @@ how the filename happens to be spelled.
 The terminal view is tab-separated so it pastes straight into a spreadsheet:
 
 ```
-model           size   quality  startup_s  suite_s  flags
-llama3.2:3b     3B     100.0    0.54       5.30
-qwq:latest      32B    40.0     9.91       169.16   in-progress >16GB
+model           size   quality  tier          startup_s  suite_s  flags
+llama3.2:3b     3B     100.0    good          0.89       5.51
+qwen2.5:7b      7B     100.0    ok            2.40       15.40
+gemma4:e4b      8.0B   100.0    discouraged   5.11       82.79
+qwq:32b         32B    56.5     discouraged   9.77       414.07   in-progress >16GB
 ```
 
+Rows are one per model, sorted by `quality` (best first) and then by `suite_s`
+(fastest first), so the first row is the best default and ties break toward the
+quicker model.
+
 Columns: `model` (display name, `latest` alias resolved), `size`, `quality`
-(composite 0–100, below), `startup_s` (cold load), `suite_s` (average time to run
-the whole suite once, below), `flags`. Full detail — `req_s`, `p95_s`,
-`ok`/`clean`/`json` rates, `est_gb`, per-interaction rows — lives in the markdown
-view (`--full`/`--out`), which also carries a field guide and one detail table per
-model in the same order.
+(composite 0–100, below), `tier` (`good`/`ok`/`discouraged` — a label on
+the quality × speed grid, below), `startup_s` (cold load), `suite_s` (average time
+to run the whole suite once, below), `flags`. Full detail — `req_s`, `p95_s`,
+`ok`/`clean`/`json` rates, `est_gb`, per-interaction rows, and the grid itself —
+lives in the markdown view (`--full`/`--out`), which also carries a field guide
+and one detail table per model in the same order.
+
+The report is one line per model, always. `--per-model all` (the default) doesn't
+add rows — it pools every included batch into that one line (rates pool their
+cells, `suite_s` averages one pass per included run), and the per-interaction
+table for that model gains a `run` column so the batches sit side by side.
+Single-batch reports omit the column since it's constant.
 
 Flag values: `in-progress` (row interrupted mid-run), `timeout×N`, `error×N`,
 `slept×N` (a request spanned a machine sleep), `>NG B` (estimated footprint over
@@ -141,9 +160,13 @@ the device budget — flagged, never hidden).
 
 CLI flags:
 
-- `--per-model latest|max-cells|all` — which row to use when a model has several
-  (default `latest`, preferring finished rows; `max-cells` prefers the row with
-  the most measurements; `all` shows every row).
+- `--per-model all|latest|max-cells` — which rows feed the report when a model has
+  several (default `all`: every row pooled into one line; `latest`: its newest
+  row only, preferring finished ones; `max-cells`: the row with the most
+  measurements). Whichever is chosen, the summary stays one line per model —
+  `all` is about how much data is behind that line, not how many lines there are.
+  With pooled rows the per-interaction table gains a `run` column; the header's
+  `run-ids:` line names every batch that went in.
 - `--run-id RUN_ID` — keep only rows from this batch. Repeatable, so two batches
   can be compared in one report.
 - `--exclude MODEL` — drop a model, matched against its id (`qwq:latest`), its
@@ -185,6 +208,40 @@ quality = (0.5·json_ok + 0.3·clean + 0.2·ok) / (weights present) × 100
 Speed is deliberately **not** part of quality — it's reported separately as
 `startup_s`/`suite_s`/`req_s`, since a fast model that formats badly shouldn't
 outrank a slower one that formats well.
+
+### Two-axis recommendation
+
+The report rates every model on two independent axes and prints a grid
+(`--full`) so the two can be read together. They genuinely disagree — a
+flawless-but-slow model is a different proposition from a fast-but-flawed one,
+and collapsing them into a single score would hide exactly that.
+
+| axis | bands |
+|---|---|
+| quality (composite score) | `strong` ≥ 98, `adequate` ≥ 85, else `weak` |
+| speed (average suite time) | `fast` < 10s, `fine` < 35s, else `slow` |
+
+`unknown` is its own band on either axis: a model with no usable data is ranked
+and shown, never guessed at or demoted. This is the same "present, don't filter"
+rule the `>16GB` flag follows. The tool never emits it — every row it reports
+carries measurements — but the app meets models that have never been swept, and
+needs an answer for them.
+
+Quality deliberately avoids the words used for tiers, so `good` means one thing in
+a report.
+
+`tier` — `good` / `ok` / `discouraged` (and `unknown` in the app) — is a *label on
+that grid*:
+
+```
+good         = strong × fast
+ok           = strong × fine  or  adequate × fast
+discouraged  = everything else
+```
+
+So a `strong`/`slow` model is still fully listed; it just isn't dressed up as a
+safe default. Both axes are derived at read time, so the cuts are tunable
+without re-running a sweep.
 
 ## Metrics
 

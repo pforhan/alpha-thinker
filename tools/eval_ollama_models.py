@@ -52,6 +52,26 @@ FIXTURES_VERSION = 1
 # row actually has, so a partial row isn't penalized for missing cells.
 QUALITY_WEIGHTS = (("json_ok_rate", 0.5), ("clean_rate", 0.3), ("ok_rate", 0.2))
 
+# Two-axis recommendation bands. Both axes are derived at read time, so these
+# cuts are tunable without re-running a sweep. Quality is the composite score;
+# speed is the average suite time (how long one pass over the whole suite takes).
+# Each tuple is an inclusive floor (quality) or exclusive ceiling (speed) and the
+# band it opens; both lists must run high-to-low. Quality deliberately avoids the
+# words used for tiers below, so "good" means one thing in this report.
+QUALITY_BANDS = ((98.0, "strong"), (85.0, "adequate"))
+SPEED_BANDS = ((10.0, "fast"), (35.0, "fine"))
+BAND_QUALITY_ORDER = ("strong", "adequate", "weak", "unknown")
+BAND_SPEED_ORDER = ("fast", "fine", "slow", "unknown")
+
+# The tier is a *label* on that grid, not the underlying model: a slow-but-
+# flawless model reads `discouraged` rather than being hidden, which is what
+# keeps the curation presentation-only. `unknown` only ever arises when an axis
+# has no data — i.e. in the app, where most installed models have never been
+# swept — never in this tool's output, where every row carries measurements.
+GOOD_CELLS = frozenset({("strong", "fast")})
+OK_CELLS = frozenset({("strong", "fine"), ("adequate", "fast")})
+TIER_GOOD, TIER_OK, TIER_DISCOURAGED, TIER_UNKNOWN = "good", "ok", "discouraged", "unknown"
+
 # Bits per weight by quantization level, for the memory estimate. Approximate
 # on purpose — this only feeds a "will it fit?" flag, not a precise number.
 QUANT_BITS = {
@@ -197,8 +217,11 @@ def parse_report_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument(
         "--per-model",
         choices=["latest", "max-cells", "all"],
-        default="latest",
-        help="When a model has several rows, which one(s) to show",
+        default="all",
+        help=(
+            "Which rows feed the report when a model has several: every row pooled into one line "
+            "(all, the default), its newest, or the one with most cells"
+        ),
     )
     p.add_argument(
         "--run-id",
@@ -801,6 +824,19 @@ def _rate(items: List[Dict[str, Any]], field: str) -> Optional[float]:
     return round(sum(1 for v in values if v) / len(values), 3)
 
 
+def _pooled_rate(cells: List[Dict[str, Any]], field: str) -> Optional[float]:
+    """Exact share of cells with `field` truthy — no per-group rounding.
+
+    The model-level rates use this so the composite score (and therefore the
+    quality band) is a deterministic function of the pooled cells, not of how
+    many groups they were bucketed into.
+    """
+    values = [c["eval"].get(field) for c in cells]
+    if all(v is None for v in values):
+        return None
+    return sum(1 for v in values if v) / len(values)
+
+
 def _p95(values: List[float]) -> float:
     if not values:
         return 0.0
@@ -853,64 +889,126 @@ def _composite_quality(rollup: Dict[str, Any]) -> Optional[float]:
     return round(100 * total / weight_sum, 1) if weight_sum else None
 
 
+def quality_band(quality: Optional[float]) -> str:
+    """Map a composite score onto its band; no data is its own band."""
+    if quality is None:
+        return "unknown"
+    for floor, label in QUALITY_BANDS:
+        if quality >= floor:
+            return label
+    return "weak"
+
+
+def speed_band(suite_s: Optional[float]) -> str:
+    """Map average suite time onto its band; no data is its own band."""
+    if suite_s is None:
+        return "unknown"
+    for ceiling, label in SPEED_BANDS:
+        if suite_s < ceiling:
+            return label
+    return "slow"
+
+
+def recommendation_tier(q_band: str, s_band: str) -> str:
+    """good / ok / discouraged as a label on the quality × speed grid.
+
+    Returns `unknown` when either axis has no data. That case can't arise from
+    this tool (every row it reports carries measurements), but it is the normal
+    case in the app for a model that has never been swept — the bands are shared,
+    so the tier rule has to answer for it.
+    """
+    if "unknown" in (q_band, s_band):
+        return TIER_UNKNOWN
+    cell = (q_band, s_band)
+    if cell in GOOD_CELLS:
+        return TIER_GOOD
+    if cell in OK_CELLS:
+        return TIER_OK
+    return TIER_DISCOURAGED
+
+
+def _group_stats(
+    model_id: Optional[str], fixture: Optional[str], interaction: Optional[str], items: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Rates and latency distribution over one bucket of scored cells."""
+    # Timing distribution over successful requests only; an error/timeout
+    # latency is capped by the timeout, not a real generation time.
+    ok_items = [c for c in items if not c.get("error")] or items
+    lats = [c.get("latency_s") or 0.0 for c in ok_items]
+    return {
+        "model_id": model_id,
+        "fixture": fixture,
+        "interaction": interaction,
+        "reps": len(items),
+        "ok_rate": _rate(items, "ok"),
+        "clean_rate": _rate(items, "clean"),
+        "json_ok_rate": _rate(items, "json_ok"),
+        "array_strings_rate": _rate(items, "array_strings"),
+        "timeouts": sum(1 for c in items if _is_timeout(c)),
+        "errors": sum(1 for c in items if c.get("error")),
+        "sleeps": sum(1 for c in items if c.get("sleep_s")),
+        "latency_mean_s": _mean(lats),
+        "latency_p50_s": round(statistics.median(lats), 4) if lats else 0.0,
+        "latency_p95_s": round(_p95(lats), 4),
+        "latency_std_s": round(statistics.pstdev(lats), 4) if len(lats) > 1 else 0.0,
+        "latency_min_s": round(min(lats), 4) if lats else 0.0,
+        "latency_max_s": round(max(lats), 4) if lats else 0.0,
+        "gen_tps_median": _median_tps(ok_items),
+    }
+
+
 def analyze_row(row: Dict[str, Any]) -> Dict[str, Any]:
-    """Score a row's cells and aggregate them per (fixture, interaction)."""
+    """Score a row's cells and aggregate them per (fixture, interaction).
+
+    Every scored cell keeps the batch it came from (`run_id`), so a merged row —
+    several batches pooled into one model line — can still be broken down per run
+    in the detail table without re-deriving anything.
+    """
+    row_run_id = (row.get("run") or {}).get("id")
+    scored: List[Dict[str, Any]] = [
+        {
+            **cell,
+            "run_id": cell.get("run_id") or row_run_id,
+            "eval": score_result(cell.get("interaction", ""), cell.get("raw") or ""),
+        }
+        for cell in row.get("cells", [])
+    ]
+
     by_key: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
-    for cell in row.get("cells", []):
-        scored = {**cell, "eval": score_result(cell.get("interaction", ""), cell.get("raw") or "")}
-        by_key.setdefault((cell.get("fixture"), cell.get("interaction")), []).append(scored)
+    for cell in scored:
+        by_key.setdefault((cell.get("fixture"), cell.get("interaction")), []).append(cell)
 
-    aggs: List[Dict[str, Any]] = []
-    for (fixture, interaction), items in by_key.items():
-        # Timing distribution over successful requests only; an error/timeout
-        # latency is capped by the timeout, not a real generation time.
-        ok_items = [c for c in items if not c.get("error")] or items
-        lats = [c.get("latency_s") or 0.0 for c in ok_items]
-        aggs.append(
-            {
-                "model_id": row.get("model_id"),
-                "fixture": fixture,
-                "interaction": interaction,
-                "runs": len(items),
-                "ok_rate": _rate(items, "ok"),
-                "clean_rate": _rate(items, "clean"),
-                "json_ok_rate": _rate(items, "json_ok"),
-                "array_strings_rate": _rate(items, "array_strings"),
-                "timeouts": sum(1 for c in items if _is_timeout(c)),
-                "errors": sum(1 for c in items if c.get("error")),
-                "sleeps": sum(1 for c in items if c.get("sleep_s")),
-                "latency_mean_s": _mean(lats),
-                "latency_p50_s": round(statistics.median(lats), 4) if lats else 0.0,
-                "latency_p95_s": round(_p95(lats), 4),
-                "latency_std_s": round(statistics.pstdev(lats), 4) if len(lats) > 1 else 0.0,
-                "latency_min_s": round(min(lats), 4) if lats else 0.0,
-                "latency_max_s": round(max(lats), 4) if lats else 0.0,
-                "gen_tps_median": _median_tps(ok_items),
-            }
-        )
+    aggs: List[Dict[str, Any]] = [
+        _group_stats(row.get("model_id"), fixture, interaction, items)
+        for (fixture, interaction), items in by_key.items()
+    ]
 
-    questions = [a for a in aggs if a["interaction"] == "initial_questions"]
+    questions = [c for c in scored if c.get("interaction") == "initial_questions"]
     tps = [a["gen_tps_median"] for a in aggs if a.get("gen_tps_median")]
     model = row.get("model") or {}
     warmup = row.get("warmup") or {}
     rollup = {
         "model_id": row.get("model_id"),
+        "run_id": (row.get("run") or {}).get("id"),
         "display_name": model.get("display_name") or row.get("model_id"),
         "size_label": _fmt_size_label(model.get("size_label") or model.get("parameter_size")),
         "parameter_size": model.get("parameter_size"),
         "quantization": model.get("quantization"),
         "estimated_gb": estimate_memory_gb(model),
-        "run_id": (row.get("run") or {}).get("id"),
         "started_at": row.get("started_at"),
         "in_progress": row.get("in_progress"),
         "cells": len(row.get("cells", [])),
         "timeouts": sum(1 for c in row.get("cells", []) if _is_timeout(c)) + (1 if warmup.get("timeout") else 0),
         "errors": sum(1 for c in row.get("cells", []) if c.get("error")) + (1 if warmup.get("error") else 0),
         "sleeps": sum(1 for c in row.get("cells", []) if c.get("sleep_s")) + (1 if warmup.get("sleep_s") else 0),
-        "ok_rate": _mean([a["ok_rate"] or 0 for a in aggs]),
-        "clean_rate": _mean([a["clean_rate"] or 0 for a in aggs]),
-        "json_ok_rate": _mean([a["json_ok_rate"] or 0 for a in questions]) if questions else None,
-        "array_strings_rate": _mean([a["array_strings_rate"] or 0 for a in questions]) if questions else None,
+        # Model-level rates pool every included cell directly rather than
+        # averaging the per-group rates: those are rounded for display, and
+        # averaging them would let the group count (and so the number of batches
+        # pooled) nudge the score that picks the quality band.
+        "ok_rate": _pooled_rate(scored, "ok"),
+        "clean_rate": _pooled_rate(scored, "clean"),
+        "json_ok_rate": _pooled_rate(questions, "json_ok") if questions else None,
+        "array_strings_rate": _pooled_rate(questions, "array_strings") if questions else None,
         "latency_mean_s": _mean([a["latency_mean_s"] for a in aggs]),
         "latency_p95_s": round(max((a["latency_p95_s"] for a in aggs), default=0.0), 4),
         "suite_s": _suite_seconds(row.get("cells", [])),
@@ -918,7 +1016,11 @@ def analyze_row(row: Dict[str, Any]) -> Dict[str, Any]:
         "load_s": warmup.get("load_s"),
     }
     rollup["quality"] = _composite_quality(rollup)
-    return {"row": row, "aggs": aggs, "rollup": rollup}
+    rollup["quality_band"] = quality_band(rollup["quality"])
+    rollup["speed_band"] = speed_band(rollup.get("suite_s"))
+    rollup["tier"] = recommendation_tier(rollup["quality_band"], rollup["speed_band"])
+    rollup["included_runs"] = list(row.get("run_ids") or ([rollup["run_id"]] if rollup["run_id"] else []))
+    return {"row": row, "rollup": rollup, "cells": scored}
 
 
 # --------------------------------------------------------------------------- #
@@ -1028,6 +1130,85 @@ def select_rows(rows: List[Dict[str, Any]], per_model: str) -> List[Dict[str, An
     return out
 
 
+def group_by_model(rows: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+    """Bucket selected rows by model, each bucket in chronological order."""
+    by_model: Dict[str, List[Dict[str, Any]]] = {}
+    for r in rows:
+        by_model.setdefault(r.get("model_id") or "?", []).append(r)
+    return [
+        sorted(group, key=lambda r: r.get("started_at") or "")
+        for _, group in sorted(by_model.items())
+    ]
+
+
+def merge_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Pool every included row of one model into a single synthetic row.
+
+    The summary is one line per model, so a model swept in several batches has to
+    collapse into one. Pooling the *cells* — rather than averaging the per-row
+    summaries — keeps the arithmetic honest: `ok_rate` becomes total-ok over
+    total-cells across every included run, and `suite_s` stays the mean duration
+    of one pass over the suite. Each cell's `run` is re-keyed with its batch so
+    run indices from different sweeps can't collide (batch A's run 0 and batch
+    B's run 0 are different passes).
+
+    A single row passes through untouched, so `--per-model latest` behaves exactly
+    as before.
+    """
+    if len(rows) == 1:
+        return rows[0]
+    # Size is the one model field that varies between batches: `size_bytes` from
+    # /api/tags is measured on disk, while the fallback (parameter count ×
+    # quantization bits) under-reports. Keep the largest estimate so the memory
+    # figure and the `>NGB` fit flag stay conservative.
+    base = dict(max(rows, key=lambda r: estimate_memory_gb(r.get("model") or {}) or 0.0))
+    cells: List[Dict[str, Any]] = []
+    for src in rows:
+        run_id = (src.get("run") or {}).get("id") or "?"
+        for cell in src.get("cells", []):
+            cells.append({**cell, "run": f"{run_id}#{cell.get('run')}", "run_id": run_id})
+    base["cells"] = cells
+    base["run_ids"] = [(src.get("run") or {}).get("id") for src in rows]
+    base["in_progress"] = any(src.get("in_progress") for src in rows)
+    base["started_at"] = min((src.get("started_at") or "" for src in rows), default="")
+    base["finished_at"] = max((src.get("finished_at") or "" for src in rows), default=None)
+    base["warmup"] = _merge_warmups([src.get("warmup") or {} for src in rows])
+    return base
+
+
+def _merge_warmups(warmups: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Collapse several cold-load measurements into one.
+
+    Cold load is the only warmup figure that reaches the report, and it is the
+    noisiest (it depends on whether the weights were already resident), so pool it
+    as a mean and keep `ok` only if every contributing load succeeded.
+    """
+    loads = [w["load_s"] for w in warmups if w.get("load_s") is not None]
+    walls = [w["wall_s"] for w in warmups if w.get("wall_s") is not None]
+    return {
+        "ok": all(w.get("ok") for w in warmups),
+        "load_s": round(statistics.mean(loads), 4) if loads else None,
+        "wall_s": round(statistics.mean(walls), 4) if walls else None,
+        "timeout": any(w.get("timeout") for w in warmups),
+        "error": None,
+        "sleep_s": sum(w.get("sleep_s") or 0.0 for w in warmups) or None,
+    }
+
+
+def analyze_models(rows: List[Dict[str, Any]], per_model: str) -> List[Dict[str, Any]]:
+    """Select rows, pool each model's, and analyze — the one path both renderers use.
+
+    This is where `--per-model all` stops meaning "one row per run" and starts
+    meaning "one row per model, every run pooled". Each entry keeps the original
+    rows as `sources` so the header can still report which batches, parameters and
+    hardware went in.
+    """
+    return [
+        {**analyze_row(merge_rows(group)), "sources": group}
+        for group in group_by_model(select_rows(rows, per_model))
+    ]
+
+
 # --------------------------------------------------------------------------- #
 # Rendering
 # --------------------------------------------------------------------------- #
@@ -1041,8 +1222,13 @@ def _common(rows: List[Dict[str, Any]], getter: Callable[[Dict[str, Any]], Any])
     return json.loads(vals.pop()) if len(vals) == 1 else "mixed"
 
 
-def _sort_key(rollup: Dict[str, Any]) -> Tuple[float, float]:
-    return (-(rollup.get("quality") or 0.0), rollup.get("latency_p95_s") or 0.0)
+def _sort_key(rollup: Dict[str, Any]) -> Tuple[float, float, float]:
+    """Quality first, then how long the whole suite takes, then tail latency."""
+    return (
+        -(rollup.get("quality") or 0.0),
+        rollup.get("suite_s") if rollup.get("suite_s") is not None else float("inf"),
+        rollup.get("latency_p95_s") or 0.0,
+    )
 
 
 def _flags(rollup: Dict[str, Any], device_gb: float) -> List[str]:
@@ -1065,17 +1251,22 @@ def _flags(rollup: Dict[str, Any], device_gb: float) -> List[str]:
 
 
 def _header_lines(analyzed: List[Dict[str, Any]], stats: Dict[str, int], per_model: str, device_gb: float) -> List[str]:
-    rows = [a["row"] for a in analyzed]
+    # Pooled entries carry their contributing rows in `sources`; run ids, params
+    # and hardware have to come from those, not from the merged synthetic row.
+    rows = [r for a in analyzed for r in (a.get("sources") or [a["row"]])]
     dropped = "".join(
         f", {stats[key]} {label}" for key, label in (("other_run", "other run"), ("excluded", "excluded"))
         if stats.get(key)
     )
     out = [
-        f"rows: {stats.get('files', 0)} file(s) read, {stats.get('used', len(analyzed))} used, "
+        f"rows: {stats.get('files', 0)} file(s) read, {stats.get('used', len(rows))} usable, "
         f"{stats.get('old_schema', 0)} too old, {stats.get('fixtures_mismatch', 0)} fixture mismatch, "
         f"{stats.get('unreadable', 0)} unreadable{dropped}",
-        f"per-model: {per_model}",
     ]
+    if len(rows) > len(analyzed):
+        out.append(f"per-model: {per_model} — {len(rows)} row(s) pooled into {len(analyzed)} model(s)")
+    else:
+        out.append(f"per-model: {per_model}")
     run_ids = sorted({(r.get("run") or {}).get("id") for r in rows if (r.get("run") or {}).get("id")})
     if len(run_ids) == 1:
         out.append(f"run-id: {run_ids[0]}")
@@ -1101,11 +1292,11 @@ def render_console(
     per_model: str,
     device_gb: float,
 ) -> str:
-    """Compact tab-separated view for the terminal: name, size, quality, startup, suite."""
-    out: List[str] = ["# Ollama evals — %d model(s)" % len(analyzed)]
+    """Compact tab-separated view for the terminal: name, size, quality, tier, timings."""
+    out: List[str] = [f"# Ollama evals — {_count_label(analyzed)}"]
     out += ["# " + line for line in _header_lines(analyzed, stats, per_model, device_gb)]
     out.append("")
-    out.append("model\tsize\tquality\tstartup_s\tsuite_s\tflags")
+    out.append("model\tsize\tquality\ttier\tstartup_s\tsuite_s\tflags")
     rollups = sorted((a["rollup"] for a in analyzed), key=_sort_key)
     for r in rollups:
         out.append(
@@ -1114,6 +1305,7 @@ def render_console(
                     r.get("display_name") or r["model_id"],
                     str(r.get("size_label") or "?"),
                     _fmt(r.get("quality"), 1),
+                    str(r.get("tier") or ""),
                     _fmt(r.get("load_s")),
                     _fmt(r.get("suite_s")),
                     " ".join(_flags(r, device_gb)),
@@ -1128,12 +1320,24 @@ FIELD_GUIDE = """\
 
 **Per-model table**
 
+One row per model. When a model was swept in several batches (and `--per-model
+all`, the default, is in effect) its rows are pooled: rates pool their cells, and
+`suite_s` averages one pass over the suite per included run, so every figure
+covers all included runs at once. The contributing batches are named in the
+`run-ids:` header line, and are broken out per run in the per-interaction tables
+below.
+
 - `model` — display name with any `:latest` alias resolved to its real size tag
   (e.g. `llama3.2:latest` → `llama3.2:3b`), distilled from the model's own
   metadata. The canonical id lives in the row file as `model_id`.
 - `size` — parameter size label (`general.size_label`, falling back to
   `details.parameter_size`), e.g. `3B`, `7.6B`.
 - `quality` — composite 0–100 quality score (see *Composite quality score* below).
+- `tier` — `good` / `ok` / `discouraged`, a label derived from the
+  quality × speed grid below. It is a presentation label, never a filter: every
+  model is listed whichever cell it lands in. (`unknown` — no usable data on an
+  axis — is the fourth tier, and belongs to the app, which sees models this tool
+  has never swept.)
 - `startup_s` — cold-load time in seconds (from the unscored warmup's
   Ollama `load_duration`): the delay a fresh session feels before its first token.
 - `suite_s` — average time to run the whole suite once: one pass over every
@@ -1147,11 +1351,12 @@ FIELD_GUIDE = """\
   averaged across all (fixture, interaction) groups and over successful requests
   only.
 - `p95_s` — worst-case (95th percentile) request time across the groups.
-- `ok` — mean share of requests that produced *usable* output: a non-empty title,
-  a parsed JSON array of non-empty strings for questions, or a non-empty summary.
-- `clean` — mean share that fully conformed to format: title ≤60 chars, no
-  surrounding quotes, no preamble, no trailing period, single line; summary ≤150
-  words, no bullets/headings, no preamble.
+- `ok` — share of every included request that produced *usable* output: a non-empty
+  title, a parsed JSON array of non-empty strings for questions, or a non-empty
+  summary. Pooled across all included runs, not averaged per batch.
+- `clean` — share of every included request that fully conformed to format: title
+  ≤60 chars, no surrounding quotes, no preamble, no trailing period, single line;
+  summary ≤150 words, no bullets/headings, no preamble.
 - `json` — share of question-generation requests whose reply parsed as JSON
   (blank where JSON isn't requested).
 - `est_gb` — rough resident-memory estimate (weights + KV/runtime headroom), from
@@ -1161,12 +1366,15 @@ FIELD_GUIDE = """\
   `slept×N` (N requests spanned a machine sleep — see below), `>16GB` (estimated
   footprint exceeds the device budget; flagged, not hidden).
 
-**Per-interaction table (one per model)**
+**Per-interaction table (one per model, same order as the model table)**
 
+- `run` — which batch a row was measured in. Only shown when the model was
+  pooled from more than one batch; then each included run gets its own rows,
+  side by side, in sweep order.
 - `fixture` — which of the fixtures the row measured (`simple-product`,
   `home-project`, `software-plan`).
 - `interaction` — `title`, `initial_questions`, or `summarize`.
-- `runs` — number of repetitions aggregated for this (fixture, interaction).
+- `reps` — number of repetitions aggregated for this row.
 - `ok`, `clean`, `json` — as above, but for this single group.
 - `arr` — share whose reply was a JSON array of non-empty strings (stricter than
   `json`: a syntactically valid array of non-strings does not count).
@@ -1218,7 +1426,94 @@ finished rows and **re-runs any row left `in_progress`**.
 `json` is weighted highest because the app's Q&A loop depends on parseable
 question arrays. Weights are renormalized over whichever components a row
 actually has (so a partial row is not penalized for absent cells). Speed is
-deliberately excluded — it is reported separately as `startup_s`/`req_s`."""
+deliberately excluded — it is reported separately as `startup_s`/`suite_s`.
+
+## Recommendation grid
+
+Two independent axes, because they genuinely disagree: a flawless-but-slow model
+is a different proposition from a fast-but-flawed one, and one combined score
+would have to hide that.
+
+- **quality** bands the composite score: `strong` ≥ 98, `adequate` ≥ 85, else `weak`.
+- **speed** bands the average suite time: `fast` < 10s, `fine` < 35s, else `slow`.
+- `unknown` is its own band on either axis — a model with no usable data is
+  ranked and shown, never guessed at or demoted. This tool always has data, so it
+  never prints `unknown`; the app, which meets unevaluated models constantly,
+  does, and gets `unknown` as the tier for them.
+
+`tier` is then a *label on the grid*: **good** = strong × fast, **ok** = strong ×
+fine or adequate × fast, and everything else is **discouraged**. It exists so the
+UI has one name to show, but the axes are the real data — a `strong`/`slow` model
+is still fully listed, just not dressed up as a safe default.
+
+Both axes are derived at read time, so the cuts are tunable without re-running a
+sweep."""
+
+
+def _count_label(analyzed: List[Dict[str, Any]]) -> str:
+    """Title counter: one entry per model, however many rows were pooled into it."""
+    models = len(analyzed)
+    rows = sum(len(a.get("sources") or [a["row"]]) for a in analyzed)
+    if rows != models:
+        return f"{models} model(s) from {rows} row(s)"
+    return f"{models} model(s)"
+
+
+def _quality_headers() -> List[str]:
+    """Band labels for the grid's rows, with the cut that opens each one."""
+    labels = [f"{label} (≥{floor:g})" for floor, label in QUALITY_BANDS]
+    return labels + ["weak", "unknown"]
+
+
+def _speed_headers() -> List[str]:
+    """Band labels for the grid's columns, with the cut that opens each one."""
+    labels = [f"{label} (<{ceiling:g}s)" for ceiling, label in SPEED_BANDS]
+    return labels + [f"slow (≥{SPEED_BANDS[-1][0]:g}s)", "unknown"]
+
+
+def _render_grid(rollups: List[Dict[str, Any]]) -> List[str]:
+    """Quality × speed grid, each cell listing its models (none are dropped)."""
+    cells: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    for r in rollups:
+        cells.setdefault((r["quality_band"], r["speed_band"]), []).append(r)
+    out = [
+        "| quality \\ speed | " + " | ".join(_speed_headers()) + " |",
+        "|---|" + "---|" * len(BAND_SPEED_ORDER),
+    ]
+    for q_band in BAND_QUALITY_ORDER:
+        row = [f"**{q_band}**" if q_band == "strong" else q_band]
+        for s_band in BAND_SPEED_ORDER:
+            members = sorted(cells.get((q_band, s_band), []), key=_sort_key)
+            names = list(dict.fromkeys(m.get("display_name") or m["model_id"] for m in members))
+            row.append(", ".join(names))
+        out.append("| " + " | ".join(row) + " |")
+    return out
+
+
+def _detail_groups(entry: Dict[str, Any], per_run: bool) -> List[Dict[str, Any]]:
+    """Bucket an entry's scored cells for the per-interaction table.
+
+    With one included run the bucket is (fixture, interaction), the same bucket the
+    per-group rates in a row file use. With several, the bucket is (run, fixture,
+    interaction) so every pooled batch gets its own rows inside the one table
+    rather than a table of its own. Insertion order is preserved, and merged rows
+    are built batch-major, so runs come out in the order they were swept.
+    """
+    by_key: Dict[Tuple[Any, ...], List[Dict[str, Any]]] = {}
+    for cell in entry["cells"]:
+        if per_run:
+            key: Tuple[Any, ...] = (cell.get("run_id"), cell.get("fixture"), cell.get("interaction"))
+        else:
+            key = (cell.get("fixture"), cell.get("interaction"))
+        by_key.setdefault(key, []).append(cell)
+
+    groups: List[Dict[str, Any]] = []
+    for key, items in by_key.items():
+        run_id, fixture, interaction = key if per_run else (None, *key)
+        group = _group_stats(entry["rollup"].get("model_id"), fixture, interaction, items)
+        group["run_id"] = run_id
+        groups.append(group)
+    return groups
 
 
 def render_markdown(
@@ -1227,44 +1522,84 @@ def render_markdown(
     per_model: str,
     device_gb: float,
 ) -> str:
-    out: List[str] = [f"# Ollama evals — {len(analyzed)} model(s)\n"]
+    out: List[str] = [f"# Ollama evals — {_count_label(analyzed)}\n"]
     out += [f"- {line}" for line in _header_lines(analyzed, stats, per_model, device_gb)]
     out.append("")
 
+    # One row per model: with `--per-model all` several batches are pooled into a
+    # single set of rates and one suite time, so "sorted by quality then suite
+    # speed" is a total order over models rather than a run column to scan.
     rollups = sorted(((a["rollup"], a) for a in analyzed), key=lambda pair: _sort_key(pair[0]))
 
-    out.append("## Per-model (sorted by composite quality, then speed)\n")
-    out.append(
-        "| model | size | quality | startup_s | suite_s | req_s | p95_s | ok | clean | json | est_gb | flags |"
-    )
-    out.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
+    out.append("## Per-model (sorted by composite quality, then suite speed)\n")
+    columns = [
+        "model", "size", "quality", "tier", "startup_s", "suite_s", "req_s", "p95_s",
+        "ok", "clean", "json", "est_gb", "flags",
+    ]
+    out.append("| " + " | ".join(columns) + " |")
+    out.append("|" + "---|" * len(columns))
     for r, _ in rollups:
-        out.append(
-            f"| {r.get('display_name') or r['model_id']} | {r.get('size_label') or '?'} | "
-            f"{_fmt(r.get('quality'), 1)} | {_fmt(r.get('load_s'))} | {_fmt(r.get('suite_s'))} | "
-            f"{_fmt(r.get('latency_mean_s'))} | "
-            f"{_fmt(r.get('latency_p95_s'))} | {r['ok_rate']:.2f} | {r['clean_rate']:.2f} | "
-            f"{_fmt(r['json_ok_rate'])} | {_fmt(r.get('estimated_gb'), 1)} | "
-            f"{' '.join(_flags(r, device_gb))} |"
-        )
+        cells = [
+            r.get("display_name") or r["model_id"],
+            r.get("size_label") or "?",
+            _fmt(r.get("quality"), 1),
+            r.get("tier"),
+            _fmt(r.get("load_s")),
+            _fmt(r.get("suite_s")),
+            _fmt(r.get("latency_mean_s")),
+            _fmt(r.get("latency_p95_s")),
+            f"{r['ok_rate']:.2f}",
+            f"{r['clean_rate']:.2f}",
+            _fmt(r["json_ok_rate"]),
+            _fmt(r.get("estimated_gb"), 1),
+            " ".join(_flags(r, device_gb)),
+        ]
+        out.append("| " + " | ".join(cells) + " |")
+    out.append("")
+
+    out.append("## Recommendation grid\n")
+    out.append(
+        "Two independent axes — **quality** (composite score) and **speed** (average\n"
+        "suite time) — so a flawless-but-slow model stays distinguishable from a\n"
+        "fast-but-flawed one. Tiers are a label on the grid, not a filter:\n"
+        "**good** = strong × fast, **ok** = strong × fine or adequate × fast,\n"
+        "everything else is **discouraged**. No model is hidden by its cell.\n"
+    )
+    out += _render_grid([r for r, _ in rollups])
     out.append("")
 
     out.append("## Per-interaction detail (one table per model, same order as above)\n")
     for r, a in rollups:
-        out.append(f"### {r.get('display_name') or r['model_id']}\n")
-        out.append(
-            "| fixture | interaction | runs | ok | clean | json | arr | timeouts | "
-            "mean | p50 | p95 | std | min | max | tps |"
-        )
-        out.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
-        for g in a["aggs"]:
-            out.append(
-                f"| {g['fixture']} | {g['interaction']} | {g['runs']} | "
-                f"{_fmt(g['ok_rate'])} | {_fmt(g['clean_rate'])} | {_fmt(g['json_ok_rate'])} | "
-                f"{_fmt(g['array_strings_rate'])} | {g['timeouts']} | {g['latency_mean_s']:.2f} | "
-                f"{g['latency_p50_s']:.2f} | {g['latency_p95_s']:.2f} | {g['latency_std_s']:.2f} | "
-                f"{g['latency_min_s']:.2f} | {g['latency_max_s']:.2f} | {_fmt(g.get('gen_tps_median'), 1)} |"
-            )
+        heading = r.get("display_name") or r["model_id"]
+        # A model pooled from several batches gets a `run` column instead of one
+        # table per batch, so its runs sit side by side.
+        per_run = len({c.get("run_id") for c in a["cells"] if c.get("run_id")}) > 1
+        out.append(f"### {heading}\n")
+        columns = (["run"] if per_run else []) + [
+            "fixture", "interaction", "reps", "ok", "clean", "json", "arr",
+            "timeouts", "mean", "p50", "p95", "std", "min", "max", "tps",
+        ]
+        out.append("| " + " | ".join(columns) + " |")
+        out.append("|" + "---|" * len(columns))
+        for g in _detail_groups(a, per_run):
+            cells = ([g["run_id"] or "?"] if per_run else []) + [
+                g["fixture"],
+                g["interaction"],
+                str(g["reps"]),
+                _fmt(g["ok_rate"]),
+                _fmt(g["clean_rate"]),
+                _fmt(g["json_ok_rate"]),
+                _fmt(g["array_strings_rate"]),
+                str(g["timeouts"]),
+                f"{g['latency_mean_s']:.2f}",
+                f"{g['latency_p50_s']:.2f}",
+                f"{g['latency_p95_s']:.2f}",
+                f"{g['latency_std_s']:.2f}",
+                f"{g['latency_min_s']:.2f}",
+                f"{g['latency_max_s']:.2f}",
+                _fmt(g.get("gen_tps_median"), 1),
+            ]
+            out.append("| " + " | ".join(cells) + " |")
         out.append("")
 
     out.append(FIELD_GUIDE)
@@ -1384,7 +1719,7 @@ def main_run(argv: Optional[List[str]] = None) -> int:
     kept, fstats = filter_rows(rows, SCHEMA, allow_fixtures=False)
     stats["used"] = len(kept)
     stats.update(fstats)
-    print("\n" + render_console([analyze_row(r) for r in select_rows(kept, "all")], stats, "all", args.device_memory_gb), flush=True)
+    print("\n" + render_console(analyze_models(kept, "all"), stats, "all", args.device_memory_gb), flush=True)
     print(f"\nFull report:  python {Path(__file__).name} report {rows_dir} --full", flush=True)
     return 0
 
@@ -1412,7 +1747,7 @@ def main_report(argv: Optional[List[str]] = None) -> int:
         )
         return 1
 
-    analyzed = [analyze_row(r) for r in select_rows(kept, args.per_model)]
+    analyzed = analyze_models(kept, args.per_model)
     if args.full:
         print(render_markdown(analyzed, stats, args.per_model, args.device_memory_gb))
     else:
