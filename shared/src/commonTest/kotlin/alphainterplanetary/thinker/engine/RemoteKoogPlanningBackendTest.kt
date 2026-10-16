@@ -1,11 +1,11 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.repository.SettingsRepository
-import alphainterplanetary.thinker.testutil.FakeStorage
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
+import alphainterplanetary.thinker.repository.SettingsRepository
+import alphainterplanetary.thinker.testutil.FakeStorage
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals

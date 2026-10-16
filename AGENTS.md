@@ -27,10 +27,8 @@ The Kotlin codebase follows these formatting conventions:
 - **Imports:**
   - Use `tools/sort_all_imports.py` to apply these rules in bulk instead of visiting each file individually.
   - No wildcard (`*`) imports — always import explicitly.
-  - Grouped and alphabetically sorted: project packages
-    (`alphainterplanetary.*`) first, then external libraries
-    (`androidx.*`, `kotlinx.*`, etc.), with a blank line only between
-    the package declaration and the first group.
+  - Grouped and alphabetically sorted, with a blank line only between
+    the package declaration and the imports and the imports and code below.
 - **Trailing commas:** Include trailing commas in multi-line parameter
   lists, function calls, and data class properties (e.g. `val questions:
   List<QuestionEntity>,`).

@@ -1,8 +1,8 @@
 package alphainterplanetary.thinker.engine
 
-import alphainterplanetary.thinker.activitylog.LogSource
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
+import alphainterplanetary.thinker.activitylog.LogSource
 
 /**
  * Couples a [PromptExecutor] and [LLModel] for a specific inference backend,

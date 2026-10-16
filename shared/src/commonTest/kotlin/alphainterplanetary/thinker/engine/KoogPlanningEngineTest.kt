@@ -1,5 +1,11 @@
 package alphainterplanetary.thinker.engine
 
+import ai.koog.prompt.executor.clients.LLMClient
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
+import ai.koog.prompt.executor.model.PromptExecutor
+import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.llm.LLModel
+import ai.koog.prompt.message.Message
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Answer
@@ -9,12 +15,6 @@ import alphainterplanetary.thinker.testutil.FakeLlmClient
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.testutil.question
 import alphainterplanetary.thinker.util.now
-import ai.koog.prompt.executor.clients.LLMClient
-import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
-import ai.koog.prompt.executor.model.PromptExecutor
-import ai.koog.prompt.llm.LLMProvider
-import ai.koog.prompt.llm.LLModel
-import ai.koog.prompt.message.Message
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

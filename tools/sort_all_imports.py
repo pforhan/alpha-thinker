@@ -42,22 +42,9 @@ def process_file(file_path):
         has_wildcard = any('*' in line for line in lines if line.strip().startswith('import '))
         return None, has_wildcard
 
-    # Separate project and external
-    project = []
-    external = []
-    has_wildcard = False
-    
-    for imp in import_lines:
-        if '*' in imp:
-            has_wildcard = True
-        if imp.startswith('import alphainterplanetary'):
-            project.append(imp)
-        else:
-            external.append(imp)
-            
-    project.sort()
-    external.sort()
-    sorted_imports = project + external
+    # Simple alphabetical sort for all imports
+    has_wildcard = any('*' in imp for imp in import_lines)
+    import_lines.sort()
     
     # Construct new content
     # 1. Headers and package
@@ -65,7 +52,7 @@ def process_file(file_path):
     # 2. One blank line
     new_lines.append('')
     # 3. Sorted imports (no blank lines between them)
-    new_lines.extend(sorted_imports)
+    new_lines.extend(import_lines)
     
     # 4. Remainder of the file
     # Everything after the last import line
