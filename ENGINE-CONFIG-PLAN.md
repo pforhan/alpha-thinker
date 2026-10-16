@@ -163,7 +163,8 @@ already applied to the DAOs.
 - [x] `IntelligenceSheet` renders from `EngineCatalog` in its current card shape
       (no visual redesign yet) so nothing regresses mid-refactor.
 - [x] delete `DynamicKoogPlanningBackendTest`
-- [ ] Update tests with these changes
+- [x] Update tests with these changes (EngineStatusTest.kt and RemoteKoogPlanningBackendTest.kt 
+      temporarily deleted.)
 
 **Proof:** `./gradlew :shared:allTests`.
 
@@ -183,7 +184,7 @@ already applied to the DAOs.
   default Remote only when storage is empty); delete-selected falls back to
   `EngineRef.Builtin(Offline)`; `markUsed` upserts an `engine_state` row
   carrying `lastUsedAt`; built-ins never appear in `instances`.
-- [ ] **EngineStatusTest (rewritten for ref/instance)** — `Builtin(Offline)`
+- [ ] **EngineStatusTest (rewritten for ref/instance, pull from git history if original needed)** — `Builtin(Offline)`
   → all slots `Unused`; complete `Instance` Remote → all `Active` with detail
   sourced from instance fields; missing model/key → `Incomplete` +
   `needsAttention`; Anthropic without key → Incomplete even at its fixed
@@ -195,7 +196,7 @@ already applied to the DAOs.
   whose backend reads only from its instance fields; repeat calls for the
   same ref return the identical cached engine; `invalidate(ref)` forces a
   rebuild (second factory creation visible); no flat storage reads.
-- [ ] **RemoteKoogPlanningBackendTest (rewritten)** — constructor takes a
+- [ ] **RemoteKoogPlanningBackendTest (rewritten, pull from git history if original needed)** — constructor takes a
   `RemoteKoogPlanningBackend`-compatible `RemoteConnection` (not a
   `SettingsRepository`); provider dispatch, base-URL normalization, `/v1`
   stripping, window carryover all derived from connection data; rebuild
