@@ -40,8 +40,7 @@ python tools/eval_ollama_models.py report --run-id morning-20261015 --exclude qw
 
 Batches are reportable straight out of this folder because the run id is part of
 each filename, so `--run-id` picks one out without you having to move or delete
-the others. Per-batch reports are kept at the repo root (`overnight-20261014.md`,
-`morning-20261015.md`, `afternoon.md`). `all.md` holds **every** saved row
+the others. `all.md` holds **every** saved row
 across all batches: the summary is still one line per model — the batches behind
 that line are pooled into it (`--per-model all`, the default), and the `run-ids:`
 header names them — while each model's per-interaction table gains a `run` column,
