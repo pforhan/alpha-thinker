@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.engine.EngineAvailability.Available
+import alphainterplanetary.thinker.engine.EngineAvailability.NotImplemented
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.repository.EngineRepository
 
@@ -76,13 +77,8 @@ object EngineCatalog {
 
           when (current.kind) {
             EngineKind.LocalFile -> {
-              // TODO: Implement actual file existence check here.
-              // For now, we just check if the path is not blank.
-              if (current.localPath.isNullOrBlank()) {
-                Unavailable("No local path specified")
-              } else {
-                Available
-              }
+              // TODO: Implement actual file existence check here. Probably a checksum too, and/or ask litert-lm if ready
+              NotImplemented
             }
             EngineKind.Remote -> {
               if (current.provider == null) {
@@ -98,7 +94,7 @@ object EngineCatalog {
             }
 
             EngineKind.Offline -> Available
-            EngineKind.OnDevice -> TODO()
+            EngineKind.OnDevice -> NotImplemented
           }
         },
       )

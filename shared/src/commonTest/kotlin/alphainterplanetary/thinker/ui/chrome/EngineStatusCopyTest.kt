@@ -1,6 +1,8 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineAvailability.Available
+import alphainterplanetary.thinker.engine.EngineAvailability.NotImplemented
+import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
@@ -15,24 +17,36 @@ import kotlin.test.assertTrue
  * two different things.
  */
 class EngineStatusCopyTest {
-  private fun engineStatus(ref: EngineRef) = engineStatus(
-    ref = ref,
-    availability = Available
-  )
-
   @Test
   fun aValuelessSlotIsDescribedInTheSameWordsAsItsSentence() {
-    val status = engineStatus(ref = EngineRef.Builtin(EngineKind.Remote))
+    val status = engineStatus(
+      ref = EngineRef.Builtin(EngineKind.Remote),
+      availability = Available
+    )
 
     val slot = status.slot(EngineCapability.Network)
     assertEquals("Needs setup", slot.displayDetail())
     assertTrue(slot.sentence().contains("needs setup"))
   }
 
+  @Test
+  fun anUnavailableEngineIsDescribedAsNeedingSetup() {
+    val status = engineStatus(
+      ref = EngineRef.Builtin(EngineKind.OnDevice),
+      availability = Unavailable("some fancy reason why not avail"),
+    )
+
+    val slot = status.slot(EngineCapability.Llm)
+    assertEquals("Needs setup", slot.displayDetail())
+    assertTrue(slot.sentence().contains("needs setup"))
+  }
 
   @Test
   fun aValuelessSlotStatesTheModeVocabularyForEveryState() {
-    val offline = engineStatus(ref = EngineRef.Builtin(EngineKind.Offline))
+    val offline = engineStatus(
+      ref = EngineRef.Builtin(EngineKind.Offline),
+      availability = Available
+    )
 
     // Unused across the board, so "not used" is the only word the column can show.
     assertEquals(
@@ -78,5 +92,37 @@ class EngineStatusCopyTest {
     )
 
     assertEquals("", slot.displayDetail())
+  }
+
+  @Test
+  fun aRemoteInstanceThatNeedsSetupIsDescribedAsNeedingSetup() {
+    val status = engineStatus(
+      ref = EngineRef.Instance("test"),
+      instance = EngineInstance(
+        id = "test",
+        kind = EngineKind.Remote,
+        label = "test",
+        provider = alphainterplanetary.thinker.engine.RemoteProvider.Ollama,
+        baseUrl = "http://localhost:11434",
+        model = "",
+      ),
+      availability = Available,
+    )
+
+    val slot = status.slot(EngineCapability.Llm)
+    assertEquals("Needs setup", slot.displayDetail())
+    assertTrue(slot.sentence().contains("needs setup"))
+  }
+
+  @Test
+  fun aNotImplementedEngineIsDescribedAsNeedingSetup() {
+    val status = engineStatus(
+      ref = EngineRef.Builtin(EngineKind.OnDevice),
+      availability = NotImplemented,
+    )
+
+    val slot = status.slot(EngineCapability.Llm)
+    assertEquals("Needs setup", slot.displayDetail())
+    assertTrue(slot.sentence().contains("needs setup"))
   }
 }

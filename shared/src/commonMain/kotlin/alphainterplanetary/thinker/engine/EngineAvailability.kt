@@ -6,6 +6,7 @@ package alphainterplanetary.thinker.engine
 sealed interface EngineAvailability {
   /** The engine is ready to use. */
   data object Available : EngineAvailability
+  data object NotImplemented : EngineAvailability
   /**
    * The engine is not ready. [reason] provides a user-facing explanation.
    */
