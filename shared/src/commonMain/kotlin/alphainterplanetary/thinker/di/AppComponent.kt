@@ -7,17 +7,13 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getActivityDatabase
 import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
-import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRegistry
-import alphainterplanetary.thinker.engine.KoogPlanningEngine
 import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
-import alphainterplanetary.thinker.engine.OfflinePlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
-import alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
-import alphainterplanetary.thinker.engine.resolveSelectedEngine
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.repository.SettingsRepository
@@ -39,7 +35,7 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   abstract val settingsRepository: SettingsRepository
 
-  abstract val engineRepository: alphainterplanetary.thinker.repository.EngineRepository
+  abstract val engineRepository: EngineRepository
 
   abstract val projectWrites: ProjectWrites
 
@@ -97,21 +93,19 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   @Provides
   fun providesEngineSelector(
     registry: EngineRegistry,
-    repository: alphainterplanetary.thinker.repository.EngineRepository,
+    repository: EngineRepository,
     settingsRepository: SettingsRepository,
     activityLogger: ActivityLogger,
-  ): PlanningEngineSelector {
-    return PlanningEngineSelector {
-      SlowDownPlanningEngine(
-        delegate = LoggingPlanningEngine(
-          delegate = registry.getEngine(
-            repository.selected.value,
-          ),
-          log = activityLogger,
+  ): PlanningEngineSelector = PlanningEngineSelector {
+    SlowDownPlanningEngine(
+      delegate = LoggingPlanningEngine(
+        delegate = registry.getEngine(
+          repository.selected.value,
         ),
-        config = settingsRepository.engineDelay,
-      )
-    }
+        log = activityLogger,
+      ),
+      config = settingsRepository.engineDelay,
+    )
   }
 }
 

@@ -12,20 +12,14 @@ import alphainterplanetary.thinker.model.Project
  */
 enum class SettingsKey(val storageKey: String) {
   PhaseTheme("phase-theme"),
-  EngineKind("engine-mode"),
   SlowDownPlanningEngine("slow-down-planning-engine"),
   EngineTitleRecommendationDelay("engine-delay-recommend-title"),
   EngineQuestionGenerationDelay("engine-delay-question-generation"),
   ActivityLoggerRetentionDays("activity-log-retention-days"),
   AnnouncedFailureActivityId("announced-failure-activity-id"),
-  RemoteLlmBaseUrl("remote-llm-base-url"),
-  RemoteLlmApiKey("remote-llm-api-key"),
-  RemoteLlmModel("remote-llm-model"),
-  RemoteLlmContextTokens("remote-llm-context-tokens"),
-  RemoteLlmProvider("remote-llm-provider"),
 
   /**
-   * The id of the project the project simulator last created, so a later run
+   * The id of the project the simulator last created, so a later run
    * replaces it. A setting rather than a marker on the project, because the
    * thing being remembered is "which project this tool made", not a state of
    * the project — the same reasoning as [AnnouncedFailureActivityId].

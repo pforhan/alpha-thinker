@@ -17,17 +17,14 @@ import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.repository.SettingsRepository
 
 /**
- * The [KoogPlanningBackend] for [EngineKind.Remote]: a Koog client pointed at
- * whichever provider, endpoint, API key, and model the user has configured in
- * [SettingsRepository], and rebuilt lazily whenever any of those settings change
- * so edits take effect from the next interaction without a restart. The previous
- * client is closed on rebuild. Rebuilds are best-effort: planning interactions
- * run single-flight, so an in-flight ask is never racing a rebuild because it
- * read the old client (which stays alive until the swap happens on the next
- * read).
+ * The [KoogPlanningBackend] for one Remote connection: it holds the
+ * [RemoteConnection] it was built with and builds the Koog client that talks to
+ * it on first use. The connection is a snapshot, so the client is built once and
+ * kept for this backend's lifetime — a change to the connection is a new backend
+ * (the [EngineRegistry] builds one after `invalidate(ref)`), never an in-place
+ * rebuild of this one. [close] releases the client.
  *
  * The [RemoteProvider] picks the client, because the wire formats differ:
  * OpenAI-compatible servers (and Ollama's `/v1` shim) get [OpenAILLMClient],
@@ -54,7 +51,13 @@ class RemoteKoogPlanningBackend(
 
   override val source: LogSource = LogSource.RemoteLLM
 
-  private var current: State? = null
+  /**
+   * The client and executor pair, built on first use and then kept. Nothing about
+   * the connection can change underneath this object — it was handed a snapshot —
+   * so there is no later target to compare against and no swap to perform: one
+   * connection, one client, until [close].
+   */
+  private var built: State? = null
 
   override val executor: PromptExecutor
     get() = state().executor
@@ -62,89 +65,77 @@ class RemoteKoogPlanningBackend(
   override val model: LLModel
     get() = state().model
 
-  private fun state(): State {
-    val target = Target(
-      provider = connection.provider,
-      baseUrl = connection.baseUrl,
-      apiKey = connection.apiKey,
-      model = connection.model,
-      contextLength = connection.contextLength,
-    )
-    val existing = current
-    if (existing != null && existing.target == target) {
-      return existing
-    }
-    val previous = current
-    val built = when (target.provider) {
-      RemoteProvider.OpenAiCompatible -> openAiCompatible(target)
-      RemoteProvider.Ollama -> ollama(target)
-      RemoteProvider.Anthropic -> anthropic(target)
-    }
-    current = built
-    previous?.client?.close()
-    return built
+  /** Closes the client this backend built; a backend that was never used has none. */
+  override fun close() {
+    built?.client?.close()
   }
 
-  private fun openAiCompatible(target: Target): State {
+  private fun state(): State = built ?: build().also { built = it }
+
+  private fun build(): State = when (connection.provider) {
+    RemoteProvider.OpenAiCompatible -> openAiCompatible()
+    RemoteProvider.Ollama -> ollama()
+    RemoteProvider.Anthropic -> anthropic()
+  }
+
+  private fun openAiCompatible(): State {
     val client = OpenAILLMClient(
-      apiKey = target.apiKey,
-      settings = OpenAIClientSettings(baseUrl = normalizeRemoteBaseUrl(target.baseUrl)),
+      apiKey = connection.apiKey,
+      settings = OpenAIClientSettings(baseUrl = normalizeRemoteBaseUrl(connection.baseUrl)),
       httpClientFactory = httpClientFactory,
     )
     return State(
-      target = target,
       executor = MultiLLMPromptExecutor(client),
       // A user-configured OpenAI-compatible model: chat completions, plain text
       // completion, and temperature sampling.
       model = LLModel(
         provider = LLMProvider.OpenAI,
-        id = target.model,
+        id = connection.model,
         capabilities = listOf(
           LLMCapability.Temperature,
           LLMCapability.Completion,
           LLMCapability.OpenAIEndpoint.Completions,
         ),
-        contextLength = target.contextLength.toLong(),
+        contextLength = connection.contextLength.toLong(),
       ),
       client = client,
     )
   }
 
-  private fun ollama(target: Target): State {
+  private fun ollama(): State {
     val client = OllamaClient(
       httpClientFactory = httpClientFactory,
-      baseUrl = normalizeRemoteBaseUrl(target.baseUrl),
+      baseUrl = normalizeRemoteBaseUrl(connection.baseUrl),
       // Send the declared window as `num_ctx` so Ollama truncates at the number
       // the app budgeted against, rather than its own default (often 2048) which
       // can be smaller than what the transcript was measured to fit.
-      contextWindowStrategy = ContextWindowStrategy.Companion.Fixed(target.contextLength.toLong()),
+      contextWindowStrategy = ContextWindowStrategy.Companion.Fixed(connection.contextLength.toLong()),
     )
     return State(
-      target = target,
       executor = MultiLLMPromptExecutor(client),
       model = LLModel(
         provider = LLMProvider.Ollama,
-        id = target.model,
+        id = connection.model,
         capabilities = listOf(LLMCapability.Temperature, LLMCapability.Completion),
-        contextLength = target.contextLength.toLong(),
+        contextLength = connection.contextLength.toLong(),
       ),
       client = client,
     )
   }
 
-  private fun anthropic(target: Target): State {
+  private fun anthropic(): State {
     // A catalogue id already carries the capabilities and window Anthropic
     // expects; anything else is a custom id the user typed, built with the same
     // capabilities so the request path does not reject it.
-    val model = AnthropicModels.modelsById()[target.model]
+    val model = AnthropicModels.modelsById()[connection.model]
       ?: LLModel(
         provider = LLMProvider.Anthropic,
-        id = target.model,
+        id = connection.model,
         capabilities = AnthropicCapabilities,
-        contextLength = target.contextLength.toLong(),
+        contextLength = connection.contextLength.toLong(),
       )
     val client = AnthropicLLMClient(
-      apiKey = target.apiKey,
+      apiKey = connection.apiKey,
       settings = AnthropicClientSettings(
         // The client refuses any model it cannot map to a version, so the
         // catalogue and a custom id are both registered. Catalogue ids map to
@@ -155,23 +146,13 @@ class RemoteKoogPlanningBackend(
       httpClientFactory = httpClientFactory,
     )
     return State(
-      target = target,
       executor = MultiLLMPromptExecutor(client),
       model = model,
       client = client,
     )
   }
 
-  private data class Target(
-    val provider: RemoteProvider,
-    val baseUrl: String,
-    val apiKey: String,
-    val model: String,
-    val contextLength: Int,
-  )
-
   private class State(
-    val target: Target,
     val executor: PromptExecutor,
     val model: LLModel,
     val client: LLMClient,

@@ -59,6 +59,11 @@ class KoogPlanningEngine(
   override val canSummarize: Boolean
     get() = true
 
+  /** The backend owns the client, so releasing the engine releases the backend. */
+  override fun close() {
+    backend.close()
+  }
+
   override suspend fun recommendTitle(synopsis: String, activityId: String): String {
     val built = prompt(PromptRecommendTitle) {
       system(TitleSystemPrompt)

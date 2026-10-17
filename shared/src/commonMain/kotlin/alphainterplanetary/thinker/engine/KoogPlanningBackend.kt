@@ -13,4 +13,12 @@ interface KoogPlanningBackend {
   val executor: PromptExecutor
   val model: LLModel
   val source: LogSource
+
+  /**
+   * Releases whatever the backend owns — a remote client's connection pool,
+   * say. A backend that holds nothing has nothing to release, so the default is
+   * a no-op rather than a declaration every in-memory backend would have to
+   * repeat.
+   */
+  fun close() {}
 }

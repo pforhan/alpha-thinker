@@ -125,6 +125,15 @@ interface PlanningEngine {
   val canSummarize: Boolean
     get() = false
 
+  /**
+   * Releases any resource the engine holds. A no-op by default, because an
+   * engine that owns nothing — the offline pool, any in-memory implementation —
+   * has nothing to release; the engine over a Koog backend
+   * ([KoogPlanningEngine]) closes its backend. It is how the registry disposes of
+   * an engine it is about to rebuild.
+   */
+  fun close() {}
+
   @Throws(AnalysisFailure::class, CancellationException::class)
   suspend fun recommendTitle(synopsis: String, activityId: String): String
 

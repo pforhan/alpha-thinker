@@ -5,8 +5,6 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
-import alphainterplanetary.thinker.engine.EngineKind
-import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,50 +29,6 @@ class SettingsRepository @Inject constructor(
   private val _phaseTheme = MutableStateFlow(PhaseTheme.Default)
   val phaseTheme: StateFlow<PhaseTheme> = _phaseTheme.asStateFlow()
 
-  /**
-   * The selected planning backend ([EngineKind]). [EngineKind.Offline] and
-   * [EngineKind.Remote] are selectable today; the on-device backends are gated
-   * off by [EngineKind.available] until they land (IMPLEMENTATION-PLAN.md
-   * Phase 3).
-   */
-  private val _engineKind = MutableStateFlow(EngineKind.Default)
-  val engineKind: StateFlow<EngineKind> = _engineKind.asStateFlow()
-
-  /**
-   * Which remote protocol the Remote backend speaks, and so which Koog client
-   * it builds ([RemoteProvider]). The connection fields below it are shared:
-   * a provider only changes their defaults and which of them is used.
-   */
-  private val _remoteLlmProvider = MutableStateFlow(RemoteProvider.Default)
-  val remoteLlmProvider: StateFlow<RemoteProvider> = _remoteLlmProvider.asStateFlow()
-
-  /** The endpoint the Remote backend talks to. */
-  private val _remoteLlmBaseUrl = MutableStateFlow(DefaultRemoteLlmBaseUrl)
-  val remoteLlmBaseUrl: StateFlow<String> = _remoteLlmBaseUrl.asStateFlow()
-
-  /** The API key for the remote endpoint; empty for providers that need none. */
-  private val _remoteLlmApiKey = MutableStateFlow(DefaultRemoteLlmApiKey)
-  val remoteLlmApiKey: StateFlow<String> = _remoteLlmApiKey.asStateFlow()
-
-  /** The model the remote endpoint serves, or an id from its catalogue. */
-  private val _remoteLlmModel = MutableStateFlow(DefaultRemoteLlmModel)
-  val remoteLlmModel: StateFlow<String> = _remoteLlmModel.asStateFlow()
-
-  /**
-   * The context window declared for [remoteLlmModel].
-   *
-   * A model named in a settings field is a bare id with no metadata attached, so
-   * unlike a registry-known model its window cannot be read off anything — this
-   * is the number the app budgets against, resolved into the same
-   * `LLModel.contextLength` a Koog-catalogued model would already carry. It is a
-   * fallback rather than the only source: a reachable catalogue fills this in
-   * from the real model — Anthropic and Ollama always, and an
-   * OpenAI-compatible server when its listing happens to report a window.
-   */
-  private val _remoteLlmContextTokens =
-    MutableStateFlow(DefaultRemoteLlmContextTokens)
-  val remoteLlmContextTokens: StateFlow<Int> = _remoteLlmContextTokens.asStateFlow()
-
   private val _engineDelay = MutableStateFlow(EngineDelayConfig.Default)
   val engineDelay: StateFlow<EngineDelayConfig> = _engineDelay.asStateFlow()
 
@@ -98,56 +52,6 @@ class SettingsRepository @Inject constructor(
       // different theme, so a startup load never clobbers their selection.
       if (_phaseTheme.value == PhaseTheme.Default) {
         _phaseTheme.value = loaded
-      }
-    }
-    scope.launch {
-      val loaded = storage.getSetting(SettingsKey.EngineKind, EngineKind.Default.key)
-        .let(EngineKind::fromKey)
-        ?: EngineKind.Default
-      // Only apply the persisted value while the user hasn't already picked a
-      // different mode, so a startup load never clobbers their selection.
-      if (_engineKind.value == EngineKind.Default) {
-        _engineKind.value = loaded
-      }
-    }
-    scope.launch {
-      val loaded = storage.getSetting(SettingsKey.RemoteLlmProvider, RemoteProvider.Default.key)
-        .let(RemoteProvider::fromKey)
-        ?: RemoteProvider.Default
-      // Only apply the persisted value while the user hasn't already picked a
-      // different provider, so a startup load never clobbers their selection.
-      if (_remoteLlmProvider.value == RemoteProvider.Default) {
-        _remoteLlmProvider.value = loaded
-      }
-    }
-    scope.launch {
-      val url = storage.getSetting(SettingsKey.RemoteLlmBaseUrl, DefaultRemoteLlmBaseUrl)
-      // Only apply the persisted value while the user hasn't already typed one
-      // this session, so a startup load never clobbers their edit.
-      if (_remoteLlmBaseUrl.value == DefaultRemoteLlmBaseUrl) {
-        _remoteLlmBaseUrl.value = url
-      }
-    }
-    scope.launch {
-      val key = storage.getSetting(SettingsKey.RemoteLlmApiKey, DefaultRemoteLlmApiKey)
-      if (_remoteLlmApiKey.value == DefaultRemoteLlmApiKey) {
-        _remoteLlmApiKey.value = key
-      }
-    }
-    scope.launch {
-      val model = storage.getSetting(SettingsKey.RemoteLlmModel, DefaultRemoteLlmModel)
-      if (_remoteLlmModel.value == DefaultRemoteLlmModel) {
-        _remoteLlmModel.value = model
-      }
-    }
-    scope.launch {
-      val stored = storage.getSetting(
-        SettingsKey.RemoteLlmContextTokens,
-        DefaultRemoteLlmContextTokens.toString(),
-      ).toIntOrNull()
-      val loaded = stored?.takeIf { it > 0 } ?: DefaultRemoteLlmContextTokens
-      if (_remoteLlmContextTokens.value == DefaultRemoteLlmContextTokens) {
-        _remoteLlmContextTokens.value = loaded
       }
     }
     scope.launch {
@@ -187,85 +91,6 @@ class SettingsRepository @Inject constructor(
     _phaseTheme.value = theme
     scope.launch {
       storage.saveSetting(SettingsKey.PhaseTheme, theme.key)
-    }
-  }
-
-  /** Selects the planning backend; unavailable modes are rejected by the picker UI. */
-  fun setEngineKind(mode: EngineKind) {
-    if (mode == _engineKind.value) return
-    _engineKind.value = mode
-    scope.launch {
-      storage.saveSetting(SettingsKey.EngineKind, mode.key)
-    }
-  }
-
-  /**
-   * Selects the remote protocol ([RemoteProvider]) and re-seeds the connection
-   * fields that are still on the previous provider's starter values.
-   *
-   * A provider switch has to move the endpoint and the model with it: an Ollama
-   * endpoint means nothing to Anthropic, and an Ollama model name is not a model
-   * Anthropic serves, so carrying them across would leave the backend pointed at
-   * a connection that cannot work. But a value the user typed is theirs, so only
-   * the untouched starters are replaced — the same "never clobber an edit" rule
-   * the startup loads follow.
-   */
-  fun setRemoteLlmProvider(provider: RemoteProvider) {
-    val previous = _remoteLlmProvider.value
-    if (provider == previous) return
-    _remoteLlmProvider.value = provider
-    scope.launch {
-      storage.saveSetting(SettingsKey.RemoteLlmProvider, provider.key)
-    }
-    if (_remoteLlmBaseUrl.value == previous.defaultBaseUrl) {
-      setRemoteLlmBaseUrl(provider.defaultBaseUrl)
-    }
-    if (_remoteLlmModel.value == previous.defaultModel) {
-      setRemoteLlmModel(provider.defaultModel)
-    }
-    if (_remoteLlmContextTokens.value == previous.defaultContextTokens) {
-      setRemoteLlmContextTokens(provider.defaultContextTokens)
-    }
-  }
-
-  /** Sets the base URL the Remote backend connects to. */
-  fun setRemoteLlmBaseUrl(url: String) {
-    if (url == _remoteLlmBaseUrl.value) return
-    _remoteLlmBaseUrl.value = url
-    scope.launch {
-      storage.saveSetting(SettingsKey.RemoteLlmBaseUrl, url)
-    }
-  }
-
-  /** Sets the API key the Remote backend authenticates with (empty for providers that need none). */
-  fun setRemoteLlmApiKey(key: String) {
-    if (key == _remoteLlmApiKey.value) return
-    _remoteLlmApiKey.value = key
-    scope.launch {
-      storage.saveSetting(SettingsKey.RemoteLlmApiKey, key)
-    }
-  }
-
-  /** Sets the model name the Remote backend asks the endpoint for. */
-  fun setRemoteLlmModel(model: String) {
-    if (model == _remoteLlmModel.value) return
-    _remoteLlmModel.value = model
-    scope.launch {
-      storage.saveSetting(SettingsKey.RemoteLlmModel, model)
-    }
-  }
-
-  /**
-   * Sets the context window declared for the remote model. Must be positive: a
-   * window of zero would resolve the budget to zero and compact every answer
-   * in every round, which is a configuration nobody means.
-   */
-  fun setRemoteLlmContextTokens(tokens: Int) {
-    require(tokens > 0) { "a model context window must be positive: $tokens" }
-    if (_remoteLlmContextTokens.value == tokens) return
-    _remoteLlmContextTokens.value = tokens
-    scope.launch {
-      storage.saveSetting(SettingsKey.RemoteLlmContextTokens, tokens.toString())
     }
   }
 
@@ -317,33 +142,4 @@ class SettingsRepository @Inject constructor(
       EngineInteraction.TitleRecommendation -> SettingsKey.EngineTitleRecommendationDelay
       EngineInteraction.QuestionGeneration -> SettingsKey.EngineQuestionGenerationDelay
     }
-
-  companion object {
-    /**
-     * The starter connection values, read off the default provider
-     * ([RemoteProvider.Ollama]) so the two can never disagree. They name a local
-     * Ollama server's `/api` root and the model a fresh Ollama exposes, because
-     * that is the default endpoint this app documents.
-     */
-    val DefaultRemoteLlmBaseUrl: String = RemoteProvider.Default.defaultBaseUrl
-
-    /** The default providers serve requests unauthenticated, so the key starts empty. */
-    const val DefaultRemoteLlmApiKey: String = ""
-
-    /** The default model a fresh Ollama install exposes over that endpoint. */
-    val DefaultRemoteLlmModel: String = RemoteProvider.Default.defaultModel
-
-    /**
-     * The window assumed for a user-named OpenAI-compatible model.
-     *
-     * A model id typed into a settings field carries no metadata, so unlike a
-     * registry-known model its window cannot be read — it has to be declared.
-     * The default is deliberately small: this is an edge-first app whose
-     * documented targets are local models, and a window guessed too high is
-     * worse than one guessed too low, because too low merely compacts the
-     * interview early while too high lets the endpoint reject the request. The
-     * field sits next to the model it describes, so the fix is one tap away.
-     */
-    val DefaultRemoteLlmContextTokens: Int = RemoteProvider.Default.defaultContextTokens
-  }
 }

@@ -7,39 +7,8 @@ package alphainterplanetary.thinker.engine
  * engine it was created under so a backlog stays internally coherent, and a
  * fresh task — e.g. a re-run after a failure — re-resolves and picks up the
  * current selection.
- *
- * Implemented by DI: the selector reads [alphainterplanetary.thinker.repository.SettingsRepository]
- * at creation time (i.e. when the task is enqueued), resolves via
- * [resolveSelectedEngine], and applies the logging / slow-down decoration to
- * the result so every interaction still flows through them.
  */
 fun interface PlanningEngineSelector {
   /** The [PlanningEngine] to run for one task, resolved from the current settings. */
   fun selectedEngine(): PlanningEngine
 }
-
-/**
- * The pure selection policy: maps the chosen [EngineKind] to the engine that
- * should run. [EngineKind.Offline] carries no model dependency and is always
- * available; any other kind must name a configured Koog engine, and throws when
- * none is bound so an unconfigured backend fails loudly instead of silently
- * falling back to another kind.
- *
- * The kind is the only gate: there is no separate "LLM enabled" flag that could
- * force Lite behind a kind still reading as Remote, so what the status chrome
- * shows about the selected kind is what actually runs.
- *
- * Stateless with respect to time: it is the caller's job to freeze the result
- * into a task ([PlanningEngineSelector]).
- */
-fun resolveSelectedEngine(
-  selectedKind: EngineKind,
-  liteEngine: PlanningEngine,
-  koogEngines: Map<EngineKind, PlanningEngine>,
-): PlanningEngine =
-  if (selectedKind == EngineKind.Offline) {
-    liteEngine
-  } else {
-    koogEngines[selectedKind]
-      ?: throw IllegalStateException("No engine configured for engine kind $selectedKind")
-  }

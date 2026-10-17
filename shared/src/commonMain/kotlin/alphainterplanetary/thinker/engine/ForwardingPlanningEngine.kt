@@ -12,6 +12,10 @@ import alphainterplanetary.thinker.activitylog.LogSource
  * log's attribution, and a decorator answering it on its own would file its
  * rows under the wrong producer.
  *
+ * [close] is forwarded for the same reason: a decorator wraps the delegate's
+ * resource rather than owning one, so releasing the decorator has to release
+ * what it wraps.
+ *
  * The interaction methods are deliberately *not* forwarded: a decorator's whole
  * job is to decide what to do around them, so the compiler should make each
  * decorator answer for every interaction rather than let a new one slip through
@@ -29,4 +33,8 @@ abstract class ForwardingPlanningEngine(
 
   override val canSummarize: Boolean
     get() = delegate.canSummarize
+
+  override fun close() {
+    delegate.close()
+  }
 }

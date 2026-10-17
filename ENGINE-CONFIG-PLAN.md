@@ -18,11 +18,18 @@ covers the models *inside* an engine — their discovery, curation
 local models). This plan's stage 3 leaves room in the picker for that plan's
 Local tier, which becomes real when its downloads land.
 
-**Status: in progress.** Stage 1's foundation has landed: `EngineMode` renamed to
-`EngineKind`, the `EngineRef` / `EngineInstance` / `EngineTier` / `EngineState`
-identity types added, and the `engine_instances` + `engine_state` storage plus a
-tested `EngineRepository` introduced (not yet wired into DI/UI). Each stage is
-intended to land independently, green on `./gradlew :shared:allTests`.
+**Status: in progress.** Stage 1's foundation has landed and is wired in:
+`EngineMode` renamed to `EngineKind`, the `EngineRef` / `EngineInstance` /
+`EngineTier` / `EngineState` identity types added, the `engine_instances` +
+`engine_state` storage plus a tested `EngineRepository`, `EngineStatus` derived
+from the selected ref, and `AppComponent` selecting through `EngineRegistry`
+(the two parallel `EngineMode`-keyed maps and `DynamicKoogPlanningBackend` are
+gone). Stage 2a has landed too: the selected instance's fields drive
+`SettingsViewModel` (one `remoteConnection` `StateFlow`) and the remote backend,
+and the flat `RemoteLlm*` keys are retired. Open in Stage 2: 2a3
+(provider-switch defaults), 2b (connections CRUD UI), 2c (per-ref
+self-validation), 2d (test checklist). Each stage is intended to land
+independently, green on `./gradlew :shared:allTests`.
 
 ---
 
@@ -183,10 +190,10 @@ already applied to the DAOs.
       metadata lookup where the provider supports it (e.g., Ollama model
       metadata) and code-defined defaults where it doesn't (e.g.,
       OpenAI-compatible endpoints).
-- [ ] **2a4. Tests.** Rewrite `SettingsViewModelTest` for the above (and
+- [x] **2a4. Tests.** Rewrite `SettingsViewModelTest` for the above (and
       `EngineRepositoryTest` coverage of field edits).
-- [ ] 2a5. Retire the flat RemoteLlm* settings. SettingsViewModel no longer reads them, but SettingsRepository still declares/loads/persists remoteLlmProvider/BaseUrl/ApiKey/Model/ContextTokens, Storage.SettingsKey still holds the five RemoteLlm* keys, and SettingsRepositoryTest still exercises them. Delete all of it (and the now-unused defaults/imports). 
-- [ ] 2a6. Engine-layer cleanup. RemoteKoogPlanningBackend no longer needs its SettingsRepository import/doc (it takes a RemoteConnection); resolveSelectedEngine + PlanningEngineSelectionTest are dead after the EngineRegistry swap, and PlanningEngineSelector's doc and AppComponent's import still name SettingsRepository.
+- [x] 2a5. Retire the flat RemoteLlm* settings. SettingsViewModel no longer reads them, but SettingsRepository still declares/loads/persists remoteLlmProvider/BaseUrl/ApiKey/Model/ContextTokens, Storage.SettingsKey still holds the five RemoteLlm* keys, and SettingsRepositoryTest still exercises them. Delete all of it (and the now-unused defaults/imports). 
+- [x] 2a6. Engine-layer cleanup. RemoteKoogPlanningBackend no longer needs its SettingsRepository import/doc (it takes a RemoteConnection); resolveSelectedEngine + PlanningEngineSelectionTest are dead after the EngineRegistry swap, and PlanningEngineSelector's doc and AppComponent's import still name SettingsRepository.
 - [ ] **2b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
       select an instance; deletion of the selected falls back to
       `EngineRef.Builtin(Offline)`.
