@@ -174,7 +174,7 @@ already applied to the DAOs.
       read & update the selected instance's fields (`baseUrl`, `apiKey`, `model`,
       `contextTokens`, `provider`), persisting via `addOrUpdate`, with no flat
       settings reads.
-- [ ] **2a2. ViewModel migration.** Rewrite `SettingsViewModel` to expose the
+- [x] **2a2. ViewModel migration.** Rewrite `SettingsViewModel` to expose the
       selected instance's fields as `StateFlow`s and mutators that call 2a1;
       keep `announcedFailureActivityId` from `SettingsRepository`.
 - [ ] **2a3. Provider-switch defaults.** On provider change of the selected
@@ -185,6 +185,8 @@ already applied to the DAOs.
       OpenAI-compatible endpoints).
 - [ ] **2a4. Tests.** Rewrite `SettingsViewModelTest` for the above (and
       `EngineRepositoryTest` coverage of field edits).
+- [ ] 2a5. Retire the flat RemoteLlm* settings. SettingsViewModel no longer reads them, but SettingsRepository still declares/loads/persists remoteLlmProvider/BaseUrl/ApiKey/Model/ContextTokens, Storage.SettingsKey still holds the five RemoteLlm* keys, and SettingsRepositoryTest still exercises them. Delete all of it (and the now-unused defaults/imports). 
+- [ ] 2a6. Engine-layer cleanup. RemoteKoogPlanningBackend no longer needs its SettingsRepository import/doc (it takes a RemoteConnection); resolveSelectedEngine + PlanningEngineSelectionTest are dead after the EngineRegistry swap, and PlanningEngineSelector's doc and AppComponent's import still name SettingsRepository.
 - [ ] **2b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
       select an instance; deletion of the selected falls back to
       `EngineRef.Builtin(Offline)`.

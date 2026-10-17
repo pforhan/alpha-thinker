@@ -1,22 +1,27 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.engine.EngineKind
+import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.RemoteConnection
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
   private val settingsRepository: SettingsRepository,
-  private val engineRepository: alphainterplanetary.thinker.repository.EngineRepository,
+  private val engineRepository: EngineRepository,
   private val modelCatalog: RemoteModelCatalog,
   private val scope: CoroutineScope,
 ) {
@@ -34,48 +39,62 @@ class SettingsViewModel(
     engineRepository.select(ref)
   }
 
-  /** The remote protocol the Remote backend speaks; switching re-seeds its fields. */
-  val remoteLlmProvider: StateFlow<RemoteProvider> = settingsRepository.remoteLlmProvider
+  /**
+   * The selected instance's Remote connection fields, or the blank placeholder
+   * shown while a builtin is selected. The settings sheet collects this one
+   * flow and reads each field off the [RemoteConnection] rather than wiring a
+   * projection (and its default) per field.
+   *
+   * It starts eagerly so the value is already current when the sheet opens,
+   * instead of replaying the placeholder while a lazy collector catches up. The
+   * ViewModel is app-scoped and the upstream is a pair of state flows, so the
+   * always-on collector costs nothing to keep.
+   * TODO revisit later to see if we can use WhileSubscribed(5_000) used elsewhere
+   */
+  val remoteConnection: StateFlow<RemoteConnection> = engineRepository.selectedInstance
+    .map { it.toRemoteConnection() }
+    .stateIn(
+      scope = scope,
+      started = SharingStarted.Eagerly,
+      initialValue = BlankRemoteConnection,
+    )
 
+  /**
+   * Sets the remote protocol the Remote backend speaks. The connection's other
+   * fields carry over unchanged — re-seeding model and window from the new
+   * provider's defaults is stage 2a3 of ENGINE-CONFIG-PLAN.md, not done here.
+   */
   fun selectRemoteProvider(provider: RemoteProvider) {
-    if (provider == settingsRepository.remoteLlmProvider.value) return
-    settingsRepository.setRemoteLlmProvider(provider)
+    engineRepository.updateSelectedInstance { it.copy(provider = provider) }
     // A model list is only meaningful for the provider it was read from, so a
     // switch discards it rather than leaving the old server's models on screen.
     _remoteModels.value = RemoteModelListState.Idle
   }
 
-  /** The endpoint the Remote backend connects to. */
-  val remoteLlmBaseUrl: StateFlow<String> = settingsRepository.remoteLlmBaseUrl
-
-  fun setRemoteLlmBaseUrl(url: String) {
-    settingsRepository.setRemoteLlmBaseUrl(url)
+  /** Sets the endpoint the Remote backend connects to. */
+  fun setRemoteBaseUrl(url: String) {
+    engineRepository.updateSelectedInstance { it.copy(baseUrl = url) }
   }
 
-  /** The API key for the remote endpoint (empty for providers that need none). */
-  val remoteLlmApiKey: StateFlow<String> = settingsRepository.remoteLlmApiKey
-
-  fun setRemoteLlmApiKey(key: String) {
-    settingsRepository.setRemoteLlmApiKey(key)
+  /** Sets the API key for the remote endpoint (empty for providers that need none). */
+  fun setRemoteApiKey(key: String) {
+    engineRepository.updateSelectedInstance { it.copy(apiKey = key) }
   }
 
-  /** The model name the remote endpoint serves. */
-  val remoteLlmModel: StateFlow<String> = settingsRepository.remoteLlmModel
-
-  fun setRemoteLlmModel(model: String) {
-    settingsRepository.setRemoteLlmModel(model)
+  /** Sets the model name the remote endpoint serves. */
+  fun setRemoteModel(model: String) {
+    engineRepository.updateSelectedInstance { it.copy(model = model) }
   }
 
   /**
-   * The context window declared for [remoteLlmModel] — the number a model named
+   * Sets the context window declared for the model — the number a model named
    * in a settings field cannot supply for itself, and that the planning-context
    * budget is a share of. Filled in from the provider's catalogue when one can
    * be read ([selectRemoteModel]).
    */
-  val remoteLlmContextTokens: StateFlow<Int> = settingsRepository.remoteLlmContextTokens
-
-  fun setRemoteLlmContextTokens(tokens: Int) {
-    settingsRepository.setRemoteLlmContextTokens(tokens)
+  fun setRemoteContextTokens(tokens: Int) {
+    require(tokens > 0) { "a model context window must be positive: $tokens" }
+    engineRepository.updateSelectedInstance { it.copy(contextTokens = tokens) }
   }
 
   /** What the model browser is showing, from the last [refreshRemoteModels]. */
@@ -91,13 +110,13 @@ class SettingsViewModel(
    * user can still type into.
    */
   fun refreshRemoteModels() {
-    val provider = settingsRepository.remoteLlmProvider.value
-    val baseUrl = settingsRepository.remoteLlmBaseUrl.value
-    val apiKey = settingsRepository.remoteLlmApiKey.value
+    val ref = engineRepository.selected.value as? EngineRef.Instance ?: return
+    val instance = engineRepository.getInstance(ref.id) ?: return
+    val provider = instance.provider ?: return
     _remoteModels.value = RemoteModelListState.Loading
     scope.launch {
       _remoteModels.value = try {
-        RemoteModelListState.Loaded(modelCatalog.list(provider, baseUrl, apiKey))
+        RemoteModelListState.Loaded(modelCatalog.list(provider, instance.baseUrl, instance.apiKey))
       } catch (e: CancellationException) {
         throw e
       } catch (e: Exception) {
@@ -114,9 +133,12 @@ class SettingsViewModel(
    * in which case [selectRemoteModel] still fills in the id.
    */
   fun selectRemoteModel(id: String, contextLength: Int?) {
-    settingsRepository.setRemoteLlmModel(id)
-    if (contextLength != null) {
-      settingsRepository.setRemoteLlmContextTokens(contextLength)
+    engineRepository.updateSelectedInstance { current ->
+      if (contextLength != null) {
+        current.copy(model = id, contextTokens = contextLength)
+      } else {
+        current.copy(model = id)
+      }
     }
   }
 
@@ -133,3 +155,30 @@ class SettingsViewModel(
     settingsRepository.markFailureAnnounced(activityId)
   }
 }
+
+/**
+ * The connection the Remote card displays while a builtin — or nothing — is
+ * selected: the app's default protocol, an unset endpoint and model, no key,
+ * and no declared window. It is the one place those fallbacks are defined.
+ */
+private val BlankRemoteConnection = RemoteConnection(
+  provider = RemoteProvider.Default,
+  baseUrl = "",
+  apiKey = "",
+  model = "",
+  contextLength = 0,
+)
+
+/** Projects the selected instance (or its absence) into the Remote card's state. */
+private fun EngineInstance?.toRemoteConnection(): RemoteConnection =
+  if (this == null) {
+    BlankRemoteConnection
+  } else {
+    RemoteConnection(
+      provider = provider ?: RemoteProvider.Default,
+      baseUrl = baseUrl,
+      apiKey = apiKey,
+      model = model,
+      contextLength = contextTokens,
+    )
+  }

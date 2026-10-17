@@ -18,6 +18,7 @@ kotlinxBrowser = "0.3"
 junit4 = "4.13.2"
 composeMaterialIcons = "1.7.3"
 koog = "1.3.0"
+turbine = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -43,6 +44,7 @@ kotlinx-browser = { group = "org.jetbrains.kotlinx", name = "kotlinx-browser", v
 kotlin-inject = { module = "me.tatarka.inject:kotlin-inject-runtime-kmp", version.ref = "kotlinInjectVersion" }
 kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInjectVersion" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 koog-agents = { group = "ai.koog", name = "koog-agents", version.ref = "koog" }
 koog-prompt-executor-ollama-client = { group = "ai.koog", name = "prompt-executor-ollama-client", version.ref = "koog" }
 koog-prompt-executor-anthropic-client = { group = "ai.koog", name = "prompt-executor-anthropic-client", version.ref = "koog" }

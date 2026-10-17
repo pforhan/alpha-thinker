@@ -26,11 +26,7 @@ import androidx.compose.ui.Modifier
 @Composable
 internal fun IntelligenceSheetContent(chrome: AppChromeState) {
   val engineKind by chrome.settings.selectedRef.collectAsState()
-  val provider by chrome.settings.remoteLlmProvider.collectAsState()
-  val baseUrl by chrome.settings.remoteLlmBaseUrl.collectAsState()
-  val apiKey by chrome.settings.remoteLlmApiKey.collectAsState()
-  val model by chrome.settings.remoteLlmModel.collectAsState()
-  val contextTokens by chrome.settings.remoteLlmContextTokens.collectAsState()
+  val connection by chrome.settings.remoteConnection.collectAsState()
   val remoteModels by chrome.settings.remoteModels.collectAsState()
   val settings = chrome.settings
 
@@ -54,16 +50,16 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
         content = {
           if (mode == EngineKind.Remote) {
             RemoteConnectionFields(
-              provider = provider,
+              provider = connection.provider,
               onProviderChange = settings::selectRemoteProvider,
-              baseUrl = baseUrl,
-              apiKey = apiKey,
-              model = model,
-              contextTokens = contextTokens.toString(),
+              baseUrl = connection.baseUrl,
+              apiKey = connection.apiKey,
+              model = connection.model,
+              contextTokens = connection.contextLength.toString(),
               models = remoteModels,
-              onBaseUrlChange = settings::setRemoteLlmBaseUrl,
-              onApiKeyChange = settings::setRemoteLlmApiKey,
-              onModelChange = settings::setRemoteLlmModel,
+              onBaseUrlChange = settings::setRemoteBaseUrl,
+              onApiKeyChange = settings::setRemoteApiKey,
+              onModelChange = settings::setRemoteModel,
               // Digits only, and only a complete number: a half-typed window
               // would otherwise resolve the budget to something the user did not
               // ask for while they are still in the field.
@@ -71,7 +67,7 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
                 typed.filter { it.isDigit() }
                   .toIntOrNull()
                   ?.takeIf { it > 0 }
-                  ?.let(settings::setRemoteLlmContextTokens)
+                  ?.let(settings::setRemoteContextTokens)
               },
               onBrowseModels = settings::refreshRemoteModels,
               onModelSelected = { info ->

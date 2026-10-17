@@ -44,6 +44,7 @@ class EngineRepository @Inject constructor(
 
   private val _selected = MutableStateFlow<EngineRef>(EngineRef.Builtin(EngineKind.Default))
 
+  /** The instance behind [selected], or null when a builtin is selected. */
   val selectedInstance: Flow<EngineInstance?> = combine(_selected, _instances) { ref, instances ->
     (ref as? EngineRef.Instance)?.let { r -> instances.find { it.id == r.id } }
   }
