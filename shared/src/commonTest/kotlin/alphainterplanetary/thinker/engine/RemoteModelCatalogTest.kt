@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.engine
 
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
+import ai.koog.prompt.executor.clients.modelsById
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -157,6 +158,71 @@ class RemoteModelCatalogTest {
       ),
       models,
     )
+  }
+
+  @Test
+  fun `anthropic answers a single models window from koogs catalogue without a request`() = runTest {
+    val catalog = KoogRemoteModelCatalog(ThrowingFactory())
+
+    val window = catalog.contextLength(
+      RemoteProvider.Anthropic,
+      "https://api.anthropic.com",
+      RemoteProvider.Anthropic.defaultModel,
+    )
+
+    assertEquals(
+      AnthropicModels.modelsById().getValue(RemoteProvider.Anthropic.defaultModel).contextLength?.toInt(),
+      window,
+    )
+  }
+
+  @Test
+  fun `anthropic cannot name a window for a model outside its catalogue`() = runTest {
+    val catalog = KoogRemoteModelCatalog(ThrowingFactory())
+
+    val window = catalog.contextLength(RemoteProvider.Anthropic, "https://api.anthropic.com", "not-a-claude")
+
+    assertEquals(null, window)
+  }
+
+  @Test
+  fun `ollama answers a single models window without listing the server`() = runTest {
+    // The targeted lookup posts one `/api/show`; it never reads `/api/tags`, so a
+    // caller that already knows the id does not sweep the whole server.
+    val client = FakeOllamaHttpClient(
+      tags = "",
+      shows = listOf(showPayload(architecture = "qwen2", contextLength = 32768, capabilities = "completion")),
+    )
+    val factory = RecordingFactory(client)
+
+    val window = KoogRemoteModelCatalog(factory)
+      .contextLength(RemoteProvider.Ollama, "http://localhost:11434/v1", "qwen2.5:7b")
+
+    assertEquals(32768, window)
+    assertEquals(0, client.getCalls)
+    assertEquals(1, client.postCalls)
+    // The `/v1` root is stripped so the native `api/...` path is not doubled.
+    assertEquals("http://localhost:11434", factory.baseUrls.single())
+  }
+
+  @Test
+  fun `ollama leaves a window it cannot read as nothing`() = runTest {
+    val client = FakeOllamaHttpClient(tags = "", shows = listOf(null))
+
+    val window = KoogRemoteModelCatalog(RecordingFactory(client))
+      .contextLength(RemoteProvider.Ollama, "http://localhost:11434", "missing:1b")
+
+    assertEquals(null, window)
+  }
+
+  @Test
+  fun `the openai compatible path cannot name a window and asks no one`() = runTest {
+    // There is no standard per-model window in the `/v1` wire format, so the
+    // lookup answers null without a request — the caller's code default stands.
+    val window = KoogRemoteModelCatalog(ThrowingFactory())
+      .contextLength(RemoteProvider.OpenAiCompatible, "http://localhost:8000/v1", "gpt-4o-mini")
+
+    assertEquals(null, window)
   }
 
   private fun showPayload(architecture: String, contextLength: Int, capabilities: String): String {

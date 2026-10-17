@@ -26,10 +26,9 @@ from the selected ref, and `AppComponent` selecting through `EngineRegistry`
 (the two parallel `EngineMode`-keyed maps and `DynamicKoogPlanningBackend` are
 gone). Stage 2a has landed too: the selected instance's fields drive
 `SettingsViewModel` (one `remoteConnection` `StateFlow`) and the remote backend,
-and the flat `RemoteLlm*` keys are retired. Open in Stage 2: 2a3
-(provider-switch defaults), 2b (connections CRUD UI), 2c (per-ref
-self-validation), 2d (test checklist). Each stage is intended to land
-independently, green on `./gradlew :shared:allTests`.
+and the flat `RemoteLlm*` keys are retired. Open in Stage 2: 2b (connections CRUD
+UI), 2c (per-ref self-validation), 2d (test checklist). Each stage is intended to
+land independently, green on `./gradlew :shared:allTests`.
 
 ---
 
@@ -184,12 +183,14 @@ already applied to the DAOs.
 - [x] **2a2. ViewModel migration.** Rewrite `SettingsViewModel` to expose the
       selected instance's fields as `StateFlow`s and mutators that call 2a1;
       keep `announcedFailureActivityId` from `SettingsRepository`.
-- [ ] **2a3. Provider-switch defaults.** On provider change of the selected
+- [x] **2a3. Provider-switch defaults.** On provider change of the selected
       instance, recompute `model`/`contextTokens` from provider defaults when
       the instance hasn't been hand-edited. "Provider defaults" means a
       metadata lookup where the provider supports it (e.g., Ollama model
       metadata) and code-defined defaults where it doesn't (e.g.,
-      OpenAI-compatible endpoints).
+      OpenAI-compatible endpoints). A switch re-seeds the previous provider's
+      starter endpoint, model, and window, then refines the window from the new
+      provider's metadata; a field the user has hand-edited is kept.
 - [x] **2a4. Tests.** Rewrite `SettingsViewModelTest` for the above (and
       `EngineRepositoryTest` coverage of field edits).
 - [x] 2a5. Retire the flat RemoteLlm* settings. SettingsViewModel no longer reads them, but SettingsRepository still declares/loads/persists remoteLlmProvider/BaseUrl/ApiKey/Model/ContextTokens, Storage.SettingsKey still holds the five RemoteLlm* keys, and SettingsRepositoryTest still exercises them. Delete all of it (and the now-unused defaults/imports). 

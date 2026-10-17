@@ -5,6 +5,7 @@ import ai.koog.http.client.get
 import ai.koog.http.client.ktor.KtorKoogHttpClient
 import ai.koog.http.client.post
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
+import ai.koog.prompt.executor.clients.modelsById
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -33,12 +34,30 @@ data class RemoteModelInfo(
  * is not gated on one ([RemoteProvider.Anthropic], [RemoteProvider.Ollama])
  * ignore it.
  */
-fun interface RemoteModelCatalog {
+interface RemoteModelCatalog {
   suspend fun list(
     provider: RemoteProvider,
     baseUrl: String,
     apiKey: String,
   ): List<RemoteModelInfo>
+
+  /**
+   * The context window [model] is served at. Unlike [list] this asks the
+   * provider about one model — Ollama's `POST /api/show`, Anthropic's bundled
+   * catalogue — so a caller that already knows the id it wants does not have to
+   * list (and detail) a whole server to learn a single number. It exists for
+   * the provider-switch defaults (ENGINE-CONFIG-PLAN.md 2a3), where the starter
+   * model's window should be the model's real one rather than a code fallback.
+   *
+   * Null when the provider cannot say: the OpenAI-compatible path has no
+   * standard per-model endpoint, and a model the provider does not serve (or a
+   * server that cannot be reached) has no window to report.
+   */
+  suspend fun contextLength(
+    provider: RemoteProvider,
+    baseUrl: String,
+    model: String,
+  ): Int?
 }
 
 /**
@@ -81,6 +100,34 @@ class KoogRemoteModelCatalog(
     RemoteProvider.Ollama -> ollamaModels(baseUrl)
 
     RemoteProvider.OpenAiCompatible -> openAiCompatibleModels(baseUrl, apiKey)
+  }
+
+  override suspend fun contextLength(
+    provider: RemoteProvider,
+    baseUrl: String,
+    model: String,
+  ): Int? = when (provider) {
+    RemoteProvider.Anthropic -> AnthropicModels.modelsById()[model]?.contextLength?.toInt()
+
+    RemoteProvider.Ollama -> ollamaContextLength(baseUrl, model)
+
+    // The `/v1` wire format has no per-model endpoint, so there is nothing to
+    // ask: the caller's code-defined default is the most the app can know.
+    RemoteProvider.OpenAiCompatible -> null
+  }
+
+  /** Asks a native Ollama server for [model]'s window; null when it will not say. */
+  private suspend fun ollamaContextLength(baseUrl: String, model: String): Int? {
+    val client = httpClientFactory.create(
+      clientName = "OllamaModelCatalog",
+      baseUrl = normalizeRemoteBaseUrl(baseUrl),
+      json = catalogJson,
+    )
+    return try {
+      contextLength(client, model)
+    } finally {
+      client.close()
+    }
   }
 
   private suspend fun openAiCompatibleModels(

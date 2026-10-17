@@ -152,6 +152,92 @@ class SettingsViewModelTest {
   }
 
   @Test
+  fun `switching provider re-seeds the previous providers starter endpoint, model, and window`() = runTest {
+    // The seeded instance still holds Ollama's starter values, so nothing is
+    // hand-edited and the whole connection moves to Anthropic's.
+    val vm = viewModelWithSelectedInstance()
+
+    vm.selectRemoteProvider(RemoteProvider.Anthropic)
+    settle()
+
+    vm.remoteConnection.test {
+      val connection = awaitItem()
+      assertEquals(RemoteProvider.Anthropic, connection.provider)
+      assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, connection.baseUrl)
+      assertEquals(RemoteProvider.Anthropic.defaultModel, connection.model)
+      assertEquals(RemoteProvider.Anthropic.defaultContextTokens, connection.contextLength)
+      cancelAndIgnoreRemainingEvents()
+    }
+  }
+
+  @Test
+  fun `switching provider keeps a hand-edited model and window`() = runTest {
+    val vm = viewModelWithSelectedInstance()
+    vm.setRemoteModel("my-own-model")
+    vm.setRemoteContextTokens(4_096)
+    settle()
+
+    vm.selectRemoteProvider(RemoteProvider.Anthropic)
+    settle()
+
+    vm.remoteConnection.test {
+      val connection = awaitItem()
+      assertEquals("my-own-model", connection.model)
+      assertEquals(4_096, connection.contextLength)
+      // The endpoint was not hand-edited, so it still follows the new provider.
+      assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, connection.baseUrl)
+      cancelAndIgnoreRemainingEvents()
+    }
+  }
+
+  @Test
+  fun `switching provider refines the seeded window from the providers metadata`() = runTest {
+    // A provider whose metadata disagrees with the code default wins, because
+    // the real window is the number the app should budget against.
+    val catalog = FakeModelCatalog(
+      windows = mapOf(RemoteProvider.Anthropic.defaultModel to 180_000),
+    )
+    val vm = viewModelWithSelectedInstance(catalog)
+
+    vm.selectRemoteProvider(RemoteProvider.Anthropic)
+    settle()
+
+    vm.remoteConnection.test {
+      assertEquals(180_000, awaitItem().contextLength)
+      cancelAndIgnoreRemainingEvents()
+    }
+  }
+
+  @Test
+  fun `a switch whose metadata cannot name a window keeps the code default`() = runTest {
+    // The fake catalogue answers no window, standing in for an
+    // OpenAI-compatible endpoint or an Ollama server that is down.
+    val vm = viewModelWithSelectedInstance()
+
+    vm.selectRemoteProvider(RemoteProvider.OpenAiCompatible)
+    settle()
+
+    vm.remoteConnection.test {
+      val connection = awaitItem()
+      assertEquals(RemoteProvider.OpenAiCompatible.defaultBaseUrl, connection.baseUrl)
+      assertEquals(RemoteProvider.OpenAiCompatible.defaultContextTokens, connection.contextLength)
+      cancelAndIgnoreRemainingEvents()
+    }
+  }
+
+  @Test
+  fun `switching provider discards the previously browsed model list`() = runTest {
+    val vm = viewModelWithSelectedInstance()
+    vm.refreshRemoteModels()
+    settle()
+    assertIs<RemoteModelListState.Loaded>(vm.remoteModels.value)
+
+    vm.selectRemoteProvider(RemoteProvider.Anthropic)
+
+    assertEquals(RemoteModelListState.Idle, vm.remoteModels.value)
+  }
+
+  @Test
   fun `setRemoteBaseUrl updates the connection`() = runTest {
     val vm = viewModelWithSelectedInstance()
 
@@ -292,6 +378,7 @@ class SettingsViewModelTest {
   /** A catalogue that answers without a network, and can be told to fail. */
   private class FakeModelCatalog(
     private val throwOnList: Boolean = false,
+    private val windows: Map<String, Int> = emptyMap(),
   ) : RemoteModelCatalog {
     var lastApiKey: String? = null
 
@@ -307,5 +394,11 @@ class SettingsViewModelTest {
         RemoteModelInfo(id = "model-b", contextLength = null),
       )
     }
+
+    override suspend fun contextLength(
+      provider: RemoteProvider,
+      baseUrl: String,
+      model: String,
+    ): Int? = windows[model]
   }
 }

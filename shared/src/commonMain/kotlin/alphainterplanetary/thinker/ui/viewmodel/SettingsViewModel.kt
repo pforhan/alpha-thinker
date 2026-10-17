@@ -60,15 +60,67 @@ class SettingsViewModel(
     )
 
   /**
-   * Sets the remote protocol the Remote backend speaks. The connection's other
-   * fields carry over unchanged — re-seeding model and window from the new
-   * provider's defaults is stage 2a3 of ENGINE-CONFIG-PLAN.md, not done here.
+   * Switches the Remote protocol and re-seeds the fields the previous provider
+   * supplied, so one provider's endpoint, starter model, and window do not ride
+   * across into a connection that cannot use them (ENGINE-CONFIG-PLAN.md 2a3).
+   *
+   * Each field is re-seeded only while it still holds the previous provider's
+   * starter value, so a hand-edited endpoint, model, or window is kept. The
+   * window also counts as starter while the model is, because it is the number
+   * that starter resolves to — the code default, or the window a metadata lookup
+   * refined it to ([seedProviderWindow]).
    */
   fun selectRemoteProvider(provider: RemoteProvider) {
-    engineRepository.updateSelectedInstance { it.copy(provider = provider) }
+    val ref = engineRepository.selected.value as? EngineRef.Instance ?: return
+    val current = engineRepository.getInstance(ref.id) ?: return
+    val previous = current.provider ?: RemoteProvider.Default
+    val reseedEndpoint = current.baseUrl == previous.defaultBaseUrl
+    val reseedModel = current.model == previous.defaultModel
+    val reseedWindow = reseedModel || current.contextTokens == previous.defaultContextTokens
+
+    val switched = current.copy(
+      provider = provider,
+      baseUrl = if (reseedEndpoint) provider.defaultBaseUrl else current.baseUrl,
+      model = if (reseedModel) provider.defaultModel else current.model,
+      contextTokens = if (reseedWindow) provider.defaultContextTokens else current.contextTokens,
+    )
+    engineRepository.addOrUpdate(switched)
     // A model list is only meaningful for the provider it was read from, so a
     // switch discards it rather than leaving the old server's models on screen.
     _remoteModels.value = RemoteModelListState.Idle
+    if (reseedWindow) seedProviderWindow(provider, switched.baseUrl, switched.model)
+  }
+
+  /**
+   * Replaces the window [selectRemoteProvider] just seeded with the one the
+   * provider reports for [model], when it can report one. The provider need not
+   * answer — an OpenAI-compatible endpoint exposes no per-model window and a
+   * local Ollama server may be down — in which case the seeded default stands.
+   * The lookup lands asynchronously, so it is applied only while the instance
+   * still carries that seeded default; a window typed in the meantime is never
+   * overwritten.
+   */
+  private fun seedProviderWindow(provider: RemoteProvider, baseUrl: String, model: String) {
+    scope.launch {
+      val window = try {
+        modelCatalog.contextLength(provider, baseUrl, model)
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        null
+      } ?: return@launch
+      if (window == provider.defaultContextTokens) return@launch
+      engineRepository.updateSelectedInstance { live ->
+        if (live.provider == provider &&
+          live.model == model &&
+          live.contextTokens == provider.defaultContextTokens
+        ) {
+          live.copy(contextTokens = window)
+        } else {
+          live
+        }
+      }
+    }
   }
 
   /** Sets the endpoint the Remote backend connects to. */
