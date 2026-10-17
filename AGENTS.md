@@ -11,8 +11,8 @@ architecture details and the full design specification.
 
 ## Validating changes
 
-Confirm code and test changes with `./gradlew :shared:allTests`. Always prefer
-this shared test target over platform-specific targets.
+Confirm code and test changes with `./gradlew :shared:desktopTest`. Always prefer
+this test target over other platform-specific targets.
 
 Phase-color palettes (in `PhaseTheme.kt`) can be validated without a build via
 `tools/palette.py`: `verify` checks every palette against the same WCAG AA and
