@@ -1,6 +1,8 @@
 package alphainterplanetary.thinker.ui.chrome
 
+import alphainterplanetary.thinker.engine.EngineAvailability.Available
 import alphainterplanetary.thinker.engine.EngineCapability
+import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
 import kotlin.test.Test
@@ -13,6 +15,11 @@ import kotlin.test.assertTrue
  * two different things.
  */
 class EngineStatusCopyTest {
+  private fun engineStatus(ref: EngineRef) = engineStatus(
+    ref = ref,
+    availability = Available
+  )
+
   @Test
   fun aValuelessSlotIsDescribedInTheSameWordsAsItsSentence() {
     val status = engineStatus(ref = EngineRef.Builtin(EngineKind.Remote))
@@ -21,6 +28,7 @@ class EngineStatusCopyTest {
     assertEquals("Needs setup", slot.displayDetail())
     assertTrue(slot.sentence().contains("needs setup"))
   }
+
 
   @Test
   fun aValuelessSlotStatesTheModeVocabularyForEveryState() {
@@ -43,7 +51,7 @@ class EngineStatusCopyTest {
   fun aConfiguredSlotShowsItsValueNotItsState() {
     val status = engineStatus(
       ref = EngineRef.Builtin(EngineKind.Remote),
-      instance = alphainterplanetary.thinker.engine.EngineInstance(
+      instance = EngineInstance(
         id = "test",
         kind = EngineKind.Remote,
         label = "test",
@@ -51,6 +59,7 @@ class EngineStatusCopyTest {
         baseUrl = "http://localhost:11434",
         model = "llama3",
       ),
+      availability = Available,
     )
 
     assertEquals("http://localhost:11434", status.slot(EngineCapability.Network).displayDetail())

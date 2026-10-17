@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.EngineAvailability.Available
+import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.repository.EngineRepository
 
 /**
@@ -12,7 +14,7 @@ data class EngineCatalogEntry(
   val tier: EngineTier,
   val label: String,
   val description: String,
-  val availability: (EngineRepository) -> Boolean,
+  val availability: (EngineRepository) -> EngineAvailability,
 )
 
 object EngineCatalog {
@@ -24,7 +26,7 @@ object EngineCatalog {
       tier = EngineTier.Offline,
       label = "Offline",
       description = "Built-in question library. Runs entirely on this device — no network, no language model.",
-      availability = { true },
+      availability = { Available },
     ),
     EngineCatalogEntry(
       ref = EngineRef.Builtin(EngineKind.OnDevice),
@@ -33,18 +35,18 @@ object EngineCatalog {
       tier = EngineTier.Advanced,
       label = "On device",
       description = "System models (Gemini Nano / Apple Foundation) running locally.",
-      availability = { false }, // Implement real check later when runtime is available
+      availability = { Unavailable("runtime not implemented") },
     ),
     // The free Alpha Interplanetary backend is a placeholder for now.
     // It is a Remote kind but fixed to a specific provider.
     EngineCatalogEntry(
-      ref = EngineRef.Builtin(EngineKind.Remote), // Note: if we want this to be uniquely identifiable, we might need a different EngineRef.Builtin key
+      ref = EngineRef.Builtin(EngineKind.Remote),
       kind = EngineKind.Remote,
-      provider = RemoteProvider.Default, // Placeholder
+      provider = RemoteProvider.Default,
       tier = EngineTier.Free,
       label = "Alpha Interplanetary",
       description = "The official Alpha Thinker cloud engine.",
-      availability = { false },
+      availability = { Unavailable("placeholder") },
     ),
   )
 
@@ -54,7 +56,6 @@ object EngineCatalog {
    */
   fun entries(
     instances: List<EngineInstance>,
-    repository: EngineRepository,
   ): List<EngineCatalogEntry> {
     val userEntries = instances.map { instance ->
       EngineCatalogEntry(
@@ -68,7 +69,38 @@ object EngineCatalog {
         },
         label = instance.label,
         description = instance.kind.description,
-        availability = { true }, // Instances are generally available if they exist
+        availability = { repo ->
+          // Per-ref self-validation using the repository as the source of truth
+          val current = repo.getInstance(instance.id)
+            ?: return@EngineCatalogEntry Unavailable("Instance missing")
+
+          when (current.kind) {
+            EngineKind.LocalFile -> {
+              // TODO: Implement actual file existence check here.
+              // For now, we just check if the path is not blank.
+              if (current.localPath.isNullOrBlank()) {
+                Unavailable("No local path specified")
+              } else {
+                Available
+              }
+            }
+            EngineKind.Remote -> {
+              if (current.provider == null) {
+              // Remotes require a provider.
+                Unavailable("Bad configuration")
+              } else if (current.provider.requiresApiKey && current.apiKey.isBlank()) {
+                Unavailable("API key required")
+              } else if (current.baseUrl.isBlank() || current.model.isBlank()) {
+                Unavailable("Connection incomplete")
+              } else {
+                Available
+              }
+            }
+
+            EngineKind.Offline -> Available
+            EngineKind.OnDevice -> TODO()
+          }
+        },
       )
     }
     return builtins + userEntries

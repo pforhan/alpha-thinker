@@ -2,10 +2,9 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.di.AppComponent
-import alphainterplanetary.thinker.engine.EngineKind
-import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
+import alphainterplanetary.thinker.engine.EngineCatalog
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
 import alphainterplanetary.thinker.ui.navigation.Navigation
@@ -179,7 +178,13 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
       val instance = if (ref is EngineRef.Instance) {
         instances.find { it.id == ref.id }
       } else null
-      engineStatus(ref, instance)
+
+      // Resolve availability from the catalog using the current repository state
+      val entry = EngineCatalog.entries(instances).find { it.ref == ref }
+      val repository = appComponent.engineRepository
+      val availability = entry?.availability(repository) ?: Unavailable("Unknown engine")
+
+      engineStatus(ref, instance, availability)
     }
       .stateIn(
         scope = appComponent.appScope,
@@ -187,6 +192,7 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
         initialValue = engineStatus(
           ref = settings.selectedRef.value,
           instance = null,
+          availability = Unavailable("Loading..."),
         ),
       )
   }
@@ -212,9 +218,9 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
  * - a failure only. A success is the header dot's business, not a sheet's.
  * - not already announced ([announcedActivityId] is the consumed id). This is
  *   what makes re-entering an errored project quiet: the announcement is keyed
- *   on the activity that will be shown, so a failure is raised once however many
- *   times its project is opened, and the ledger persists across launches.
- * - no sheet up already. Skipping leaves the failure unconsumed, so it is still
+ *   on the activity that will be shown, and a screen-local raise re-runs on every
+ *   re-entry of a project that is still broken.
+ * - no sheet up already. Skipping lets the failure be unconsumed, so it is still
  *   pending once the sheet closes.
  * - the failure belongs to where the user is. A projectless activity (a bare
  *   capability failure) or the project currently open qualifies; one belonging
@@ -250,7 +256,7 @@ internal fun shouldAnnounceFailure(
  * consumes the id it acts on so the next emission of the *same* failure — the
  * effect below re-runs on route and sheet changes — finds nothing to do.
  *
- * Keyed on the activity id, the project, and whether a sheet is up, so all three
+ * Keyed on the activity id, the project, and the sheet, so all three
  * ways a decision can become answerable re-evaluate it: the failure arriving,
  * the user navigating to (or away from) its project, and a sheet closing over a
  * failure that was skipped while it was open. The announced id is deliberately

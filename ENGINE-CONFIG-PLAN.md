@@ -28,7 +28,7 @@ gone). Stage 2a has landed too: the selected instance's fields drive
 `SettingsViewModel` (one `remoteConnection` `StateFlow`) and the remote backend,
 and the flat `RemoteLlm*` keys are retired. Open in Stage 2: 2b (connections CRUD
 UI), 2c (per-ref self-validation), 2d (test checklist). Each stage is intended to
-land independently, green on `./gradlew :shared:allTests`.
+land independently, green on `./gradlew :shared:desktopTest`.
 
 ---
 
@@ -172,7 +172,7 @@ already applied to the DAOs.
 - [x] Update tests with these changes (EngineStatusTest.kt and RemoteKoogPlanningBackendTest.kt 
       temporarily deleted.)
 
-**Proof:** `./gradlew :shared:allTests`.
+**Proof:** `./gradlew :shared:desktopTest`.
 
 ### Stage 2 — Per-instance config & multi-endpoint
 
@@ -195,9 +195,6 @@ already applied to the DAOs.
       `EngineRepositoryTest` coverage of field edits).
 - [x] 2a5. Retire the flat RemoteLlm* settings. SettingsViewModel no longer reads them, but SettingsRepository still declares/loads/persists remoteLlmProvider/BaseUrl/ApiKey/Model/ContextTokens, Storage.SettingsKey still holds the five RemoteLlm* keys, and SettingsRepositoryTest still exercises them. Delete all of it (and the now-unused defaults/imports). 
 - [x] 2a6. Engine-layer cleanup. RemoteKoogPlanningBackend no longer needs its SettingsRepository import/doc (it takes a RemoteConnection); resolveSelectedEngine + PlanningEngineSelectionTest are dead after the EngineRegistry swap, and PlanningEngineSelector's doc and AppComponent's import still name SettingsRepository.
-- [ ] **2b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
-      select an instance; deletion of the selected falls back to
-      `EngineRef.Builtin(Offline)`.
 - [ ] **2c. Per-ref self-validation.** On-device and LocalFile availability feeds
       `CapabilityState` (file present, runtime available).
 - [ ] **2d. Tests.** EngineStatusTest, EngineRegistryTest, RemoteKoog... etc per checklist.
@@ -243,10 +240,13 @@ backend exists for a single instance, receives its endpoint/key/model/window
 at construction, and is rebuilt via `invalidate(ref)` whenever its instance
 changes.
 
-**Proof:** `./gradlew :shared:allTests`.
+**Proof:** `./gradlew :shared:desktopTests`.
 
 ### Stage 3 — Presentation
 
+- [ ] **Moved from 2: Connections CRUD UI.** Advanced list screen: add / edit / delete /
+  select an instance; deletion of the selected falls back to `EngineRef.Builtin(Offline)`.
+  implement along with the rest of stage 3 to keep everything consistent.
 - [ ] One `EnginePickerSheet`, used for first run and every later engine change:
       visible tiers **Offline / Free (disabled placeholder) / Local (disabled
       until MODEL-CATALOG-PLAN.md stage 3)**; an **Advanced** disclosure holding
@@ -255,7 +255,7 @@ changes.
 - [ ] Retire `IntelligenceSheet` (superseded by `EnginePickerSheet`); keep the
       `ChromeSheet` route stable where possible.
 
-**Proof:** `./gradlew :shared:allTests`; eyeball via `:desktopApp:run`.
+**Proof:** `./gradlew :shared:desktopTest`; eyeball via `:desktopApp:run`.
 
 ### Related — companion plan
 

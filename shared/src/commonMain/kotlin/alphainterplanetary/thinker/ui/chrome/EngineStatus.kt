@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.ui.chrome
 
+import alphainterplanetary.thinker.engine.EngineAvailability
+import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
@@ -76,6 +78,7 @@ data class EngineStatus(
 fun engineStatus(
   ref: EngineRef,
   instance: EngineInstance? = null,
+  availability: EngineAvailability,
 ): EngineStatus {
   val mode = when (ref) {
     is EngineRef.Builtin -> ref.kind
@@ -117,10 +120,13 @@ fun engineStatus(
       // until then the slot is stable-and-muted rather than absent.
       EngineCapability.Tools -> null
     }
+
     return CapabilityStatus(
       capability = capability,
       state = when {
         !supported -> CapabilityState.Unused
+        // Even if detail is present, the engine might be unavailable (e.g. runtime missing)
+        availability is Unavailable -> CapabilityState.Incomplete
         detail == null -> CapabilityState.Incomplete
         else -> CapabilityState.Active
       },

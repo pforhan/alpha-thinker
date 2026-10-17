@@ -68,6 +68,7 @@ enum class EngineKind(
     when (this) {
       Offline -> true
       Remote -> true
+      // Not yet implemented:
       OnDevice, LocalFile -> false
     }
 

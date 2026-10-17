@@ -152,7 +152,7 @@ class SettingsViewModelTest {
   }
 
   @Test
-  fun `switching provider re-seeds the previous providers starter endpoint, model, and window`() = runTest {
+  fun `switching provider re-seeds the previous providers starter endpoint model and window`() = runTest {
     // The seeded instance still holds Ollama's starter values, so nothing is
     // hand-edited and the whole connection moves to Anthropic's.
     val vm = viewModelWithSelectedInstance()
