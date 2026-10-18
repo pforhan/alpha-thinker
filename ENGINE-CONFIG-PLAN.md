@@ -197,7 +197,7 @@ already applied to the DAOs.
 - [x] 2a6. Engine-layer cleanup. RemoteKoogPlanningBackend no longer needs its SettingsRepository import/doc (it takes a RemoteConnection); resolveSelectedEngine + PlanningEngineSelectionTest are dead after the EngineRegistry swap, and PlanningEngineSelector's doc and AppComponent's import still name SettingsRepository.
 - [x] **2c. Per-ref self-validation.** On-device and LocalFile availability feeds
       `CapabilityState` (file present, runtime available).
-- [ ] **2d. Tests.** EngineStatusTest, EngineRegistryTest, RemoteKoog... etc per checklist.
+- [x] **2d. Tests.** EngineStatusTest, EngineRegistryTest, RemoteKoog... etc per checklist.
   **Test checklist (Stage 2 deliverables):**
 - [x] **EngineRepositoryTest** — create / update / delete; `addOrUpdate`
   replaces in place; selection persists across repository load (seeded
@@ -216,17 +216,17 @@ already applied to the DAOs.
   whose backend reads only from its instance fields; repeat calls for the
   same ref return the identical cached engine; `invalidate(ref)` forces a
   rebuild (second factory creation visible); no flat storage reads.
-- [ ] **RemoteKoogPlanningBackendTest (rewritten, pull from git history if original needed)** — constructor takes a
+- [x] **RemoteKoogPlanningBackendTest (rewritten, pull from git history if original needed)** — constructor takes a
   `RemoteKoogPlanningBackend`-compatible `RemoteConnection` (not a
   `SettingsRepository`); provider dispatch, base-URL normalization, `/v1`
   stripping, window carryover all derived from connection data; rebuild
   triggered only by changed target; no listener-based state rebuilds.
-- [ ] **SettingsViewModelTest (rewritten)** — `selectedRef` starts at
+- [x] **SettingsViewModelTest (rewritten)** — `selectedRef` starts at
   `Builtin(Offline)`; `selectEngine(ref)` updates `selectedRef` and
   persists via repository; `announcedFailureActivityId` still flows out of
   `SettingsRepository`; multiple instances coexist with independent field
   edits and no cross-talk.
-- [ ] **AppChromeStateTest (new)** — the `engineStatus` flow emits a
+- [x] **AppChromeStateTest (new)** — the `engineStatus` flow emits a
   refreshed derivation whenever `selectedRef` changes or a field of the
   selected instance changes; no stale reuse of previously cached backend.
 

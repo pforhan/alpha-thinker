@@ -50,7 +50,7 @@ class SettingsViewModelTest {
       scope = scope,
     )
     settle()
-    return Fixture(vm, engines)
+    return Fixture(vm, engines, fakeStorage)
   }
 
   private fun TestScope.viewModel(
@@ -70,6 +70,7 @@ class SettingsViewModelTest {
   private class Fixture(
     val vm: SettingsViewModel,
     val engines: EngineRepository,
+    val storage: FakeStorage,
   )
 
   @Test
@@ -105,6 +106,33 @@ class SettingsViewModelTest {
     settle()
 
     assertEquals(EngineRef.Builtin(EngineKind.OnDevice), vm.selectedRef.value)
+  }
+
+  @Test
+  fun `selectEngine persists the selection through the repository`() = runTest {
+    val fixture = fixture()
+    val ref = EngineRef.Instance(fixture.engines.instances.value.first().id)
+
+    fixture.vm.selectEngine(ref)
+    settle()
+
+    // A fresh repository over the same storage sees the selection, so the
+    // ViewModel's write reached the engine_state row and not just the flow.
+    val reopened = EngineRepository(fixture.storage, backgroundScope)
+    settle()
+    assertEquals(ref, reopened.selected.value)
+  }
+
+  @Test
+  fun `announcedFailureActivityId flows out of the settings repository`() = runTest {
+    val vm = viewModel()
+
+    assertEquals(null, vm.announcedFailureActivityId.value)
+
+    vm.markFailureAnnounced("activity-7")
+    settle()
+
+    assertEquals("activity-7", vm.announcedFailureActivityId.value)
   }
 
   @Test

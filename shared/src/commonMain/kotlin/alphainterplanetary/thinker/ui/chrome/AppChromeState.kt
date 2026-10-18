@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCatalog
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
 import alphainterplanetary.thinker.ui.navigation.Navigation
@@ -20,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -171,21 +173,7 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
       )
   }
   val status = remember(appComponent, settings) {
-    combine(
-      settings.selectedRef,
-      appComponent.engineRepository.instances,
-    ) { ref, instances ->
-      val instance = if (ref is EngineRef.Instance) {
-        instances.find { it.id == ref.id }
-      } else null
-
-      // Resolve availability from the catalog using the current repository state
-      val entry = EngineCatalog.entries(instances).find { it.ref == ref }
-      val repository = appComponent.engineRepository
-      val availability = entry?.availability(repository) ?: Unavailable("Unknown engine")
-
-      engineStatus(ref, instance, availability)
-    }
+    engineStatusFlow(appComponent.engineRepository)
       .stateIn(
         scope = appComponent.appScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -207,6 +195,33 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
     )
   }
 }
+
+/**
+ * The status flow behind [AppChromeState.engineStatus]: one derivation per
+ * change of the selected [EngineRef] or of the instance list it is resolved
+ * against.
+ *
+ * Extracted from `rememberAppChromeState` so the re-derivation contract can be
+ * tested without a composition: whenever the selection changes, or any field of
+ * any instance changes (which re-derives availability too), a fresh
+ * [EngineStatus] is emitted — nothing is cached across emissions, so a stale
+ * status cannot outlive the configuration it describes.
+ */
+internal fun engineStatusFlow(engineRepository: EngineRepository): Flow<EngineStatus> =
+  combine(
+    engineRepository.selected,
+    engineRepository.instances,
+  ) { ref, instances ->
+    val instance = if (ref is EngineRef.Instance) {
+      instances.find { it.id == ref.id }
+    } else null
+
+    // Resolve availability from the catalog using the current repository state
+    val entry = EngineCatalog.entries(instances).find { it.ref == ref }
+    val availability = entry?.availability(engineRepository) ?: Unavailable("Unknown engine")
+
+    engineStatus(ref, instance, availability)
+  }
 
 /**
  * Whether [latest] is a failure the user still has to be told about — the whole
