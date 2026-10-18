@@ -110,6 +110,20 @@ class EngineRepositoryTest {
   }
 
   @Test
+  fun `markUsed on a builtin records recency without adding an instance row`() = runTest {
+    val repo = repository()
+    testScheduler.advanceUntilIdle()
+
+    repo.markUsed(EngineRef.Builtin(EngineKind.Offline), at = 3_000L)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(3_000L, repo.lastUsedAt.value[EngineRef.Builtin(EngineKind.Offline)])
+    val seeded = repo.instances.value.single()
+    assertEquals(EngineKind.Remote, seeded.kind)
+    assertEquals(RemoteProvider.Default, seeded.provider)
+  }
+
+  @Test
   fun `markUsed keeps the engine selected`() = runTest {
     val storage = FakeStorage()
     storage.upsertEngineInstance(preset)

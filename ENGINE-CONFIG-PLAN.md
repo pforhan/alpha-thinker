@@ -199,19 +199,19 @@ already applied to the DAOs.
       `CapabilityState` (file present, runtime available).
 - [ ] **2d. Tests.** EngineStatusTest, EngineRegistryTest, RemoteKoog... etc per checklist.
   **Test checklist (Stage 2 deliverables):**
-- [ ] **EngineRepositoryTest** — create / update / delete; `addOrUpdate`
+- [x] **EngineRepositoryTest** — create / update / delete; `addOrUpdate`
   replaces in place; selection persists across repository load (seeded
   default Remote only when storage is empty); delete-selected falls back to
   `EngineRef.Builtin(Offline)`; `markUsed` upserts an `engine_state` row
   carrying `lastUsedAt`; built-ins never appear in `instances`.
-- [ ] **EngineStatusTest (rewritten for ref/instance, pull from git history if original needed)** — `Builtin(Offline)`
+- [x] **EngineStatusTest (rewritten for ref/instance, pull from git history if original needed)** — `Builtin(Offline)`
   → all slots `Unused`; complete `Instance` Remote → all `Active` with detail
   sourced from instance fields; missing model/key → `Incomplete` +
   `needsAttention`; Anthropic without key → Incomplete even at its fixed
   origin; Anthropic with key → fixed origin as active; OnDevice/LocalFile
   instances → Llm-only Active with mode label; `Tools` remains `Unused` for
   every ref kind.
-- [ ] **EngineRegistryTest** — `getEngine(Offline)` returns
+- [x] **EngineRegistryTest** — `getEngine(Offline)` returns
   `OfflinePlanningEngine`; a Remote instance returns a `KoogPlanningEngine`
   whose backend reads only from its instance fields; repeat calls for the
   same ref return the identical cached engine; `invalidate(ref)` forces a
