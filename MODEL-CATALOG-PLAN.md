@@ -16,8 +16,11 @@ It is a dedicated tracker for work previously itemized in
 - "Ollama model pull".
 - "Downloaded local models (LiteRT-LM, in-process)".
 
-**Status: not started.** Depends on ENGINE-CONFIG-PLAN.md **stages 1–2**
-(per-instance config), because model state is per engine instance.
+**Status: not started.** Depends on ENGINE-CONFIG-PLAN.md stages 1–2
+(per-instance config), because model state is per engine instance. Its stage
+2/3 UI work additionally comes after that plan's stage 3b, which moves
+`ModelBrowser` into the Advanced connection editor — build the grouped browser
+and the pull affordance there, not in `IntelligenceSheet`.
 
 ---
 
@@ -147,6 +150,8 @@ Plus `ModelProfiles` (family/pattern rules + measured seeds) and `ModelRanker`.
       `Verified/Recommended` first (Verified could be starred or outlined), then
       `Others`, each with a header and chips showing `id · size · context` +
       short reason. Preserve tap-to-select.
+      (Lands in the connection editor moved by ENGINE-CONFIG-PLAN.md stage 3b;
+      that plan owns where the browser lives, this one owns what it shows.)
 - [ ] **Hostability flag:** estimate each model's memory footprint (on-disk size,
       else `parameter_count × bytes/param`) and flag those that won't fit the
       device's budget next to the size/context chips — a note, not a filter.
@@ -162,16 +167,19 @@ Plus `ModelProfiles` (family/pattern rules + measured seeds) and `ModelRanker`.
 ### Stage 3 — Downloads & local models
 
 - [ ] **Ollama model pull:** add `OllamaModelPuller` calling `POST /api/pull`
-      with streaming NDJSON; expose a pull with progress/cancel; add a UI
+      with streaming NDJSON; expose a pull with progress/cancel/background; add a UI
       affordance to pull an ID (or show "Pull" for known IDs when missing);
-      update the installed list on completion.
+      update the installed list on completion. Use a task to track the ongoing activity.
+      log interesting info about the download (start, end, cancelled, etc)
 - [ ] **Downloaded local models (LiteRT-LM, in-process):** Koog's official
       `LiteRTLLMClient` on Android; a small JVM `LLMClient` adapter over
-      `litertlm-jvm` for desktop; a model download + management UI.
+      `litertlm-jvm` for desktop; a model download + management UI. Use the same
+      progress dialogs and tasks and logging functionality as in the above task.
 - [ ] **Track context length** as models are selected and downloaded.
 - [ ] **Make the Local tier real:** once this lands, ENGINE-CONFIG-PLAN.md
-      stage 3's Local tier is enabled rather than a placeholder, and its
-      downloaded models are `EngineKind.LocalFile` instance rows.
+      stage 3's Local placeholder rows become enabled, and the downloaded
+      models are `EngineKind.LocalFile` instance rows rendered under Local
+      through the same list component (that plan's stage 3b).
       Platform-gate it (web/wasm on-device stays deferred).
 
 Note: the LiteRT client may require a beta version of Koog (see

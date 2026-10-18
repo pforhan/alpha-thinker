@@ -26,9 +26,11 @@ from the selected ref, and `AppComponent` selecting through `EngineRegistry`
 (the two parallel `EngineMode`-keyed maps and `DynamicKoogPlanningBackend` are
 gone). Stage 2a has landed too: the selected instance's fields drive
 `SettingsViewModel` (one `remoteConnection` `StateFlow`) and the remote backend,
-and the flat `RemoteLlm*` keys are retired. Open in Stage 2: 2b (connections CRUD
-UI), 2c (per-ref self-validation), 2d (test checklist). Each stage is intended to
-land independently, green on `./gradlew :shared:desktopTest`.
+and the flat `RemoteLlm*` keys are retired. Stage 2's 2c (per-ref
+self-validation) and 2d (test checklist) have landed as well; its 2b
+(connections CRUD UI) moved to Stage 3, which is now specified as sub-stages
+3a–3f with its own test checklist. Each stage is intended to land
+independently, green on `./gradlew :shared:desktopTest`.
 
 ---
 
@@ -240,28 +242,80 @@ backend exists for a single instance, receives its endpoint/key/model/window
 at construction, and is rebuilt via `invalidate(ref)` whenever its instance
 changes.
 
-**Proof:** `./gradlew :shared:desktopTests`.
+**Proof:** `./gradlew :shared:desktopTest`.
 
 ### Stage 3 — Presentation
 
-- [ ] **Moved from 2: Connections CRUD UI.** Advanced list screen: add / edit / delete /
-  select an instance; deletion of the selected falls back to `EngineRef.Builtin(Offline)`.
-  implement along with the rest of stage 3 to keep everything consistent.
-- [ ] One `EnginePickerSheet`, used for first run and every later engine change:
-      visible tiers **Offline / Free (disabled placeholder) / Local (disabled
-      until MODEL-CATALOG-PLAN.md stage 3)**; an **Advanced** disclosure holding
-      Remote connections and On-device.
-- [ ] Recast status pills and the header flyout per selected `EngineRef`.
-- [ ] Retire `IntelligenceSheet` (superseded by `EnginePickerSheet`); keep the
-      `ChromeSheet` route stable where possible.
+Split into six sub-stages, each intended to land independently green; the
+connections CRUD screen moved here from 2b so the picker and its Advanced area
+are built as one consistent surface.
 
-**Proof:** `./gradlew :shared:desktopTest`; eyeball via `:desktopApp:run`.
+- [ ] **3a. Picker surface (ViewModel).** The mutators Stage 2 didn't need:
+      create / rename / delete an instance on `SettingsViewModel`, with
+      delete-selected falling back to `EngineRef.Builtin(Offline)` (already
+      guaranteed by `EngineRepository`). Lock one decision first: **edit
+      implies select** keeps today's plumbing — `remoteConnection` and
+      `remoteModels` are keyed to the selected ref, so Edit selects the row and
+      then edits; **edit-any** instead requires scoping the field mutators and
+      the model-browse state to the ref being edited rather than
+      `engineRepository.selected`. Pick one and say which in the PR.
+- [ ] **3b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
+      select a Remote instance, reusing `RemoteConnectionFields` moved out of
+      the kind card; the On-device entry is read-only. Deletion of the selected
+      falls back to `EngineRef.Builtin(Offline)`. Downloaded `LocalFile` rows
+      render under the Local tier through the same list component once
+      MODEL-CATALOG-PLAN.md stage 3 lands; that plan owns their download and
+      management UI.
+- [ ] **3c. `EnginePickerSheet`.** One sheet, used for first run and every later
+      engine change: a pure merge of `EngineCatalog.entries(instances)` grouped
+      by `EngineTier` and ordered by `lastUsedAt`; visible tiers **Offline /
+      Free (disabled placeholder) / Local (placeholder rows disabled until
+      MODEL-CATALOG-PLAN.md stage 3; existing `LocalFile` instances
+      selectable)**; an **Advanced** disclosure holding the connections list
+      (3b) and On-device. Swap it into the existing `ChromeSheet.Intelligence`
+      route — keep the enum entry name so saved stacks survive `NavStack`'s
+      name-based restore, or rename to `Picker` and accept the pre-release
+      drop; say which.
+- [ ] **3d. First run.** Open `EnginePickerSheet` on first launch — the trigger
+      is a pure function (no `engine_state` rows yet); no separate onboarding
+      gate or tutorial (Decision 3).
+- [ ] **3e. Status recast.** Status pills, the header flyout, the Status sheet,
+      and `EngineStatusCopy` word the selected `EngineRef`: the instance's
+      label where the ref is an instance, the tier entry's label for built-ins,
+      and an `Incomplete` availability reads "needs setup".
+- [ ] **3f. Retire `IntelligenceSheet`**, superseded by `EnginePickerSheet`
+      (route stability handled in 3c).
+  **Test checklist (Stage 3 deliverables):**
+- [ ] **SettingsViewModelTest** — create / rename / delete flows;
+      delete-selected fallback to `Builtin(Offline)`; the 3a edit-scoping case;
+      the first-run trigger function.
+- [ ] **NavStackTest** — the sheet content swap / rename keeps open, close, and
+      replace-on-stack semantics (extend the existing cases).
+- [ ] **EngineStatusCopyTest** — summary and needs-setup wording for an
+      instance-labeled ref.
+- [ ] **EngineCatalog grouping** (in `EngineRepositoryTest` or a new
+      `EngineCatalogTest`) — tier merge of built-ins + instances and
+      `lastUsedAt` ordering; `LocalFile` instances land under Local.
+
+**Proof:** `./gradlew :shared:desktopTest`; eyeball via `:desktopApp:run`
+(first run opens the picker; a connection can be created, edited, selected,
+and deleted from the Advanced area).
+
+**Coordination — companion plan:** this stage owns *where* the model browser
+lives: `ModelBrowser` moves from `IntelligenceSheet`'s Remote card into the
+Advanced connection editor (3b). [MODEL-CATALOG-PLAN.md](MODEL-CATALOG-PLAN.md)
+owns *what* it shows — grouped Verified / Recommended / Others in its stage 2,
+the pull affordance in its stage 3. Land 3b before that plan's stage 2 so the
+grouped browser is built in its final home; its stage 3 progress/cancel
+component plugs into the same editor.
 
 ### Related — companion plan
 
 Model-level work (metadata, curation, and downloads) is tracked separately in
 [MODEL-CATALOG-PLAN.md](MODEL-CATALOG-PLAN.md). It depends on this plan's
-stages 1–2 and enables this plan's stage 3 Local tier.
+stages 1–2 and enables this plan's stage 3 Local tier; its stage 2/3 UI work
+additionally follows this plan's stage 3b move of `ModelBrowser` (see Stage 3,
+"Coordination — companion plan").
 
 ---
 
