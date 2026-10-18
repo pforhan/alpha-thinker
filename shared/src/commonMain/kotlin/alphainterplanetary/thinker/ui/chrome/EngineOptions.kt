@@ -36,7 +36,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 /**
  * One selectable planning backend: names and describes the mode, marks the
- * selected one, and gates unavailable backends off (only Lite and Remote are
+ * selected one, and gates unavailable backends off (only offline and Remote are
  * selectable today — the on-device backends land later).
  *
  * [content] renders inside the same card, below the header, so a mode's own

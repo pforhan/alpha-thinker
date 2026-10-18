@@ -36,7 +36,7 @@ class LogContextTest {
   @Test
   fun `prompt response and failure rows render their markers`() = runTest {
     val log = RecordingActivityLogger()
-    val context = log.context("task-2", LogCategory.QuestionGeneration, LogSource.Lite)
+    val context = log.context("task-2", LogCategory.QuestionGeneration, LogSource.Offline)
 
     context.prompt("SYSTEM\nTitle system")
     context.prompt("SYSTEM\nQuestions system")

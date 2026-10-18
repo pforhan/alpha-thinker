@@ -7,7 +7,7 @@ import kotlin.test.assertFalse
 class EngineCapabilitiesTest {
 
   @Test
-  fun `lite has no capabilities at all`() {
+  fun `offline has no capabilities at all`() {
     assertEquals(emptySet(), EngineKind.Offline.capabilities)
   }
 
@@ -40,7 +40,7 @@ class EngineCapabilitiesTest {
   }
 
   @Test
-  fun `every model-backed kind runs an llm and lite does not`() {
+  fun `every model-backed kind runs an llm and offline does not`() {
     EngineKind.entries.forEach { mode ->
       val expected = mode != EngineKind.Offline
       assertEquals(expected, mode.capabilities.contains(EngineCapability.Llm), mode.name)

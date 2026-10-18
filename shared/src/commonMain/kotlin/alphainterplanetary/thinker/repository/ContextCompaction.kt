@@ -14,7 +14,7 @@ import alphainterplanetary.thinker.phases.Phase
  * model — and [DropEarlierAnswers] is the default because it is the one that
  * needs no model and no waiting.
  *
- * None of it applies to an engine that composes no prompt (the built-in Lite
+ * None of it applies to an engine that composes no prompt (the built-in Offline
  * engine, which has no
  * [alphainterplanetary.thinker.engine.PlanningEngine.contextWindowTokens]):
  * there is no window to fill, so no choice is ever put to the user and none of

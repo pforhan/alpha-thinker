@@ -35,7 +35,7 @@ private fun CapabilityState.valueReadout(): String =
 
 /**
  * The value to show for a slot: its detail, or the state's own words when the
- * mode has nothing to name (a Lite mode, or Tools before the lookup work).
+ * mode has nothing to name (an Offline mode, or Tools before the lookup work).
  */
 internal fun CapabilityStatus.displayDetail(): String {
   if (detail.isNotBlank()) return detail

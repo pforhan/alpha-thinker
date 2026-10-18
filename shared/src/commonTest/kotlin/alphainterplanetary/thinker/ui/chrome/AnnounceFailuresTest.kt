@@ -187,8 +187,8 @@ class AnnounceFailuresTest {
   @Test
   fun `labels the row with the engine that ran it`() {
     assertEquals(
-      "Last Lite activity: Question generation failed: model exploded",
-      lastActivityLabel(activity("task-1", source = LogSource.Lite)),
+      "Last Offline activity: Question generation failed: model exploded",
+      lastActivityLabel(activity("task-1", source = LogSource.Offline)),
     )
     assertEquals(
       "Last Remote LLM activity: Question generation failed: model exploded",

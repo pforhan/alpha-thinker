@@ -937,17 +937,17 @@ class ProjectRepositoryTest {
 
   /**
    * The summarize choice is only offered to an engine that can carry it out:
-   * a Lite engine draws fixed strings from a pool and has no way to condense
+   * a Offline engine draws fixed strings from a pool and has no way to condense
    * anything, so offering it would be offering a failure.
    */
   @Test
   fun `checkContext only offers summarizing to an engine that can do it`() = runTest {
     val storage = FakeStorage(mutableMapOf("p1" to phasedProject()))
 
-    val lite = repo(storage = storage).checkContext("p1")
-    assertNotNull(lite)
-    assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), lite.summarizablePhases)
-    assertFalse(lite.canSummarize)
+    val offline = repo(storage = storage).checkContext("p1")
+    assertNotNull(offline)
+    assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research), offline.summarizablePhases)
+    assertFalse(offline.canSummarize)
 
     val llm = repo(storage = storage, generator = FakePlanningEngine().apply {
       canSummarize = true
@@ -2102,7 +2102,7 @@ class ProjectRepositoryTest {
   // ---------- engines that never read the transcript ----------
 
   /**
-   * The Lite engine serves fixed strings from a pool and composes no prompt, so
+   * The Offline engine serves fixed strings from a pool and composes no prompt, so
    * it has no window to fill: an over-long project is not near any limit, and
    * none of the three choices are on the table.
    */

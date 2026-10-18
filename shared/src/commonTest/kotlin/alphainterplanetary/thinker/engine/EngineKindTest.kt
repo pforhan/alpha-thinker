@@ -23,7 +23,7 @@ class EngineKindTest {
   }
 
   @Test
-  fun `Lite and Remote are selectable while the on-device kinds are not yet`() {
+  fun `offline and Remote are selectable while the on-device kinds are not yet`() {
     assertTrue(EngineKind.Offline.available())
     assertTrue(EngineKind.Remote.available())
     assertFalse(EngineKind.OnDevice.available())

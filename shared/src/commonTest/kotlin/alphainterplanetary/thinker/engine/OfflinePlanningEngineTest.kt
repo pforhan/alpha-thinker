@@ -19,8 +19,8 @@ class OfflinePlanningEngineTest {
   /**
    * The declaration the whole context-budget apparatus keys off: the pool
    * serves fixed strings, so this engine composes no prompt and has no window
-   * to overrun. Getting it wrong would put a near-limit dialog in front of a
-   * Lite user whose generation sends nothing they wrote.
+   * to overrun. Getting it wrong would put a near-limit dialog in front of an
+   * Offline user whose generation sends nothing they wrote.
    */
   @Test
   fun `the engine declares that it has no context window`() {

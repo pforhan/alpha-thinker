@@ -400,7 +400,7 @@ class ProjectDetailViewModelTest {
   }
 
   /**
-   * The Lite engine draws from a fixed pool and has nothing to summarize with,
+   * The Offline engine draws from a fixed pool and has nothing to summarize with,
    * so the dialog offers two ways forward rather than a third that would fail.
    */
   @Test

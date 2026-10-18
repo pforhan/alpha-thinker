@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
  *
  * What it still files itself is the interaction's *own* outcome row, and only
  * when the delegate reported no request of its own
- * ([LogScope.fallback]): the hardcoded Lite engine never speaks to a model, so
+ * ([LogScope.fallback]): the hardcoded Offline engine never speaks to a model, so
  * there is nothing for it to file and its result would otherwise never reach the
  * log. An engine that did report gets exactly one row pair per request and no
  * second, duplicate summary.

@@ -19,7 +19,7 @@ import alphainterplanetary.thinker.phases.Phase
  * [calls], [titleCalls], and [summarizeCalls].
  */
 open class FakePlanningEngine(
-  override var source: LogSource = LogSource.Lite,
+  override var source: LogSource = LogSource.Offline,
   /** The window a budget is a share of; null means the engine composes no prompt. */
   override var contextWindowTokens: Int? = 8192,
   /** What the engine reports it can do; drives whether the summarize choice is offered. */

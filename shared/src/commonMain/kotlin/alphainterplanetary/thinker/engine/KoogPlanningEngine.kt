@@ -20,9 +20,7 @@ import kotlinx.serialization.json.Json
  * The LLM-hosted [PlanningEngine], implemented over Koog's [PromptExecutor]
  * seam (a `MultiLLMPromptExecutor` over whichever LLM client the active
  * backend supplies — on-device, remote, or downloaded; ENG-DESIGN.md
- * "LLM Inference Layer"). It is invoked statelessly, exactly like
- * [OfflinePlanningEngine], so DI can swap Lite for an LLM backend without
- * touching the repository or tasks.
+ * "LLM Inference Layer").
  *
  * Both question interactions ask the model for a JSON array of question strings
  * and parse it with kotlinx.serialization, and no other shape is accepted: a

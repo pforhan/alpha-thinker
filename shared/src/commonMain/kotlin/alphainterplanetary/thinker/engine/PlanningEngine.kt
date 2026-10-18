@@ -41,7 +41,7 @@ fun QuestionBatch.summary(): String = buildString {
  * The unified contract for the engine that produces planning content — question
  * rounds and recommended titles. A [PlanningEngine] is invoked statelessly with
  * the project context it needs, so the same call shape works across every
- * backend: a local edge LLM, a remote HTTP/cloud model, or the hardcoded Lite
+ * backend: a local edge LLM, a remote HTTP/cloud model, or the hardcoded Offline
  * fallback ([OfflinePlanningEngine]).
  *
  * There is one question-generation call rather than one per kind of round, so
@@ -93,7 +93,7 @@ fun QuestionBatch.summary(): String = buildString {
  * is a window: nothing to condense without one.
  */
 interface PlanningEngine {
-  /** The producer this engine reports on the activity log (e.g. [LogSource.RemoteLLM] for a Koog-backed mode, [LogSource.Lite] for the built-in fallback). */
+  /** The producer this engine reports on the activity log (e.g. [LogSource.RemoteLLM] for a Koog-backed mode, [LogSource.Offline] for the built-in fallback). */
   val source: LogSource
 
   /**
@@ -108,7 +108,7 @@ interface PlanningEngine {
    * is a bare id and cannot, which is why the remote connection fields carry a
    * window of their own and feed this.
    *
-   * False-by-default is not an option here — the null case is the Lite engine
+   * False-by-default is not an option here — the null case is the Offline engine
    * saying it composes no prompt at all, and defaulting would let an engine
    * forget to say so and have its answers trimmed for a window that does not
    * exist.

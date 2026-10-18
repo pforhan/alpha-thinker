@@ -19,7 +19,7 @@ class OfflinePlanningEngine @Inject constructor(
   private val count: Int = 5,
 ) : PlanningEngine {
 
-  override val source: LogSource = LogSource.Lite
+  override val source: LogSource = LogSource.Offline
 
   /**
    * No window, and not merely a large one: the pool serves fixed strings, so

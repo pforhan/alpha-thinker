@@ -20,7 +20,7 @@ import kotlinx.coroutines.test.runTest
 /**
  * The decorator's remaining job is narrow: install the interaction's [LogScope],
  * and file the interaction's *own* outcome row only when the delegate reported
- * no request of its own (the Lite path, and any engine that fails before it
+ * no request of its own (the Offline path, and any engine that fails before it
  * sends). Everything else is the engine's, one row pair per request.
  */
 class LoggingPlanningEngineTest {
@@ -37,7 +37,7 @@ class LoggingPlanningEngineTest {
     val terminal = log.entries.single()
     assertEquals("task-1", terminal.activityId)
     assertEquals(LogCategory.TitleRecommendation, terminal.category)
-    assertEquals(LogSource.Lite, terminal.source)
+    assertEquals(LogSource.Offline, terminal.source)
     assertEquals("response: Recommended", terminal.log)
     assertNull(terminal.raw, "an engine that never spoke to a model has no reply to keep")
   }
@@ -285,18 +285,18 @@ class LoggingPlanningEngineTest {
   /**
    * Both facts are the delegate's: the decorator observes an engine, it doesn't
    * give one capabilities or lend it a context window. This is also the guard
-   * against a decorated Lite engine being treated as though it had one.
+   * against a decorated Offline engine being treated as though it had one.
    */
   @Test
   fun `the context window and the summarize capability are both the delegate's`() = runTest {
     val log = RecordingActivityLogger()
 
-    val lite = LoggingPlanningEngine(
+    val offline = LoggingPlanningEngine(
       FakePlanningEngine().apply { contextWindowTokens = null },
       log,
     )
-    assertNull(lite.contextWindowTokens)
-    assertFalse(lite.canSummarize)
+    assertNull(offline.contextWindowTokens)
+    assertFalse(offline.canSummarize)
 
     val llm = LoggingPlanningEngine(
       FakePlanningEngine().apply {

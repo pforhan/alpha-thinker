@@ -61,7 +61,7 @@ class LogScope internal constructor(
   /**
    * A fresh writer for the interaction's *own* outcome row, or null once a
    * request has reported one of its own. This is what keeps an engine that
-   * never speaks to a model (the hardcoded Lite engine) on the log without
+   * never speaks to a model (the hardcoded Offline engine) on the log without
    * letting an LLM-backed engine file the same result twice.
    */
   suspend fun fallback(): LogContext? =

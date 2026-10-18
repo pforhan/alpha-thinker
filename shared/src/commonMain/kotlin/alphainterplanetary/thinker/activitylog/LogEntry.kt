@@ -34,8 +34,8 @@ enum class LogCategory(val label: String) {
  * `null` on a row means a source doesn't apply (e.g. a standalone note).
  */
 enum class LogSource(val label: String) {
-  /** The built-in hardcoded Lite engine. */
-  Lite("Lite"),
+  /** The built-in hardcoded Offline engine. */
+  Offline("Offline"),
 
   /** An on-device / system LLM. */
   LocalLLM("On-device LLM"),
@@ -141,7 +141,7 @@ data class LogEntry(
    * from, and the raw is what the viewer's full-entry popup adds on top (never
    * a second copy of the row). Null when there is no underlying payload — a
    * lifecycle marker, a synthesized `input:` summary, or an engine that never
-   * spoke to a model (Lite).
+   * spoke to a model (Offline).
    */
   val raw: String? = null,
 )

@@ -29,7 +29,7 @@ enum class CapabilityState {
  * One stable header slot's displayed state. [detail] carries the slot's current
  * value (the endpoint, the model) for the Status sheet and the flyout rows, and
  * is empty when the mode's own description already explains the slot (an unused
- * capability, a Lite mode) — the presentation supplies that text, so the
+ * capability, an offline mode) — the presentation supplies that text, so the
  * derivation carries no user-facing copy beyond the values themselves.
  */
 data class CapabilityStatus(

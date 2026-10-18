@@ -42,7 +42,7 @@ class EngineRegistryTest {
     val engine = registry.getEngine(EngineRef.Builtin(EngineKind.Offline))
 
     assertEquals(OfflinePlanningEngine::class, engine::class)
-    assertEquals(LogSource.Lite, engine.source)
+    assertEquals(LogSource.Offline, engine.source)
   }
 
   @Test
