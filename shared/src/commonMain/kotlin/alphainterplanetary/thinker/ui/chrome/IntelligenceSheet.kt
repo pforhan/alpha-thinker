@@ -15,9 +15,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 
 /**
- * The planning-backend picker: one card per [EngineKind], with the Remote
- * connection fields nested inside the Remote card rather than listed below the
- * stack (see [EngineKindOption]'s content slot).
+ * The planning-backend picker: one card per [EngineKind], except Remote — that
+ * slot holds [ConnectionsList], because the Remote backend is per-instance:
+ * the list is where a connection is selected, edited, or deleted, and its
+ * add/edit [ConnectionDialog] holds the connection fields as a draft.
  *
  * This is the only place the engine can change, which is what keeps the header
  * a projection: a switch here moves the single source of truth, and every pill,
@@ -25,9 +26,10 @@ import androidx.compose.ui.Modifier
  */
 @Composable
 internal fun IntelligenceSheetContent(chrome: AppChromeState) {
-  val engineKind by chrome.engines.selectedRef.collectAsState()
-  val connection by chrome.engines.remoteConnection.collectAsState()
-  val remoteModels by chrome.engines.remoteModels.collectAsState()
+  val selectedRef by chrome.engines.selectedRef.collectAsState()
+  val instances by chrome.engines.instances.collectAsState()
+  val draft by chrome.engines.draft.collectAsState()
+  val draftModels by chrome.engines.draftModels.collectAsState()
   val engines = chrome.engines
 
   Column(
@@ -38,45 +40,43 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
     verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
   ) {
     EngineKind.entries.forEach { mode ->
-      val selected = when (val ref = engineKind) {
-        is EngineRef.Builtin -> ref.kind == mode
-        else -> false
+      if (mode == EngineKind.Remote) {
+        ConnectionsList(
+          instances = instances,
+          selectedRef = selectedRef,
+          onSelect = { ref -> engines.selectEngine(ref) },
+          onEdit = { ref -> engines.startEditConnection(ref.id) },
+          onDelete = { ref -> engines.deleteInstance(ref.id) },
+          onAdd = { engines.startAddConnection() },
+        )
+      } else {
+        EngineKindOption(
+          mode = mode,
+          selected = selectedRef == EngineRef.Builtin(mode),
+          selectable = mode.available(),
+          onClick = { engines.selectEngine(EngineRef.Builtin(mode)) },
+        )
       }
-      EngineKindOption(
-        mode = mode,
-        selected = selected,
-        selectable = mode.available(),
-        onClick = { engines.selectEngine(EngineRef.Builtin(mode)) },
-        content = {
-          if (mode == EngineKind.Remote) {
-            RemoteConnectionFields(
-              provider = connection.provider,
-              onProviderChange = engines::selectRemoteProvider,
-              baseUrl = connection.baseUrl,
-              apiKey = connection.apiKey,
-              model = connection.model,
-              contextTokens = connection.contextLength.toString(),
-              models = remoteModels,
-              onBaseUrlChange = engines::setRemoteBaseUrl,
-              onApiKeyChange = engines::setRemoteApiKey,
-              onModelChange = engines::setRemoteModel,
-              // Digits only, and only a complete number: a half-typed window
-              // would otherwise resolve the budget to something the user did not
-              // ask for while they are still in the field.
-              onContextTokensChange = { typed ->
-                typed.filter { it.isDigit() }
-                  .toIntOrNull()
-                  ?.takeIf { it > 0 }
-                  ?.let(engines::setRemoteContextTokens)
-              },
-              onBrowseModels = engines::refreshRemoteModels,
-              onModelSelected = { info ->
-                engines.selectRemoteModel(info.id, info.contextLength)
-              },
-            )
-          }
-        },
-      )
     }
+  }
+
+  draft?.let { current ->
+    ConnectionDialog(
+      draft = current,
+      isNew = instances.none { it.id == current.id },
+      models = draftModels,
+      onNameChange = engines::setDraftLabel,
+      onProviderChange = engines::setDraftProvider,
+      onBaseUrlChange = engines::setDraftBaseUrl,
+      onApiKeyChange = engines::setDraftApiKey,
+      onModelChange = engines::setDraftModel,
+      onContextTokensChange = engines::setDraftContextTokens,
+      onBrowseModels = engines::refreshDraftModels,
+      onModelSelected = { info ->
+        engines.pickDraftModel(info.id, info.contextLength)
+      },
+      onSave = engines::saveDraft,
+      onDismiss = engines::cancelDraft,
+    )
   }
 }

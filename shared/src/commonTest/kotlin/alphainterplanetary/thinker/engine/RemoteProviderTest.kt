@@ -44,6 +44,17 @@ class RemoteProviderTest {
   }
 
   @Test
+  fun `suggested connection names are short and human`() {
+    // What a connection is called in the user's list, prefetched into the
+    // dialog's Name field: the local server and the vendor keep their names,
+    // and the generic /v1 escape hatch is what it is to the user — an API —
+    // rather than the protocol chip it was picked from.
+    assertEquals("Ollama", RemoteProvider.Ollama.suggestedConnectionName)
+    assertEquals("API", RemoteProvider.OpenAiCompatible.suggestedConnectionName)
+    assertEquals("Anthropic", RemoteProvider.Anthropic.suggestedConnectionName)
+  }
+
+  @Test
   fun `only the providers that cannot send without a key require one`() {
     assertTrue(RemoteProvider.Anthropic.requiresApiKey)
     // A key field the provider never reads would be pure confusion.

@@ -14,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 
@@ -55,21 +56,20 @@ class EngineViewModelTest {
     catalog: RemoteModelCatalog = FakeModelCatalog(),
   ): EngineViewModel = fixture(catalog).vm
 
-  /** Creates a ViewModel, lets the repository seed, then selects the seeded instance. */
-  private fun TestScope.viewModelWithSelectedInstance(
-    catalog: RemoteModelCatalog = FakeModelCatalog(),
-  ): EngineViewModel {
-    val fixture = fixture(catalog)
-    fixture.vm.selectEngine(EngineRef.Instance(fixture.engines.instances.value.first().id))
-    settle()
-    return fixture.vm
-  }
-
   private class Fixture(
     val vm: EngineViewModel,
     val engines: EngineRepository,
     val storage: FakeStorage,
   )
+
+  /** Adds a second connection through the dialog flow and returns its ref. */
+  private fun addConnection(vm: EngineViewModel, label: String): EngineRef.Instance {
+    vm.startAddConnection()
+    vm.setDraftLabel(label)
+    val ref = EngineRef.Instance(checkNotNull(vm.draft.value).id)
+    vm.saveDraft()
+    return ref
+  }
 
   @Test
   fun `selectedRef starts at the default builtin`() = runTest {
@@ -105,86 +105,111 @@ class EngineViewModelTest {
   }
 
   @Test
-  fun `remoteConnection is blank when a builtin is selected`() = runTest {
+  fun `draft is closed until a connection is being added or edited`() = runTest {
     val vm = viewModel()
-    settle()
 
-    vm.remoteConnection.test {
-      val connection = awaitItem()
-      assertEquals(RemoteProvider.Default, connection.provider)
-      assertEquals("", connection.baseUrl)
-      assertEquals("", connection.apiKey)
-      assertEquals("", connection.model)
-      assertEquals(0, connection.contextLength)
-      cancelAndIgnoreRemainingEvents()
-    }
+    assertNull(vm.draft.value)
+
+    vm.startAddConnection()
+    assertIs<EngineInstance>(vm.draft.value)
+
+    vm.cancelDraft()
+    assertNull(vm.draft.value)
   }
 
   @Test
-  fun `remoteConnection resolves the selected instance`() = runTest {
-    val vm = viewModelWithSelectedInstance()
+  fun `the add draft starts from the provider defaults without a stored row`() = runTest {
+    val fixture = fixture()
 
-    vm.remoteConnection.test {
-      val connection = awaitItem()
-      assertEquals(RemoteProvider.Default, connection.provider)
-      assertEquals(RemoteProvider.Default.defaultBaseUrl, connection.baseUrl)
-      assertEquals(RemoteProvider.Default.defaultModel, connection.model)
-      assertEquals(RemoteProvider.Default.defaultContextTokens, connection.contextLength)
-      cancelAndIgnoreRemainingEvents()
-    }
+    fixture.vm.startAddConnection()
+    val draft = checkNotNull(fixture.vm.draft.value)
+
+    assertEquals(RemoteProvider.Default, draft.provider)
+    assertEquals(RemoteProvider.Default.suggestedConnectionName, draft.label)
+    assertEquals(RemoteProvider.Default.defaultBaseUrl, draft.baseUrl)
+    assertEquals(RemoteProvider.Default.defaultModel, draft.model)
+    assertEquals(RemoteProvider.Default.defaultContextTokens, draft.contextTokens)
+    // The dialog edits a draft, not a row: nothing is stored until Save.
+    assertNull(fixture.engines.getInstance(draft.id))
   }
 
   @Test
-  fun `selectRemoteProvider updates the connection`() = runTest {
-    val vm = viewModelWithSelectedInstance()
+  fun `the edit draft starts from the stored row`() = runTest {
+    val fixture = fixture()
+    val id = fixture.engines.instances.value.first().id
 
-    vm.remoteConnection.test {
-      assertEquals(RemoteProvider.Default, awaitItem().provider)
+    fixture.vm.startEditConnection(id)
 
-      vm.selectRemoteProvider(RemoteProvider.Anthropic)
-
-      assertEquals(RemoteProvider.Anthropic, awaitItem().provider)
-      cancelAndIgnoreRemainingEvents()
-    }
+    assertEquals(fixture.engines.getInstance(id), fixture.vm.draft.value)
   }
 
   @Test
-  fun `switching provider re-seeds the previous providers starter endpoint model and window`() = runTest {
-    // The seeded instance still holds Ollama's starter values, so nothing is
-    // hand-edited and the whole connection moves to Anthropic's.
-    val vm = viewModelWithSelectedInstance()
+  fun `setDraftProvider updates the draft`() = runTest {
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
 
-    vm.selectRemoteProvider(RemoteProvider.Anthropic)
-    settle()
+    fixture.vm.setDraftProvider(RemoteProvider.Anthropic)
 
-    vm.remoteConnection.test {
-      val connection = awaitItem()
-      assertEquals(RemoteProvider.Anthropic, connection.provider)
-      assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, connection.baseUrl)
-      assertEquals(RemoteProvider.Anthropic.defaultModel, connection.model)
-      assertEquals(RemoteProvider.Anthropic.defaultContextTokens, connection.contextLength)
-      cancelAndIgnoreRemainingEvents()
+    assertEquals(RemoteProvider.Anthropic, fixture.vm.draft.value?.provider)
+  }
+
+  @Test
+  fun `switching provider re-seeds the previous providers starter endpoint model and window`() =
+    runTest {
+      // The draft still holds Ollama's starter values, so nothing is
+      // hand-edited and the whole connection moves to Anthropic's.
+      val fixture = fixture()
+      fixture.vm.startAddConnection()
+
+      fixture.vm.setDraftProvider(RemoteProvider.Anthropic)
+      settle()
+
+      val draft = checkNotNull(fixture.vm.draft.value)
+      assertEquals(RemoteProvider.Anthropic, draft.provider)
+      assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, draft.baseUrl)
+      assertEquals(RemoteProvider.Anthropic.defaultModel, draft.model)
+      assertEquals(RemoteProvider.Anthropic.defaultContextTokens, draft.contextTokens)
     }
+
+  @Test
+  fun `switching provider follows the suggested name until it is hand-written`() = runTest {
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
+    assertEquals(
+      RemoteProvider.Ollama.suggestedConnectionName,
+      fixture.vm.draft.value?.label,
+    )
+
+    fixture.vm.setDraftProvider(RemoteProvider.Anthropic)
+
+    assertEquals(
+      RemoteProvider.Anthropic.suggestedConnectionName,
+      fixture.vm.draft.value?.label,
+    )
+
+    // A name the user typed is theirs: pill switches leave it alone.
+    fixture.vm.setDraftLabel("My Claude")
+    fixture.vm.setDraftProvider(RemoteProvider.OpenAiCompatible)
+
+    assertEquals("My Claude", fixture.vm.draft.value?.label)
   }
 
   @Test
   fun `switching provider keeps a hand-edited model and window`() = runTest {
-    val vm = viewModelWithSelectedInstance()
-    vm.setRemoteModel("my-own-model")
-    vm.setRemoteContextTokens(4_096)
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
+    fixture.vm.setDraftModel("my-own-model")
+    fixture.vm.setDraftContextTokens(4_096)
     settle()
 
-    vm.selectRemoteProvider(RemoteProvider.Anthropic)
+    fixture.vm.setDraftProvider(RemoteProvider.Anthropic)
     settle()
 
-    vm.remoteConnection.test {
-      val connection = awaitItem()
-      assertEquals("my-own-model", connection.model)
-      assertEquals(4_096, connection.contextLength)
-      // The endpoint was not hand-edited, so it still follows the new provider.
-      assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, connection.baseUrl)
-      cancelAndIgnoreRemainingEvents()
-    }
+    val draft = checkNotNull(fixture.vm.draft.value)
+    assertEquals("my-own-model", draft.model)
+    assertEquals(4_096, draft.contextTokens)
+    // The endpoint was not hand-edited, so it still follows the new provider.
+    assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, draft.baseUrl)
   }
 
   @Test
@@ -194,82 +219,72 @@ class EngineViewModelTest {
     val catalog = FakeModelCatalog(
       windows = mapOf(RemoteProvider.Anthropic.defaultModel to 180_000),
     )
-    val vm = viewModelWithSelectedInstance(catalog)
+    val fixture = fixture(catalog)
+    fixture.vm.startAddConnection()
 
-    vm.selectRemoteProvider(RemoteProvider.Anthropic)
+    fixture.vm.setDraftProvider(RemoteProvider.Anthropic)
     settle()
 
-    vm.remoteConnection.test {
-      assertEquals(180_000, awaitItem().contextLength)
-      cancelAndIgnoreRemainingEvents()
-    }
+    assertEquals(180_000, fixture.vm.draft.value?.contextTokens)
   }
 
   @Test
   fun `a switch whose metadata cannot name a window keeps the code default`() = runTest {
     // The fake catalogue answers no window, standing in for an
     // OpenAI-compatible endpoint or an Ollama server that is down.
-    val vm = viewModelWithSelectedInstance()
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
 
-    vm.selectRemoteProvider(RemoteProvider.OpenAiCompatible)
+    fixture.vm.setDraftProvider(RemoteProvider.OpenAiCompatible)
     settle()
 
-    vm.remoteConnection.test {
-      val connection = awaitItem()
-      assertEquals(RemoteProvider.OpenAiCompatible.defaultBaseUrl, connection.baseUrl)
-      assertEquals(RemoteProvider.OpenAiCompatible.defaultContextTokens, connection.contextLength)
-      cancelAndIgnoreRemainingEvents()
-    }
+    val draft = checkNotNull(fixture.vm.draft.value)
+    assertEquals(RemoteProvider.OpenAiCompatible.defaultBaseUrl, draft.baseUrl)
+    assertEquals(RemoteProvider.OpenAiCompatible.defaultContextTokens, draft.contextTokens)
   }
 
   @Test
   fun `switching provider discards the previously browsed model list`() = runTest {
-    val vm = viewModelWithSelectedInstance()
-    vm.refreshRemoteModels()
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
+    fixture.vm.refreshDraftModels()
     settle()
-    assertIs<RemoteModelListState.Loaded>(vm.remoteModels.value)
+    assertIs<RemoteModelListState.Loaded>(fixture.vm.draftModels.value)
 
-    vm.selectRemoteProvider(RemoteProvider.Anthropic)
+    fixture.vm.setDraftProvider(RemoteProvider.Anthropic)
 
-    assertEquals(RemoteModelListState.Idle, vm.remoteModels.value)
+    assertEquals(RemoteModelListState.Idle, fixture.vm.draftModels.value)
   }
 
   @Test
-  fun `setRemoteBaseUrl updates the connection`() = runTest {
-    val vm = viewModelWithSelectedInstance()
+  fun `setDraftBaseUrl updates the draft`() = runTest {
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
 
-    vm.remoteConnection.test {
-      awaitItem()
+    fixture.vm.setDraftBaseUrl("http://example.com/v1")
 
-      vm.setRemoteBaseUrl("http://example.com/v1")
-
-      assertEquals("http://example.com/v1", awaitItem().baseUrl)
-      cancelAndIgnoreRemainingEvents()
-    }
+    assertEquals("http://example.com/v1", fixture.vm.draft.value?.baseUrl)
   }
 
   @Test
-  fun `setRemoteApiKey updates the connection`() = runTest {
-    val vm = viewModelWithSelectedInstance()
+  fun `setDraftApiKey updates the draft`() = runTest {
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
 
-    vm.remoteConnection.test {
-      awaitItem()
+    fixture.vm.setDraftApiKey("sk-secret")
 
-      vm.setRemoteApiKey("sk-secret")
-
-      assertEquals("sk-secret", awaitItem().apiKey)
-      cancelAndIgnoreRemainingEvents()
-    }
+    assertEquals("sk-secret", fixture.vm.draft.value?.apiKey)
   }
 
   @Test
   fun `browsing models surfaces the providers list`() = runTest {
-    val vm = viewModelWithSelectedInstance()
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
 
-    vm.refreshRemoteModels()
+    fixture.vm.refreshDraftModels()
     settle()
 
-    val state = vm.remoteModels.value
+    val state = fixture.vm.draftModels.value
     assertIs<RemoteModelListState.Loaded>(state)
     assertEquals(listOf("model-a", "model-b"), state.models.map { it.id })
   }
@@ -279,11 +294,12 @@ class EngineViewModelTest {
     // A server that gates its `/v1/models` listing needs the credential, so the
     // browser cannot read a list from one without passing it along.
     val catalog = FakeModelCatalog()
-    val vm = viewModelWithSelectedInstance(catalog)
+    val fixture = fixture(catalog)
+    fixture.vm.startAddConnection()
 
-    vm.setRemoteApiKey("sk-secret")
+    fixture.vm.setDraftApiKey("sk-secret")
     settle()
-    vm.refreshRemoteModels()
+    fixture.vm.refreshDraftModels()
     settle()
 
     assertEquals("sk-secret", catalog.lastApiKey)
@@ -291,123 +307,77 @@ class EngineViewModelTest {
 
   @Test
   fun `a failed model probe is captured in the state`() = runTest {
-    val vm = viewModelWithSelectedInstance(FakeModelCatalog(throwOnList = true))
+    val fixture = fixture(FakeModelCatalog(throwOnList = true))
+    fixture.vm.startAddConnection()
 
-    vm.refreshRemoteModels()
+    fixture.vm.refreshDraftModels()
     settle()
 
-    assertIs<RemoteModelListState.Failed>(vm.remoteModels.value)
+    assertIs<RemoteModelListState.Failed>(fixture.vm.draftModels.value)
   }
 
   @Test
-  fun `selecting a model adopts its window`() = runTest {
-    val vm = viewModelWithSelectedInstance()
-
-    vm.remoteConnection.test {
-      awaitItem()
-
-      vm.selectRemoteModel("model-a", 32_768)
-
-      val connection = awaitItem()
-      assertEquals("model-a", connection.model)
-      assertEquals(32_768, connection.contextLength)
-      cancelAndIgnoreRemainingEvents()
-    }
-  }
-
-  @Test
-  fun `selecting a model without a window leaves the declared one alone`() = runTest {
-    val vm = viewModelWithSelectedInstance()
-
-    vm.remoteConnection.test {
-      val before = awaitItem()
-
-      vm.selectRemoteModel("model-a", null)
-
-      val after = awaitItem()
-      assertEquals("model-a", after.model)
-      assertEquals(before.contextLength, after.contextLength)
-      cancelAndIgnoreRemainingEvents()
-    }
-  }
-
-  @Test
-  fun `field edits stay with the instance they were made on`() = runTest {
+  fun `picking a model adopts its window`() = runTest {
     val fixture = fixture()
-    val firstId = fixture.engines.instances.value.first().id
-    val secondId = "conn-2"
-    fixture.engines.addOrUpdate(
-      EngineInstance(
-        id = secondId,
-        kind = EngineKind.Remote,
-        provider = RemoteProvider.Anthropic,
-        label = "Claude",
-        baseUrl = "https://api.anthropic.com",
-        model = "claude-sonnet-4-5",
-        contextTokens = 200_000,
-      ),
-    )
+    fixture.vm.startAddConnection()
 
-    fixture.vm.selectEngine(EngineRef.Instance(firstId))
-    settle()
-    fixture.vm.setRemoteBaseUrl("http://first.example/v1")
-    settle()
+    fixture.vm.pickDraftModel("model-a", 32_768)
 
-    // The connection follows the selection rather than remembering the first
-    // instance's edit — the point of deriving one flow from the repository.
-    fixture.vm.selectEngine(EngineRef.Instance(secondId))
-    settle()
-    fixture.vm.remoteConnection.test {
-      val connection = awaitItem()
-      assertEquals(RemoteProvider.Anthropic, connection.provider)
-      assertEquals("https://api.anthropic.com", connection.baseUrl)
-      cancelAndIgnoreRemainingEvents()
-    }
-
-    fixture.vm.selectEngine(EngineRef.Instance(firstId))
-    settle()
-    fixture.vm.remoteConnection.test {
-      assertEquals("http://first.example/v1", awaitItem().baseUrl)
-      cancelAndIgnoreRemainingEvents()
-    }
+    val draft = checkNotNull(fixture.vm.draft.value)
+    assertEquals("model-a", draft.model)
+    assertEquals(32_768, draft.contextTokens)
   }
 
   @Test
-  fun `creating a connection starts it from the provider defaults and selects it`() = runTest {
+  fun `picking a model without a window leaves the declared one alone`() = runTest {
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
+    val before = checkNotNull(fixture.vm.draft.value).contextTokens
+
+    fixture.vm.pickDraftModel("model-a", null)
+
+    val draft = checkNotNull(fixture.vm.draft.value)
+    assertEquals("model-a", draft.model)
+    assertEquals(before, draft.contextTokens)
+  }
+
+  @Test
+  fun `editing a draft leaves the stored rows alone until saved`() = runTest {
+    val fixture = fixture()
+    val id = fixture.engines.instances.value.first().id
+    val before = fixture.engines.getInstance(id)
+
+    fixture.vm.startEditConnection(id)
+    fixture.vm.setDraftModel("my-own-model")
+    settle()
+
+    // The dialog shapes a draft: the running engine keeps its stored values
+    // until Save commits them.
+    assertEquals(before, fixture.engines.getInstance(id))
+
+    fixture.vm.saveDraft()
+    settle()
+
+    assertEquals("my-own-model", fixture.engines.getInstance(id)?.model)
+    assertNull(fixture.vm.draft.value)
+  }
+
+  @Test
+  fun `saving a new draft creates the row, selects it, and closes the dialog`() = runTest {
     val fixture = fixture()
 
-    val ref = fixture.vm.createRemoteInstance()
+    fixture.vm.startAddConnection(provider = RemoteProvider.Anthropic)
+    fixture.vm.setDraftLabel("Work Claude")
+    val ref = EngineRef.Instance(checkNotNull(fixture.vm.draft.value).id)
+    fixture.vm.saveDraft()
     settle()
 
-    // Edit implies select (ENGINE-CONFIG-PLAN.md 3a): the row just made is the
-    // selection, so the field mutators and the connection flow key off it.
     assertEquals(ref, fixture.vm.selectedRef.value)
-    assertEquals(RemoteProvider.Default, fixture.engines.getInstance(ref.id)?.provider)
-    assertEquals(RemoteProvider.Default.label, fixture.engines.getInstance(ref.id)?.label)
-
-    fixture.vm.remoteConnection.test {
-      val connection = awaitItem()
-      assertEquals(RemoteProvider.Default.defaultBaseUrl, connection.baseUrl)
-      assertEquals(RemoteProvider.Default.defaultModel, connection.model)
-      assertEquals(RemoteProvider.Default.defaultContextTokens, connection.contextLength)
-      cancelAndIgnoreRemainingEvents()
-    }
-  }
-
-  @Test
-  fun `creating a connection takes the callers provider and label and persists both`() = runTest {
-    val fixture = fixture()
-
-    val ref = fixture.vm.createRemoteInstance(
-      provider = RemoteProvider.Anthropic,
-      label = "Work Claude",
-    )
-    settle()
-
-    val created = fixture.engines.getInstance(ref.id)
-    assertEquals("Work Claude", created?.label)
-    assertEquals(RemoteProvider.Anthropic, created?.provider)
-    assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, created?.baseUrl)
+    val saved = fixture.engines.getInstance(ref.id)
+    assertEquals("Work Claude", saved?.label)
+    assertEquals(RemoteProvider.Anthropic, saved?.provider)
+    assertEquals(RemoteProvider.Anthropic.defaultBaseUrl, saved?.baseUrl)
+    assertNull(fixture.vm.draft.value)
 
     // A fresh repository over the same storage sees the row and the selection.
     val reopened = EngineRepository(fixture.storage, backgroundScope)
@@ -417,43 +387,35 @@ class EngineViewModelTest {
   }
 
   @Test
-  fun `renaming a row updates its label and persists it`() = runTest {
-    val fixture = fixture()
-    val id = fixture.engines.instances.value.first().id
-
-    fixture.vm.renameInstance(id, "Kitchen Ollama")
-    settle()
-
-    assertEquals("Kitchen Ollama", fixture.engines.getInstance(id)?.label)
-
-    val reopened = EngineRepository(fixture.storage, backgroundScope)
-    settle()
-    assertEquals("Kitchen Ollama", reopened.getInstance(id)?.label)
-  }
-
-  @Test
-  fun `renaming a row that is not selected leaves the selection alone`() = runTest {
+  fun `saving an edit updates its row without switching the running engine`() = runTest {
     val fixture = fixture()
     val firstId = fixture.engines.instances.value.first().id
-    val other = fixture.vm.createRemoteInstance(label = "Second")
+    val other = addConnection(fixture.vm, "Second")
     settle()
 
-    fixture.vm.renameInstance(firstId, "Renamed away")
+    fixture.vm.startEditConnection(firstId)
+    fixture.vm.setDraftLabel("Renamed away")
+    fixture.vm.setDraftModel("my-own-model")
+    fixture.vm.saveDraft()
     settle()
 
-    // Renames are row-scoped: pointing at another row must not switch the
-    // running engine the way an edit of its connection fields would.
+    // Edits are row-scoped: pointing the dialog at another row must not switch
+    // the running engine the way selecting its row would.
     assertEquals(other, fixture.vm.selectedRef.value)
-    assertEquals("Renamed away", fixture.engines.getInstance(firstId)?.label)
+    val edited = fixture.engines.getInstance(firstId)
+    assertEquals("Renamed away", edited?.label)
+    assertEquals("my-own-model", edited?.model)
+    assertEquals("Second", fixture.engines.getInstance(other.id)?.label)
   }
 
   @Test
-  fun `renaming a row to a blank label is rejected`() = runTest {
+  fun `saving a draft with a blank label is rejected`() = runTest {
     val fixture = fixture()
-    val id = fixture.engines.instances.value.first().id
+    fixture.vm.startAddConnection()
+    fixture.vm.setDraftLabel("   ")
 
     assertFailsWith<IllegalArgumentException> {
-      fixture.vm.renameInstance(id, "   ")
+      fixture.vm.saveDraft()
     }
   }
 
@@ -461,7 +423,7 @@ class EngineViewModelTest {
   fun `deleting a row removes it and leaves the other engines alone`() = runTest {
     val fixture = fixture()
     val firstId = fixture.engines.instances.value.first().id
-    val other = fixture.vm.createRemoteInstance(label = "Second")
+    val other = addConnection(fixture.vm, "Second")
     settle()
 
     fixture.vm.deleteInstance(firstId)
@@ -484,6 +446,31 @@ class EngineViewModelTest {
 
     assertEquals(EngineRef.Builtin(EngineKind.Default), fixture.vm.selectedRef.value)
     assertEquals(true, fixture.engines.instances.value.none { it.id == id })
+  }
+
+  @Test
+  fun `instances lists the rows the connections list renders`() = runTest {
+    val fixture = fixture()
+    val seededLabel = fixture.engines.instances.value.first().label
+
+    assertEquals(listOf(seededLabel), fixture.vm.instances.value.map { it.label })
+
+    // The list the connections UI renders follows the CRUD: a saved draft
+    // appends its row beside the add button, an edit updates in place, a
+    // delete drops it.
+    val created = addConnection(fixture.vm, "Work")
+    settle()
+    assertEquals(listOf(seededLabel, "Work"), fixture.vm.instances.value.map { it.label })
+
+    fixture.vm.startEditConnection(created.id)
+    fixture.vm.setDraftLabel("Day job")
+    fixture.vm.saveDraft()
+    settle()
+    assertEquals(listOf(seededLabel, "Day job"), fixture.vm.instances.value.map { it.label })
+
+    fixture.vm.deleteInstance(created.id)
+    settle()
+    assertEquals(listOf(seededLabel), fixture.vm.instances.value.map { it.label })
   }
 
   /** A catalogue that answers without a network, and can be told to fail. */

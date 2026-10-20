@@ -29,13 +29,14 @@ data class EngineInstance(
   companion object {
     /**
      * A Remote connection seeded from [provider]'s starter endpoint, model, and
-     * window — what both a fresh install and a newly created connection start
-     * from, so there is one definition of "a configured connection" rather than
-     * one per call site.
+     * window, named with its [RemoteProvider.suggestedConnectionName] — what
+     * both a fresh install and a newly drafted connection start from, so there
+     * is one definition of "a configured connection" rather than one per call
+     * site.
      */
     fun remote(
       provider: RemoteProvider = RemoteProvider.Default,
-      label: String = provider.label,
+      label: String = provider.suggestedConnectionName,
     ): EngineInstance = EngineInstance(
       id = randomUUID(),
       kind = EngineKind.Remote,

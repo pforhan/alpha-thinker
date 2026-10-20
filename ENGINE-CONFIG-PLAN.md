@@ -265,13 +265,26 @@ are built as one consistent surface.
       moved into a new `EngineViewModel` (hoisted on `AppChromeState` beside the
       settings), leaving `SettingsViewModel` the theme and failure
       announcement, so its tests live in `EngineViewModelTest`.*
-- [ ] **3b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
+- [x] **3b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
       select a Remote instance, reusing `RemoteConnectionFields` moved out of
       the kind card; the On-device entry is read-only. Deletion of the selected
       falls back to `EngineRef.Builtin(Offline)`. Downloaded `LocalFile` rows
       render under the Local tier through the same list component once
       MODEL-CATALOG-PLAN.md stage 3 lands; that plan owns their download and
       management UI.
+      *Landed as an in-sheet section: the Remote slot in `IntelligenceSheet`
+      now holds `ConnectionsList` — divider-separated rows where a tap selects
+      (dot on the right edge, inline with the kind cards) and per-row
+      edit/delete icons sit just left of it. All fields moved into an
+      add/edit `ConnectionDialog` that edits a draft (`EngineInstance` reused
+      as the working copy) committed on Save, merging rename into it and
+      revising 3a's edit-implies-select: adding selects the new connection,
+      while editing a row is row-scoped and leaves the running engine alone.
+      The dialog carries a Name field, so a connection no longer inherits the
+      provider's label unnamed — its suggested name follows the provider pill
+      until hand-edited (`RemoteProvider.suggestedConnectionName`: "Ollama",
+      "API", "Anthropic"). 3c only has to wrap the list in the Advanced
+      disclosure.*
 - [ ] **3c. `EnginePickerSheet`.** One sheet, used for first run and every later
       engine change: a pure merge of `EngineCatalog.entries(instances)` grouped
       by `EngineTier` and ordered by `lastUsedAt`; visible tiers **Offline /

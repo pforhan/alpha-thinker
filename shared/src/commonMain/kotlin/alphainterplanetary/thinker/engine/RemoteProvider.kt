@@ -39,6 +39,14 @@ enum class RemoteProvider(
   val defaultModel: String,
   /** The context window a freshly-chosen provider starts from. */
   val defaultContextTokens: Int,
+  /**
+   * The name a new connection starts with, prefilled in the dialog's Name
+   * field and following the provider pill until the user types a name of
+   * their own. Short and human — a connection is named for what it is to the
+   * user ("API" for the generic `/v1` escape hatch), not for the protocol
+   * chip it was picked from ([label]).
+   */
+  val suggestedConnectionName: String,
   /** Whether a request is rejected outright without an API key. */
   val requiresApiKey: Boolean,
   /**
@@ -65,6 +73,7 @@ enum class RemoteProvider(
     configurableBaseUrl = true,
     defaultModel = "llama3.2:latest",
     defaultContextTokens = 8_192,
+    suggestedConnectionName = "Ollama",
     requiresApiKey = false,
     apiKeyUrl = null,
   ),
@@ -85,6 +94,7 @@ enum class RemoteProvider(
     configurableBaseUrl = true,
     defaultModel = "llama3.2:latest",
     defaultContextTokens = 8_192,
+    suggestedConnectionName = "API",
     requiresApiKey = false,
     apiKeyUrl = null,
   ),
@@ -104,6 +114,7 @@ enum class RemoteProvider(
     // the catalogue still carries it.
     defaultModel = "claude-sonnet-4-5",
     defaultContextTokens = 200_000,
+    suggestedConnectionName = "Anthropic",
     requiresApiKey = true,
     apiKeyUrl = "https://console.anthropic.com/settings/keys",
   ),
