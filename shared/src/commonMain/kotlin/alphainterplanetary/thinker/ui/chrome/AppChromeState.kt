@@ -10,6 +10,7 @@ import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
 import alphainterplanetary.thinker.ui.navigation.Navigation
 import alphainterplanetary.thinker.ui.tools.ToolsViewModel
+import alphainterplanetary.thinker.ui.viewmodel.EngineViewModel
 import alphainterplanetary.thinker.ui.viewmodel.SettingsViewModel
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -60,9 +61,9 @@ enum class ChromeSheet {
  * screen's `AppScaffold`.
  *
  * It exists because three things outlive any single screen: the open settings
- * sheet, the app-wide snackbar (so there is exactly one host), and the settings
- * and tools ViewModels — hoisted here so a long-running tool action's progress
- * survives navigating away from the screen that started it.
+ * sheet, the app-wide snackbar (so there is exactly one host), and the settings,
+ * engine, and tools ViewModels — hoisted here so a long-running tool action's
+ * progress survives navigating away from the screen that started it.
  *
  * It also carries the [stack], and delegates its [Navigation] API to it: a sheet
  * is an entry in the stack, so the flyout's rows and the header's status cluster
@@ -79,8 +80,10 @@ enum class ChromeSheet {
  */
 @Stable
 class AppChromeState internal constructor(
-  /** The hoisted settings ViewModel driving the flyout values and the sheets. */
+  /** The hoisted settings: the phase-color theme and failure announcement. */
   val settings: SettingsViewModel,
+  /** The hoisted engines: selection, connection fields, instance CRUD. */
+  val engines: EngineViewModel,
   /** The hoisted tools: the sample generator, the simulator, the engine delay. */
   val tools: ToolsViewModel,
   /** The newest logged activity, or null on an empty log. */
@@ -151,6 +154,10 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
   val settings = remember(appComponent) {
     SettingsViewModel(
       settingsRepository = appComponent.settingsRepository,
+    )
+  }
+  val engines = remember(appComponent) {
+    EngineViewModel(
       engineRepository = appComponent.engineRepository,
       modelCatalog = appComponent.remoteModelCatalog,
       scope = appComponent.appScope,
@@ -172,22 +179,23 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
         initialValue = null,
       )
   }
-  val status = remember(appComponent, settings) {
+  val status = remember(appComponent, engines) {
     engineStatusFlow(appComponent.engineRepository)
       .stateIn(
         scope = appComponent.appScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = engineStatus(
-          ref = settings.selectedRef.value,
+          ref = engines.selectedRef.value,
           instance = null,
           availability = Unavailable("Loading..."),
         ),
       )
   }
   val stack = rememberSaveable(saver = NavStack.Saver) { NavStack() }
-  return remember(appComponent, settings, tools, latestActivity, status, stack) {
+  return remember(appComponent, settings, engines, tools, latestActivity, status, stack) {
     AppChromeState(
       settings = settings,
+      engines = engines,
       tools = tools,
       latestActivity = latestActivity,
       engineStatus = status,

@@ -25,10 +25,10 @@ import androidx.compose.ui.Modifier
  */
 @Composable
 internal fun IntelligenceSheetContent(chrome: AppChromeState) {
-  val engineKind by chrome.settings.selectedRef.collectAsState()
-  val connection by chrome.settings.remoteConnection.collectAsState()
-  val remoteModels by chrome.settings.remoteModels.collectAsState()
-  val settings = chrome.settings
+  val engineKind by chrome.engines.selectedRef.collectAsState()
+  val connection by chrome.engines.remoteConnection.collectAsState()
+  val remoteModels by chrome.engines.remoteModels.collectAsState()
+  val engines = chrome.engines
 
   Column(
     modifier = Modifier
@@ -46,20 +46,20 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
         mode = mode,
         selected = selected,
         selectable = mode.available(),
-        onClick = { settings.selectEngine(EngineRef.Builtin(mode)) },
+        onClick = { engines.selectEngine(EngineRef.Builtin(mode)) },
         content = {
           if (mode == EngineKind.Remote) {
             RemoteConnectionFields(
               provider = connection.provider,
-              onProviderChange = settings::selectRemoteProvider,
+              onProviderChange = engines::selectRemoteProvider,
               baseUrl = connection.baseUrl,
               apiKey = connection.apiKey,
               model = connection.model,
               contextTokens = connection.contextLength.toString(),
               models = remoteModels,
-              onBaseUrlChange = settings::setRemoteBaseUrl,
-              onApiKeyChange = settings::setRemoteApiKey,
-              onModelChange = settings::setRemoteModel,
+              onBaseUrlChange = engines::setRemoteBaseUrl,
+              onApiKeyChange = engines::setRemoteApiKey,
+              onModelChange = engines::setRemoteModel,
               // Digits only, and only a complete number: a half-typed window
               // would otherwise resolve the budget to something the user did not
               // ask for while they are still in the field.
@@ -67,11 +67,11 @@ internal fun IntelligenceSheetContent(chrome: AppChromeState) {
                 typed.filter { it.isDigit() }
                   .toIntOrNull()
                   ?.takeIf { it > 0 }
-                  ?.let(settings::setRemoteContextTokens)
+                  ?.let(engines::setRemoteContextTokens)
               },
-              onBrowseModels = settings::refreshRemoteModels,
+              onBrowseModels = engines::refreshRemoteModels,
               onModelSelected = { info ->
-                settings.selectRemoteModel(info.id, info.contextLength)
+                engines.selectRemoteModel(info.id, info.contextLength)
               },
             )
           }

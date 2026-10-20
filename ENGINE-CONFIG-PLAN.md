@@ -250,7 +250,7 @@ Split into six sub-stages, each intended to land independently green; the
 connections CRUD screen moved here from 2b so the picker and its Advanced area
 are built as one consistent surface.
 
-- [ ] **3a. Picker surface (ViewModel).** The mutators Stage 2 didn't need:
+- [x] **3a. Picker surface (ViewModel).** The mutators Stage 2 didn't need:
       create / rename / delete an instance on `SettingsViewModel`, with
       delete-selected falling back to `EngineRef.Builtin(Offline)` (already
       guaranteed by `EngineRepository`). Lock one decision first: **edit
@@ -259,6 +259,12 @@ are built as one consistent surface.
       then edits; **edit-any** instead requires scoping the field mutators and
       the model-browse state to the ref being edited rather than
       `engineRepository.selected`. Pick one and say which in the PR.
+      *Decisions: **edit implies select** — `createRemoteInstance` also selects
+      the row it makes, while `renameInstance`/`deleteInstance` stay row-scoped
+      by id so a rename cannot switch the running engine. The engine concern
+      moved into a new `EngineViewModel` (hoisted on `AppChromeState` beside the
+      settings), leaving `SettingsViewModel` the theme and failure
+      announcement, so its tests live in `EngineViewModelTest`.*
 - [ ] **3b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
       select a Remote instance, reusing `RemoteConnectionFields` moved out of
       the kind card; the On-device entry is read-only. Deletion of the selected
@@ -286,9 +292,12 @@ are built as one consistent surface.
 - [ ] **3f. Retire `IntelligenceSheet`**, superseded by `EnginePickerSheet`
       (route stability handled in 3c).
   **Test checklist (Stage 3 deliverables):**
-- [ ] **SettingsViewModelTest** — create / rename / delete flows;
-      delete-selected fallback to `Builtin(Offline)`; the 3a edit-scoping case;
-      the first-run trigger function.
+- [ ] **EngineViewModelTest** (the 3a CRUD cases, moved from
+      `SettingsViewModelTest` with the ViewModel split) — create / rename /
+      delete flows; delete-selected fallback to `Builtin(Offline)`; the 3a
+      edit-scoping case; the first-run trigger function.
+      *The CRUD, fallback, and edit-scoping cases have landed with 3a; the
+      first-run trigger is 3d's.*
 - [ ] **NavStackTest** — the sheet content swap / rename keeps open, close, and
       replace-on-stack semantics (extend the existing cases).
 - [ ] **EngineStatusCopyTest** — summary and needs-setup wording for an

@@ -28,22 +28,30 @@ data class EngineInstance(
 ) {
   companion object {
     /**
+     * A Remote connection seeded from [provider]'s starter endpoint, model, and
+     * window — what both a fresh install and a newly created connection start
+     * from, so there is one definition of "a configured connection" rather than
+     * one per call site.
+     */
+    fun remote(
+      provider: RemoteProvider = RemoteProvider.Default,
+      label: String = provider.label,
+    ): EngineInstance = EngineInstance(
+      id = randomUUID(),
+      kind = EngineKind.Remote,
+      provider = provider,
+      label = label,
+      baseUrl = provider.defaultBaseUrl,
+      model = provider.defaultModel,
+      contextTokens = provider.defaultContextTokens,
+    )
+
+    /**
      * The Remote connection a fresh install starts from: the app's documented
      * local target ([RemoteProvider.Default], Ollama) with its starter endpoint,
      * model, and window. The repository seeds one so the picker always offers
      * something configured rather than an empty list on first run.
      */
-    fun defaultRemote(): EngineInstance {
-      val provider = RemoteProvider.Default
-      return EngineInstance(
-        id = randomUUID(),
-        kind = EngineKind.Remote,
-        provider = provider,
-        label = provider.label,
-        baseUrl = provider.defaultBaseUrl,
-        model = provider.defaultModel,
-        contextTokens = provider.defaultContextTokens,
-      )
-    }
+    fun defaultRemote(): EngineInstance = remote()
   }
 }
