@@ -285,7 +285,7 @@ are built as one consistent surface.
       until hand-edited (`RemoteProvider.suggestedConnectionName`: "Ollama",
       "API", "Anthropic"). 3c only has to wrap the list in the Advanced
       disclosure.*
-- [ ] **3c. `EnginePickerSheet`.** One sheet, used for first run and every later
+- [x] **3c. `EnginePickerSheet`.** One sheet, used for first run and every later
       engine change: a pure merge of `EngineCatalog.entries(instances)` grouped
       by `EngineTier` and ordered by `lastUsedAt`; visible tiers **Offline /
       Free (disabled placeholder) / Local (placeholder rows disabled until
@@ -295,29 +295,66 @@ are built as one consistent surface.
       route — keep the enum entry name so saved stacks survive `NavStack`'s
       name-based restore, or rename to `Picker` and accept the pre-release
       drop; say which.
-- [ ] **3d. First run.** Open `EnginePickerSheet` on first launch — the trigger
+      *Decision: the enum entry name is kept (`ChromeSheet.Intelligence`) so a
+      saved stack's `sheet:Intelligence` key still decodes; the sheet's visible
+      title changes to "Engine" and its body moves from per-kind cards to
+      `EnginePickerSheet`, rendering Preferred (three tier cards in a row,
+      Offline/Free/Local) over an Advanced disclosure holding the On-device
+      runtime and `ConnectionsList`. The Local card is a disabled placeholder
+      that owns its tier — the recommendation/download dialog lands there
+      (MODEL-CATALOG-PLAN.md stage 3), not in instance rows. The merge is
+      `EngineCatalog.groupedByTier(instances, lastUsedAt)`, ordered by
+      `lastUsedAt` with never-used engines keeping catalog order;
+      `IntelligenceSheet` and `EngineOptions` are deleted (3f) as part of this
+      landing; the card gate is catalog availability rather than the
+      `EngineKind.available()` predicate the old cards used.*
+      *Selection is a colour as well as a marker: a selected card takes the
+      `primaryContainer` fill and a `SelectionDot` in its top/trailing corner,
+      and that pair is shared by the three preferred cards, the on-device card,
+      and every connection card — connection cards are individual `Card`s
+      rather than rows in a wrapper, so they can take the same fill. The
+      Preferred row's cards are height-matched to the tallest
+      (`IntrinsicSize.Min` + `fillMaxHeight`). The Advanced area still carries
+      no "Remote" heading or description: a connection's own name is its card's
+      title. The on-device runtime stays in Advanced until its UI is ready; it
+      may later become a subset of the Local tier.*
+- [x] **3d. First run.** Open `EnginePickerSheet` on first launch — the trigger
       is a pure function (no `engine_state` rows yet); no separate onboarding
       gate or tutorial (Decision 3).
-- [ ] **3e. Status recast.** Status pills, the header flyout, the Status sheet,
+      *Landed as `EngineRepository.firstRunPending`, seeded from the pure
+      `shouldOfferFirstRun(states)` (empty `engine_state` list) and flipped by
+      `markFirstRunSeen()`, which writes the default selection's row so the
+      trigger is false on every later launch. `AppChromeState.OpenPickerOnFirstRun`
+      raises the sheet from `NavApp` (the always-composed root), standing aside
+      while any sheet is already up; closing the picker without choosing is
+      final.*
+- [x] **3e. Status recast.** Status pills, the header flyout, the Status sheet,
       and `EngineStatusCopy` word the selected `EngineRef`: the instance's
       label where the ref is an instance, the tier entry's label for built-ins,
       and an `Incomplete` availability reads "needs setup".
-- [ ] **3f. Retire `IntelligenceSheet`**, superseded by `EnginePickerSheet`
+- [x] **3f. Retire `IntelligenceSheet`**, superseded by `EnginePickerSheet`
       (route stability handled in 3c).
   **Test checklist (Stage 3 deliverables):**
 - [ ] **EngineViewModelTest** (the 3a CRUD cases, moved from
       `SettingsViewModelTest` with the ViewModel split) — create / rename /
       delete flows; delete-selected fallback to `Builtin(Offline)`; the 3a
       edit-scoping case; the first-run trigger function.
-      *The CRUD, fallback, and edit-scoping cases have landed with 3a; the
-      first-run trigger is 3d's.*
+      *The CRUD, fallback, edit-scoping, and first-run passthrough cases have
+      landed with 3a/3d; the trigger's own rule is covered by
+      `EngineRepositoryTest` (`shouldOfferFirstRun` / `markFirstRunSeen`).*
 - [ ] **NavStackTest** — the sheet content swap / rename keeps open, close, and
       replace-on-stack semantics (extend the existing cases).
+      *Not needed: keeping the `ChromeSheet.Intelligence` key left every
+      existing case true as-is (open, replace-on-stack, back, and key
+      round-trip all still pass unchanged).*
 - [ ] **EngineStatusCopyTest** — summary and needs-setup wording for an
       instance-labeled ref.
 - [ ] **EngineCatalog grouping** (in `EngineRepositoryTest` or a new
       `EngineCatalogTest`) — tier merge of built-ins + instances and
       `lastUsedAt` ordering; `LocalFile` instances land under Local.
+      *Landed as `EngineCatalogTest` covering tier order, built-in placement,
+      Advanced membership, the `LocalFile` tier mapping, recency ordering, and
+      dropping empty tiers.*
 
 **Proof:** `./gradlew :shared:desktopTest`; eyeball via `:desktopApp:run`
 (first run opens the picker; a connection can be created, edited, selected,

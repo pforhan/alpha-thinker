@@ -57,6 +57,16 @@ class EngineRepository @Inject constructor(
   /** When each engine last ran, for ordering the picker. Absent means never used. */
   val lastUsedAt: StateFlow<Map<EngineRef, Long>> = _lastUsedAt.asStateFlow()
 
+  private val _firstRunPending = MutableStateFlow(false)
+
+  /**
+   * True on a store that has never recorded an engine choice or run — the
+   * first-run picker's trigger (ENGINE-CONFIG-PLAN.md 3d). It starts false and
+   * flips on [load], so the picker can only open over loaded truth rather than
+   * racing a store it has not read yet.
+   */
+  val firstRunPending: StateFlow<Boolean> = _firstRunPending.asStateFlow()
+
   init {
     scope.launch { load() }
   }
@@ -65,11 +75,25 @@ class EngineRepository @Inject constructor(
   suspend fun load() {
     _instances.value = readInstances()
     val states = storage.getEngineStates()
+    _firstRunPending.value = shouldOfferFirstRun(states)
     _selected.value = states.firstOrNull { it.selected }?.ref
       ?: EngineRef.Builtin(EngineKind.Default)
     _lastUsedAt.value = states
       .mapNotNull { state -> state.lastUsedAt?.let { state.ref to it } }
       .toMap()
+  }
+
+  /**
+   * Records that the first-run picker was shown, so it does not reopen on
+   * every launch: the current selection gets its `engine_state` row now, and
+   * an explicit choice later simply moves the `selected` flag onto its own
+   * row. Dismissing the picker without choosing is therefore final — the
+   * default stands and the user is not nagged (Decision 3: the picker is a
+   * picker, not an onboarding gate).
+   */
+  fun markFirstRunSeen() {
+    _firstRunPending.value = false
+    scope.launch { storage.setSelectedEngine(_selected.value) }
   }
 
   /** Promotes [ref] to the selection and persists it, clearing every other. */
@@ -134,3 +158,12 @@ class EngineRepository @Inject constructor(
     return listOf(seeded)
   }
 }
+
+/**
+ * The whole first-run rule: no [EngineState] row has ever been written, so no
+ * engine has been chosen or run. Kept pure so the trigger behind
+ * [EngineRepository.firstRunPending] is testable without a repository and
+ * cannot drift from the storage it describes (ENGINE-CONFIG-PLAN.md 3d — the
+ * trigger is a pure function, with no separate first-run flag).
+ */
+internal fun shouldOfferFirstRun(states: List<EngineState>): Boolean = states.isEmpty()

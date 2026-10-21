@@ -37,8 +37,7 @@ import androidx.compose.ui.unit.Dp
  * It is read-only on purpose, and it is also the only route to it: the flyout's
  * Intelligence item and the header's cluster both point here rather than each
  * rendering the status themselves. The one control that can change any of this —
- * the engine picker — lives in the [ChromeSheet.Intelligence] sheet, one row away,
- * so no second surface grows a switch this one lacks.
+ * the engine picker — lives in the [ChromeSheet.Intelligence] sheet, one row away.
  *
  * The last-activity row is the one thing here that navigates, and it leaves
  * rather than opens: the Activity Log is a full screen, so it replaces the sheet

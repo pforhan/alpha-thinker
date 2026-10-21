@@ -232,6 +232,33 @@ internal fun engineStatusFlow(engineRepository: EngineRepository): Flow<EngineSt
   }
 
 /**
+ * Raises [ChromeSheet.Intelligence] over the app's first frames when no engine
+ * has ever been chosen or run (ENGINE-CONFIG-PLAN.md 3d).
+ *
+ * The trigger is [EngineRepository.firstRunPending] — a pure function of the
+ * `engine_state` rows, with no separate first-run flag — and it starts false,
+ * so this waits for the store to load and can only fire on truth. The first
+ * frame that sees it marks it seen, which writes the default selection's
+ * `engine_state` row: from then on the trigger is false, so closing the picker
+ * without choosing is final.
+ *
+ * This is not an onboarding gate. It raises the same picker every later
+ * engine change uses (Decision 3), and it stands aside for any sheet already
+ * up — a failure announced first keeps the top of the stack — leaving the
+ * pending flag set for the next frame that can answer it.
+ */
+@Composable
+internal fun AppChromeState.OpenPickerOnFirstRun() {
+  val pending by engines.firstRunPending.collectAsState()
+
+  LaunchedEffect(pending, sheet) {
+    if (!pending || sheet != null) return@LaunchedEffect
+    engines.markFirstRunSeen()
+    openSheet(ChromeSheet.Intelligence)
+  }
+}
+
+/**
  * Whether [latest] is a failure the user still has to be told about — the whole
  * rule for when a failure interrupts, kept as a pure function so the policy is
  * testable without a composition and cannot drift between the three places it

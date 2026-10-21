@@ -289,7 +289,7 @@ private data class OpenAiModel(
 }
 
 /**
- * What the model browse affordance in the Remote card is showing. A sealed
+ * What the model browse affordance in the connection editor is showing. A sealed
  * interface rather than a list plus a flag, so "loading" and "found nothing"
  * cannot be confused — an empty Ollama server is a real answer, not a spinner.
  */

@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
+import alphainterplanetary.thinker.engine.EngineAvailability
+import alphainterplanetary.thinker.engine.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
@@ -45,6 +47,30 @@ class EngineViewModel(
    * add-connection button.
    */
   val instances: StateFlow<List<EngineInstance>> = engineRepository.instances
+
+  /** When each engine last ran, so the picker can order its tiers by recency (3c). */
+  val lastUsedAt: StateFlow<Map<EngineRef, Long>> = engineRepository.lastUsedAt
+
+  /**
+   * True on a store that has never recorded an engine choice or run — what
+   * opens the picker over the app's first frames (3d). False again as soon as
+   * [markFirstRunSeen] runs, so the trigger has one source in the repository
+   * and the chrome merely projects it.
+   */
+  val firstRunPending: StateFlow<Boolean> = engineRepository.firstRunPending
+
+  /** Marks the first-run picker shown; see [firstRunPending] and 3d. */
+  fun markFirstRunSeen() {
+    engineRepository.markFirstRunSeen()
+  }
+
+  /**
+   * Evaluates a catalog entry's availability against the live repository —
+   * the picker's card enablement, so a placeholder ("coming soon") card is
+   * gated off by the same truth the status layer reports.
+   */
+  fun availability(entry: EngineCatalogEntry): EngineAvailability =
+    entry.availability(engineRepository)
 
   fun selectEngine(ref: EngineRef) {
     engineRepository.select(ref)

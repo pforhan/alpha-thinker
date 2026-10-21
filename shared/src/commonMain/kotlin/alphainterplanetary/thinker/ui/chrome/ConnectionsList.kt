@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.ui.components.OptionHeader
 import alphainterplanetary.thinker.ui.components.SelectionDot
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,7 +24,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -40,18 +40,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * The Remote card's body: the user's connections, one [ConnectionRow] each
- * (ENGINE-CONFIG-PLAN.md stage 3b).
+ * The user's connections, one [ConnectionCard] each (ENGINE-CONFIG-PLAN.md
+ * stage 3b).
  *
- * Tapping a row selects it as the running engine — the selection is only the
- * dot on the row's right edge, in line with the kind cards above and below, so
- * selection stays as subdued as it is for them. Everything else about a
- * connection lives behind the add/edit dialog ([ConnectionDialog]), which
- * holds the fields as a draft and commits them on Save: the row keeps just the
- * edit and delete affordances, and a connection gets a name of the user's own
- * when it is created instead of inheriting the provider's label. The list will
- * be reused verbatim behind the picker sheet's Advanced disclosure (3c), so
- * rows stay compact enough for the expected two or three connections.
+ * No wrapper card and no kind heading: the connections are their own cards,
+ * stacked directly on the sheet's surface beside the other cards in the
+ * picker's Advanced area. The "Remote" label and its description were a
+ * heading over a kind the user never chose — a connection's own name is what
+ * they picked, and it is the card's title.
+ *
+ * Tapping a card selects it as the running engine, which fills the card with
+ * the same [selectedEngineColors] the tier cards use, and marks it with the
+ * same dot. Everything else about a connection lives behind the add/edit
+ * dialog ([ConnectionDialog]), which holds the fields as a draft and commits
+ * them on Save: the card keeps just the edit and delete affordances, and a
+ * connection gets a name of the user's own when it is created instead of
+ * inheriting the provider's label.
  */
 @Composable
 internal fun ConnectionsList(
@@ -64,47 +68,35 @@ internal fun ConnectionsList(
 ) {
   var deleting by remember { mutableStateOf<EngineInstance?>(null) }
 
-  Card(modifier = Modifier.fillMaxWidth()) {
-    Column(modifier = Modifier.padding(Dimens.CardPadding)) {
-      OptionHeader(
-        label = EngineKind.Remote.label,
-        description = EngineKind.Remote.description,
-      ) {
-        // A container of connections, not a selectable kind: the rows below
-        // carry the selection, so the header marks nothing of its own.
-      }
-      if (instances.isEmpty()) {
-        Spacer(modifier = Modifier.height(Dimens.SectionGap))
-        Text(
-          text = "No connections yet.",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
-      instances.forEachIndexed { index, instance ->
-        val ref = EngineRef.Instance(instance.id)
-        if (index > 0) {
-          Spacer(modifier = Modifier.height(Dimens.ContentGap))
-          HorizontalDivider()
-          Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        }
-        ConnectionRow(
-          instance = instance,
-          selected = selectedRef == ref,
-          onSelect = { onSelect(ref) },
-          onEdit = { onEdit(ref) },
-          onDelete = { deleting = instance },
-        )
-      }
-      Spacer(modifier = Modifier.height(Dimens.SectionGap))
-      OutlinedButton(
-        onClick = onAdd,
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Icon(Icons.Default.Add, contentDescription = null)
-        Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-        Text("Add connection")
-      }
+  Column(
+    modifier = Modifier.fillMaxWidth(),
+    verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
+  ) {
+    if (instances.isEmpty()) {
+      Text(
+        text = "No connections yet.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    }
+    instances.forEach { instance ->
+      val ref = EngineRef.Instance(instance.id)
+      ConnectionCard(
+        instance = instance,
+        selected = selectedRef == ref,
+        onSelect = { onSelect(ref) },
+        onEdit = { onEdit(ref) },
+        onDelete = { deleting = instance },
+      )
+    }
+    Spacer(modifier = Modifier.height(Dimens.ContentGap))
+    OutlinedButton(
+      onClick = onAdd,
+      modifier = Modifier.fillMaxWidth(),
+    ) {
+      Icon(Icons.Default.Add, contentDescription = null)
+      Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
+      Text("Add connection")
     }
   }
 
@@ -124,47 +116,54 @@ internal fun ConnectionsList(
 /**
  * One connection: its label and at-a-glance summary on the leading edge, with
  * edit and delete beside the selection dot on the trailing edge — the dot
- * last, so it lines up with the dots of the kind cards above and below. The
- * whole row is the select target; the icons are the row's own actions.
+ * last, so the card's actions sit left of the marker that says whether it is
+ * running. The whole card is the select target; the icons are its own actions.
+ * A selected card takes the same fill as a selected tier card.
  */
 @Composable
-private fun ConnectionRow(
+private fun ConnectionCard(
   instance: EngineInstance,
   selected: Boolean,
   onSelect: () -> Unit,
   onEdit: () -> Unit,
   onDelete: () -> Unit,
 ) {
-  Row(
-    modifier = Modifier
-      .fillMaxWidth()
-      .clickable(onClick = onSelect),
-    verticalAlignment = Alignment.CenterVertically,
+  Card(
+    onClick = onSelect,
+    modifier = Modifier.fillMaxWidth(),
+    colors = selectedEngineColors(selected),
   ) {
-    OptionHeader(label = instance.label, description = instance.connectionSummary()) {
-      RowActionIcon(
-        icon = Icons.Default.Edit,
-        description = "Edit ${instance.label}",
-        onClick = onEdit,
-      )
-      RowActionIcon(
-        icon = Icons.Default.Delete,
-        description = "Delete ${instance.label}",
-        onClick = onDelete,
-      )
-      // The same inset [RowActionIcon] gives its icon, so the dot's gap to
-      // Delete matches the gap between Edit and Delete.
-      Spacer(modifier = Modifier.width(Dimens.ContentGap))
-      SelectionDot(selected)
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(Dimens.CardPadding),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      OptionHeader(label = instance.label, description = instance.connectionSummary()) {
+        RowActionIcon(
+          icon = Icons.Default.Edit,
+          description = "Edit ${instance.label}",
+          onClick = onEdit,
+        )
+        RowActionIcon(
+          icon = Icons.Default.Delete,
+          description = "Delete ${instance.label}",
+          onClick = onDelete,
+        )
+        // The same inset [RowActionIcon] gives its icon, so the dot's gap to
+        // Delete matches the gap between Edit and Delete.
+        Spacer(modifier = Modifier.width(Dimens.ContentGap))
+        SelectionDot(selected)
+      }
     }
   }
 }
 
 /**
- * An icon action sized for a row's trailing edge. [IconButton]'s built-in
+ * An icon action sized for a card's trailing edge. [IconButton]'s built-in
  * minimum would space the two icons twice as far apart as the icon sits from
  * the selection dot, so the slot is sized by hand: the icon centered in a
- * square padded by [Dimens.ContentGap], which is also the gap the row leaves
+ * square padded by [Dimens.ContentGap], which is also the gap the card leaves
  * between the slots.
  */
 @Composable

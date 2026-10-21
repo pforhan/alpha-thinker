@@ -473,6 +473,21 @@ class EngineViewModelTest {
     assertEquals(listOf(seededLabel), fixture.vm.instances.value.map { it.label })
   }
 
+  @Test
+  fun `the first-run trigger is exposed and cleared through the view model`() = runTest {
+    val fixture = fixture()
+    settle()
+
+    // A fresh store has no engine_state row, so the chrome's first-run effect
+    // has something to act on (ENGINE-CONFIG-PLAN.md 3d).
+    assertEquals(true, fixture.vm.firstRunPending.value)
+
+    fixture.vm.markFirstRunSeen()
+    settle()
+
+    assertEquals(false, fixture.vm.firstRunPending.value)
+  }
+
   /** A catalogue that answers without a network, and can be told to fail. */
   private class FakeModelCatalog(
     private val throwOnList: Boolean = false,

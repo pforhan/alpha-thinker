@@ -76,7 +76,7 @@ internal fun ChromeSheetHost(
 
         ChromeSheet.PhaseColors -> PhaseColorsSheetContent(chrome = chrome)
 
-        ChromeSheet.Intelligence -> IntelligenceSheetContent(chrome = chrome)
+        ChromeSheet.Intelligence -> EnginePickerSheetContent(chrome = chrome)
 
 
         ChromeSheet.Testing -> TestingSheetContent(chrome = chrome)
@@ -135,6 +135,6 @@ internal val ChromeSheet.title: String
   get() = when (this) {
     ChromeSheet.Status -> "Status"
     ChromeSheet.PhaseColors -> "Phase colors"
-    ChromeSheet.Intelligence -> "Intelligence"
+    ChromeSheet.Intelligence -> "Engine"
     ChromeSheet.Testing -> "Testing"
   }

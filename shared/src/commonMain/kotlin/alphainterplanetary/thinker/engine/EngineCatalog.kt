@@ -49,6 +49,17 @@ object EngineCatalog {
       description = "The official Alpha Thinker cloud engine.",
       availability = { Unavailable("placeholder") },
     ),
+    // The Local card a fresh install shows: a placeholder until MODEL-CATALOG-PLAN.md
+    // stage 3 lands downloads, whose recommendation/download dialog replaces it.
+    EngineCatalogEntry(
+      ref = EngineRef.Builtin(EngineKind.LocalFile),
+      kind = EngineKind.LocalFile,
+      provider = null,
+      tier = EngineTier.Local,
+      label = EngineKind.LocalFile.label,
+      description = EngineKind.LocalFile.description,
+      availability = { Unavailable("no downloaded models yet") },
+    ),
   )
 
   /**
@@ -100,5 +111,25 @@ object EngineCatalog {
       )
     }
     return builtins + userEntries
+  }
+
+  /**
+   * The picker's view of [entries]: one group per [EngineTier] in display
+   * order — `Offline`, `Free`, `Local` (the preferred cards) then `Advanced`
+   * (the disclosure) — each group ordered by recency, most recently used
+   * first, with never-used engines keeping the list's creation order behind
+   * them. Empty tiers are dropped.
+   *
+   * Pure over its inputs, so the picker renders from the merge alone and the
+   * ordering rule has one home (ENGINE-CONFIG-PLAN.md stage 3c).
+   */
+  fun groupedByTier(
+    instances: List<EngineInstance>,
+    lastUsedAt: Map<EngineRef, Long> = emptyMap(),
+  ): List<Pair<EngineTier, List<EngineCatalogEntry>>> = EngineTier.entries.mapNotNull { tier ->
+    val group = entries(instances)
+      .filter { it.tier == tier }
+      .sortedByDescending { lastUsedAt[it.ref] ?: 0L }
+    if (group.isEmpty()) null else tier to group
   }
 }

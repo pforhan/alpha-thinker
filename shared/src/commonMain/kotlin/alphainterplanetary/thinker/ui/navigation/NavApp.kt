@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.navigation
 
 import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.ui.chrome.AnnounceFailures
+import alphainterplanetary.thinker.ui.chrome.OpenPickerOnFirstRun
 import alphainterplanetary.thinker.ui.chrome.rememberAppChromeState
 import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
@@ -50,6 +51,10 @@ internal fun NavApp(appComponent: AppComponent) {
   // the nav root is the one place that outlives every screen, so a failure is
   // raised once per activity no matter how often its project is re-entered.
   chrome.AnnounceFailures()
+
+  // And the first-run picker is raised from here for the same reason: it is a
+  // fact about the store, not about the screen the user happens to launch into.
+  chrome.OpenPickerOnFirstRun()
 
   // Likewise the jump to a finished simulation's project: the run started in a
   // settings sheet and ends minutes later, usually on some other screen. The

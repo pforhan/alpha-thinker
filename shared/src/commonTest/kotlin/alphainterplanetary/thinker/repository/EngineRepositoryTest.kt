@@ -304,4 +304,56 @@ class EngineRepositoryTest {
 
     assertEquals(emptyList(), repo.instances.value)
   }
+
+  @Test
+  fun `a store with no engine state is a first run`() = runTest {
+    val repo = repository()
+    testScheduler.advanceUntilIdle()
+
+    assertTrue(repo.firstRunPending.value)
+    assertTrue(shouldOfferFirstRun(emptyList()))
+  }
+
+  @Test
+  fun `a stored selection is not a first run`() = runTest {
+    val storage = FakeStorage()
+    storage.setSelectedEngine(EngineRef.Builtin(EngineKind.Offline))
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(false, repo.firstRunPending.value)
+  }
+
+  @Test
+  fun `markFirstRunSeen persists the default selection so it never reopens`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+    assertTrue(repo.firstRunPending.value)
+
+    repo.markFirstRunSeen()
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(false, repo.firstRunPending.value)
+    // The write is what makes it final: a relaunch reads a state row.
+    val reopened = repository(storage)
+    testScheduler.advanceUntilIdle()
+    assertEquals(false, reopened.firstRunPending.value)
+    assertEquals(EngineRef.Builtin(EngineKind.Offline), reopened.selected.value)
+  }
+
+  @Test
+  fun `a used engine makes the store no longer a first run`() = runTest {
+    val storage = FakeStorage()
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    repo.markUsed(EngineRef.Builtin(EngineKind.Offline), at = 1_000L)
+    testScheduler.advanceUntilIdle()
+
+    val reopened = repository(storage)
+    testScheduler.advanceUntilIdle()
+    assertEquals(false, reopened.firstRunPending.value)
+  }
 }
