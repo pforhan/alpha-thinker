@@ -61,11 +61,11 @@ internal fun StatusSheetContent(
     verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
   ) {
     Text(
-      text = status.mode.label,
+      text = status.label,
       style = MaterialTheme.typography.titleMedium,
     )
     Text(
-      text = status.mode.description,
+      text = status.description,
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

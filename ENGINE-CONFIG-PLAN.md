@@ -332,6 +332,10 @@ are built as one consistent surface.
       and `EngineStatusCopy` word the selected `EngineRef`: the instance's
       label where the ref is an instance, the tier entry's label for built-ins,
       and an `Incomplete` availability reads "needs setup".
+      *Landed as `EngineStatus.label` / `EngineStatus.description`: the selected
+      ref's own name and one line about it, read from the same catalog the
+      picker renders, so the summary, the flyout row, and the Status sheet all
+      word the engine the way the picker does.*
 - [x] **3f. Retire `IntelligenceSheet`**, superseded by `EnginePickerSheet`
       (route stability handled in 3c).
   **Test checklist (Stage 3 deliverables):**

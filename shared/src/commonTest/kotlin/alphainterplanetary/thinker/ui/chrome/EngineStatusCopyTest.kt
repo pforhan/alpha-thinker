@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.RemoteProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -69,7 +70,7 @@ class EngineStatusCopyTest {
         id = "test",
         kind = EngineKind.Remote,
         label = "test",
-        provider = alphainterplanetary.thinker.engine.RemoteProvider.Ollama,
+        provider = RemoteProvider.Ollama,
         baseUrl = "http://localhost:11434",
         model = "llama3",
       ),
@@ -102,7 +103,7 @@ class EngineStatusCopyTest {
         id = "test",
         kind = EngineKind.Remote,
         label = "test",
-        provider = alphainterplanetary.thinker.engine.RemoteProvider.Ollama,
+        provider = RemoteProvider.Ollama,
         baseUrl = "http://localhost:11434",
         model = "",
       ),
@@ -124,5 +125,63 @@ class EngineStatusCopyTest {
     val slot = status.slot(EngineCapability.Llm)
     assertEquals("Needs setup", slot.displayDetail())
     assertTrue(slot.sentence().contains("needs setup"))
+  }
+
+  @Test
+  fun theSummaryNamesTheInstanceTheUserChose() {
+    // The summary is what a screen reader announces, so it has to name the
+    // engine the user picked: "Work Claude", not the kind's "Remote".
+    val status = engineStatus(
+      ref = EngineRef.Instance("conn-1"),
+      instance = EngineInstance(
+        id = "conn-1",
+        kind = EngineKind.Remote,
+        label = "Work Claude",
+        provider = RemoteProvider.Anthropic,
+        baseUrl = "https://api.anthropic.com",
+        apiKey = "sk-ant",
+        model = "claude-sonnet-4-5",
+      ),
+      availability = Available,
+    )
+
+    assertTrue(
+      status.summary().startsWith("Engine status: Work Claude."),
+      "summary was '${status.summary()}'",
+    )
+  }
+
+  @Test
+  fun theSummaryOfABuiltinNamesItsCatalogEntry() {
+    val status = engineStatus(
+      ref = EngineRef.Builtin(EngineKind.Remote),
+      availability = Available,
+    )
+
+    assertTrue(
+      status.summary().startsWith("Engine status: Alpha Interplanetary."),
+      "summary was '${status.summary()}'",
+    )
+  }
+
+  @Test
+  fun anInstanceThatNeedsSetupSaysSoInTheSummary() {
+    val status = engineStatus(
+      ref = EngineRef.Instance("conn-1"),
+      instance = EngineInstance(
+        id = "conn-1",
+        kind = EngineKind.Remote,
+        label = "Work Claude",
+        provider = RemoteProvider.Anthropic,
+        baseUrl = "https://api.anthropic.com",
+        apiKey = "sk-ant",
+        model = "",
+      ),
+      availability = Available,
+    )
+
+    val summary = status.summary()
+    assertTrue(summary.startsWith("Engine status: Work Claude."), "summary was '$summary'")
+    assertTrue(summary.contains("needs setup"), "summary was '$summary'")
   }
 }

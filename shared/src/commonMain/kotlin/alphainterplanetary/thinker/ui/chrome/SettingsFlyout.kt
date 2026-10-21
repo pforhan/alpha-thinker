@@ -90,7 +90,7 @@ internal fun SettingsFlyoutButton(
       // sentence twice and tap twice to reach the engine.
       IntelligenceFlyoutRow(
         status = status,
-        engineLabel = status.mode.label,
+        engineLabel = status.label,
         onClick = {
           expanded = false
           chrome.openSheet(ChromeSheet.Status)

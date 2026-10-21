@@ -99,6 +99,25 @@ class AppChromeStateTest {
   }
 
   @Test
+  fun `renaming the selected instance re-derives the status label`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(remoteInstance())
+    val repository = engineRepository(storage)
+    repository.select(EngineRef.Instance("conn-1"))
+
+    engineStatusFlow(repository).test {
+      assertEquals("Ollama", awaitItem().label)
+
+      // The chrome words the engine by the instance's own name, so a rename
+      // has to reach the status rather than leave the old name on screen.
+      repository.addOrUpdate(remoteInstance().copy(label = "Work Ollama"))
+
+      assertEquals("Work Ollama", awaitItem().label)
+      cancelAndIgnoreRemainingEvents()
+    }
+  }
+
+  @Test
   fun `deleting a non-selected instance leaves the selected status alone`() = runTest {
     val storage = FakeStorage()
     storage.upsertEngineInstance(remoteInstance())

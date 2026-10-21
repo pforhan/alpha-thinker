@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.engine.EngineAvailability
 import alphainterplanetary.thinker.engine.EngineAvailability.NotImplemented
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCapability
+import alphainterplanetary.thinker.engine.EngineCatalog
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
@@ -45,10 +46,25 @@ data class CapabilityStatus(
  * [alphainterplanetary.thinker.engine.EngineRegistry].
  *
  * The header cluster, the flyout's rows, and the Status sheet all read this one
- * derivation instead of each re-deriving the mode with its own `when`.
+ * derivation instead of each re-deriving the mode with its own `when`. It also
+ * carries the engine's own name and description, so the surfaces that word the
+ * engine word it the same way the picker does.
  */
 data class EngineStatus(
   val mode: EngineKind,
+  /**
+   * The name of the selected engine: the instance's own label where the ref is
+   * an instance, the catalog entry's label for a built-in. The chrome words the
+   * engine by this and not by its kind, so a connection is called what the user
+   * called it and a built-in is called what the catalog calls it.
+   */
+  val label: String,
+  /**
+   * One line on what the selected engine is: the catalog entry's description
+   * for a built-in, the kind's for an instance — the same words the picker
+   * shows for the engine it names.
+   */
+  val description: String,
   val slots: List<CapabilityStatus>,
 ) {
   /** The slot for [capability]; every mode reports all three, so always found. */
@@ -85,6 +101,16 @@ fun engineStatus(
     is EngineRef.Builtin -> ref.kind
     is EngineRef.Instance -> instance?.kind ?: EngineKind.Remote
   }
+
+  // The name and the one-line description the chrome shows for the selected
+  // engine, read from the same catalog the picker renders it from: the
+  // instance's own label where the ref is an instance, the catalog entry's
+  // label for a built-in (the Free tier's "Alpha Interplanetary", not the
+  // kind's "Remote"). A ref whose row is gone falls back to the kind's own
+  // words, so a deleted engine still reads as something rather than nothing.
+  val entry = EngineCatalog.entries(listOfNotNull(instance)).firstOrNull { it.ref == ref }
+  val label = entry?.label?.ifBlank { mode.label } ?: mode.label
+  val description = entry?.description ?: mode.description
 
   val url = instance?.baseUrl?.trim() ?: ""
   val model = instance?.model?.trim() ?: ""
@@ -139,6 +165,8 @@ fun engineStatus(
 
   return EngineStatus(
     mode = mode,
+    label = label,
+    description = description,
     slots = EngineCapability.entries.map(::statusFor),
   )
 }

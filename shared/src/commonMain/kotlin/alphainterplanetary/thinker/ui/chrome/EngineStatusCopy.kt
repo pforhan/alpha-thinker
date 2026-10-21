@@ -51,4 +51,4 @@ internal fun CapabilityStatus.sentence(): String =
 
 /** The whole status as one sentence, describing what the app will do. */
 internal fun EngineStatus.summary(): String =
-  "Engine status: ${mode.label}. " + slots.joinToString(" ") { it.sentence() }
+  "Engine status: $label. " + slots.joinToString(" ") { it.sentence() }
