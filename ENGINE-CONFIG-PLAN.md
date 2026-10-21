@@ -339,21 +339,25 @@ are built as one consistent surface.
 - [x] **3f. Retire `IntelligenceSheet`**, superseded by `EnginePickerSheet`
       (route stability handled in 3c).
   **Test checklist (Stage 3 deliverables):**
-- [ ] **EngineViewModelTest** (the 3a CRUD cases, moved from
+- [x] **EngineViewModelTest** (the 3a CRUD cases, moved from
       `SettingsViewModelTest` with the ViewModel split) — create / rename /
       delete flows; delete-selected fallback to `Builtin(Offline)`; the 3a
       edit-scoping case; the first-run trigger function.
       *The CRUD, fallback, edit-scoping, and first-run passthrough cases have
       landed with 3a/3d; the trigger's own rule is covered by
       `EngineRepositoryTest` (`shouldOfferFirstRun` / `markFirstRunSeen`).*
-- [ ] **NavStackTest** — the sheet content swap / rename keeps open, close, and
+- [x] **NavStackTest** — the sheet content swap / rename keeps open, close, and
       replace-on-stack semantics (extend the existing cases).
-      *Not needed: keeping the `ChromeSheet.Intelligence` key left every
-      existing case true as-is (open, replace-on-stack, back, and key
-      round-trip all still pass unchanged).*
-- [ ] **EngineStatusCopyTest** — summary and needs-setup wording for an
+      *Extended with the picker sheet's own cases: it closes back to the screen
+      it covered, it sits over the Status sheet with back returning to it, and a
+      stack saved with the kept `sheet:Intelligence` key still restores onto
+      it.*
+- [x] **EngineStatusCopyTest** — summary and needs-setup wording for an
       instance-labeled ref.
-- [ ] **EngineCatalog grouping** (in `EngineRepositoryTest` or a new
+      *Landed with 3e's wording: the summary names the instance the user chose
+      ("Work Claude", not the kind's "Remote"), a built-in names its catalog
+      entry, and an instance that is not configured reads "needs setup".*
+- [x] **EngineCatalog grouping** (in `EngineRepositoryTest` or a new
       `EngineCatalogTest`) — tier merge of built-ins + instances and
       `lastUsedAt` ordering; `LocalFile` instances land under Local.
       *Landed as `EngineCatalogTest` covering tier order, built-in placement,

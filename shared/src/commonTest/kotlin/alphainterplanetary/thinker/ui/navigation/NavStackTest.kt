@@ -223,6 +223,51 @@ class NavStackTest {
   }
 
   @Test
+  fun `the engine picker closes back to the screen it covered`() {
+    val stack = NavStack()
+    stack.navigate(AppRoute.ProjectDetail("project-1"))
+
+    stack.openSheet(ChromeSheet.Intelligence)
+    assertEquals(ChromeSheet.Intelligence, stack.sheet)
+    assertEquals(AppRoute.ProjectDetail("project-1"), stack.route)
+
+    assertTrue(stack.goBack())
+    assertNull(stack.sheet)
+    assertEquals(AppRoute.ProjectDetail("project-1"), stack.route)
+  }
+
+  @Test
+  fun `the engine picker sits over the status sheet and back returns to it`() {
+    val stack = NavStack()
+    stack.openSheet(ChromeSheet.Status)
+
+    // The Status sheet's "Change engine…" row opens the picker over it, so the
+    // picker is a second entry rather than a replacement.
+    stack.openSheet(ChromeSheet.Intelligence)
+    assertEquals(ChromeSheet.Intelligence, stack.sheet)
+    assertTrue(stack.hasSheetBelow)
+
+    assertTrue(stack.goBack())
+    assertEquals(ChromeSheet.Status, stack.sheet)
+    assertFalse(stack.hasSheetBelow)
+  }
+
+  @Test
+  fun `a stack saved with the engine picker still restores onto it`() {
+    // The picker replaced the sheet's content, but the sheet's key was kept, so
+    // a stack saved before the swap still restores onto the picker (the
+    // ENGINE-CONFIG-PLAN.md 3c decision).
+    val restored = NavStack.fromKeys(
+      listOf("route:project_list", "sheet:Intelligence"),
+    )
+
+    assertEquals(ChromeSheet.Intelligence, restored.sheet)
+    assertTrue(restored.goBack())
+    assertNull(restored.sheet)
+    assertEquals(AppRoute.ProjectList, restored.route)
+  }
+
+  @Test
   fun `a key this build cannot decode is dropped and the rest survive`() {
     val stack = NavStack.fromKeys(
       listOf("route:project_detail:project-1", "route:retired_screen", "route:task_manager"),
