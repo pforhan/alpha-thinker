@@ -47,7 +47,7 @@ class AppChromeStateTest {
 
     engineStatusFlow(repository).test {
       val status = awaitItem()
-      assertEquals(EngineKind.Offline, status.mode)
+      assertEquals(EngineKind.Offline, status.kind)
       assertEquals(
         listOf(CapabilityState.Unused, CapabilityState.Unused, CapabilityState.Unused),
         status.slots.map { it.state },
@@ -63,12 +63,12 @@ class AppChromeStateTest {
     val repository = engineRepository(storage)
 
     engineStatusFlow(repository).test {
-      assertEquals(EngineKind.Offline, awaitItem().mode)
+      assertEquals(EngineKind.Offline, awaitItem().kind)
 
       repository.select(EngineRef.Instance("conn-1"))
 
       val status = awaitItem()
-      assertEquals(EngineKind.Remote, status.mode)
+      assertEquals(EngineKind.Remote, status.kind)
       assertEquals(CapabilityState.Active, status.slot(EngineCapability.Network).state)
       assertEquals("http://localhost:11434", status.slot(EngineCapability.Network).detail)
       assertEquals("llama3.2:latest", status.slot(EngineCapability.Llm).detail)
@@ -126,7 +126,7 @@ class AppChromeStateTest {
     repository.select(EngineRef.Instance("conn-1"))
 
     engineStatusFlow(repository).test {
-      assertEquals(EngineKind.Remote, awaitItem().mode)
+      assertEquals(EngineKind.Remote, awaitItem().kind)
 
       repository.delete("conn-2")
 
@@ -134,7 +134,7 @@ class AppChromeStateTest {
       // derivation for the still-selected conn-1 must be equivalent, not stale
       // and not confused by the removal.
       val status = awaitItem()
-      assertEquals(EngineKind.Remote, status.mode)
+      assertEquals(EngineKind.Remote, status.kind)
       assertEquals("llama3.2:latest", status.slot(EngineCapability.Llm).detail)
       cancelAndIgnoreRemainingEvents()
     }
@@ -147,12 +147,12 @@ class AppChromeStateTest {
     val repository = engineRepository()
 
     engineStatusFlow(repository).test {
-      assertEquals(EngineKind.Offline, awaitItem().mode)
+      assertEquals(EngineKind.Offline, awaitItem().kind)
 
       repository.select(EngineRef.Builtin(EngineKind.OnDevice))
 
       val status = awaitItem()
-      assertEquals(EngineKind.OnDevice, status.mode)
+      assertEquals(EngineKind.OnDevice, status.kind)
       assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
       assertEquals(CapabilityState.Unused, status.slot(EngineCapability.Network).state)
       cancelAndIgnoreRemainingEvents()
@@ -166,14 +166,14 @@ class AppChromeStateTest {
     val repository = engineRepository(storage)
 
     engineStatusFlow(repository).test {
-      assertEquals(EngineKind.Offline, awaitItem().mode)
+      assertEquals(EngineKind.Offline, awaitItem().kind)
 
       // The ref is selected before its row exists — the catalog lookup misses,
       // so availability degrades to Unavailable instead of crashing.
       repository.select(EngineRef.Instance("ghost"))
 
       val status = awaitItem()
-      assertEquals(EngineKind.Remote, status.mode)
+      assertEquals(EngineKind.Remote, status.kind)
       assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
       assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
       cancelAndIgnoreRemainingEvents()

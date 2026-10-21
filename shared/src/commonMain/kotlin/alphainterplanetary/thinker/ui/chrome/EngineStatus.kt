@@ -51,7 +51,7 @@ data class CapabilityStatus(
  * engine word it the same way the picker does.
  */
 data class EngineStatus(
-  val mode: EngineKind,
+  val kind: EngineKind,
   /**
    * The name of the selected engine: the instance's own label where the ref is
    * an instance, the catalog entry's label for a built-in. The chrome words the
@@ -97,7 +97,7 @@ fun engineStatus(
   instance: EngineInstance? = null,
   availability: EngineAvailability,
 ): EngineStatus {
-  val mode = when (ref) {
+  val kind = when (ref) {
     is EngineRef.Builtin -> ref.kind
     is EngineRef.Instance -> instance?.kind ?: EngineKind.Remote
   }
@@ -109,8 +109,8 @@ fun engineStatus(
   // kind's "Remote"). A ref whose row is gone falls back to the kind's own
   // words, so a deleted engine still reads as something rather than nothing.
   val entry = EngineCatalog.entries(listOfNotNull(instance)).firstOrNull { it.ref == ref }
-  val label = entry?.label?.ifBlank { mode.label } ?: mode.label
-  val description = entry?.description ?: mode.description
+  val label = entry?.label?.ifBlank { kind.label } ?: kind.label
+  val description = entry?.description ?: kind.description
 
   val url = instance?.baseUrl?.trim() ?: ""
   val model = instance?.model?.trim() ?: ""
@@ -118,7 +118,7 @@ fun engineStatus(
   val apiKey = instance?.apiKey ?: ""
 
   // null means "the mode needs this and the app does not have it".
-  val networkDetail: String? = when (mode) {
+  val networkDetail: String? = when (kind) {
     EngineKind.Offline -> null
     EngineKind.Remote -> when {
       // A provider that requires a key has nothing to send until one is set.
@@ -131,16 +131,16 @@ fun engineStatus(
     // No endpoint is involved at all: only Remote egresses.
     EngineKind.OnDevice, EngineKind.LocalFile -> null
   }
-  val llmDetail: String? = when (mode) {
+  val llmDetail: String? = when (kind) {
     EngineKind.Offline -> null
     EngineKind.Remote -> model.ifBlank { null }
     // The runtime names its own model; the mode is how the user selected it.
     EngineKind.OnDevice, EngineKind.LocalFile ->
-      if (availability is Unavailable || availability is NotImplemented) null else mode.label
+      if (availability is Unavailable || availability is NotImplemented) null else kind.label
   }
 
   fun statusFor(capability: EngineCapability): CapabilityStatus {
-    val supported = capability in mode.capabilities
+    val supported = capability in kind.capabilities
     val detail = when (capability) {
       EngineCapability.Network -> networkDetail
       EngineCapability.Llm -> llmDetail
@@ -164,7 +164,7 @@ fun engineStatus(
   }
 
   return EngineStatus(
-    mode = mode,
+    kind = kind,
     label = label,
     description = description,
     slots = EngineCapability.entries.map(::statusFor),

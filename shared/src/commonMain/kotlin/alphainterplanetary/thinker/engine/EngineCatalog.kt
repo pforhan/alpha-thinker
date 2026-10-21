@@ -46,7 +46,7 @@ object EngineCatalog {
       provider = RemoteProvider.Default,
       tier = EngineTier.Free,
       label = "Alpha Interplanetary",
-      description = "The official Alpha Thinker cloud engine.",
+      description = "The official Alpha Interplanetary cloud engine.",
       availability = { Unavailable("placeholder") },
     ),
     // The Local card a fresh install shows: a placeholder until MODEL-CATALOG-PLAN.md

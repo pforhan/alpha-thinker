@@ -192,7 +192,7 @@ class EngineStatusTest {
     // status must read as an unconfigured Remote, not crash on the missing row.
     val status = engineStatus(EngineRef.Instance("gone"), instance = null, availability = Available)
 
-    assertEquals(EngineKind.Remote, status.mode)
+    assertEquals(EngineKind.Remote, status.kind)
     assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
     assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
     assertTrue(status.needsAttention)
