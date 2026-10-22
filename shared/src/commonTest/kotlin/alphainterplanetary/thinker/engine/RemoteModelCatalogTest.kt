@@ -24,6 +24,17 @@ class RemoteModelCatalogTest {
       AnthropicModels.models.mapNotNull { it.contextLength?.toInt() },
       models.mapNotNull { it.contextLength },
     )
+    // The bundled catalogue is where Anthropic's models are described, so the
+    // app reads their capabilities and output limits from it rather than
+    // declaring them itself.
+    assertTrue(models.all { it.source == ModelSource.Anthropic })
+    val starter = models.first { it.id == RemoteProvider.Anthropic.defaultModel }
+    assertEquals(
+      AnthropicModels.modelsById().getValue(RemoteProvider.Anthropic.defaultModel).maxOutputTokens?.toInt(),
+      starter.maxOutputTokens,
+    )
+    assertTrue("completion" in starter.capabilities)
+    assertTrue(starter.capabilities.any { it.endsWith("json-schema") })
   }
 
   @Test
@@ -45,8 +56,12 @@ class RemoteModelCatalogTest {
 
     assertEquals(
       listOf(
-        RemoteModelInfo(id = "gpt-4o-mini", contextLength = null),
-        RemoteModelInfo(id = "llama-3.1-8b", contextLength = 131072),
+        RemoteModelInfo(id = "gpt-4o-mini", source = ModelSource.OpenAiCompatible),
+        RemoteModelInfo(
+          id = "llama-3.1-8b",
+          source = ModelSource.OpenAiCompatible,
+          contextLength = 131072,
+        ),
       ),
       models,
     )
@@ -54,6 +69,24 @@ class RemoteModelCatalogTest {
     // the segment is not doubled.
     assertEquals("http://localhost:8000", factory.baseUrls.single())
     assertEquals("Bearer sk-secret", client.lastGetHeaders["Authorization"])
+  }
+
+  @Test
+  fun `the generic openai path leaves the metadata it has no way to learn`() = runTest {
+    // The `/v1` wire format carries an id and little else, so a null there is a
+    // fact about the source rather than a gap in the listing.
+    val client = FakeOpenAiHttpClient(
+      body = """{"object":"list","data":[{"id":"gpt-4o-mini","object":"model"}]}""",
+    )
+
+    val models = KoogRemoteModelCatalog(RecordingFactory(client))
+      .list(RemoteProvider.OpenAiCompatible, "http://localhost:8000", "")
+
+    val model = models.single()
+    assertEquals(null, model.parameterSizeB)
+    assertEquals(null, model.quantization)
+    assertEquals(null, model.format)
+    assertEquals(emptySet(), model.capabilities)
   }
 
   @Test
@@ -65,20 +98,43 @@ class RemoteModelCatalogTest {
     val models = KoogRemoteModelCatalog(RecordingFactory(client))
       .list(RemoteProvider.OpenAiCompatible, "http://localhost:8000", "")
 
-    assertEquals(listOf(RemoteModelInfo(id = "local-model", contextLength = null)), models)
+    assertEquals(
+      listOf(RemoteModelInfo(id = "local-model", source = ModelSource.OpenAiCompatible)),
+      models,
+    )
     assertTrue(client.lastGetHeaders.isEmpty())
   }
 
   @Test
-  fun `ollama lists the servers models with their real windows`() = runTest {
+  fun `ollama lists the servers models with their real windows and metadata`() = runTest {
     val client = FakeOllamaHttpClient(
       tags = """{"models":[
-        {"name":"llama3.2:latest","model":"llama3.2:latest","size":2019393189,"modified_at":"2024-01-01T00:00:00Z","digest":"a"},
-        {"name":"qwen2.5:7b","model":"qwen2.5:7b","size":4683087332,"modified_at":"2024-01-01T00:00:00Z","digest":"b"}
+        {"name":"llama3.2:latest","model":"llama3.2:latest","size":2019393189,
+         "details":{"format":"gguf","family":"llama","parameter_size":"3.2B",
+                    "quantization_level":"Q4_K_M"}},
+        {"name":"qwen2.5:7b","model":"qwen2.5:7b","size":4683087332,
+         "details":{"format":"gguf","family":"qwen2","parameter_size":"7.6B",
+                    "quantization_level":"Q4_K_M"}}
       ]}""",
       shows = listOf(
-        showPayload(architecture = "llama", contextLength = 131072, capabilities = "completion"),
-        showPayload(architecture = "qwen2", contextLength = 32768, capabilities = "completion,tools"),
+        showPayload(
+          architecture = "llama",
+          contextLength = 131072,
+          capabilities = "completion,tools",
+          sizeLabel = "3B",
+          parameterCount = 3212749824,
+          parameterSize = "3.2B",
+          quantization = "Q4_K_M",
+        ),
+        showPayload(
+          architecture = "qwen2",
+          contextLength = 32768,
+          capabilities = "completion",
+          sizeLabel = "7.6B",
+          parameterCount = 7724125184,
+          parameterSize = "7.6B",
+          quantization = "Q4_K_M",
+        ),
       ),
     )
     val factory = RecordingFactory(client)
@@ -87,8 +143,34 @@ class RemoteModelCatalogTest {
 
     assertEquals(
       listOf(
-        RemoteModelInfo(id = "llama3.2:latest", contextLength = 131072),
-        RemoteModelInfo(id = "qwen2.5:7b", contextLength = 32768),
+        RemoteModelInfo(
+          id = "llama3.2:latest",
+          source = ModelSource.Ollama,
+          // The alias is resolved for the eye; the id stays the reference the
+          // provider is asked for.
+          displayName = "llama3.2:3b",
+          contextLength = 131072,
+          parameterSizeB = 3,
+          sizeLabel = "3.2B",
+          parameterCount = 3212749824,
+          sizeBytes = 2019393189,
+          quantization = "Q4_K_M",
+          format = "gguf",
+          capabilities = setOf("completion", "tools"),
+        ),
+        RemoteModelInfo(
+          id = "qwen2.5:7b",
+          source = ModelSource.Ollama,
+          displayName = "qwen2.5:7b",
+          contextLength = 32768,
+          parameterSizeB = 8,
+          sizeLabel = "7.6B",
+          parameterCount = 7724125184,
+          sizeBytes = 4683087332,
+          quantization = "Q4_K_M",
+          format = "gguf",
+          capabilities = setOf("completion"),
+        ),
       ),
       models,
     )
@@ -100,11 +182,36 @@ class RemoteModelCatalogTest {
   }
 
   @Test
+  fun `a latest alias is shown as the size it stands for`() = runTest {
+    // `llama3.2:latest` is really `llama3.2:3b`, and a browser that shows the
+    // bare alias says nothing about which model it is.
+    val client = FakeOllamaHttpClient(
+      tags = """{"models":[{"name":"llama3.2:latest","model":"llama3.2:latest"}]}""",
+      shows = listOf(
+        showPayload(
+          architecture = "llama",
+          contextLength = 131072,
+          capabilities = "completion",
+          sizeLabel = "3B",
+          parameterSize = "3.2B",
+        ),
+      ),
+    )
+
+    val model = KoogRemoteModelCatalog(RecordingFactory(client))
+      .list(RemoteProvider.Ollama, "http://localhost:11434", "")
+      .single()
+
+    assertEquals("llama3.2:latest", model.id)
+    assertEquals("llama3.2:3b", model.displayName)
+  }
+
+  @Test
   fun `a capability koog does not know does not fail the listing`() = runTest {
     // Ollama grew a `decision` capability after Koog 1.3.0 typed this field as a
-    // closed enum, which made every `POST /api/show` fail. The listing reads the
-    // window out of `model_info` and never parses `capabilities`, so an unknown
-    // one is inert.
+    // closed enum, which made every `POST /api/show` fail. The capabilities are
+    // read here as the plain strings they are, so one the app has never heard
+    // of is carried along rather than failing the whole listing.
     val client = FakeOllamaHttpClient(
       tags = """{"models":[{"name":"gemma3:4b","model":"gemma3:4b","size":1}]}""",
       shows = listOf(
@@ -116,30 +223,51 @@ class RemoteModelCatalogTest {
       ),
     )
 
-    val models = KoogRemoteModelCatalog(RecordingFactory(client))
+    val model = KoogRemoteModelCatalog(RecordingFactory(client))
       .list(RemoteProvider.Ollama, "http://localhost:11434", "")
+      .single()
 
-    assertEquals(listOf(RemoteModelInfo(id = "gemma3:4b", contextLength = 131072)), models)
+    assertEquals("gemma3:4b", model.id)
+    assertEquals(131072, model.contextLength)
+    assertEquals(
+      listOf("completion", "decision", "something-new", "thinking", "tools"),
+      model.capabilities.sorted(),
+    )
   }
 
   @Test
-  fun `a window reported in the listing is taken without asking for details`() = runTest {
-    // Newer servers fold `context_length` into `/api/tags`, so no `/api/show`
-    // round-trip is needed for those models.
+  fun `the listings details stand in for a model that cannot be described`() = runTest {
+    // A model whose `POST /api/show` fails is still a model the server serves,
+    // and the listing already carries what the server knows about it.
     val client = FakeOllamaHttpClient(
-      tags = """{"models":[{"name":"c:3b","model":"c:3b","details":{"family":"c","context_length":65536}}]}""",
-      shows = emptyList(),
+      tags = """{"models":[{"name":"c:3b","model":"c:3b","size":42,
+        "details":{"family":"c","context_length":65536,"parameter_size":"3B",
+                   "quantization_level":"Q4_K_M","format":"gguf"}}]}""",
+      shows = listOf(null),
     )
 
     val models = KoogRemoteModelCatalog(RecordingFactory(client))
       .list(RemoteProvider.Ollama, "http://localhost:11434", "")
 
-    assertEquals(listOf(RemoteModelInfo(id = "c:3b", contextLength = 65536)), models)
-    assertEquals(0, client.postCalls)
+    assertEquals(
+      listOf(
+        RemoteModelInfo(
+          id = "c:3b",
+          source = ModelSource.Ollama,
+          contextLength = 65536,
+          parameterSizeB = 3,
+          sizeLabel = "3B",
+          sizeBytes = 42,
+          quantization = "Q4_K_M",
+          format = "gguf",
+        ),
+      ),
+      models,
+    )
   }
 
   @Test
-  fun `a models show failure drops only its window`() = runTest {
+  fun `a models show failure drops only its metadata`() = runTest {
     val client = FakeOllamaHttpClient(
       tags = """{"models":[{"name":"a:1b","model":"a:1b"},{"name":"b:2b","model":"b:2b"}]}""",
       shows = listOf(
@@ -153,8 +281,14 @@ class RemoteModelCatalogTest {
 
     assertEquals(
       listOf(
-        RemoteModelInfo(id = "a:1b", contextLength = null),
-        RemoteModelInfo(id = "b:2b", contextLength = 8192),
+        RemoteModelInfo(id = "a:1b", source = ModelSource.Ollama),
+        RemoteModelInfo(
+          id = "b:2b",
+          source = ModelSource.Ollama,
+          contextLength = 8192,
+          format = "gguf",
+          capabilities = setOf("completion"),
+        ),
       ),
       models,
     )
@@ -225,13 +359,36 @@ class RemoteModelCatalogTest {
     assertEquals(null, window)
   }
 
-  private fun showPayload(architecture: String, contextLength: Int, capabilities: String): String {
+  /**
+   * An Ollama `POST /api/show` payload: the details the listing would also
+   * carry, the capabilities the server reports, and the `model_info` the
+   * architecture keys its window and its size under.
+   */
+  private fun showPayload(
+    architecture: String,
+    contextLength: Int,
+    capabilities: String = "completion",
+    sizeLabel: String? = null,
+    parameterCount: Long? = null,
+    parameterSize: String? = null,
+    quantization: String? = null,
+    format: String? = "gguf",
+  ): String {
     val encoded = capabilities.split(",").joinToString(",") { "\"$it\"" }
-    return """{"details":{"format":"gguf","family":"$architecture","parameter_size":"7B"},
-        "capabilities":[$encoded],
-        "model_info":{"general.architecture":"$architecture",
-                      "$architecture.context_length":$contextLength,
-                      "$architecture.embedding_length":3072}}"""
+    val details = buildList {
+      format?.let { add("\"format\":\"$it\"") }
+      parameterSize?.let { add("\"parameter_size\":\"$it\"") }
+      quantization?.let { add("\"quantization_level\":\"$it\"") }
+      add("\"family\":\"$architecture\"")
+    }.joinToString(",")
+    val info = buildList {
+      add("\"general.architecture\":\"$architecture\"")
+      sizeLabel?.let { add("\"general.size_label\":\"$it\"") }
+      parameterCount?.let { add("\"general.parameter_count\":$it") }
+      add("\"$architecture.context_length\":$contextLength")
+      add("\"$architecture.embedding_length\":3072")
+    }.joinToString(",")
+    return """{"details":{$details},"capabilities":[$encoded],"model_info":{$info}}"""
   }
 
   /**

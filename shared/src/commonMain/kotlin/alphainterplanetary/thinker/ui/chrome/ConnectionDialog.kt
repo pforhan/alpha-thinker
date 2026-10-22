@@ -304,11 +304,15 @@ private fun ModelBrowser(
               label = {
                 // The window the provider reported rides along with the id, so
                 // the user can see what picking this model will budget against.
+                // The name shown is the resolved one — an id that is only an
+                // alias (`llama3.2:latest`) would otherwise say nothing about
+                // which model it stands for — while the id picked is the
+                // canonical one.
                 Text(
                   if (info.contextLength != null) {
-                    "${info.id} · ${formatTokens(info.contextLength)}"
+                    "${info.displayName} · ${formatTokens(info.contextLength)}"
                   } else {
-                    info.id
+                    info.displayName
                   },
                 )
               },

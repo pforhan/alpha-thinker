@@ -16,14 +16,37 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 
 /**
- * One model a remote provider offers: the id to ask for and, when the provider
- * can tell us, the context window it serves. The window is what lets the app
- * budget a real share of the model's own limit instead of falling back to the
- * number declared in the settings field.
+ * One model a remote provider offers: the id to ask for, the window it
+ * serves, and whatever else the provider could tell us about it.
+ *
+ * [id] is the canonical reference — what is sent to the provider — and
+ * [displayName] is what the browser shows, which differs from it only when the
+ * id is an alias: `llama3.2:latest` is really `llama3.2:3b`, and the browser
+ * shows the resolved name while the id stays what the provider is asked for.
+ *
+ * The rest is the provider's own metadata, left null where the provider has no
+ * way to report it. The generic `/v1` wire format carries an id and little
+ * else, so a null there is a fact about the source rather than a gap in the
+ * listing — which is why [source] is part of the model rather than a guess
+ * made from the fields that happen to be filled.
  */
 data class RemoteModelInfo(
   val id: String,
-  val contextLength: Int?,
+  val source: ModelSource,
+  val displayName: String = id,
+  val contextLength: Int? = null,
+  val maxOutputTokens: Int? = null,
+  /** The parameter size in billions, rounded: "3.2B" is 3. */
+  val parameterSizeB: Int? = null,
+  /** The parameter size as the source declares it ("3.2B", "873.44M"). */
+  val sizeLabel: String? = null,
+  /** The model's exact parameter count, where the source reports one. */
+  val parameterCount: Long? = null,
+  /** The on-disk size of the weights, in bytes, where the source reports one. */
+  val sizeBytes: Long? = null,
+  val quantization: String? = null,
+  val format: String? = null,
+  val capabilities: Set<String> = emptySet(),
 )
 
 /**
@@ -75,14 +98,16 @@ interface RemoteModelCatalog {
  * server happened to report one (some, like vLLM, do).
  *
  * Ollama is asked over its management API: `GET /api/tags` names the installed
- * models and `POST /api/show` carries each one's `context_length`. That real
- * window is the reason [RemoteProvider.Ollama] is a provider of its own, since
- * the `/v1` shim exposes neither it nor the `num_ctx` control the native client
- * gets. Those two calls are spoken directly rather than through Koog's
- * `OllamaClient` because its `/api/show` response types a model's `capabilities`
- * as a closed enum, so a server reporting one Koog does not know (Ollama's
- * `decision`, and whatever follows) fails the entire listing. The [KoogHttpClient]
- * from [httpClientFactory] is the transport underneath every Koog client, so a
+ * models and `POST /api/show` describes each one — its window, its size, its
+ * quantization, and its capabilities. That real window is the reason
+ * [RemoteProvider.Ollama] is a provider of its own, since the `/v1` shim
+ * exposes neither it nor the `num_ctx` control the native client gets. Those
+ * two calls are spoken directly rather than through Koog's `OllamaClient`
+ * because its `/api/show` response types a model's `capabilities` as a closed
+ * enum, so a server reporting one Koog does not know (Ollama's `decision`, and
+ * whatever follows) fails the entire listing; here they are read as the plain
+ * strings they are, so an unknown one is inert. The [KoogHttpClient] from
+ * [httpClientFactory] is the transport underneath every Koog client, so a
  * decorator wrapped around it one day would cover these calls too.
  */
 class KoogRemoteModelCatalog(
@@ -94,7 +119,15 @@ class KoogRemoteModelCatalog(
     apiKey: String,
   ): List<RemoteModelInfo> = when (provider) {
     RemoteProvider.Anthropic -> AnthropicModels.models.map { model ->
-      RemoteModelInfo(id = model.id, contextLength = model.contextLength?.toInt())
+      RemoteModelInfo(
+        id = model.id,
+        source = ModelSource.Anthropic,
+        contextLength = model.contextLength?.toInt(),
+        maxOutputTokens = model.maxOutputTokens?.toInt(),
+        // Koog names a capability by its id, so the app reads the catalogue's
+        // own vocabulary rather than inventing a second one.
+        capabilities = model.capabilities.orEmpty().map { it.id.lowercase() }.toSet(),
+      )
     }
 
     RemoteProvider.Ollama -> ollamaModels(baseUrl)
@@ -124,7 +157,7 @@ class KoogRemoteModelCatalog(
       json = catalogJson,
     )
     return try {
-      contextLength(client, model)
+      show(client, model)?.contextLength()
     } finally {
       client.close()
     }
@@ -145,7 +178,13 @@ class KoogRemoteModelCatalog(
       )
       listing.data
         .filter { it.id.isNotBlank() }
-        .map { RemoteModelInfo(id = it.id, contextLength = it.contextLength) }
+        .map {
+          RemoteModelInfo(
+            id = it.id,
+            source = ModelSource.OpenAiCompatible,
+            contextLength = it.contextLength,
+          )
+        }
     } finally {
       client.close()
     }
@@ -163,33 +202,57 @@ class KoogRemoteModelCatalog(
       )
       tags.models
         .filter { it.id.isNotBlank() }
-        .map { tag ->
-          RemoteModelInfo(
-            id = tag.id,
-            // Newer servers put the window right in the listing, which spares a
-            // `/api/show` per model; only the ones that do not, ask.
-            contextLength = tag.contextLength ?: contextLength(client, tag.id),
-          )
-        }
+        .map { tag -> ollamaModel(client, tag) }
     } finally {
       client.close()
     }
   }
 
   /**
-   * The window reported for [model], or null when the server cannot say. A model
-   * whose details cannot be read is still a model the server serves — the list
-   * is the point and the window is a bonus — so a failed `/api/show` drops only
-   * the window rather than the whole listing.
+   * One Ollama model, read from the listing and from the model's own details.
+   *
+   * The details are asked for because the listing cannot answer everything: a
+   * model's capabilities and the size that resolves a `latest` alias are only
+   * in `POST /api/show`, and the listing's own details stand in for a model
+   * whose details cannot be read.
    */
-  private suspend fun contextLength(client: KoogHttpClient, model: String): Int? = try {
+  private suspend fun ollamaModel(client: KoogHttpClient, tag: OllamaTag): RemoteModelInfo {
+    val show = show(client, tag.id)
+    val details = show?.details ?: tag.details
+    return RemoteModelInfo(
+      id = tag.id,
+      source = ModelSource.Ollama,
+      // The alias is resolved for the eye only; the id stays the reference the
+      // provider is asked for.
+      displayName = resolveLatestAlias(tag.id, show?.sizeLabel() ?: details?.parameterSize),
+      contextLength = show?.contextLength() ?: tag.contextLength,
+      parameterSizeB = parseSizeLabel(details?.parameterSize) ?: sizeFromCount(show?.parameterCount()),
+      sizeLabel = details?.parameterSize,
+      parameterCount = show?.parameterCount(),
+      sizeBytes = tag.sizeBytes,
+      quantization = details?.quantizationLevel,
+      format = details?.format,
+      capabilities = show?.capabilities
+        .orEmpty()
+        .map { it.trim().lowercase() }
+        .filter { it.isNotEmpty() }
+        .toSet(),
+    )
+  }
+
+  /**
+   * The model's own details, or null when the server will not say. A failed
+   * `/api/show` costs the model its metadata, not its place in the list: the
+   * listing is the point and the details are a bonus.
+   */
+  private suspend fun show(client: KoogHttpClient, model: String): OllamaShow? = try {
     catalogJson.decodeFromString<OllamaShow>(
       client.post<OllamaShowRequest, String>(
         path = OllamaShowPath,
         requestBody = OllamaShowRequest(model),
         headers = JsonHeaders,
       ),
-    ).contextLength()
+    )
   } catch (e: CancellationException) {
     throw e
   } catch (e: Exception) {
@@ -216,9 +279,9 @@ private fun bearerHeaders(apiKey: String): Map<String, String> =
 
 /**
  * Lenient on purpose: Ollama's own fields grow between versions, and only the
- * names and the one context-length key below are read, so anything else — a
- * capability the app has never heard of, a detail it does not use — is ignored
- * rather than allowed to fail the parse.
+ * names read below are looked for, so anything else — a capability the app has
+ * never heard of, a detail it does not use — is ignored rather than allowed to
+ * fail the parse.
  */
 private val catalogJson = Json {
   ignoreUnknownKeys = true
@@ -232,6 +295,8 @@ private data class OllamaTags(val models: List<OllamaTag> = emptyList())
 private data class OllamaTag(
   val name: String = "",
   val model: String = "",
+  /** The on-disk size of the weights, in bytes. */
+  @SerialName("size") val sizeBytes: Long? = null,
   val details: OllamaTagDetails? = null,
 ) {
   /** Ollama prints both; either serves as the id to ask for. */
@@ -241,9 +306,17 @@ private data class OllamaTag(
   val contextLength: Int? get() = details?.contextLength
 }
 
+/**
+ * What a source says about a model beyond its name: how big it is, how it is
+ * quantized, and the format its weights are stored in. The listing and the
+ * details call report the same shape, so both are read into this one.
+ */
 @Serializable
 private data class OllamaTagDetails(
   @SerialName("context_length") val contextLength: Int? = null,
+  @SerialName("parameter_size") val parameterSize: String? = null,
+  @SerialName("quantization_level") val quantizationLevel: String? = null,
+  val format: String? = null,
 )
 
 @Serializable
@@ -252,6 +325,8 @@ private data class OllamaShowRequest(val model: String)
 @Serializable
 private data class OllamaShow(
   @SerialName("model_info") val modelInfo: JsonObject? = null,
+  val details: OllamaTagDetails? = null,
+  val capabilities: List<String> = emptyList(),
 ) {
   /**
    * The window `model_info` carries, keyed by the model's architecture
@@ -260,13 +335,28 @@ private data class OllamaShow(
    * covers a server that reports one without naming the architecture.
    */
   fun contextLength(): Int? {
-    val info = modelInfo ?: return null
-    val architecture = (info["general.architecture"] as? JsonPrimitive)?.contentOrNull
-    val declared = architecture?.let { info["$it.context_length"] }
-    val value = declared
-      ?: info.entries.firstOrNull { it.key.endsWith(".context_length") }?.value
-    return (value as? JsonPrimitive)?.longOrNull?.toInt()
+    val info = modelInfo
+    if (info != null) {
+      val architecture = (info["general.architecture"] as? JsonPrimitive)?.contentOrNull
+      val declared = architecture?.let { info["$it.context_length"] }
+      val value = declared
+        ?: info.entries.firstOrNull { it.key.endsWith(".context_length") }?.value
+      val parsed = (value as? JsonPrimitive)?.longOrNull?.toInt()
+      if (parsed != null) return parsed
+    }
+    return details?.contextLength
   }
+
+  /**
+   * The size the model declares for itself ("3B"). The details report the same
+   * figure in another unit ("3.2B"), so the declared label is the one that says
+   * what the author meant.
+   */
+  fun sizeLabel(): String? = (modelInfo?.get("general.size_label") as? JsonPrimitive)?.contentOrNull
+
+  /** The model's exact parameter count, where it declares one. */
+  fun parameterCount(): Long? =
+    (modelInfo?.get("general.parameter_count") as? JsonPrimitive)?.longOrNull
 }
 
 @Serializable

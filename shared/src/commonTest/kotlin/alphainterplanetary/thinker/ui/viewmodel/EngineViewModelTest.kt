@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.ui.viewmodel
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.ModelSource
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
@@ -503,8 +504,8 @@ class EngineViewModelTest {
       lastApiKey = apiKey
       if (throwOnList) error("probe failed")
       return listOf(
-        RemoteModelInfo(id = "model-a", contextLength = 32_768),
-        RemoteModelInfo(id = "model-b", contextLength = null),
+        RemoteModelInfo(id = "model-a", source = ModelSource.OpenAiCompatible, contextLength = 32_768),
+        RemoteModelInfo(id = "model-b", source = ModelSource.OpenAiCompatible, contextLength = null),
       )
     }
 

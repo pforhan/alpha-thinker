@@ -104,19 +104,25 @@ Plus `ModelProfiles` (family/pattern rules + measured seeds) and `ModelRanker`.
 
 ### Stage 1 — Model metadata & identity
 
-- [ ] **Gather richer metadata (Ollama):** extend `OllamaShow` /
+- [x] **Gather richer metadata (Ollama):** extend `OllamaShow` /
       `OllamaTagDetails` parsing in `RemoteModelCatalog` to capture
       `details.parameter_size`, `details.quantization_level`, `details.format`,
       and the `capabilities` array. (Anthropic: Koog
       `LLModel.capabilities` / `maxOutputTokens`; OpenAI-compatible: null.)
-- [ ] **Resolve the `latest` alias for display:** `latest` is only a tag alias
+- [x] **Resolve the `latest` alias for display:** `latest` is only a tag alias
       (`llama3.2:latest` is really `llama3.2:3b`), so distill the real identity
       for the UI while keeping the canonical id for selection — when the tag is
       `latest`, show the resolved size (e.g. `llama3.2:3b`, or `llama3.2 · 3B`)
       instead of the bare alias.
-- [ ] **Extend `RemoteModelInfo`** with `parameterSizeB`, `quantization`,
+- [x] **Extend `RemoteModelInfo`** with `parameterSizeB`, `quantization`,
       `format`, `capabilities`, and `source: ModelSource`; update
       mappers/tests.
+
+**Landed:** `RemoteModelInfo` also carries `displayName` (the resolved alias),
+`maxOutputTokens`, `sizeLabel`, `parameterCount`, and `sizeBytes` — the inputs
+stage 2's footprint estimate needs — and `ModelSource` lives in a file of its
+own. The alias resolution and the size parsing are `ModelIdentity.kt`; the
+browser chip shows the resolved name while the id stays canonical.
 
 **Proof:** `./gradlew :shared:allTests`.
 
