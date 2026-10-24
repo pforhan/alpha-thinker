@@ -240,7 +240,7 @@ class EngineStatusTest {
     )
 
     assertEquals("Alpha Interplanetary", status.label)
-    assertEquals("The official Alpha Thinker cloud engine.", status.description)
+    assertEquals("The official Alpha Interplanetary cloud engine.", status.description)
   }
 
   @Test

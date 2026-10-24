@@ -247,6 +247,17 @@ def parse_report_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=DEFAULT_DEVICE_GB,
         help="Flag models whose estimated footprint exceeds this (0 disables)",
     )
+    p.add_argument(
+        "--emit",
+        choices=["kotlin", "json"],
+        default=None,
+        help="Emit source-ready snippet for copy-paste into ModelProfiles/curation (JSON or Kotlin)",
+    )
+    p.add_argument(
+        "--emit-out",
+        default=None,
+        help="Write the emitted snippet to this path instead of stdout",
+    )
     return p.parse_args(argv)
 
 
@@ -1792,6 +1803,84 @@ def render_markdown(
     return "\n".join(out)
 
 
+def _quality_band_from_score(quality: Optional[float]) -> str:
+    if quality is None:
+        return "Unknown"
+    if quality >= 98.0:
+        return "Strong"
+    if quality >= 85.0:
+        return "Adequate"
+    return "Weak"
+
+
+def _speed_band_from_suite(suite_s: Optional[float]) -> str:
+    if suite_s is None:
+        return "Unknown"
+    if suite_s < 10.0:
+        return "Fast"
+    if suite_s < 35.0:
+        return "Fine"
+    return "Slow"
+
+
+def emit_curated_snippet(analyzed: List[Dict[str, Any]], fmt: str) -> str:
+    """Emit source-ready data for ModelProfiles from evaluated rows."""
+    items = []
+    for a in analyzed:
+        r = a["rollup"]
+        items.append(
+            {
+                "modelIdPattern": r["model_id"],
+                "displayName": r.get("display_name") or r["model_id"],
+                "qualityScore": round(r.get("quality"), 1) if r.get("quality") is not None else None,
+                "qualityBand": _quality_band_from_score(r.get("quality")),
+                "speedBand": r.get("speed_band") or _speed_band_from_suite(r.get("suite_s")),
+                "suiteSeconds": round(r.get("suite_s"), 2) if r.get("suite_s") is not None else None,
+                "okRate": round(r.get("ok_rate"), 3) if r.get("ok_rate") is not None else None,
+                "cleanRate": round(r.get("clean_rate"), 3) if r.get("clean_rate") is not None else None,
+                "jsonOkRate": round(r.get("json_ok_rate"), 3) if r.get("json_ok_rate") is not None else None,
+                "notes": r.get("notes") or [],
+            }
+        )
+
+    if fmt == "json":
+        return json.dumps({"measuredSeeds": items}, indent=2) + "\n"
+
+    # Kotlin snippet
+    lines = ["  /** Measured seeds from eval runs (paste into ModelProfiles.measuredSeeds). */"]
+    lines.append("  val measuredSeeds = listOf(")
+    for item in items:
+        mid = item["modelIdPattern"]
+        qband = item["qualityBand"]
+        sband = item["speedBand"]
+        suite = item["suiteSeconds"]
+        ok = item["okRate"]
+        clean = item["cleanRate"]
+        json_ok = item["jsonOkRate"]
+        notes = item["notes"]
+        lines.append(f"    ModelMeasurement(")
+        lines.append(f'      modelIdPattern = "{mid}",')
+        qscore = item["qualityScore"]
+        if qscore is not None:
+            lines.append(f"      qualityScore = {qscore},")
+        lines.append(f"      qualityBand = ModelQuality.{qband},")
+        lines.append(f"      speedBand = ModelSpeed.{sband},")
+        if suite is not None:
+            lines.append(f"      suiteSeconds = {suite},")
+        if ok is not None:
+            lines.append(f"      okRate = {ok},")
+        if clean is not None:
+            lines.append(f"      cleanRate = {clean},")
+        if json_ok is not None:
+            lines.append(f"      jsonOkRate = {json_ok},")
+        if notes:
+            notes_str = ", ".join(f'"{n}"' for n in notes)
+            lines.append(f"      notes = listOf({notes_str}),")
+        lines.append("    ),")
+    lines.append("  )")
+    return "\n".join(lines) + "\n"
+
+
 # --------------------------------------------------------------------------- #
 # Commands
 # --------------------------------------------------------------------------- #
@@ -1933,6 +2022,18 @@ def main_report(argv: Optional[List[str]] = None) -> int:
         return 1
 
     analyzed = analyze_models(kept, args.per_model)
+
+    if args.emit:
+        snippet = emit_curated_snippet(analyzed, args.emit)
+        if args.emit_out:
+            out_path = Path(args.emit_out).expanduser()
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(snippet)
+            print(f"Wrote {out_path}", file=sys.stderr)
+        else:
+            print(snippet, end="")
+        return 0
+
     if args.full:
         print(render_markdown(analyzed, stats, args.per_model, args.device_memory_gb))
     else:
