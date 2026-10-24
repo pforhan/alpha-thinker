@@ -662,19 +662,24 @@ def run_cell(
         }
 
 
-def _fmt_size_label(size_label: Optional[str]) -> Optional[str]:
-    """Render a parameter-size label with a consistent unit.
-
-    Metadata mixes units ("873.44M", "3B"), so a sub-1B count is shown in
-    billions to match the rest of the table ("873.44M" -> "0.9B").
-    """
-    if not size_label:
-        return None
-    s = str(size_label).strip()
-    m = re.fullmatch(r"([\d.]+)\s*M", s, re.IGNORECASE)
-    if m:
-        return f"{float(m.group(1)) / 1000:.1f}B"
-    return s
+def _fmt_size_label(size_label: Optional[str], size_bytes: Optional[int] = None, estimated_gb: Optional[float] = None) -> str:
+    """Render size as human readable bytes if available, else estimated_gb with asterisk."""
+    if size_bytes:
+        if size_bytes >= 1024**3:
+            return f"{size_bytes / 1024**3:.1f} GB"
+        elif size_bytes >= 1024**2:
+            return f"{size_bytes / 1024**2:.0f} MB"
+        else:
+            return f"{size_bytes / 1024:.0f} KB"
+    if estimated_gb:
+        return f"{estimated_gb:.1f} GB*"
+    if size_label:
+        s = str(size_label).strip()
+        m = re.fullmatch(r"([\d.]+)\s*M", s, re.IGNORECASE)
+        if m:
+            return f"{float(m.group(1)) / 1000:.1f}B"
+        return s
+    return "?"
 
 
 def _size_tag(size_label: Optional[str]) -> Optional[str]:
@@ -1145,14 +1150,17 @@ def analyze_row(row: Dict[str, Any]) -> Dict[str, Any]:
     tps = [a["gen_tps_median"] for a in aggs if a.get("gen_tps_median")]
     model = row.get("model") or {}
     warmup = row.get("warmup") or {}
+    estimated_gb = estimate_memory_gb(model)
+    size_bytes = model.get("size_bytes")
     rollup = {
         "model_id": row.get("model_id"),
         "run_id": (row.get("run") or {}).get("id"),
         "display_name": model.get("display_name") or row.get("model_id"),
-        "size_label": _fmt_size_label(model.get("size_label") or model.get("parameter_size")),
+        "size_label": _fmt_size_label(model.get("size_label") or model.get("parameter_size"), size_bytes, estimated_gb),
+        "size_bytes": size_bytes,
         "parameter_size": model.get("parameter_size"),
         "quantization": model.get("quantization"),
-        "estimated_gb": estimate_memory_gb(model),
+        "estimated_gb": estimated_gb,
         "started_at": row.get("started_at"),
         "in_progress": row.get("in_progress"),
         "cells": len(row.get("cells", [])),
@@ -1382,11 +1390,12 @@ def _common(rows: List[Dict[str, Any]], getter: Callable[[Dict[str, Any]], Any])
 
 
 def _sort_key(rollup: Dict[str, Any]) -> Tuple[float, float, float]:
-    """Sort by tier (good > ok > discouraged), then suite speed."""
+    """Sort by tier (good > ok > discouraged), then quality desc, then speed asc."""
     tier_order = {TIER_GOOD: 0, TIER_OK: 1, TIER_DISCOURAGED: 2, TIER_UNKNOWN: 3}
     tier = rollup.get("tier") or TIER_UNKNOWN
     return (
         tier_order.get(tier, 99),
+        -(rollup.get("quality") or 0.0),
         rollup.get("suite_s") if rollup.get("suite_s") is not None else float("inf"),
     )
 
@@ -1696,9 +1705,9 @@ def render_markdown(
     # One row per model: sorted by tier then suite speed.
     rollups = sorted(((a["rollup"], a) for a in analyzed), key=lambda pair: _sort_key(pair[0]))
 
-    out.append("## Per-model (sorted by tier, then suite speed)\n")
+    out.append("## Per-model (sorted by tier, then quality, then suite speed)\n")
     columns = [
-        "model", "size", "quality", "tier", "suite_s", "ok", "clean", "json", "notes",
+        "model", "disksize", "quality", "tier", "suite_s", "ok", "clean", "json", "notes",
     ]
     out.append("| " + " | ".join(columns) + " |")
     out.append("|" + "---|" * len(columns))
