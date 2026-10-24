@@ -1,40 +1,43 @@
-# Ollama evals — 24 model(s) from 45 row(s)
+# Ollama evals — 27 model(s) from 49 row(s)
 
-- rows: 45 file(s) read, 45 usable, 0 too old, 0 fixture mismatch, 0 unreadable
-- per-model: all — 45 row(s) pooled into 24 model(s)
-- run-ids: afternoon-20261015, morning-20261015, overnight-20261014
+- rows: 49 file(s) read, 49 usable, 0 too old, 0 fixture mismatch, 0 unreadable
+- per-model: all — 49 row(s) pooled into 27 model(s)
+- run-ids: 20261023-201315, 20261023-211344, 20261023-211827, afternoon-20261015, morning-20261015, overnight-20261014
 - params: base_url=http://localhost:11434, runs=mixed, num_ctx=2048, temp=0.0
 - hardware: {"cpu": "Apple M2 Max", "platform": "darwin", "python": "3.15.0", "ram_gb": 64.0}
 - device budget: 16GB (models above it are flagged, never hidden)
 
 ## Per-model (sorted by composite quality, then suite speed)
 
-| model                | size  | quality | tier        | startup_s | suite_s | req_s | p95_s  | ok   | clean | json | est_gb | flags             |
-| ----------------------| -------| ---------| -------------| -----------| ---------| -------| --------| ------| -------| ------| --------| -------------------|
-| llama3.2:3b          | 3B    | 100.0   | good        | 0.89      | 5.51    | 0.61  | 1.57   | 1.00 | 1.00  | 1.00 | 3.2    |                   |
-| qwen2.5:7b           | 7B    | 100.0   | ok          | 2.40      | 15.40   | 1.71  | 4.85   | 1.00 | 1.00  | 1.00 | 6.0    |                   |
-| gemma4:e4b           | 8.0B  | 100.0   | discouraged | 5.11      | 82.79   | 9.20  | 24.51  | 1.00 | 1.00  | 1.00 | 11.3   |                   |
-| qwen3.6:35b-mlx      | 35.1B | 100.0   | discouraged | 4.96      | 208.53  | 23.17 | 37.61  | 1.00 | 1.00  | 1.00 | 19.8   | >16GB             |
-| qwen3.8:27b-mlx      | 27.8B | 100.0   | discouraged | 9.33      | 264.69  | 29.41 | 58.39  | 1.00 | 1.00  | 1.00 | 15.9   |                   |
-| muse-glimmer:30b-mlx | 32.3B | 100.0   | discouraged | 10.93     | 372.97  | 41.44 | 63.45  | 1.00 | 1.00  | 1.00 | 18.3   | >16GB             |
-| deepseek-r1:14b      | 14B   | 96.7    | discouraged | 4.08      | 269.71  | 29.97 | 64.17  | 1.00 | 0.89  | 1.00 | 10.6   |                   |
-| gemma4:26b           | 25.8B | 94.4    | discouraged | 9.63      | 162.36  | 18.04 | 40.87  | 0.89 | 0.89  | 1.00 | 16.5   | >16GB             |
-| gemma4:31b-mlx       | 31.7B | 94.4    | discouraged | 7.12      | 260.42  | 62.27 | 300.02 | 0.89 | 0.89  | 1.00 | 18.0   | timeout×3 >16GB   |
-| gemma4:31b           | 31.3B | 94.4    | discouraged | 11.68     | 770.30  | 85.59 | 257.38 | 0.89 | 0.89  | 1.00 | 19.8   | >16GB             |
-| deepseek-r1:8b       | 8B    | 94.1    | discouraged | 2.58      | 196.79  | 21.87 | 82.13  | 1.00 | 0.80  | 1.00 | 6.6    | slept×1           |
-| deepseek-r1:1.5b     | 1.5B  | 93.3    | discouraged | 1.06      | 27.91   | 3.10  | 5.45   | 1.00 | 0.78  | 1.00 | 2.2    |                   |
-| nemotron-mini:4b     | 4B    | 90.0    | ok          | 1.73      | 5.78    | 0.64  | 1.73   | 1.00 | 0.67  | 1.00 | 3.9    |                   |
-| gemma4:26b-mlx       | 26.2B | 85.2    | discouraged | 8.82      | 90.74   | 77.75 | 300.00 | 0.70 | 0.70  | 1.00 | 15.0   | timeout×8         |
-| gemma4:12b           | 12B   | 61.1    | discouraged | 3.14      | 592.47  | 65.83 | 114.08 | 0.56 | 0.56  | 0.67 | 9.1    |                   |
-| gemma4-12b-128k:12b  | 12B   | 61.1    | discouraged | 4.11      | 626.29  | 69.59 | 107.99 | 0.56 | 0.56  | 0.67 | 8.2    |                   |
-| qwq:32b              | 32B   | 56.5    | discouraged | 9.77      | 414.07  | 90.72 | 236.89 | 0.92 | 0.16  | 0.67 | 22.3   | in-progress >16GB |
-| qwen3.6:36b          | 36.0B | 50.0    | discouraged | 7.54      | 241.16  | 26.80 | 34.13  | 0.67 | 0.67  | 0.33 | 22.7   | >16GB             |
-| tev1:0.8b            | 0.8B  | 35.6    | discouraged | 0.93      | 109.74  | 12.19 | 15.51  | 0.78 | 0.11  | 0.33 | 1.9    |                   |
-| qwen3.5:4b           | 4.7B  | 33.3    | discouraged | 2.32      | 307.75  | 34.19 | 43.42  | 0.33 | 0.33  | 0.33 | 4.6    |                   |
-| qwen3-vl:4b          | 4.4B  | 31.9    | discouraged | 2.31      | 192.53  | 21.39 | 42.53  | 0.64 | 0.64  | 0.00 | 4.5    |                   |
-| tinyllama:1b         | 1B    | 16.7    | discouraged | 0.40      | 332.84  | 36.98 | 95.50  | 0.67 | 0.11  | 0.00 | 1.7    | slept×1           |
-| qwen3.5:9.7b         | 9.7B  | 11.1    | discouraged | 3.08      | 548.89  | 60.99 | 67.43  | 0.22 | 0.22  | 0.00 | 8.1    |                   |
-| qwen3.5:0.8b         | 0.9B  | 0.0     | discouraged | 1.45      | 129.33  | 14.37 | 14.92  | 0.00 | 0.00  | 0.00 | 2.1    |                   |
+| model | size | quality | tier | startup_s | suite_s | req_s | p95_s | ok | clean | json | est_gb | flags | notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| llama3.2:3b | 3B | 100.0 | good | 0.89 | 5.51 | 0.61 | 1.57 | 1.00 | 1.00 | 1.00 | 3.2 |  |  |
+| qwen2.5:7b | 7B | 100.0 | ok | 2.40 | 15.40 | 1.71 | 4.85 | 1.00 | 1.00 | 1.00 | 6.0 |  |  |
+| gemma4:e4b | 8.0B | 100.0 | discouraged | 5.11 | 82.79 | 9.20 | 24.51 | 1.00 | 1.00 | 1.00 | 11.3 |  |  |
+| qwen3.6:35b-mlx | 35.1B | 100.0 | discouraged | 4.96 | 208.53 | 23.17 | 37.61 | 1.00 | 1.00 | 1.00 | 19.8 | >16GB |  |
+| qwen3.8:27b-mlx | 27.8B | 100.0 | discouraged | 9.33 | 264.69 | 29.41 | 58.39 | 1.00 | 1.00 | 1.00 | 15.9 |  |  |
+| muse-glimmer:30b-mlx | 32.3B | 100.0 | discouraged | 10.93 | 372.97 | 41.44 | 63.45 | 1.00 | 1.00 | 1.00 | 18.3 | >16GB |  |
+| deepseek-r1:14b | 14B | 96.7 | discouraged | 4.08 | 269.71 | 29.97 | 64.17 | 1.00 | 0.89 | 1.00 | 10.6 |  | Summaries include bullets/headings (home-project) |
+| gemma4:26b | 25.8B | 94.4 | discouraged | 9.63 | 162.36 | 18.04 | 40.87 | 0.89 | 0.89 | 1.00 | 16.5 | >16GB |  |
+| gemma4:31b-mlx | 31.7B | 94.4 | discouraged | 7.12 | 260.42 | 62.27 | 300.02 | 0.89 | 0.89 | 1.00 | 18.0 | timeout×3 >16GB |  |
+| gemma4:31b | 31.3B | 94.4 | discouraged | 11.68 | 770.30 | 85.59 | 257.38 | 0.89 | 0.89 | 1.00 | 19.8 | >16GB |  |
+| deepseek-r1:8b | 8B | 94.1 | discouraged | 2.58 | 196.79 | 21.87 | 82.13 | 1.00 | 0.80 | 1.00 | 6.6 | slept×1 | Multi-line titles (home-project, software-plan) |
+| deepseek-r1:1.5b | 1.5B | 93.3 | discouraged | 1.06 | 27.91 | 3.10 | 5.45 | 1.00 | 0.78 | 1.00 | 2.2 |  | Titles over 60 chars (software-plan)<br>Summaries include bullets/headings (home-project) |
+| nemotron-mini:4b | 4B | 90.0 | ok | 1.73 | 5.78 | 0.64 | 1.73 | 1.00 | 0.67 | 1.00 | 3.9 |  | Titles wrapped in quotes (home-project, simple-product, software-plan) |
+| gemma4:26b-mlx | 26.2B | 85.2 | discouraged | 8.82 | 90.74 | 77.75 | 300.00 | 0.70 | 0.70 | 1.00 | 15.0 | timeout×8 |  |
+| phi3:mini | mini | 80.4 | discouraged | 1.57 | 49.32 | 18.91 | 120.00 | 0.85 | 0.44 | 1.00 | 3.3 | timeout×4 | Titles wrapped in quotes (home-project)<br>Titles with trailing periods (software-plan)<br>Summaries include bullets/headings (simple-product, software-plan) |
+| gemma4:12b | 12B | 61.1 | discouraged | 3.14 | 592.47 | 65.83 | 114.08 | 0.56 | 0.56 | 0.67 | 9.1 |  | Questions failed to parse as JSON arrays (home-project) |
+| gemma4-12b-128k:12b | 12B | 61.1 | discouraged | 4.11 | 626.29 | 69.59 | 107.99 | 0.56 | 0.56 | 0.67 | 8.2 |  | Questions failed to parse as JSON arrays (home-project) |
+| qwq:32b | 32B | 56.5 | discouraged | 9.77 | 414.07 | 90.72 | 236.89 | 0.92 | 0.16 | 0.67 | 22.3 | in-progress >16GB | Multi-line titles (home-project, simple-product, software-plan)<br>Questions failed to parse as JSON arrays (home-project)<br>Summaries over 150 words (home-project, simple-product, software-plan) |
+| qwen3.6:36b | 36.0B | 50.0 | discouraged | 7.54 | 241.16 | 26.80 | 34.13 | 0.67 | 0.67 | 0.33 | 22.7 | >16GB | Questions failed to parse as JSON arrays (home-project, software-plan) |
+| qwen2.5:1.5b | 1.5B | 38.9 | discouraged | 0.01 | 4.03 | 0.45 | 1.37 | 0.78 | 0.22 | 0.33 | 2.1 |  | Titles wrapped in quotes (home-project, simple-product)<br>Questions failed to parse as JSON arrays (home-project, simple-product)<br>Summaries include bullets/headings (home-project, simple-product, software-plan) |
+| tev1:0.8b | 0.8B | 35.6 | discouraged | 0.93 | 109.74 | 12.19 | 15.51 | 0.78 | 0.11 | 0.33 | 1.9 |  | Titles with trailing periods (home-project)<br>Multi-line titles (simple-product, software-plan)<br>Questions failed to parse as JSON arrays (simple-product, software-plan)<br>Summaries include bullets/headings (home-project, simple-product, software-plan) |
+| qwen3.5:4b | 4.7B | 33.3 | discouraged | 2.32 | 307.75 | 34.19 | 43.42 | 0.33 | 0.33 | 0.33 | 4.6 |  | Questions failed to parse as JSON arrays (home-project, software-plan) |
+| qwen3-vl:4b | 4.4B | 31.9 | discouraged | 2.31 | 192.53 | 21.39 | 42.53 | 0.64 | 0.64 | 0.00 | 4.5 |  | Questions failed to parse as JSON arrays (home-project, simple-product, software-plan) |
+| smollm2:135m | 0.1B | 20.0 | discouraged | 0.80 | 88.79 | 9.97 | 82.54 | 0.67 | 0.22 | 0.00 | 1.3 | error×3 | Titles wrapped in quotes (simple-product)<br>Titles with trailing periods (software-plan)<br>Titles over 60 chars (home-project)<br>Questions failed to parse as JSON arrays (home-project, simple-product, software-plan)<br>Summaries over 150 words (simple-product) |
+| tinyllama:1b | 1B | 16.7 | discouraged | 0.40 | 332.84 | 36.98 | 95.50 | 0.67 | 0.11 | 0.00 | 1.7 | slept×1 | Titles over 60 chars (home-project, software-plan)<br>Questions failed to parse as JSON arrays (home-project, simple-product, software-plan)<br>Summaries include bullets/headings (home-project, simple-product)<br>Summaries over 150 words (software-plan) |
+| qwen3.5:9.7b | 9.7B | 11.1 | discouraged | 3.08 | 548.89 | 60.99 | 67.43 | 0.22 | 0.22 | 0.00 | 8.1 |  | Questions failed to parse as JSON arrays (home-project, simple-product, software-plan) |
+| qwen3.5:0.8b | 0.9B | 0.0 | discouraged | 1.45 | 129.33 | 14.37 | 14.92 | 0.00 | 0.00 | 0.00 | 2.1 |  | Questions failed to parse as JSON arrays (home-project, simple-product, software-plan) |
 
 ## Recommendation grid
 
@@ -44,46 +47,46 @@ fast-but-flawed one. Tiers are a label on the grid, not a filter:
 **good** = strong × fast, **ok** = strong × fine or adequate × fast,
 everything else is **discouraged**. No model is hidden by its cell.
 
-| quality \ speed | fast (<10s)      | fine (<35s)      | slow (≥35s)                                                                                                                         | unknown |
-| -----------------| ------------------| ------------------| -------------------------------------------------------------------------------------------------------------------------------------| ---------|
-| **strong**      | llama3.2:3b      | qwen2.5:7b       | gemma4:e4b, qwen3.6:35b-mlx, qwen3.8:27b-mlx, muse-glimmer:30b-mlx                                                                  |         |
-| adequate        | nemotron-mini:4b | deepseek-r1:1.5b | deepseek-r1:14b, gemma4:26b, gemma4:31b-mlx, gemma4:31b, deepseek-r1:8b, gemma4:26b-mlx                                             |         |
-| weak            |                  |                  | gemma4:12b, gemma4-12b-128k:12b, qwq:32b, qwen3.6:36b, tev1:0.8b, qwen3.5:4b, qwen3-vl:4b, tinyllama:1b, qwen3.5:9.7b, qwen3.5:0.8b |         |
-| unknown         |                  |                  |                                                                                                                                     |         |
+| quality \ speed | fast (<10s) | fine (<35s) | slow (≥35s) | unknown |
+|---|---|---|---|---|
+| **strong** | llama3.2:3b | qwen2.5:7b | gemma4:e4b, qwen3.6:35b-mlx, qwen3.8:27b-mlx, muse-glimmer:30b-mlx |  |
+| adequate | nemotron-mini:4b | deepseek-r1:1.5b | deepseek-r1:14b, gemma4:26b, gemma4:31b-mlx, gemma4:31b, deepseek-r1:8b, gemma4:26b-mlx |  |
+| weak | qwen2.5:1.5b |  | phi3:mini, gemma4:12b, gemma4-12b-128k:12b, qwq:32b, qwen3.6:36b, tev1:0.8b, qwen3.5:4b, qwen3-vl:4b, smollm2:135m, tinyllama:1b, qwen3.5:9.7b, qwen3.5:0.8b |  |
+| unknown |  |  |  |  |
 
 ## Per-interaction detail (one table per model, same order as above)
 
 ### llama3.2:3b
 
-| run                | fixture        | interaction       | reps | ok   | clean | json | arr  | timeouts | mean | p50  | p95  | std  | min  | max  | tps   |
-| --------------------| ----------------| -------------------| ------| ------| -------| ------| ------| ----------| ------| ------| ------| ------| ------| ------| -------|
-| overnight-20261014 | simple-product | title             | 3    | 1.00 | 1.00  | -    | -    | 0        | 0.12 | 0.06 | 0.22 | 0.08 | 0.06 | 0.22 | 139.3 |
-| overnight-20261014 | home-project   | title             | 3    | 1.00 | 1.00  | -    | -    | 0        | 0.08 | 0.07 | 0.10 | 0.02 | 0.07 | 0.10 | 133.0 |
-| overnight-20261014 | software-plan  | title             | 3    | 1.00 | 1.00  | -    | -    | 0        | 0.07 | 0.06 | 0.10 | 0.02 | 0.06 | 0.10 | 138.5 |
-| overnight-20261014 | simple-product | initial_questions | 3    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 0.75 | 0.72 | 0.87 | 0.09 | 0.65 | 0.87 | 94.4  |
-| overnight-20261014 | home-project   | initial_questions | 3    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 0.90 | 0.86 | 0.98 | 0.06 | 0.85 | 0.98 | 73.4  |
-| overnight-20261014 | software-plan  | initial_questions | 3    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 0.75 | 0.72 | 0.82 | 0.05 | 0.70 | 0.82 | 74.6  |
-| overnight-20261014 | simple-product | summarize         | 3    | 1.00 | 1.00  | -    | -    | 0        | 1.29 | 1.23 | 1.43 | 0.09 | 1.23 | 1.43 | 73.2  |
-| overnight-20261014 | home-project   | summarize         | 3    | 1.00 | 1.00  | -    | -    | 0        | 0.86 | 0.84 | 0.91 | 0.04 | 0.82 | 0.91 | 72.9  |
-| overnight-20261014 | software-plan  | summarize         | 3    | 1.00 | 1.00  | -    | -    | 0        | 0.48 | 0.47 | 0.55 | 0.05 | 0.43 | 0.55 | 77.1  |
-| morning-20261015   | simple-product | title             | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.08 | 0.06 | 0.14 | 0.03 | 0.06 | 0.14 | 139.7 |
-| morning-20261015   | home-project   | title             | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.08 | 0.07 | 0.10 | 0.01 | 0.07 | 0.10 | 131.6 |
-| morning-20261015   | software-plan  | title             | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.07 | 0.07 | 0.10 | 0.01 | 0.06 | 0.10 | 125.6 |
-| morning-20261015   | simple-product | initial_questions | 5    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 0.89 | 0.85 | 1.04 | 0.08 | 0.84 | 1.04 | 74.4  |
-| morning-20261015   | home-project   | initial_questions | 5    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 0.90 | 0.87 | 1.04 | 0.07 | 0.86 | 1.04 | 72.5  |
-| morning-20261015   | software-plan  | initial_questions | 5    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 0.73 | 0.71 | 0.83 | 0.05 | 0.70 | 0.83 | 75.3  |
-| morning-20261015   | simple-product | summarize         | 5    | 1.00 | 1.00  | -    | -    | 0        | 1.26 | 1.22 | 1.44 | 0.09 | 1.22 | 1.44 | 73.6  |
-| morning-20261015   | home-project   | summarize         | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.83 | 0.80 | 0.93 | 0.05 | 0.79 | 0.93 | 74.9  |
-| morning-20261015   | software-plan  | summarize         | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.46 | 0.45 | 0.54 | 0.04 | 0.43 | 0.54 | 75.6  |
-| afternoon-20261015 | simple-product | title             | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.08 | 0.07 | 0.15 | 0.03 | 0.06 | 0.15 | 127.5 |
-| afternoon-20261015 | home-project   | title             | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.08 | 0.08 | 0.11 | 0.01 | 0.07 | 0.11 | 121.5 |
-| afternoon-20261015 | software-plan  | title             | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.11 | 0.11 | 0.13 | 0.01 | 0.09 | 0.13 | 89.6  |
-| afternoon-20261015 | simple-product | initial_questions | 5    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 1.02 | 0.97 | 1.22 | 0.10 | 0.95 | 1.22 | 65.5  |
-| afternoon-20261015 | home-project   | initial_questions | 5    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 0.97 | 0.94 | 1.11 | 0.07 | 0.92 | 1.11 | 67.6  |
-| afternoon-20261015 | software-plan  | initial_questions | 5    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 0.79 | 0.77 | 0.90 | 0.05 | 0.76 | 0.90 | 68.5  |
-| afternoon-20261015 | simple-product | summarize         | 5    | 1.00 | 1.00  | -    | -    | 0        | 1.40 | 1.36 | 1.57 | 0.09 | 1.35 | 1.57 | 66.6  |
-| afternoon-20261015 | home-project   | summarize         | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.91 | 0.88 | 1.03 | 0.06 | 0.87 | 1.03 | 67.9  |
-| afternoon-20261015 | software-plan  | summarize         | 5    | 1.00 | 1.00  | -    | -    | 0        | 0.49 | 0.47 | 0.57 | 0.04 | 0.47 | 0.57 | 71.6  |
+| run | fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| overnight-20261014 | simple-product | title | 3 | 1.00 | 1.00 | - | - | 0 | 0.12 | 0.06 | 0.22 | 0.08 | 0.06 | 0.22 | 139.3 |
+| overnight-20261014 | home-project | title | 3 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.10 | 0.02 | 0.07 | 0.10 | 133.0 |
+| overnight-20261014 | software-plan | title | 3 | 1.00 | 1.00 | - | - | 0 | 0.07 | 0.06 | 0.10 | 0.02 | 0.06 | 0.10 | 138.5 |
+| overnight-20261014 | simple-product | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.75 | 0.72 | 0.87 | 0.09 | 0.65 | 0.87 | 94.4 |
+| overnight-20261014 | home-project | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.90 | 0.86 | 0.98 | 0.06 | 0.85 | 0.98 | 73.4 |
+| overnight-20261014 | software-plan | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.75 | 0.72 | 0.82 | 0.05 | 0.70 | 0.82 | 74.6 |
+| overnight-20261014 | simple-product | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 1.29 | 1.23 | 1.43 | 0.09 | 1.23 | 1.43 | 73.2 |
+| overnight-20261014 | home-project | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 0.86 | 0.84 | 0.91 | 0.04 | 0.82 | 0.91 | 72.9 |
+| overnight-20261014 | software-plan | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 0.48 | 0.47 | 0.55 | 0.05 | 0.43 | 0.55 | 77.1 |
+| morning-20261015 | simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.06 | 0.14 | 0.03 | 0.06 | 0.14 | 139.7 |
+| morning-20261015 | home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.10 | 0.01 | 0.07 | 0.10 | 131.6 |
+| morning-20261015 | software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.07 | 0.07 | 0.10 | 0.01 | 0.06 | 0.10 | 125.6 |
+| morning-20261015 | simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.89 | 0.85 | 1.04 | 0.08 | 0.84 | 1.04 | 74.4 |
+| morning-20261015 | home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.90 | 0.87 | 1.04 | 0.07 | 0.86 | 1.04 | 72.5 |
+| morning-20261015 | software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.73 | 0.71 | 0.83 | 0.05 | 0.70 | 0.83 | 75.3 |
+| morning-20261015 | simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.26 | 1.22 | 1.44 | 0.09 | 1.22 | 1.44 | 73.6 |
+| morning-20261015 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.83 | 0.80 | 0.93 | 0.05 | 0.79 | 0.93 | 74.9 |
+| morning-20261015 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.46 | 0.45 | 0.54 | 0.04 | 0.43 | 0.54 | 75.6 |
+| afternoon-20261015 | simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.15 | 0.03 | 0.06 | 0.15 | 127.5 |
+| afternoon-20261015 | home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.08 | 0.11 | 0.01 | 0.07 | 0.11 | 121.5 |
+| afternoon-20261015 | software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.11 | 0.11 | 0.13 | 0.01 | 0.09 | 0.13 | 89.6 |
+| afternoon-20261015 | simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.02 | 0.97 | 1.22 | 0.10 | 0.95 | 1.22 | 65.5 |
+| afternoon-20261015 | home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.97 | 0.94 | 1.11 | 0.07 | 0.92 | 1.11 | 67.6 |
+| afternoon-20261015 | software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.79 | 0.77 | 0.90 | 0.05 | 0.76 | 0.90 | 68.5 |
+| afternoon-20261015 | simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.40 | 1.36 | 1.57 | 0.09 | 1.35 | 1.57 | 66.6 |
+| afternoon-20261015 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.91 | 0.88 | 1.03 | 0.06 | 0.87 | 1.03 | 67.9 |
+| afternoon-20261015 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.49 | 0.47 | 0.57 | 0.04 | 0.47 | 0.57 | 71.6 |
 
 ### qwen2.5:7b
 
@@ -244,17 +247,17 @@ everything else is **discouraged**. No model is hidden by its cell.
 
 ### gemma4:31b
 
-| fixture        | interaction       | reps | ok   | clean | json | arr  | timeouts | mean   | p50    | p95    | std  | min    | max    | tps |
-| ----------------| -------------------| ------| ------| -------| ------| ------| ----------| --------| --------| --------| ------| --------| --------| -----|
-| simple-product | title             | 3    | 1.00 | 1.00  | -    | -    | 0        | 44.03  | 43.80  | 44.66  | 0.45 | 43.64  | 44.66  | 7.7 |
-| home-project   | title             | 3    | 1.00 | 1.00  | -    | -    | 0        | 44.51  | 44.06  | 45.45  | 0.66 | 44.01  | 45.45  | 7.7 |
-| software-plan  | title             | 3    | 0.00 | 0.00  | -    | -    | 0        | 256.68 | 256.57 | 257.38 | 0.53 | 256.09 | 257.38 | 7.7 |
-| simple-product | initial_questions | 3    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 81.52  | 80.98  | 82.76  | 0.88 | 80.83  | 82.76  | 7.7 |
-| home-project   | initial_questions | 3    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 83.50  | 82.80  | 84.94  | 1.02 | 82.75  | 84.94  | 7.7 |
-| software-plan  | initial_questions | 3    | 1.00 | 1.00  | 1.00 | 1.00 | 0        | 109.60 | 108.82 | 111.28 | 1.19 | 108.71 | 111.28 | 7.7 |
-| simple-product | summarize         | 3    | 1.00 | 1.00  | -    | -    | 0        | 53.70  | 53.10  | 54.92  | 0.86 | 53.09  | 54.92  | 7.7 |
-| home-project   | summarize         | 3    | 1.00 | 1.00  | -    | -    | 0        | 52.47  | 51.77  | 53.99  | 1.08 | 51.64  | 53.99  | 7.7 |
-| software-plan  | summarize         | 3    | 1.00 | 1.00  | -    | -    | 0        | 44.29  | 43.49  | 45.97  | 1.19 | 43.41  | 45.97  | 7.7 |
+| fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| simple-product | title | 3 | 1.00 | 1.00 | - | - | 0 | 44.03 | 43.80 | 44.66 | 0.45 | 43.64 | 44.66 | 7.7 |
+| home-project | title | 3 | 1.00 | 1.00 | - | - | 0 | 44.51 | 44.06 | 45.45 | 0.66 | 44.01 | 45.45 | 7.7 |
+| software-plan | title | 3 | 0.00 | 0.00 | - | - | 0 | 256.68 | 256.57 | 257.38 | 0.53 | 256.09 | 257.38 | 7.7 |
+| simple-product | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 81.52 | 80.98 | 82.76 | 0.88 | 80.83 | 82.76 | 7.7 |
+| home-project | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 83.50 | 82.80 | 84.94 | 1.02 | 82.75 | 84.94 | 7.7 |
+| software-plan | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 109.60 | 108.82 | 111.28 | 1.19 | 108.71 | 111.28 | 7.7 |
+| simple-product | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 53.70 | 53.10 | 54.92 | 0.86 | 53.09 | 54.92 | 7.7 |
+| home-project | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 52.47 | 51.77 | 53.99 | 1.08 | 51.64 | 53.99 | 7.7 |
+| software-plan | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 44.29 | 43.49 | 45.97 | 1.19 | 43.41 | 45.97 | 7.7 |
 
 ### deepseek-r1:8b
 
@@ -366,6 +369,20 @@ everything else is **discouraged**. No model is hidden by its cell.
 | home-project | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 8.30 | 8.10 | 8.79 | 0.34 | 8.02 | 8.79 | 59.8 |
 | software-plan | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 10.75 | 10.46 | 11.70 | 0.68 | 10.10 | 11.70 | 58.5 |
 
+### phi3:mini
+
+| fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| simple-product | title | 3 | 1.00 | 1.00 | - | - | 0 | 0.19 | 0.07 | 0.44 | 0.17 | 0.07 | 0.44 | 138.2 |
+| home-project | title | 3 | 1.00 | 0.00 | - | - | 0 | 0.12 | 0.09 | 0.16 | 0.03 | 0.09 | 0.16 | 130.6 |
+| software-plan | title | 3 | 1.00 | 0.00 | - | - | 0 | 16.61 | 16.93 | 17.15 | 0.62 | 15.74 | 17.15 | 75.0 |
+| simple-product | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 2.22 | 2.23 | 2.26 | 0.04 | 2.16 | 2.26 | 71.9 |
+| home-project | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.64 | 1.55 | 1.83 | 0.13 | 1.54 | 1.83 | 72.0 |
+| software-plan | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.61 | 1.51 | 1.83 | 0.15 | 1.51 | 1.83 | 80.2 |
+| simple-product | summarize | 3 | 0.67 | 0.00 | - | - | 1 | 2.68 | 2.68 | 2.85 | 0.17 | 2.51 | 2.85 | 68.9 |
+| home-project | summarize | 3 | 0.00 | 0.00 | - | - | 3 | 120.00 | 120.00 | 120.00 | 0.00 | 120.00 | 120.00 | - |
+| software-plan | summarize | 3 | 1.00 | 0.00 | - | - | 0 | 25.15 | 20.42 | 51.43 | 19.81 | 3.59 | 51.43 | 74.3 |
+
 ### gemma4:12b
 
 | run | fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
@@ -433,6 +450,29 @@ everything else is **discouraged**. No model is hidden by its cell.
 | simple-product | summarize | 3 | 0.00 | 0.00 | - | - | 0 | 33.95 | 34.00 | 34.13 | 0.17 | 33.73 | 34.13 | 55.3 |
 | home-project | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 13.65 | 13.67 | 13.77 | 0.11 | 13.50 | 13.77 | 55.4 |
 | software-plan | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 23.59 | 23.48 | 23.95 | 0.26 | 23.35 | 23.95 | 54.9 |
+
+### qwen2.5:1.5b
+
+| run | fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 20261023-211344 | simple-product | title | 5 | 1.00 | 0.00 | - | - | 0 | 0.11 | 0.10 | 0.15 | 0.02 | 0.10 | 0.15 | 186.6 |
+| 20261023-211344 | home-project | title | 5 | 1.00 | 0.00 | - | - | 0 | 0.10 | 0.10 | 0.12 | 0.01 | 0.10 | 0.12 | 184.9 |
+| 20261023-211344 | software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.10 | 0.01 | 0.07 | 0.10 | 191.9 |
+| 20261023-211344 | simple-product | initial_questions | 5 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0.35 | 0.34 | 0.42 | 0.03 | 0.33 | 0.42 | 178.3 |
+| 20261023-211344 | home-project | initial_questions | 5 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0.49 | 0.45 | 0.62 | 0.10 | 0.39 | 0.62 | 175.0 |
+| 20261023-211344 | software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.13 | 1.09 | 1.24 | 0.07 | 1.06 | 1.24 | 129.7 |
+| 20261023-211344 | simple-product | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 1.31 | 1.30 | 1.37 | 0.04 | 1.28 | 1.37 | 136.7 |
+| 20261023-211344 | home-project | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 0.28 | 0.27 | 0.35 | 0.03 | 0.26 | 0.35 | 143.9 |
+| 20261023-211344 | software-plan | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 0.23 | 0.22 | 0.27 | 0.02 | 0.22 | 0.27 | 147.6 |
+| 20261023-211827 | simple-product | title | 5 | 1.00 | 0.00 | - | - | 0 | 0.11 | 0.10 | 0.15 | 0.02 | 0.10 | 0.15 | 185.6 |
+| 20261023-211827 | home-project | title | 5 | 1.00 | 0.00 | - | - | 0 | 0.10 | 0.10 | 0.12 | 0.01 | 0.10 | 0.12 | 187.2 |
+| 20261023-211827 | software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.10 | 0.01 | 0.07 | 0.10 | 190.8 |
+| 20261023-211827 | simple-product | initial_questions | 5 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0.36 | 0.35 | 0.42 | 0.03 | 0.34 | 0.42 | 172.1 |
+| 20261023-211827 | home-project | initial_questions | 5 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0.47 | 0.41 | 0.59 | 0.09 | 0.39 | 0.59 | 169.3 |
+| 20261023-211827 | software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.07 | 1.04 | 1.13 | 0.04 | 1.03 | 1.13 | 135.7 |
+| 20261023-211827 | simple-product | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 1.29 | 1.28 | 1.31 | 0.01 | 1.28 | 1.31 | 137.1 |
+| 20261023-211827 | home-project | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 0.27 | 0.27 | 0.28 | 0.00 | 0.26 | 0.28 | 144.1 |
+| 20261023-211827 | software-plan | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 0.22 | 0.22 | 0.23 | 0.00 | 0.22 | 0.23 | 146.5 |
 
 ### tev1:0.8b
 
@@ -502,6 +542,20 @@ everything else is **discouraged**. No model is hidden by its cell.
 | morning-20261015 | simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 11.25 | 11.32 | 11.38 | 0.13 | 11.06 | 11.38 | 52.7 |
 | morning-20261015 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 9.63 | 9.63 | 9.83 | 0.12 | 9.47 | 9.83 | 52.4 |
 | morning-20261015 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 8.52 | 8.48 | 8.77 | 0.19 | 8.30 | 8.77 | 52.7 |
+
+### smollm2:135m
+
+| fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| simple-product | title | 3 | 1.00 | 0.00 | - | - | 0 | 0.09 | 0.09 | 0.09 | 0.00 | 0.09 | 0.09 | 304.1 |
+| home-project | title | 3 | 1.00 | 0.00 | - | - | 0 | 0.12 | 0.12 | 0.12 | 0.00 | 0.11 | 0.12 | 319.5 |
+| software-plan | title | 3 | 1.00 | 0.00 | - | - | 0 | 0.12 | 0.08 | 0.19 | 0.05 | 0.08 | 0.19 | 337.9 |
+| simple-product | initial_questions | 3 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0.88 | 0.93 | 0.93 | 0.07 | 0.78 | 0.93 | 259.6 |
+| home-project | initial_questions | 3 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0.94 | 0.94 | 0.95 | 0.01 | 0.93 | 0.95 | - |
+| software-plan | initial_questions | 3 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 8.63 | 9.25 | 9.29 | 0.90 | 7.37 | 9.29 | 269.0 |
+| simple-product | summarize | 3 | 1.00 | 0.00 | - | - | 0 | 78.57 | 76.87 | 82.54 | 2.82 | 76.28 | 82.54 | 266.7 |
+| home-project | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 0.16 | 0.16 | 0.18 | 0.01 | 0.15 | 0.18 | 336.6 |
+| software-plan | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 0.22 | 0.22 | 0.23 | 0.00 | 0.22 | 0.23 | 322.2 |
 
 ### tinyllama:1b
 

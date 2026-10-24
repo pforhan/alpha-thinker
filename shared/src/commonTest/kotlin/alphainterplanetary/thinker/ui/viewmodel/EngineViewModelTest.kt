@@ -364,7 +364,7 @@ class EngineViewModelTest {
   }
 
   @Test
-  fun `saving a new draft creates the row, selects it, and closes the dialog`() = runTest {
+  fun `saving a new draft creates the row and selects it and closes the dialog`() = runTest {
     val fixture = fixture()
 
     fixture.vm.startAddConnection(provider = RemoteProvider.Anthropic)

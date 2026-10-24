@@ -957,6 +957,128 @@ def _group_stats(
     }
 
 
+def _collect_format_notes(scored: List[Dict[str, Any]]) -> List[str]:
+    """Aggregate recurring format failures into human-readable notes."""
+    from collections import defaultdict
+
+    notes: List[str] = []
+
+    # Track patterns
+    title_quotes = {"count": 0, "fixtures": set()}
+    title_period = {"count": 0, "fixtures": set()}
+    title_preamble = {"count": 0, "fixtures": set()}
+    title_multiline = {"count": 0, "fixtures": set()}
+    title_long = {"count": 0, "fixtures": set()}
+
+    questions_json = {"count": 0, "fixtures": set()}
+    questions_bad_array = {"count": 0, "fixtures": set()}
+
+    summary_bullets = {"count": 0, "fixtures": set()}
+    summary_preamble = {"count": 0, "fixtures": set()}
+    summary_long = {"count": 0, "fixtures": set()}
+
+    title_total = 0
+    questions_total = 0
+    summary_total = 0
+
+    for c in scored:
+        interaction = c.get("interaction")
+        fixture = c.get("fixture") or "?"
+        evald = c.get("eval") or {}
+        err = (evald.get("error") or "").lower()
+
+        if interaction == "title":
+            title_total += 1
+            if "wrapped in quotes" in err:
+                title_quotes["count"] += 1
+                title_quotes["fixtures"].add(fixture)
+            elif "trailing period" in err:
+                title_period["count"] += 1
+                title_period["fixtures"].add(fixture)
+            elif "preamble" in err:
+                title_preamble["count"] += 1
+                title_preamble["fixtures"].add(fixture)
+            elif "multi-line" in err:
+                title_multiline["count"] += 1
+                title_multiline["fixtures"].add(fixture)
+            elif ">60 chars" in err:
+                title_long["count"] += 1
+                title_long["fixtures"].add(fixture)
+        elif interaction == "initial_questions":
+            questions_total += 1
+            if "json parse failed" in err:
+                questions_json["count"] += 1
+                questions_json["fixtures"].add(fixture)
+            elif "not array of non-empty strings" in err or "array of non-empty strings" in err:
+                questions_bad_array["count"] += 1
+                questions_bad_array["fixtures"].add(fixture)
+        elif interaction == "summarize":
+            summary_total += 1
+            if "bullets/headings" in err:
+                summary_bullets["count"] += 1
+                summary_bullets["fixtures"].add(fixture)
+            elif "preamble" in err:
+                summary_preamble["count"] += 1
+                summary_preamble["fixtures"].add(fixture)
+            elif ">150 words" in err:
+                summary_long["count"] += 1
+                summary_long["fixtures"].add(fixture)
+
+    def _fmt_fixtures(s):
+        items = sorted(list(s))
+        if not items:
+            return ""
+        if len(items) == 1:
+            return items[0]
+        return ", ".join(items)
+
+    # Only surface if it's notable (>= 25% of that interaction or affects >= 2 fixtures)
+    if title_total > 0 and title_quotes["count"] > 0:
+        if title_quotes["count"] / title_total >= 0.25 or len(title_quotes["fixtures"]) >= 2:
+            fx = _fmt_fixtures(title_quotes["fixtures"])
+            notes.append(f"Titles wrapped in quotes ({fx})" if fx else "Titles wrapped in quotes")
+    if title_total > 0 and title_period["count"] > 0:
+        if title_period["count"] / title_total >= 0.25 or len(title_period["fixtures"]) >= 2:
+            fx = _fmt_fixtures(title_period["fixtures"])
+            notes.append(f"Titles with trailing periods ({fx})" if fx else "Titles with trailing periods")
+    if title_total > 0 and title_preamble["count"] > 0:
+        if title_preamble["count"] / title_total >= 0.25 or len(title_preamble["fixtures"]) >= 2:
+            fx = _fmt_fixtures(title_preamble["fixtures"])
+            notes.append(f"Titles include preamble/explanation ({fx})" if fx else "Titles include preamble/explanation")
+    if title_total > 0 and title_multiline["count"] > 0:
+        if title_multiline["count"] / title_total >= 0.25 or len(title_multiline["fixtures"]) >= 2:
+            fx = _fmt_fixtures(title_multiline["fixtures"])
+            notes.append(f"Multi-line titles ({fx})" if fx else "Multi-line titles")
+    if title_total > 0 and title_long["count"] > 0:
+        if title_long["count"] / title_total >= 0.25 or len(title_long["fixtures"]) >= 2:
+            fx = _fmt_fixtures(title_long["fixtures"])
+            notes.append(f"Titles over 60 chars ({fx})" if fx else "Titles over 60 chars")
+
+    if questions_total > 0 and questions_json["count"] > 0:
+        if questions_json["count"] / questions_total >= 0.25 or len(questions_json["fixtures"]) >= 2:
+            fx = _fmt_fixtures(questions_json["fixtures"])
+            notes.append(f"Questions failed to parse as JSON arrays ({fx})" if fx else "Questions failed to parse as JSON arrays")
+    if questions_total > 0 and questions_bad_array["count"] > 0:
+        if questions_bad_array["count"] / questions_total >= 0.25 or len(questions_bad_array["fixtures"]) >= 2:
+            fx = _fmt_fixtures(questions_bad_array["fixtures"])
+            notes.append(f"Questions not valid arrays of non-empty strings ({fx})" if fx else "Questions not valid arrays of non-empty strings")
+
+    if summary_total > 0 and summary_bullets["count"] > 0:
+        if summary_bullets["count"] / summary_total >= 0.25 or len(summary_bullets["fixtures"]) >= 2:
+            fx = _fmt_fixtures(summary_bullets["fixtures"])
+            notes.append(f"Summaries include bullets/headings ({fx})" if fx else "Summaries include bullets/headings")
+    if summary_total > 0 and summary_preamble["count"] > 0:
+        if summary_preamble["count"] / summary_total >= 0.25 or len(summary_preamble["fixtures"]) >= 2:
+            fx = _fmt_fixtures(summary_preamble["fixtures"])
+            notes.append(f"Summaries include preamble ({fx})" if fx else "Summaries include preamble")
+    if summary_total > 0 and summary_long["count"] > 0:
+        if summary_long["count"] / summary_total >= 0.25 or len(summary_long["fixtures"]) >= 2:
+            fx = _fmt_fixtures(summary_long["fixtures"])
+            notes.append(f"Summaries over 150 words ({fx})" if fx else "Summaries over 150 words")
+
+    return notes
+
+
 def analyze_row(row: Dict[str, Any]) -> Dict[str, Any]:
     """Score a row's cells and aggregate them per (fixture, interaction).
 
@@ -1020,6 +1142,7 @@ def analyze_row(row: Dict[str, Any]) -> Dict[str, Any]:
     rollup["speed_band"] = speed_band(rollup.get("suite_s"))
     rollup["tier"] = recommendation_tier(rollup["quality_band"], rollup["speed_band"])
     rollup["included_runs"] = list(row.get("run_ids") or ([rollup["run_id"]] if rollup["run_id"] else []))
+    rollup["notes"] = _collect_format_notes(scored)
     return {"row": row, "rollup": rollup, "cells": scored}
 
 
@@ -1296,9 +1419,11 @@ def render_console(
     out: List[str] = [f"# Ollama evals — {_count_label(analyzed)}"]
     out += ["# " + line for line in _header_lines(analyzed, stats, per_model, device_gb)]
     out.append("")
-    out.append("model\tsize\tquality\ttier\tstartup_s\tsuite_s\tflags")
+    out.append("model\tsize\tquality\ttier\tstartup_s\tsuite_s\tflags\tnotes")
     rollups = sorted((a["rollup"] for a in analyzed), key=_sort_key)
     for r in rollups:
+        notes_str = "; ".join(r.get("notes") or [])
+        flags_str = " ".join(_flags(r, device_gb))
         out.append(
             "\t".join(
                 [
@@ -1308,7 +1433,8 @@ def render_console(
                     str(r.get("tier") or ""),
                     _fmt(r.get("load_s")),
                     _fmt(r.get("suite_s")),
-                    " ".join(_flags(r, device_gb)),
+                    flags_str,
+                    notes_str,
                 ]
             )
         )
@@ -1534,11 +1660,12 @@ def render_markdown(
     out.append("## Per-model (sorted by composite quality, then suite speed)\n")
     columns = [
         "model", "size", "quality", "tier", "startup_s", "suite_s", "req_s", "p95_s",
-        "ok", "clean", "json", "est_gb", "flags",
+        "ok", "clean", "json", "est_gb", "flags", "notes",
     ]
     out.append("| " + " | ".join(columns) + " |")
     out.append("|" + "---|" * len(columns))
     for r, _ in rollups:
+        notes_str = "<br>".join(r.get("notes") or [])
         cells = [
             r.get("display_name") or r["model_id"],
             r.get("size_label") or "?",
@@ -1553,6 +1680,7 @@ def render_markdown(
             _fmt(r["json_ok_rate"]),
             _fmt(r.get("estimated_gb"), 1),
             " ".join(_flags(r, device_gb)),
+            notes_str,
         ]
         out.append("| " + " | ".join(cells) + " |")
     out.append("")
