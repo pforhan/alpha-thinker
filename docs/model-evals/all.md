@@ -1,8 +1,8 @@
-# Ollama evals — 27 model(s) from 49 row(s)
+# Ollama evals — 27 model(s) from 50 row(s)
 
-- rows: 49 file(s) read, 49 usable, 0 too old, 0 fixture mismatch, 0 unreadable
-- per-model: all — 49 row(s) pooled into 27 model(s)
-- run-ids: 20261023-201315, 20261023-211344, 20261023-211827, afternoon-20261015, morning-20261015, overnight-20261014
+- rows: 50 file(s) read, 50 usable, 0 too old, 0 fixture mismatch, 0 unreadable
+- per-model: all — 50 row(s) pooled into 27 model(s)
+- run-ids: 20261023-201315, 20261023-211344, 20261023-211827, 20261024-090344, afternoon-20261015, morning-20261015, overnight-20261014
 - params: base_url=http://localhost:11434, runs=mixed, num_ctx=2048, temp=0.0
 - hardware: {"cpu": "Apple M2 Max", "platform": "darwin", "python": "3.15.0", "ram_gb": 64.0}
 - device budget: 16GB (models above it are flagged, never hidden)
@@ -11,7 +11,7 @@
 
 | model | disksize | quality | tier | suite_s | ok | clean | json | notes |
 |---|---|---|---|---|---|---|---|---|
-| llama3.2:3b | 1.9 GB | 100.0 | good | 5.51 | 1.00 | 1.00 | 1.00 |  |
+| llama3.2:3b | 1.9 GB | 100.0 | good | 5.33 | 1.00 | 1.00 | 1.00 |  |
 | qwen2.5:7b | 4.4 GB | 100.0 | ok | 15.40 | 1.00 | 1.00 | 1.00 |  |
 | nemotron-mini:4b | 2.5 GB | 90.0 | ok | 5.78 | 1.00 | 0.67 | 1.00 | Titles wrapped in quotes (home-project, simple-product, software-plan) |
 | gemma4:e4b | 8.9 GB | 100.0 | discouraged | 82.79 | 1.00 | 1.00 | 1.00 |  |
@@ -86,6 +86,15 @@ everything else is **discouraged**. No model is hidden by its cell.
 | afternoon-20261015 | simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.40 | 1.36 | 1.57 | 0.09 | 1.35 | 1.57 | 66.6 |
 | afternoon-20261015 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.91 | 0.88 | 1.03 | 0.06 | 0.87 | 1.03 | 67.9 |
 | afternoon-20261015 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.49 | 0.47 | 0.57 | 0.04 | 0.47 | 0.57 | 71.6 |
+| 20261024-090344 | simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.06 | 0.15 | 0.04 | 0.06 | 0.15 | 139.3 |
+| 20261024-090344 | home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.10 | 0.01 | 0.07 | 0.10 | 133.0 |
+| 20261024-090344 | software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.07 | 0.06 | 0.09 | 0.01 | 0.06 | 0.09 | 138.9 |
+| 20261024-090344 | simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.59 | 0.55 | 0.71 | 0.06 | 0.54 | 0.71 | 112.7 |
+| 20261024-090344 | home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.91 | 0.87 | 1.14 | 0.12 | 0.82 | 1.14 | 72.6 |
+| 20261024-090344 | software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 0.70 | 0.68 | 0.79 | 0.05 | 0.66 | 0.79 | 77.6 |
+| 20261024-090344 | simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.21 | 1.16 | 1.38 | 0.08 | 1.15 | 1.38 | 77.2 |
+| 20261024-090344 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.79 | 0.77 | 0.87 | 0.04 | 0.77 | 0.87 | 77.0 |
+| 20261024-090344 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.44 | 0.42 | 0.51 | 0.04 | 0.41 | 0.51 | 80.4 |
 
 ### qwen2.5:7b (Size: 4.36 GB, Quant: Q4_K_M, Params: 7.6B)
 
@@ -639,8 +648,7 @@ below.
 - `model` — display name with any `:latest` alias resolved to its real size tag
   (e.g. `llama3.2:latest` → `llama3.2:3b`), distilled from the model's own
   metadata. The canonical id lives in the row file as `model_id`.
-- `size` — parameter size label (`general.size_label`, falling back to
-  `details.parameter_size`), e.g. `3B`, `7.6B`.
+- `disksize` — Size on disk, or estimated size (shown with an asterisk).
 - `quality` — composite 0–100 quality score (see *Composite quality score* below).
 - `tier` — `good` / `ok` / `discouraged`, a label derived from the
   quality × speed grid below. It is a presentation label, never a filter: every
