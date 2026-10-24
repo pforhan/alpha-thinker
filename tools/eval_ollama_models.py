@@ -255,6 +255,36 @@ def parse_report_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 # --------------------------------------------------------------------------- #
 
 def get_installed_models(base_url: str, timeout: float) -> List[Dict[str, Any]]:
+    # Try to get from CLI first for accurate sizes
+    try:
+        result = subprocess.run(["ollama", "list"], timeout=timeout, capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout:
+            models = []
+            lines = result.stdout.strip().splitlines()
+            for line in lines[1:]:  # skip header
+                parts = line.split()
+                if parts:
+                    name = parts[0]
+                    # Find size - it's usually in MB/GB
+                    size_bytes = None
+                    for p in parts:
+                        if 'GB' in p.upper():
+                            try:
+                                num = float(re.findall(r'[\d.]+', p)[0])
+                                size_bytes = int(num * 1024**3)
+                            except:
+                                pass
+                        elif 'MB' in p.upper():
+                            try:
+                                num = float(re.findall(r'[\d.]+', p)[0])
+                                size_bytes = int(num * 1024**2)
+                            except:
+                                pass
+                    models.append({"name": name, "model": name, "size": size_bytes})
+            if models:
+                return models
+    except Exception:
+        pass
     try:
         with httpx.Client(timeout=timeout) as client:
             resp = client.get(f"{base_url}/api/tags")
@@ -276,6 +306,12 @@ def get_model_info(base_url: str, model: str, timeout: float) -> Optional[Dict[s
 
 
 def stop_ollama(base_url: str, timeout: float, model_id: str) -> None:
+    # Prefer CLI over API
+    try:
+        subprocess.run(["ollama", "stop", model_id], timeout=timeout, capture_output=True)
+        return
+    except Exception:
+        pass
     try:
         with httpx.Client(timeout=timeout) as client:
             client.post(f"{base_url}/api/stop", json={"model": model_id})
@@ -1346,11 +1382,12 @@ def _common(rows: List[Dict[str, Any]], getter: Callable[[Dict[str, Any]], Any])
 
 
 def _sort_key(rollup: Dict[str, Any]) -> Tuple[float, float, float]:
-    """Quality first, then how long the whole suite takes, then tail latency."""
+    """Sort by tier (good > ok > discouraged), then suite speed."""
+    tier_order = {TIER_GOOD: 0, TIER_OK: 1, TIER_DISCOURAGED: 2, TIER_UNKNOWN: 3}
+    tier = rollup.get("tier") or TIER_UNKNOWN
     return (
-        -(rollup.get("quality") or 0.0),
+        tier_order.get(tier, 99),
         rollup.get("suite_s") if rollup.get("suite_s") is not None else float("inf"),
-        rollup.get("latency_p95_s") or 0.0,
     )
 
 
@@ -1415,15 +1452,16 @@ def render_console(
     per_model: str,
     device_gb: float,
 ) -> str:
-    """Compact tab-separated view for the terminal: name, size, quality, tier, timings."""
+    """Compact tab-separated view for the terminal: name, size, quality, tier."""
     out: List[str] = [f"# Ollama evals — {_count_label(analyzed)}"]
     out += ["# " + line for line in _header_lines(analyzed, stats, per_model, device_gb)]
     out.append("")
-    out.append("model\tsize\tquality\ttier\tstartup_s\tsuite_s\tflags\tnotes")
+    out.append("model\tsize\tquality\ttier\tsuite_s\tnotes")
     rollups = sorted((a["rollup"] for a in analyzed), key=_sort_key)
     for r in rollups:
-        notes_str = "; ".join(r.get("notes") or [])
-        flags_str = " ".join(_flags(r, device_gb))
+        notes_list = list(r.get("notes") or [])
+        notes_list.extend(_flags(r, device_gb))
+        notes_str = "; ".join(notes_list)
         out.append(
             "\t".join(
                 [
@@ -1431,9 +1469,7 @@ def render_console(
                     str(r.get("size_label") or "?"),
                     _fmt(r.get("quality"), 1),
                     str(r.get("tier") or ""),
-                    _fmt(r.get("load_s")),
                     _fmt(r.get("suite_s")),
-                    flags_str,
                     notes_str,
                 ]
             )
@@ -1599,16 +1635,21 @@ def _speed_headers() -> List[str]:
 
 def _render_grid(rollups: List[Dict[str, Any]]) -> List[str]:
     """Quality × speed grid, each cell listing its models (none are dropped)."""
+    # Drop unknown rows/columns as they're always empty
+    q_bands = ["strong", "adequate", "weak"]
+    s_bands = ["fast", "fine", "slow"]
     cells: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
     for r in rollups:
+        if r["quality_band"] == "unknown" or r["speed_band"] == "unknown":
+            continue
         cells.setdefault((r["quality_band"], r["speed_band"]), []).append(r)
     out = [
-        "| quality \\ speed | " + " | ".join(_speed_headers()) + " |",
-        "|---|" + "---|" * len(BAND_SPEED_ORDER),
+        "| quality \\ speed | fast (<10s) | fine (<35s) | slow (≥35s) |",
+        "|---|---|---|---|",
     ]
-    for q_band in BAND_QUALITY_ORDER:
+    for q_band in q_bands:
         row = [f"**{q_band}**" if q_band == "strong" else q_band]
-        for s_band in BAND_SPEED_ORDER:
+        for s_band in s_bands:
             members = sorted(cells.get((q_band, s_band), []), key=_sort_key)
             names = list(dict.fromkeys(m.get("display_name") or m["model_id"] for m in members))
             row.append(", ".join(names))
@@ -1652,34 +1693,28 @@ def render_markdown(
     out += [f"- {line}" for line in _header_lines(analyzed, stats, per_model, device_gb)]
     out.append("")
 
-    # One row per model: with `--per-model all` several batches are pooled into a
-    # single set of rates and one suite time, so "sorted by quality then suite
-    # speed" is a total order over models rather than a run column to scan.
+    # One row per model: sorted by tier then suite speed.
     rollups = sorted(((a["rollup"], a) for a in analyzed), key=lambda pair: _sort_key(pair[0]))
 
-    out.append("## Per-model (sorted by composite quality, then suite speed)\n")
+    out.append("## Per-model (sorted by tier, then suite speed)\n")
     columns = [
-        "model", "size", "quality", "tier", "startup_s", "suite_s", "req_s", "p95_s",
-        "ok", "clean", "json", "est_gb", "flags", "notes",
+        "model", "size", "quality", "tier", "suite_s", "ok", "clean", "json", "notes",
     ]
     out.append("| " + " | ".join(columns) + " |")
     out.append("|" + "---|" * len(columns))
     for r, _ in rollups:
-        notes_str = "<br>".join(r.get("notes") or [])
+        notes_list = list(r.get("notes") or [])
+        notes_list.extend(_flags(r, device_gb))
+        notes_str = "<br>".join(notes_list)
         cells = [
             r.get("display_name") or r["model_id"],
             r.get("size_label") or "?",
             _fmt(r.get("quality"), 1),
             r.get("tier"),
-            _fmt(r.get("load_s")),
             _fmt(r.get("suite_s")),
-            _fmt(r.get("latency_mean_s")),
-            _fmt(r.get("latency_p95_s")),
             f"{r['ok_rate']:.2f}",
             f"{r['clean_rate']:.2f}",
             _fmt(r["json_ok_rate"]),
-            _fmt(r.get("estimated_gb"), 1),
-            " ".join(_flags(r, device_gb)),
             notes_str,
         ]
         out.append("| " + " | ".join(cells) + " |")
@@ -1702,7 +1737,21 @@ def render_markdown(
         # A model pooled from several batches gets a `run` column instead of one
         # table per batch, so its runs sit side by side.
         per_run = len({c.get("run_id") for c in a["cells"] if c.get("run_id")}) > 1
-        out.append(f"### {heading}\n")
+        # Add model summary if we have details
+        model_details = a["row"].get("model") or {}
+        summary_parts = []
+        if model_details.get("size_bytes"):
+            summary_parts.append(f"Size: {model_details['size_bytes']/1024**3:.2f} GB")
+        elif r.get("estimated_gb"):
+            summary_parts.append(f"Est. size: {r['estimated_gb']:.1f} GB")
+        if model_details.get("quantization"):
+            summary_parts.append(f"Quant: {model_details['quantization']}")
+        if model_details.get("parameter_size"):
+            summary_parts.append(f"Params: {model_details['parameter_size']}")
+        if summary_parts:
+            out.append(f"### {heading} ({', '.join(summary_parts)})\n")
+        else:
+            out.append(f"### {heading}\n")
         columns = (["run"] if per_run else []) + [
             "fixture", "interaction", "reps", "ok", "clean", "json", "arr",
             "timeouts", "mean", "p50", "p95", "std", "min", "max", "tps",
