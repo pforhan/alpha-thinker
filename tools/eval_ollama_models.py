@@ -1501,8 +1501,7 @@ below.
 - `model` — display name with any `:latest` alias resolved to its real size tag
   (e.g. `llama3.2:latest` → `llama3.2:3b`), distilled from the model's own
   metadata. The canonical id lives in the row file as `model_id`.
-- `size` — parameter size label (`general.size_label`, falling back to
-  `details.parameter_size`), e.g. `3B`, `7.6B`.
+- `disksize` — Size on disk, or estimated size (shown with an asterisk).
 - `quality` — composite 0–100 quality score (see *Composite quality score* below).
 - `tier` — `good` / `ok` / `discouraged`, a label derived from the
   quality × speed grid below. It is a presentation label, never a filter: every
