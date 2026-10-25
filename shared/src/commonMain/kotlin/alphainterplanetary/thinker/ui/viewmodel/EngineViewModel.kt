@@ -4,7 +4,11 @@ import alphainterplanetary.thinker.engine.EngineAvailability
 import alphainterplanetary.thinker.engine.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.ModelPresentationTier
+import alphainterplanetary.thinker.engine.ModelRank
+import alphainterplanetary.thinker.engine.ModelRanker
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
+import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.repository.EngineRepository
@@ -215,19 +219,48 @@ class EngineViewModel(
    * one that has to be asked (Ollama's management API, the generic
    * OpenAI-compatible `GET /v1/models`). A failure is captured in the state
    * rather than thrown, because the browser is an affordance beside a field
-   * the user can still type into.
+   * the user can still type into. When no model is selected or the current
+   * selection is missing from the list, auto-selects the top of Recommended
+   * (falling back to Others).
    */
   fun refreshDraftModels() {
     val draft = _draft.value ?: return
     val provider = draft.provider ?: return
     _draftModels.value = RemoteModelListState.Loading
     scope.launch {
-      _draftModels.value = try {
-        RemoteModelListState.Loaded(modelCatalog.list(provider, draft.baseUrl, draft.apiKey))
+      val state = try {
+        val models = modelCatalog.list(provider, draft.baseUrl, draft.apiKey)
+        val ranked = ModelRanker.rank(models)
+        maybeAutoSelectBestAvailable(draft, ranked)
+        RemoteModelListState.Loaded(models)
       } catch (e: CancellationException) {
         throw e
       } catch (e: Exception) {
         RemoteModelListState.Failed(e.message ?: e.toString())
+      }
+      _draftModels.value = state
+    }
+  }
+
+  private fun maybeAutoSelectBestAvailable(draft: EngineInstance, ranked: List<ModelRank>) {
+    if (ranked.isEmpty()) return
+    val currentModel = draft.model
+    val currentExists = currentModel.isNotBlank() && ranked.any { it.model.id == currentModel }
+    if (currentExists) return
+
+    val best = ranked.firstOrNull { it.presentationTier == ModelPresentationTier.Recommended }
+      ?: ranked.firstOrNull { it.presentationTier == ModelPresentationTier.HighQualityButSlower }
+      ?: ranked.firstOrNull { it.presentationTier == ModelPresentationTier.LowerQualityButFast }
+      ?: ranked.firstOrNull()
+      ?: return
+
+    _draft.update { live ->
+      if (live == null || live.provider != draft.provider) {
+        live
+      } else if (best.model.contextLength != null) {
+        live.copy(model = best.model.id, contextTokens = best.model.contextLength)
+      } else {
+        live.copy(model = best.model.id)
       }
     }
   }

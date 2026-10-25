@@ -1,6 +1,8 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.ModelPresentationTier
+import alphainterplanetary.thinker.engine.ModelRanker
 import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -259,8 +262,9 @@ private fun RemoteProviderPicker(
  * [state] drives the affordance: idle shows only the button, loading a spinner
  * beside it, a failure the reason in place of the list, and a loaded list (even
  * an empty one — an empty Ollama server is an answer) the models as tappable
- * chips. Picking one hands its id — and the window the provider actually serves,
- * when it said — back to the caller through [onSelect].
+ * chips grouped by Verified/Recommended/Others. Picking one hands its id — and
+ * the window the provider actually serves, when it said — back to the caller
+ * through [onSelect].
  */
 @Composable
 private fun ModelBrowser(
@@ -292,32 +296,43 @@ private fun ModelBrowser(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       } else {
+        val ranked = ModelRanker.rank(state.models)
         Spacer(modifier = Modifier.height(Dimens.TightGap))
-        FlowRow(
-          horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
-          verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-        ) {
-          state.models.forEach { info ->
-            FilterChip(
-              selected = info.id == current,
-              onClick = { onSelect(info) },
-              label = {
-                // The window the provider reported rides along with the id, so
-                // the user can see what picking this model will budget against.
-                // The name shown is the resolved one — an id that is only an
-                // alias (`llama3.2:latest`) would otherwise say nothing about
-                // which model it stands for — while the id picked is the
-                // canonical one.
-                Text(
-                  if (info.contextLength != null) {
-                    "${info.displayName} · ${formatTokens(info.contextLength)}"
-                  } else {
-                    info.displayName
-                  },
-                )
-              },
-              elevation = null,
+        listOf(
+          ModelPresentationTier.Recommended,
+          ModelPresentationTier.HighQualityButSlower,
+          ModelPresentationTier.LowerQualityButFast,
+          ModelPresentationTier.Unknown,
+          ModelPresentationTier.Discouraged,
+        ).forEach { tier ->
+          val group = ranked.filter { it.presentationTier == tier }
+          if (group.isNotEmpty()) {
+            Text(
+              text = "${tier.icon} ${tier.description}",
+              style = MaterialTheme.typography.headlineSmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.padding(top = Dimens.TightGap),
             )
+            Spacer(modifier = Modifier.height(Dimens.TightGap))
+            FlowRow(
+              horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
+              verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+            ) {
+              group.forEach { rank ->
+                val info = rank.model
+                val note = rank.reason.takeIf { it.isNotBlank() && it != "Meets minimum requirements" && it != "Insufficient data" && !it.startsWith("Unmeasured model") }
+                FilterChip(
+                  selected = info.id == current,
+                  onClick = { onSelect(info) },
+                  label = {
+                    Text(
+                      if (!note.isNullOrBlank()) "${info.displayName} · $note" else info.displayName,
+                    )
+                  },
+                  elevation = null,
+                )
+              }
+            }
           }
         }
       }

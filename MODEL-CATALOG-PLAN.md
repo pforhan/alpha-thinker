@@ -128,7 +128,7 @@ browser chip shows the resolved name while the id stays canonical.
 
 ### Stage 2 — Curation
 
-- [ ] **Curated families + capability gate:** add `ModelProfiles.kt` with
+- [x] **Curated families + capability gate:** add `ModelProfiles.kt` with
       family/pattern rules for instruction-following + JSON + summarization.
       Define `Verified`, `Recommended`, `Others` (presentation only). Consider a
       small `Verified` subset (starred) within `Recommended`, or a separate
@@ -139,7 +139,7 @@ browser chip shows the resolved name while the id stays canonical.
       derived as a *label on that grid* (good = strong×fast, ok = strong×fine or
       adequate×fast). A model with no data lands in `unknown` on either axis and
       is still ranked and shown.
-- [ ] **Ranking function:** `ModelRanker.rank(...)` returns ordered models with
+- [x] **Ranking function:** `ModelRanker.rank(...)` returns ordered models with
       `ModelRank` (tier/group/reason). Prefer declared JSON/structured-output/
       completion, favor small–medium params + Q4–Q6, penalize very large/unknown.
       Unit tests with representative samples.
@@ -148,13 +148,13 @@ browser chip shows the resolved name while the id stays canonical.
   IMPLEMENTATION-PLAN.md Phase 3.7 adds the snippet emitter that `ModelProfiles`
   consumes, so the curated list is generated from measured rows instead of
   hand-transcribed.
-- [ ] **Best-available selection:** in `SettingsViewModel.refreshRemoteModels()`,
+- [x] **Best-available selection:** in `SettingsViewModel.refreshRemoteModels()`,
       if the current selection is missing or unset, auto-select the top of
       `Recommended` (else the top of `Others`) and apply the known context
       window.
-- [ ] **Grouped browser UI:** update `ModelBrowser` to show
-      `Verified/Recommended` first (Verified could be starred or outlined), then
-      `Others`, each with a header and chips showing `id · size · context` +
+- [x] **Grouped browser UI:** update `ModelBrowser` to show
+      `Recommended`, `Slower`, `Adequate Quality` then
+      `Others` then `Discouraged`, each with a header and chips showing `id · ` +
       short reason. Preserve tap-to-select.
       (Lands in the connection editor moved by ENGINE-CONFIG-PLAN.md stage 3b;
       that plan owns where the browser lives, this one owns what it shows.)

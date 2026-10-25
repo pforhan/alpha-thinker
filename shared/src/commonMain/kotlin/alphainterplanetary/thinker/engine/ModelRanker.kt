@@ -10,7 +10,7 @@ object ModelRanker {
   fun rank(models: List<RemoteModelInfo>): List<ModelRank> {
     return models.map { model -> rankModel(model) }
       .sortedWith(
-        compareBy<ModelRank> { presentationOrder(it.presentationTier) }
+        compareBy<ModelRank> { it.presentationTier.presentationOrder }
           .thenByDescending { qualityOrder(it.quality) }
           .thenBy { speedOrder(it.speed) }
           .thenBy { it.model.displayName },
@@ -22,7 +22,7 @@ object ModelRanker {
       ?: ModelProfiles.findMeasurement(model.displayName)
 
     if (measurement != null) {
-      val (presentationTier, reason) = deriveMeasuredTier(measurement, model)
+      val (presentationTier, reason) = deriveMeasuredTier(measurement)
       return ModelRank(
         model = model,
         presentationTier = presentationTier,
@@ -37,7 +37,7 @@ object ModelRanker {
       ?: ModelProfiles.findHeuristic(model.displayName)
 
     if (heuristic != null) {
-      val (presentationTier, reason) = deriveHeuristicTier(heuristic, model)
+      val (presentationTier, _) = deriveHeuristicTier(heuristic)
       return ModelRank(
         model = model,
         presentationTier = presentationTier,
@@ -51,7 +51,7 @@ object ModelRanker {
     // Unrecognized, unmeasured models
     return ModelRank(
       model = model,
-      presentationTier = ModelPresentationTier.Others,
+      presentationTier = ModelPresentationTier.Unknown,
       quality = ModelQuality.Unknown,
       speed = ModelSpeed.Unknown,
       reason = "Unmeasured model; performance unknown",
@@ -61,76 +61,62 @@ object ModelRanker {
 
   private fun deriveMeasuredTier(
     measurement: ModelMeasurement,
-    model: RemoteModelInfo,
   ): Pair<ModelPresentationTier, String> {
     val q = measurement.qualityBand
     val s = measurement.speedBand
 
-    // good = strong × fast
+    // Recommended = good tier from all.md: strong × fast
     if (q == ModelQuality.Strong && s == ModelSpeed.Fast) {
-      return ModelPresentationTier.Verified to buildReason("Strong and fast; excellent for title/JSON/summarization", measurement)
+      return ModelPresentationTier.Recommended to buildReason("Strong and fast", measurement)
     }
-    // ok = strong × fine or adequate × fast
-    if ((q == ModelQuality.Strong && s == ModelSpeed.Fine) ||
-        (q == ModelQuality.Adequate && s == ModelSpeed.Fast)
-    ) {
-      return ModelPresentationTier.Recommended to buildReason("Good balance of quality and speed", measurement)
+    // High-quality but slower: strong quality but fine or slow speed
+    if (q == ModelQuality.Strong && (s == ModelSpeed.Fine || s == ModelSpeed.Slow)) {
+      return ModelPresentationTier.HighQualityButSlower to buildReason("High quality", measurement)
     }
-    // strong × slow but still solid quality
-    if (q == ModelQuality.Strong && s == ModelSpeed.Slow) {
-      // Some strong/slow are large models; still recommended if quality is top-tier
-      if (measurement.qualityScore >= 100.0) {
-        return ModelPresentationTier.Recommended to buildReason("Top quality but slower; best if speed isn't critical", measurement)
-      }
-      return ModelPresentationTier.Others to buildReason("Strong quality but slow", measurement)
-    }
-    // adequate × fine
-    if (q == ModelQuality.Adequate && s == ModelSpeed.Fine) {
-      return ModelPresentationTier.Recommended to buildReason("Adequate quality, reasonable speed", measurement)
+    // Lower-quality but fast: adequate quality and fast or fine speeds
+    if (q == ModelQuality.Adequate && (s == ModelSpeed.Fast || s == ModelSpeed.Fine)) {
+      return ModelPresentationTier.LowerQualityButFast to buildReason("Adequate quality, good speed", measurement)
     }
     // adequate × slow
     if (q == ModelQuality.Adequate && s == ModelSpeed.Slow) {
-      return ModelPresentationTier.Others to buildReason("Adequate quality but slow", measurement)
+      return ModelPresentationTier.Discouraged to buildReason("Adequate quality but slow", measurement)
     }
     // weak
     if (q == ModelQuality.Weak) {
-      return ModelPresentationTier.Others to buildReason("May struggle with JSON/formatting", measurement)
+      return ModelPresentationTier.Discouraged to buildReason("May struggle", measurement)
+    }
+    if (q == ModelQuality.Unknown || s == ModelSpeed.Unknown) {
+      return ModelPresentationTier.Unknown to buildReason("Insufficient data", measurement)
     }
 
-    return ModelPresentationTier.Others to buildReason("Meets minimum requirements", measurement)
+    return ModelPresentationTier.Discouraged to buildReason("Meets minimum requirements", measurement)
   }
 
   private fun deriveHeuristicTier(
     heuristic: ModelProfiles.FamilyHeuristic,
-    model: RemoteModelInfo,
   ): Pair<ModelPresentationTier, String> {
     val q = heuristic.baseQuality
     val s = heuristic.baseSpeed
 
     if (q == ModelQuality.Strong && s == ModelSpeed.Fast) {
-      return ModelPresentationTier.Verified to "${heuristic.reasoning} (estimated)"
-    }
-    if ((q == ModelQuality.Strong && s == ModelSpeed.Fine) ||
-        (q == ModelQuality.Adequate && s == ModelSpeed.Fast)
-    ) {
       return ModelPresentationTier.Recommended to "${heuristic.reasoning} (estimated)"
     }
-    if (q == ModelQuality.Strong && s == ModelSpeed.Slow) {
-      return ModelPresentationTier.Recommended to "${heuristic.reasoning} (estimated)"
+    if (q == ModelQuality.Strong && (s == ModelSpeed.Fine || s == ModelSpeed.Slow)) {
+      return ModelPresentationTier.HighQualityButSlower to "${heuristic.reasoning} (estimated)"
+    }
+    if (q == ModelQuality.Adequate && (s == ModelSpeed.Fast || s == ModelSpeed.Fine)) {
+      return ModelPresentationTier.LowerQualityButFast to "${heuristic.reasoning} (estimated)"
+    }
+    if (q == ModelQuality.Unknown || s == ModelSpeed.Unknown) {
+      return ModelPresentationTier.Unknown to "${heuristic.reasoning} (estimated)"
     }
 
-    return ModelPresentationTier.Others to "${heuristic.reasoning} (estimated)"
+    return ModelPresentationTier.Discouraged to "${heuristic.reasoning} (estimated)"
   }
 
   private fun buildReason(base: String, measurement: ModelMeasurement): String {
     val notes = measurement.notes.takeIf { it.isNotEmpty() }?.joinToString("; ") ?: ""
     return if (notes.isEmpty()) base else "$base ($notes)"
-  }
-
-  private fun presentationOrder(tier: ModelPresentationTier): Int = when (tier) {
-    ModelPresentationTier.Verified -> 0
-    ModelPresentationTier.Recommended -> 1
-    ModelPresentationTier.Others -> 2
   }
 
   private fun qualityOrder(quality: ModelQuality): Int = when (quality) {

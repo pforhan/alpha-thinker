@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import androidx.compose.material3.Text
 import kotlin.math.roundToInt
 
 /**
@@ -27,13 +28,21 @@ enum class ModelSpeed {
 
 /**
  * Presentation grouping only — no model is ever hidden.
- * Verified are starred known-good families; Recommended is the best
- * balance of quality/speed; Others are everything else.
+ * Recommended is the "good" tier (strong × fast).
+ * High-quality but slower for strong models that aren't fast.
+ * Lower-quality but fast for adequate models that are fast/fine.
+ * Unknown for unmeasured/unclear models.
+ * Discouraged for everything else.
  */
-enum class ModelPresentationTier {
-  Verified,
-  Recommended,
-  Others,
+enum class ModelPresentationTier(val icon: String, val description: String) {
+  Recommended("★", "Recommended"),
+  HighQualityButSlower("✔", "High-quality but Slower"),
+  LowerQualityButFast("▶▶", "Lower-quality but Fast"),
+  Unknown("?", "Unknown"),
+  Discouraged("✗", "Discouraged"),
+  ;
+  val presentationOrder: Int
+    get() = ordinal
 }
 
 /**
