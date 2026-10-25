@@ -30,7 +30,8 @@ class RemoteModelCatalogTest {
     assertTrue(models.all { it.source == ModelSource.Anthropic })
     val starter = models.first { it.id == RemoteProvider.Anthropic.defaultModel }
     assertEquals(
-      AnthropicModels.modelsById().getValue(RemoteProvider.Anthropic.defaultModel).maxOutputTokens?.toInt(),
+      AnthropicModels.modelsById()
+        .getValue(RemoteProvider.Anthropic.defaultModel).maxOutputTokens?.toInt(),
       starter.maxOutputTokens,
     )
     assertTrue("completion" in starter.capabilities)
@@ -139,7 +140,8 @@ class RemoteModelCatalogTest {
     )
     val factory = RecordingFactory(client)
 
-    val models = KoogRemoteModelCatalog(factory).list(RemoteProvider.Ollama, "http://localhost:11434/v1", "")
+    val models =
+      KoogRemoteModelCatalog(factory).list(RemoteProvider.Ollama, "http://localhost:11434/v1", "")
 
     assertEquals(
       listOf(
@@ -295,26 +297,29 @@ class RemoteModelCatalogTest {
   }
 
   @Test
-  fun `anthropic answers a single models window from koogs catalogue without a request`() = runTest {
-    val catalog = KoogRemoteModelCatalog(ThrowingFactory())
+  fun `anthropic answers a single models window from koogs catalogue without a request`() =
+    runTest {
+      val catalog = KoogRemoteModelCatalog(ThrowingFactory())
 
-    val window = catalog.contextLength(
-      RemoteProvider.Anthropic,
-      "https://api.anthropic.com",
-      RemoteProvider.Anthropic.defaultModel,
-    )
+      val window = catalog.contextLength(
+        RemoteProvider.Anthropic,
+        "https://api.anthropic.com",
+        RemoteProvider.Anthropic.defaultModel,
+      )
 
-    assertEquals(
-      AnthropicModels.modelsById().getValue(RemoteProvider.Anthropic.defaultModel).contextLength?.toInt(),
-      window,
-    )
-  }
+      assertEquals(
+        AnthropicModels.modelsById()
+          .getValue(RemoteProvider.Anthropic.defaultModel).contextLength?.toInt(),
+        window,
+      )
+    }
 
   @Test
   fun `anthropic cannot name a window for a model outside its catalogue`() = runTest {
     val catalog = KoogRemoteModelCatalog(ThrowingFactory())
 
-    val window = catalog.contextLength(RemoteProvider.Anthropic, "https://api.anthropic.com", "not-a-claude")
+    val window =
+      catalog.contextLength(RemoteProvider.Anthropic, "https://api.anthropic.com", "not-a-claude")
 
     assertEquals(null, window)
   }
@@ -325,7 +330,13 @@ class RemoteModelCatalogTest {
     // caller that already knows the id does not sweep the whole server.
     val client = FakeOllamaHttpClient(
       tags = "",
-      shows = listOf(showPayload(architecture = "qwen2", contextLength = 32768, capabilities = "completion")),
+      shows = listOf(
+        showPayload(
+          architecture = "qwen2",
+          contextLength = 32768,
+          capabilities = "completion"
+        )
+      ),
     )
     val factory = RecordingFactory(client)
 

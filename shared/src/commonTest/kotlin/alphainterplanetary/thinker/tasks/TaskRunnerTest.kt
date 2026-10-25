@@ -122,9 +122,10 @@ class TaskRunnerTest {
     val engine = runner.enqueue("p1", TaskKind.QuestionGeneration) {
       delay(1_000)
     }
-    val remote = runner.enqueue("p1", TaskKind.QuestionGeneration, group = ConcurrencyGroup.Remote) {
-      delay(500)
-    }
+    val remote =
+      runner.enqueue("p1", TaskKind.QuestionGeneration, group = ConcurrencyGroup.Remote) {
+        delay(500)
+      }
 
     testScheduler.runCurrent()
 
@@ -274,9 +275,10 @@ class TaskRunnerTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
     // A Remote task for another project contends with neither lock the body
     // holds: different project, and Remote admits four at a time.
-    val remote = runner.enqueue("p2", TaskKind.QuestionGeneration, group = ConcurrencyGroup.Remote) {
-      delay(500)
-    }
+    val remote =
+      runner.enqueue("p2", TaskKind.QuestionGeneration, group = ConcurrencyGroup.Remote) {
+        delay(500)
+      }
     var awaited: GenerationTask? = null
     var thrown: Throwable? = null
 
@@ -311,7 +313,7 @@ class TaskRunnerTest {
     assertEquals(done.id, awaited?.id)
   }
 
-@Test
+  @Test
   fun `the deadlock guard is not fooled by an unwrapped dispatcher`() = runTest {
     // The guard reads the coroutine context, so it must still see the body's
     // marker after the coroutine has been re-dispatched — here via

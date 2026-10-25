@@ -264,7 +264,12 @@ class EngineRepositoryTest {
     repo.select(EngineRef.Instance("conn-1"))
     testScheduler.advanceUntilIdle()
 
-    repo.updateSelectedInstance { it.copy(baseUrl = "https://new.example.com", model = "new-model") }
+    repo.updateSelectedInstance {
+      it.copy(
+        baseUrl = "https://new.example.com",
+        model = "new-model"
+      )
+    }
     testScheduler.advanceUntilIdle()
 
     val updated = repo.instances.value.single { it.id == "conn-1" }

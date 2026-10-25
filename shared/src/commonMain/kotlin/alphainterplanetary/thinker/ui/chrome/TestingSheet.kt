@@ -110,6 +110,7 @@ private fun SimulatorLauncherItem(
           is SimulationState.Running -> "A run is in flight."
           is SimulationState.Finished -> "Last run: ${state.questions} questions across " +
             "${state.phasesCovered} of ${state.phaseCount} phases."
+
           is SimulationState.Failed -> "The last run failed: ${state.message}"
           SimulationState.Cancelled -> "The last run was cancelled."
           SimulationState.Idle -> "Runs a whole project against the selected engine."

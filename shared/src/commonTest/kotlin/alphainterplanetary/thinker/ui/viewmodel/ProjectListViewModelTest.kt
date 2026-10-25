@@ -150,7 +150,7 @@ class ProjectListViewModelTest {
       throw IllegalStateException("boom")
     }
 
-    override suspend fun getProject(id: String): Project? =
+    override suspend fun getProject(id: String): Project =
       throw IllegalStateException("boom")
 
     override suspend fun getAllProjects(): List<Project> =

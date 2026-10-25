@@ -175,6 +175,7 @@ fun ProjectDetailScreen(
             ui.project.title.ifBlank { UntitledProjectLabel }
           }
         }
+
         is ProjectDetailUiState.Error -> "Error"
       }
       Text(
@@ -493,7 +494,7 @@ private fun ProjectDetailContent(
                 }
               }
             } else {
-                items(visibleQuestions, key = { it.id }) { question ->
+              items(visibleQuestions, key = { it.id }) { question ->
                 QuestionListRow(
                   project = project,
                   question = question,
@@ -628,12 +629,19 @@ private fun QuestionEmptyState(
               vertical = Dimens.ScreenPadding,
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(
+              Dimens.ContentGap,
+              Alignment.CenterVertically
+            ),
           ) {
             if (completedStats != null) {
               CelebratedPhaseHeader(stats = completedStats)
               Text(
-                text = "Answered ${completedStats.answered} of ${completedStats.total} over ${formatDuration(completedStats.spent)}",
+                text = "Answered ${completedStats.answered} of ${completedStats.total} over ${
+                  formatDuration(
+                    completedStats.spent
+                  )
+                }",
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

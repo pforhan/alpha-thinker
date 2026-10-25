@@ -165,7 +165,10 @@ class ProjectSimulatorTest {
 
     val project = harness.project
     assertEquals(BuiltInPhase.entries.size, project.rounds.map { it.phase }.distinct().size)
-    assertTrue(project.questions.all { it.isUnanswered }, "resolveQuestions = false answered something")
+    assertTrue(
+      project.questions.all { it.isUnanswered },
+      "resolveQuestions = false answered something"
+    )
   }
 
   // ---------- the knobs ----------
@@ -208,7 +211,11 @@ class ProjectSimulatorTest {
       generator.summarizeCalls.isEmpty(),
       "KeepEverything summarized anyway",
     )
-    assertEquals(BuiltInPhase.entries.size, generator.calls.size, "the run still covers every phase")
+    assertEquals(
+      BuiltInPhase.entries.size,
+      generator.calls.size,
+      "the run still covers every phase"
+    )
   }
 
   @Test
@@ -252,13 +259,19 @@ class ProjectSimulatorTest {
     testScheduler.advanceUntilIdle()
 
     val state = harness.finished()
-    assertTrue(state.failures.isNotEmpty(), "a phase that never generated anything was not reported")
+    assertTrue(
+      state.failures.isNotEmpty(),
+      "a phase that never generated anything was not reported"
+    )
     // The run asked the opening phase twice before giving up on it — and both
     // rounds latched their failure on the project, which is then a project with
     // no first phase and so no library left to walk.
     val rounds = harness.project.rounds
     assertEquals(2, rounds.size, "the opening phase was not asked a second time")
-    assertTrue(rounds.all { it.outcome == RoundOutcome.Failed }, "a failed round did not latch its failure")
+    assertTrue(
+      rounds.all { it.outcome == RoundOutcome.Failed },
+      "a failed round did not latch its failure"
+    )
   }
 
   @Test
@@ -291,7 +304,8 @@ class ProjectSimulatorTest {
     val generator = engine().apply {
       // Phase 2's opening round (call 1) comes back empty; the run's second ask,
       // and everything after it, serves questions.
-      batchFor = { callIndex, roundId -> if (callIndex == 1) emptyList() else batch(callIndex, roundId) }
+      batchFor =
+        { callIndex, roundId -> if (callIndex == 1) emptyList() else batch(callIndex, roundId) }
     }
     val harness = harness(generator = generator)
 
@@ -329,7 +343,11 @@ class ProjectSimulatorTest {
       "the phases after the empty one were still generated",
     )
     val state = harness.finished()
-    assertEquals(1, state.failures.size, "one thing went wrong in that phase, so it is reported once")
+    assertEquals(
+      1,
+      state.failures.size,
+      "one thing went wrong in that phase, so it is reported once"
+    )
     assertTrue(!state.stoppedAtEmptyPhase, "stopping is off unless the run asks for it")
     assertEquals(
       BuiltInPhase.entries.size - 1,

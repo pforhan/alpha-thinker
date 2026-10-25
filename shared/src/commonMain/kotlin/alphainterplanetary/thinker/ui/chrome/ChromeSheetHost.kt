@@ -78,7 +78,6 @@ internal fun ChromeSheetHost(
 
         ChromeSheet.Intelligence -> EnginePickerSheetContent(chrome = chrome)
 
-
         ChromeSheet.Testing -> TestingSheetContent(chrome = chrome)
       }
     }

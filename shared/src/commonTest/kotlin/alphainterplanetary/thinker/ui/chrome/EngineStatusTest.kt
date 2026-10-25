@@ -159,8 +159,16 @@ class EngineStatusTest {
         availability = availability,
       )
 
-      assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state, "$availability")
-      assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state, "$availability")
+      assertEquals(
+        CapabilityState.Incomplete,
+        status.slot(EngineCapability.Network).state,
+        "$availability"
+      )
+      assertEquals(
+        CapabilityState.Incomplete,
+        status.slot(EngineCapability.Llm).state,
+        "$availability"
+      )
       assertTrue(status.needsAttention, "$availability")
     }
   }
@@ -212,8 +220,16 @@ class EngineStatusTest {
         availability = Available,
       )
 
-      assertEquals(CapabilityState.Unused, builtin.slot(EngineCapability.Tools).state, "builtin $kind")
-      assertEquals(CapabilityState.Unused, instance.slot(EngineCapability.Tools).state, "instance $kind")
+      assertEquals(
+        CapabilityState.Unused,
+        builtin.slot(EngineCapability.Tools).state,
+        "builtin $kind"
+      )
+      assertEquals(
+        CapabilityState.Unused,
+        instance.slot(EngineCapability.Tools).state,
+        "instance $kind"
+      )
     }
   }
 

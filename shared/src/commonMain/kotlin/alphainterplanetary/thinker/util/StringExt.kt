@@ -19,9 +19,11 @@ fun String.jsonArray(): String? {
         isEscaped -> {
           isEscaped = false
         }
+
         char == '\\' -> {
           isEscaped = true
         }
+
         char == '"' -> {
           inString = false
         }

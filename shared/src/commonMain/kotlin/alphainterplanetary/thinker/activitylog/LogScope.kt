@@ -1,14 +1,13 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.activitylog
 
-import alphainterplanetary.thinker.activitylog.LogContext
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * The seam that lets an LLM-backed [PlanningEngine] record its requests on the
+ * The seam that lets a PlanningEngine record its work on the
  * app's activity log without knowing the log exists.
  *
  * Two things have to cross that seam, and both used to arrive on a side channel
@@ -22,7 +21,7 @@ import kotlinx.coroutines.sync.withLock
  * each reply on the pair it belongs to.
  *
  * A coroutine context element is the one channel that spans it. The decorator
- * installs one [LogScope] per interaction (the [LoggingPlanningEngine] root),
+ * installs one [LogScope] per interaction (the LoggingPlanningEngine root),
  * and the engine's one real call site opens a [LogRequest] from it for each
  * request it sends ([logRequest]). A request has its own writer and its own
  * reply — nothing is shared between them — so parallel `async` fan-out pairs
@@ -31,11 +30,11 @@ import kotlinx.coroutines.sync.withLock
  * observed.
  *
  * Every request files into the same activity, in append order, which is what the
- * read model ([alphainterplanetary.thinker.activitylog.ActivityRecord]) folds
- * into an activity. A sub-request's reply therefore reads on its own
- * `response:`/`failed:` row rather than on the parent's — the failure case
- * matters most, where one merged payload put a successful sub-reply on the
- * parent's `failed:` row under a message about a different thing.
+ * read model ([ActivityRecord]) folds into an activity. A sub-request's reply
+ * therefore reads on its own `response:`/`failed:` row rather than on the
+ * parent's — the failure case matters most, where one merged payload put a
+ * successful sub-reply on the parent's `failed:` row under a message about
+ * a different thing.
  */
 class LogScope internal constructor(
   private val newContext: () -> LogContext,
@@ -106,4 +105,5 @@ class LogRequest internal constructor(
  * when no scope is installed — an engine called directly is not observed, and
  * the caller carries on as if the row didn't exist.
  */
-suspend fun logRequest(prompt: String): LogRequest? = coroutineContext[LogScope]?.request(prompt)
+suspend fun logRequest(prompt: String): LogRequest? =
+  currentCoroutineContext()[LogScope]?.request(prompt)

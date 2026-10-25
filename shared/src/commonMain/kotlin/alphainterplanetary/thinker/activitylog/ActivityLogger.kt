@@ -46,7 +46,7 @@ interface ActivityLogger {
     category = LogCategory.TaskRun,
     source = LogSource.TaskRunner,
     projectId = projectId,
-    )
+  )
 
   /** All rows in append order (drives the Activity Log viewer). */
   fun entries(): Flow<List<LogEntry>>
@@ -112,7 +112,9 @@ class RoomActivityLogger(
 
   override fun latestActivity(): Flow<ActivityRecord?> =
     dao.observeRecent(ActivityLogger.RecentActivityRowLimit)
-      .map { entities -> ActivityRecord.groupByActivity(entities.map { it.toModel() }).firstOrNull() }
+      .map { entities ->
+        ActivityRecord.groupByActivity(entities.map { it.toModel() }).firstOrNull()
+      }
 
   override suspend fun entriesForProject(projectId: String): List<LogEntry> =
     dao.allForProject(projectId).map { it.toModel() }

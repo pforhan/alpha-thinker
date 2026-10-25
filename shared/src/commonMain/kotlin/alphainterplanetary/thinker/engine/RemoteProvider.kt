@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.RemoteProvider.Companion.Default
+
 /**
  * Which flavor of remote endpoint a [RemoteKoogPlanningBackend] talks to. The
  * mode is one ([EngineKind.Remote]) but the client that reaches it is not: a

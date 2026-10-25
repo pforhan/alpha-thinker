@@ -83,11 +83,36 @@ class SampleProjectGenerator @Inject constructor(
             ),
           ),
         ),
-        sampleQuestion(id = "scope-q3", text = "What grind size works best for cold brew?", timestamp = created, roundId = roundId),
-        sampleQuestion(id = "scope-q4", text = "How long can the concentrate stay fresh in the fridge?", timestamp = created, roundId = roundId),
-        sampleQuestion(id = "scope-q5", text = "Do I need a filter bag or is a regular cheesecloth enough?", timestamp = created, roundId = roundId),
-        sampleQuestion(id = "scope-q6", text = "What is a simple way to serve it without fancy equipment?", timestamp = created, roundId = roundId),
-        sampleQuestion(id = "scope-q7", text = "How much concentrate does one batch yield?", timestamp = created, roundId = roundId),
+        sampleQuestion(
+          id = "scope-q3",
+          text = "What grind size works best for cold brew?",
+          timestamp = created,
+          roundId = roundId
+        ),
+        sampleQuestion(
+          id = "scope-q4",
+          text = "How long can the concentrate stay fresh in the fridge?",
+          timestamp = created,
+          roundId = roundId
+        ),
+        sampleQuestion(
+          id = "scope-q5",
+          text = "Do I need a filter bag or is a regular cheesecloth enough?",
+          timestamp = created,
+          roundId = roundId
+        ),
+        sampleQuestion(
+          id = "scope-q6",
+          text = "What is a simple way to serve it without fancy equipment?",
+          timestamp = created,
+          roundId = roundId
+        ),
+        sampleQuestion(
+          id = "scope-q7",
+          text = "How much concentrate does one batch yield?",
+          timestamp = created,
+          roundId = roundId
+        ),
       ),
       rounds = listOf(
         sampleRound(
@@ -178,8 +203,18 @@ class SampleProjectGenerator @Inject constructor(
             "score each. If three of three land, stop looking and scale that shortlist.",
           answeredAt = daysAgo(6),
         ),
-        sampleQuestion(id = "research-r2-q8", text = "What makes your approach different?", timestamp = daysAgo(7), roundId = "${RESEARCH_PROJECT_ID}-r2"),
-        sampleQuestion(id = "research-r2-q9", text = "What have others already learned in this space that you can borrow?", timestamp = daysAgo(6), roundId = "${RESEARCH_PROJECT_ID}-r2"),
+        sampleQuestion(
+          id = "research-r2-q8",
+          text = "What makes your approach different?",
+          timestamp = daysAgo(7),
+          roundId = "${RESEARCH_PROJECT_ID}-r2"
+        ),
+        sampleQuestion(
+          id = "research-r2-q9",
+          text = "What have others already learned in this space that you can borrow?",
+          timestamp = daysAgo(6),
+          roundId = "${RESEARCH_PROJECT_ID}-r2"
+        ),
         draftQuestion(
           id = "research-r2-q10",
           roundId = "${RESEARCH_PROJECT_ID}-r2",
@@ -316,8 +351,18 @@ class SampleProjectGenerator @Inject constructor(
             "'Is there a vegetarian version?'",
           draftUpdatedAt = daysAgo(2),
         ),
-        sampleQuestion(id = "design-r3-q12", text = "What is the smallest demo that shows the core idea moving?", timestamp = daysAgo(5), roundId = "${DESIGN_PROJECT_ID}-r3"),
-        sampleQuestion(id = "design-r3-q13", text = "What is the part you will iterate on most?", timestamp = daysAgo(4), roundId = "${DESIGN_PROJECT_ID}-r3"),
+        sampleQuestion(
+          id = "design-r3-q12",
+          text = "What is the smallest demo that shows the core idea moving?",
+          timestamp = daysAgo(5),
+          roundId = "${DESIGN_PROJECT_ID}-r3"
+        ),
+        sampleQuestion(
+          id = "design-r3-q13",
+          text = "What is the part you will iterate on most?",
+          timestamp = daysAgo(4),
+          roundId = "${DESIGN_PROJECT_ID}-r3"
+        ),
         ignoredQuestion(
           id = "design-r3-q14",
           roundId = "${DESIGN_PROJECT_ID}-r3",
@@ -1202,7 +1247,12 @@ class SampleProjectGenerator @Inject constructor(
       title = lipsum(1),
       status = "Draft",
       questions = listOf(
-        sampleQuestion(id = "stress-q1", text = lipsum(2), timestamp = daysAgo(3), roundId = roundId),
+        sampleQuestion(
+          id = "stress-q1",
+          text = lipsum(2),
+          timestamp = daysAgo(3),
+          roundId = roundId
+        ),
         sampleQuestion(
           id = "stress-q2",
           text = lipsum(2),
@@ -1212,7 +1262,13 @@ class SampleProjectGenerator @Inject constructor(
             completeAnswer(questionId = "stress-q2", text = lipsum(3), createdAt = daysAgo(2)),
           ),
         ),
-        sampleQuestion(id = "stress-q3", text = lipsum(1), timestamp = daysAgo(2), roundId = roundId, ignoredAt = daysAgo(2)),
+        sampleQuestion(
+          id = "stress-q3",
+          text = lipsum(1),
+          timestamp = daysAgo(2),
+          roundId = roundId,
+          ignoredAt = daysAgo(2)
+        ),
         sampleQuestion(
           id = "stress-q4",
           text = lipsum(2),
@@ -1239,8 +1295,19 @@ class SampleProjectGenerator @Inject constructor(
             completeAnswer(questionId = "stress-q6", text = lipsum(2), createdAt = daysAgo(0, 3)),
           ),
         ),
-        sampleQuestion(id = "stress-q7", text = lipsum(2), timestamp = daysAgo(2), roundId = roundId),
-        sampleQuestion(id = "stress-q8", text = lipsum(1), timestamp = daysAgo(1), roundId = roundId, ignoredAt = daysAgo(0, 6)),
+        sampleQuestion(
+          id = "stress-q7",
+          text = lipsum(2),
+          timestamp = daysAgo(2),
+          roundId = roundId
+        ),
+        sampleQuestion(
+          id = "stress-q8",
+          text = lipsum(1),
+          timestamp = daysAgo(1),
+          roundId = roundId,
+          ignoredAt = daysAgo(0, 6)
+        ),
       ),
       rounds = listOf(
         sampleRound(

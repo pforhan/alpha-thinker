@@ -8,7 +8,6 @@ import alphainterplanetary.thinker.engine.ModelPresentationTier
 import alphainterplanetary.thinker.engine.ModelRank
 import alphainterplanetary.thinker.engine.ModelRanker
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
-import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.repository.EngineRepository

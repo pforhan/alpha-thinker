@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogScope
 import alphainterplanetary.thinker.engine.PlanningContext.PhaseSummary
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase

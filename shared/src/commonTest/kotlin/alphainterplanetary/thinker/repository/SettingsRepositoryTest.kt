@@ -3,13 +3,10 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.engine.EngineDelayConfig
 import alphainterplanetary.thinker.engine.EngineInteraction
-import alphainterplanetary.thinker.engine.EngineKind
-import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope

@@ -108,7 +108,13 @@ internal fun NavApp(appComponent: AppComponent) {
         }
 
         AppRoute.ActivityLog -> {
-          val vm = remember { ActivityLogViewModel(appComponent.activityLogger, appComponent.projectRepository, appComponent.appScope) }
+          val vm = remember {
+            ActivityLogViewModel(
+              appComponent.activityLogger,
+              appComponent.projectRepository,
+              appComponent.appScope
+            )
+          }
           ActivityLogScreen(
             viewModel = vm,
             chrome = chrome,

@@ -158,7 +158,8 @@ class ActivityRecord private constructor(
    */
   private fun taskKind(): TaskKind? {
     val label = entries.firstNotNullOfOrNull { row ->
-      if (row.log.startsWith(LogMarkers.Started)) row.log.substringAfter(LogMarkers.Started).trim() else null
+      if (row.log.startsWith(LogMarkers.Started))
+        row.log.substringAfter(LogMarkers.Started).trim() else null
     } ?: return null
     return TaskKind.entries.firstOrNull { it.name == label }
   }

@@ -82,7 +82,10 @@ private const val PhaseRowBurstHorizontalBias = 0.15f
  * left edge, pointing at the referenced row next to it); [Up] is a callout
  * rendered below its target (arrow on the top edge, pointing up at it).
  */
-private enum class CalloutArrow { Left, Up }
+private enum class CalloutArrow {
+  Left,
+  Up
+}
 
 /** Draws the row-tint callout background (arrow + rounded rect) for [arrow]. */
 private fun DrawScope.drawCalloutShape(
@@ -111,6 +114,7 @@ private fun DrawScope.drawCalloutShape(
         cornerRadius = CornerRadius(radius),
       )
     }
+
     CalloutArrow.Up -> {
       val tipX = arrowCoordinate.coerceIn(arrowWidth, size.width - arrowWidth)
       val path = Path().apply {
@@ -138,6 +142,7 @@ private fun calloutContentPadding(arrow: CalloutArrow): PaddingValues = when (ar
     end = Dimens.ContentGap,
     bottom = Dimens.ContentGap,
   )
+
   CalloutArrow.Up -> PaddingValues(
     top = Dimens.PhaseChoiceArrowWidth + Dimens.ContentGap,
     start = Dimens.ContentGap,

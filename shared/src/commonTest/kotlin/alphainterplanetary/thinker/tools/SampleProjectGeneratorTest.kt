@@ -175,7 +175,7 @@ class SampleProjectGeneratorTest {
     collector.cancel()
   }
 
-@Test
+  @Test
   fun `every answer id is unique across all projects`() = runTest {
     val storage = FakeStorage()
     val generator = SampleProjectGenerator(storage, ProjectWrites())

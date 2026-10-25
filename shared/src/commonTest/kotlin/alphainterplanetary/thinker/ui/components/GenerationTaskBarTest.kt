@@ -23,15 +23,36 @@ class GenerationTaskBarTest {
   fun `a single active task describes its kind`() {
     assertEquals(
       "Generating questions…",
-      activeTaskSummary(listOf(task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Running))),
+      activeTaskSummary(
+        listOf(
+          task(
+            kind = TaskKind.QuestionGeneration,
+            status = TaskStatus.Running
+          )
+        )
+      ),
     )
     assertEquals(
       "Generating questions…",
-      activeTaskSummary(listOf(task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Queued))),
+      activeTaskSummary(
+        listOf(
+          task(
+            kind = TaskKind.QuestionGeneration,
+            status = TaskStatus.Queued
+          )
+        )
+      ),
     )
     assertEquals(
       "Generating title…",
-      activeTaskSummary(listOf(task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Running))),
+      activeTaskSummary(
+        listOf(
+          task(
+            kind = TaskKind.TitleRecommendation,
+            status = TaskStatus.Running
+          )
+        )
+      ),
     )
     assertEquals(
       "Rewriting synopsis…",

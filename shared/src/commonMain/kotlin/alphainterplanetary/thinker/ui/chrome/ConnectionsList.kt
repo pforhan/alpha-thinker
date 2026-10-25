@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineInstance
-import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.components.OptionHeader

@@ -80,7 +80,14 @@ class SlowDownPlanningEngineTest {
 
     val job = launch {
       generator.recommendTitle("synopsis", activityId = "test-activity")
-      generator.generateQuestions("title", "synopsis", emptyList(), "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+      generator.generateQuestions(
+        "title",
+        "synopsis",
+        emptyList(),
+        "r1",
+        BuiltInPhase.ScopeGoals,
+        activityId = "test-activity"
+      )
     }
     testScheduler.runCurrent()
     assertEquals(0, delegate.calls.size + delegate.titleCalls)
@@ -114,7 +121,14 @@ class SlowDownPlanningEngineTest {
 
     val job = launch {
       generator.recommendTitle("synopsis", activityId = "test-activity")
-      generator.generateQuestions("title", "synopsis", emptyList(), "r1", BuiltInPhase.ScopeGoals, activityId = "test-activity")
+      generator.generateQuestions(
+        "title",
+        "synopsis",
+        emptyList(),
+        "r1",
+        BuiltInPhase.ScopeGoals,
+        activityId = "test-activity"
+      )
     }
     testScheduler.runCurrent()
     assertEquals(1, delegate.titleCalls)

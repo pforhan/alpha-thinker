@@ -1,7 +1,5 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.activitylog
 
-import alphainterplanetary.thinker.activitylog.LogCategory
-import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import alphainterplanetary.thinker.util.now

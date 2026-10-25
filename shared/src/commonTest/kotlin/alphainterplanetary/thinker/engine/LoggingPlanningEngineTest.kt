@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.engine
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.activitylog.logRequest
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
@@ -18,7 +19,7 @@ import kotlin.test.fail
 import kotlinx.coroutines.test.runTest
 
 /**
- * The decorator's remaining job is narrow: install the interaction's [LogScope],
+ * The decorator's remaining job is narrow: install the interaction's [alphainterplanetary.thinker.activitylog.LogScope],
  * and file the interaction's *own* outcome row only when the delegate reported
  * no request of its own (the Offline path, and any engine that fails before it
  * sends). Everything else is the engine's, one row pair per request.
@@ -144,7 +145,10 @@ class LoggingPlanningEngineTest {
     engine.recommendTitle("A menu planner", activityId = "task-6")
 
     assertEquals(
-      listOf("prompt: SYSTEM\nTitle system\n\nUSER\nA menu planner", "response: Mobile Menu Planner"),
+      listOf(
+        "prompt: SYSTEM\nTitle system\n\nUSER\nA menu planner",
+        "response: Mobile Menu Planner"
+      ),
       log.entries.map { it.log },
     )
   }
@@ -156,31 +160,32 @@ class LoggingPlanningEngineTest {
    * to be filed last.
    */
   @Test
-  fun `two requests in one interaction file two pairs and the last drives the headline`() = runTest {
-    val log = RecordingActivityLogger()
-    val engine = LoggingPlanningEngine(delegate = SummarizingThenGenerating(), log = log)
+  fun `two requests in one interaction file two pairs and the last drives the headline`() =
+    runTest {
+      val log = RecordingActivityLogger()
+      val engine = LoggingPlanningEngine(delegate = SummarizingThenGenerating(), log = log)
 
-    engine.generateQuestions(
-      title = "T",
-      synopsis = "S",
-      previousQuestions = emptyList(),
-      roundId = "r1",
-      phase = BuiltInPhase.ScopeGoals,
-      activityId = "task-7",
-    )
+      engine.generateQuestions(
+        title = "T",
+        synopsis = "S",
+        previousQuestions = emptyList(),
+        roundId = "r1",
+        phase = BuiltInPhase.ScopeGoals,
+        activityId = "task-7",
+      )
 
-    assertEquals(
-      listOf(
-        "prompt: SYSTEM\nSummarize",
-        "response: a summary of earlier answers",
-        "prompt: SYSTEM\nQuestions",
-        "response: 3 questions, done=false\n• one\n• two\n• three",
-      ),
-      log.entries.map { it.log },
-    )
-    assertTrue(log.entries.all { it.activityId == "task-7" })
-    assertEquals("Generated 3 questions", activity(log).summary)
-  }
+      assertEquals(
+        listOf(
+          "prompt: SYSTEM\nSummarize",
+          "response: a summary of earlier answers",
+          "prompt: SYSTEM\nQuestions",
+          "response: 3 questions, done=false\n• one\n• two\n• three",
+        ),
+        log.entries.map { it.log },
+      )
+      assertTrue(log.entries.all { it.activityId == "task-7" })
+      assertEquals("Generated 3 questions", activity(log).summary)
+    }
 
   /**
    * A sub-request's failure is the activity's failure — it is filed on the
@@ -416,7 +421,7 @@ class LoggingPlanningEngineTest {
    */
   private class SummarizingThenGenerating(
     private val failSummary: Boolean = false,
-  ): FakePlanningEngine(source = LogSource.RemoteLLM) {
+  ) : FakePlanningEngine(source = LogSource.RemoteLLM) {
     override suspend fun generateQuestions(
       title: String,
       synopsis: String,

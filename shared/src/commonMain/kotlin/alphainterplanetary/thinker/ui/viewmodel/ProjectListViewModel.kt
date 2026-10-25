@@ -69,7 +69,7 @@ class ProjectListViewModel(
    * lands. [loadProjects] is the one that goes back to [ProjectListUiState.Loading]
    * first, because a first read has nothing to show; a reload over a populated
    * list would only put a spinner between the user and projects they are
-   // looking at.
+  // looking at.
    */
   private fun reloadProjects() {
     vmScope.launch {

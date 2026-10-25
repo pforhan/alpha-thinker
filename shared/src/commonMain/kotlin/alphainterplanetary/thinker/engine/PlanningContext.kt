@@ -140,7 +140,12 @@ object PlanningContext {
     val spoken = summaries.filter { it.summary.isNotBlank() }
     val covered = spoken.flatMapTo(mutableSetOf()) { it.coversQuestionIds }
     val lines = questions
-      .joinToString(separator = "\n") { question -> line(question, summarized = question.id in covered) }
+      .joinToString(separator = "\n") { question ->
+        line(
+          question,
+          summarized = question.id in covered
+        )
+      }
     val summarized = spoken
       .joinToString(separator = "\n") { "${it.phase.label}: ${it.summary}" }
       .ifEmpty { null }

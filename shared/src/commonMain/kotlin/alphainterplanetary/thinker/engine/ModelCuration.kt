@@ -1,8 +1,5 @@
 package alphainterplanetary.thinker.engine
 
-import androidx.compose.material3.Text
-import kotlin.math.roundToInt
-
 /**
  * Quality bands derived from the composite score (MODEL-CATALOG-PLAN.md).
  * Strong means it meets the bar for Verified/Recommended; Weak means
@@ -41,6 +38,7 @@ enum class ModelPresentationTier(val icon: String, val description: String) {
   Unknown("?", "Unknown"),
   Discouraged("✗", "Discouraged"),
   ;
+
   val presentationOrder: Int
     get() = ordinal
 }
@@ -295,7 +293,10 @@ object ModelProfiles {
 
   fun findMeasurement(modelId: String): ModelMeasurement? {
     return measuredSeeds.firstOrNull { measurement ->
-      val pattern = Regex("^${Regex.escape(measurement.modelIdPattern.replace(":", "\\:"))}", RegexOption.IGNORE_CASE)
+      val pattern = Regex(
+        "^${Regex.escape(measurement.modelIdPattern.replace(":", "\\:"))}",
+        RegexOption.IGNORE_CASE
+      )
       pattern.containsMatchIn(modelId) || modelId.startsWith(measurement.modelIdPattern)
     }
   }

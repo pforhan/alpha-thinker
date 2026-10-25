@@ -43,7 +43,7 @@ class ProjectTest {
         draftText = "draft",
         draftUpdatedAt = Instant.fromEpochMilliseconds(0),
         answers = listOf(
-          alphainterplanetary.thinker.model.Answer(
+          Answer(
             id = "1",
             questionId = "q",
             text = "a",

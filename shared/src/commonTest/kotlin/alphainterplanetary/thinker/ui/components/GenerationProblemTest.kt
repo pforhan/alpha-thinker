@@ -25,7 +25,8 @@ class GenerationProblemTest {
 
   @Test
   fun `a task still in flight is not a problem`() {
-    val project = project(rounds = listOf(round("r1", outcome = RoundOutcome.Failed, outcomeDetail = "boom")))
+    val project =
+      project(rounds = listOf(round("r1", outcome = RoundOutcome.Failed, outcomeDetail = "boom")))
 
     val running = task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Running)
 
@@ -36,7 +37,8 @@ class GenerationProblemTest {
   fun `a failed title task on a project with no title is a title problem`() {
     val project = project(title = "")
 
-    val failed = task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Failed, error = "boom")
+    val failed =
+      task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Failed, error = "boom")
 
     assertEquals(GenerationProblemKind.Title, generationProblemKind(project, listOf(failed)))
   }
@@ -45,7 +47,8 @@ class GenerationProblemTest {
   fun `a failed title task is not a problem once the project has a title`() {
     val project = project(title = "User typed this")
 
-    val failed = task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Failed, error = "boom")
+    val failed =
+      task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Failed, error = "boom")
 
     assertNull(generationProblemKind(project, listOf(failed)))
   }
@@ -54,7 +57,11 @@ class GenerationProblemTest {
   fun `a failed round is a question problem`() {
     val project = project(
       rounds = listOf(
-        round("r1", outcome = RoundOutcome.Failed, outcomeDetail = "The planner came back with no new questions."),
+        round(
+          "r1",
+          outcome = RoundOutcome.Failed,
+          outcomeDetail = "The planner came back with no new questions."
+        ),
       ),
     )
 
@@ -65,7 +72,8 @@ class GenerationProblemTest {
   fun `a failed question task is a problem even when the round write did not land`() {
     val project = project(rounds = listOf(round("r1")))
 
-    val failed = task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Failed, error = "HTTP 500")
+    val failed =
+      task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Failed, error = "HTTP 500")
 
     assertEquals(GenerationProblemKind.Questions, generationProblemKind(project, listOf(failed)))
   }
@@ -77,7 +85,8 @@ class GenerationProblemTest {
       rounds = listOf(round("r1")),
     )
 
-    val failed = task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Failed, error = "HTTP 500")
+    val failed =
+      task(kind = TaskKind.QuestionGeneration, status = TaskStatus.Failed, error = "HTTP 500")
 
     assertNull(generationProblemKind(project, listOf(failed)))
   }
@@ -112,7 +121,8 @@ class GenerationProblemTest {
       rounds = listOf(round("r1", outcome = RoundOutcome.Failed, outcomeDetail = "boom")),
     )
 
-    val failed = task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Failed, error = "boom")
+    val failed =
+      task(kind = TaskKind.TitleRecommendation, status = TaskStatus.Failed, error = "boom")
 
     assertEquals(GenerationProblemKind.Title, generationProblemKind(project, listOf(failed)))
   }

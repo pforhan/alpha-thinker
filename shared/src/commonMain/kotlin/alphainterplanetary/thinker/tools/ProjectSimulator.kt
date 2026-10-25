@@ -323,7 +323,12 @@ class ProjectSimulator @Inject constructor(
         repository.saveAnswer(projectId, question.id, draftFor(question, phase), completed = false)
 
       else ->
-        repository.saveAnswer(projectId, question.id, answerFor(question, phase, index), completed = true)
+        repository.saveAnswer(
+          projectId,
+          question.id,
+          answerFor(question, phase, index),
+          completed = true
+        )
     }
   }
 
@@ -356,7 +361,10 @@ class ProjectSimulator @Inject constructor(
    * guess about storage order in a run that is allowed to be cancelled at any
    * moment.
    */
-  private suspend fun createAndAwait(config: SimulationConfig, failures: MutableList<String>): String {
+  private suspend fun createAndAwait(
+    config: SimulationConfig,
+    failures: MutableList<String>,
+  ): String {
     try {
       return repository.createProjectAndWait(config.synopsis, config.title).id
     } catch (e: TaskFailed) {

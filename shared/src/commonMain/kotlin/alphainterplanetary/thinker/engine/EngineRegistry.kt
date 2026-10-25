@@ -27,6 +27,7 @@ class EngineRegistry @Inject constructor(
       EngineKind.Offline -> OfflinePlanningEngine()
       else -> throw IllegalStateException("Built-in engine ${ref.kind} not yet implemented")
     }
+
     is EngineRef.Instance -> {
       val instance = repository.getInstance(ref.id)
         ?: throw IllegalStateException("Engine instance ${ref.id} not found")

@@ -84,7 +84,12 @@ data class PhaseTheme(
         BuiltInPhase.Design to PhaseColors(0xFFF2CD00, 0xFF2A251A, 0xFFEBE5D6, 0xFF6E5D1B),
         BuiltInPhase.ExecutionPlan to PhaseColors(0xFF79C300, 0xFF23271C, 0xFFE2E7D8, 0xFF46661B),
         BuiltInPhase.ValidationPlan to PhaseColors(0xFF1961AE, 0xFFDFE5F8, 0xFFE0E5F4, 0xFF19365F),
-        BuiltInPhase.DefinitionOfDone to PhaseColors(0xFF61007D, 0xFFEFE1F2, 0xFFEDE2EF, 0xFF4F1362),
+        BuiltInPhase.DefinitionOfDone to PhaseColors(
+          0xFF61007D,
+          0xFFEFE1F2,
+          0xFFEDE2EF,
+          0xFF4F1362
+        ),
       ),
     )
 
@@ -100,7 +105,12 @@ data class PhaseTheme(
         BuiltInPhase.Design to PhaseColors(0xFF0077B6, 0xFFFCFDFF, 0xFF003C5B, 0xFFFCFDFF),
         BuiltInPhase.ExecutionPlan to PhaseColors(0xFF0096C7, 0xFF001B26, 0xFF004B64, 0xFFFCFDFF),
         BuiltInPhase.ValidationPlan to PhaseColors(0xFF00B4D8, 0xFF001B26, 0xFF005A6C, 0xFFFCFDFF),
-        BuiltInPhase.DefinitionOfDone to PhaseColors(0xFF48CAE4, 0xFF001B26, 0xFF246572, 0xFFFCFDFF),
+        BuiltInPhase.DefinitionOfDone to PhaseColors(
+          0xFF48CAE4,
+          0xFF001B26,
+          0xFF246572,
+          0xFFFCFDFF
+        ),
       ),
     )
 
@@ -115,7 +125,12 @@ data class PhaseTheme(
         BuiltInPhase.Design to PhaseColors(0xFFF3C053, 0xFF181511, 0xFFEEE4D6, 0xFF55400E),
         BuiltInPhase.ExecutionPlan to PhaseColors(0xFFA1C349, 0xFF151611, 0xFFE4E7D8, 0xFF273209),
         BuiltInPhase.ValidationPlan to PhaseColors(0xFF87A330, 0xFF151611, 0xFFE4E7D8, 0xFF3B490E),
-        BuiltInPhase.DefinitionOfDone to PhaseColors(0xFF6A8532, 0xFF000000, 0xFFE3E7D8, 0xFF4C6519),
+        BuiltInPhase.DefinitionOfDone to PhaseColors(
+          0xFF6A8532,
+          0xFF000000,
+          0xFFE3E7D8,
+          0xFF4C6519
+        ),
       ),
     )
 
@@ -131,7 +146,12 @@ data class PhaseTheme(
         BuiltInPhase.Design to PhaseColors(0xFFF0E442, 0xFF171611, 0xFFE9E5D6, 0xFF4E4A0D),
         BuiltInPhase.ExecutionPlan to PhaseColors(0xFF0072B2, 0xFFF2F4F8, 0xFFDCE6F4, 0xFF276090),
         BuiltInPhase.ValidationPlan to PhaseColors(0xFFD55E00, 0xFF191512, 0xFFF4E2D9, 0xFF672F0A),
-        BuiltInPhase.DefinitionOfDone to PhaseColors(0xFFCC79A7, 0xFF191417, 0xFFF3E1E9, 0xFFA52777),
+        BuiltInPhase.DefinitionOfDone to PhaseColors(
+          0xFFCC79A7,
+          0xFF191417,
+          0xFFF3E1E9,
+          0xFFA52777
+        ),
       ),
     )
 

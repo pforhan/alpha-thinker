@@ -9,7 +9,6 @@ import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.components.TaskSpinner
 import alphainterplanetary.thinker.ui.theme.Dimens
-import alphainterplanetary.thinker.util.formatTokens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -218,14 +217,16 @@ internal fun RemoteConnectionFields(
     singleLine = true,
     isError = contextTokens.toIntOrNull()?.let { it > 0 } != true,
     supportingText = {
-      Text("Each generation fills up to ${PlanningContext.TranscriptSharePercent}% of " +
-        "it with this project's questions and answers." +
-        if (provider == RemoteProvider.OpenAiCompatible) {
-          " Picking a model fills in its id, and a window too when the server " +
-            "reports one; otherwise tell the app how big the model is."
-        } else {
-          " Picking a model above fills it in from the model's real window."
-        })
+      Text(
+        "Each generation fills up to ${PlanningContext.TranscriptSharePercent}% of " +
+          "it with this project's questions and answers." +
+          if (provider == RemoteProvider.OpenAiCompatible) {
+            " Picking a model fills in its id, and a window too when the server " +
+              "reports one; otherwise tell the app how big the model is."
+          } else {
+            " Picking a model above fills it in from the model's real window."
+          }
+      )
     },
   )
 }
@@ -320,7 +321,11 @@ private fun ModelBrowser(
             ) {
               group.forEach { rank ->
                 val info = rank.model
-                val note = rank.reason.takeIf { it.isNotBlank() && it != "Meets minimum requirements" && it != "Insufficient data" && !it.startsWith("Unmeasured model") }
+                val note = rank.reason.takeIf {
+                  it.isNotBlank() && it != "Meets minimum requirements" && it != "Insufficient data" && !it.startsWith(
+                    "Unmeasured model"
+                  )
+                }
                 FilterChip(
                   selected = info.id == current,
                   onClick = { onSelect(info) },
@@ -337,6 +342,7 @@ private fun ModelBrowser(
         }
       }
     }
+
     is RemoteModelListState.Failed -> {
       Spacer(modifier = Modifier.height(Dimens.TightGap))
       Text(

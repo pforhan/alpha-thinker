@@ -15,7 +15,9 @@ import kotlinx.coroutines.test.runTest
 class LogDaoTest {
 
   private fun inMemory(): ActivityDatabase =
-    getActivityDatabase(Room.inMemoryDatabaseBuilder<ActivityDatabase>().setDriver(BundledSQLiteDriver()))
+    getActivityDatabase(
+      Room.inMemoryDatabaseBuilder<ActivityDatabase>().setDriver(BundledSQLiteDriver())
+    )
 
   private fun entry(
     activityId: String?,

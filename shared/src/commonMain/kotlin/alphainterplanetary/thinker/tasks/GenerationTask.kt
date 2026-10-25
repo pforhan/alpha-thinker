@@ -40,10 +40,9 @@ enum class TaskKind {
       TitleRecommendation,
       SynopsisRewrite,
       AutoArchive,
-      -> ConcurrencyGroup.Engine
+        -> ConcurrencyGroup.Engine
     }
 }
-
 
 enum class TaskStatus {
   Queued,

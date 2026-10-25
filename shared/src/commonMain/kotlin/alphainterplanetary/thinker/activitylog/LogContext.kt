@@ -64,7 +64,8 @@ class LogContext internal constructor(
    * A `response:` detail row (the engine's produced outcome), optionally with
    * the verbatim payload it was read from (see [LogEntry.raw]).
    */
-  suspend fun response(text: String, raw: String? = null) = file("${LogMarkers.Response} $text", raw)
+  suspend fun response(text: String, raw: String? = null) =
+    file("${LogMarkers.Response} $text", raw)
 
   /** Files a row verbatim — the escape hatch for text that has no marker. */
   suspend fun append(text: String) = file(text)
@@ -105,7 +106,12 @@ class LogContext internal constructor(
     append("context compacted: $dropped $noun dropped to fit budget")
   }
 
-  suspend fun contextCompacted(phaseLabel: String, count: Int, oldEstTokens: Int, newEstTokens: Int) {
+  suspend fun contextCompacted(
+    phaseLabel: String,
+    count: Int,
+    oldEstTokens: Int,
+    newEstTokens: Int,
+  ) {
     val noun = if (count == 1) "answer" else "answers"
     append(
       "context compacted: $phaseLabel summarized, $count $noun replaced " +

@@ -33,6 +33,7 @@ sealed interface ProjectDetailUiState {
     val project: Project,
     val canGenerateMoreInPhase: Boolean,
   ) : ProjectDetailUiState
+
   data class Error(val message: String) : ProjectDetailUiState
 }
 

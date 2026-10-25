@@ -18,7 +18,7 @@ class QuestionViewModeTest {
 
   private fun ids(
     view: QuestionViewMode,
-    questions: List<alphainterplanetary.thinker.model.Question>,
+    questions: List<Question>,
   ): List<String> =
     view.apply(questions).map { it.id }
 

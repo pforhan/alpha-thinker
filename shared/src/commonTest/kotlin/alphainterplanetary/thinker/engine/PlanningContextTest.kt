@@ -181,7 +181,6 @@ class PlanningContextTest {
     assertTrue(PlanningContext.nearLimit(estimatedTokens = 2001, budgetTokens = 2000))
   }
 
-
   // ---------- the phases a summary could be written from ----------
 
   /**
@@ -478,7 +477,10 @@ class PlanningContextTest {
     val trim = PlanningContext.trim(project, 50)
 
     assertEquals(0, trim.droppedAnswers, "a skipped answer is already not rendered")
-    assertEquals("Q: Ignored? / ${PlanningContext.SkippedNote}", PlanningContext.line(trim.questions.first()))
+    assertEquals(
+      "Q: Ignored? / ${PlanningContext.SkippedNote}",
+      PlanningContext.line(trim.questions.first())
+    )
   }
 
   // ---------- trimming a transcript that already has summaries ----------

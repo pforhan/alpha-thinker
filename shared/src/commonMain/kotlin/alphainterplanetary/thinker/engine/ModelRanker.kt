@@ -75,11 +75,17 @@ object ModelRanker {
     }
     // Lower-quality but fast: adequate quality and fast or fine speeds
     if (q == ModelQuality.Adequate && (s == ModelSpeed.Fast || s == ModelSpeed.Fine)) {
-      return ModelPresentationTier.LowerQualityButFast to buildReason("Adequate quality, good speed", measurement)
+      return ModelPresentationTier.LowerQualityButFast to buildReason(
+        "Adequate quality, good speed",
+        measurement
+      )
     }
     // adequate × slow
     if (q == ModelQuality.Adequate && s == ModelSpeed.Slow) {
-      return ModelPresentationTier.Discouraged to buildReason("Adequate quality but slow", measurement)
+      return ModelPresentationTier.Discouraged to buildReason(
+        "Adequate quality but slow",
+        measurement
+      )
     }
     // weak
     if (q == ModelQuality.Weak) {
@@ -89,7 +95,10 @@ object ModelRanker {
       return ModelPresentationTier.Unknown to buildReason("Insufficient data", measurement)
     }
 
-    return ModelPresentationTier.Discouraged to buildReason("Meets minimum requirements", measurement)
+    return ModelPresentationTier.Discouraged to buildReason(
+      "Meets minimum requirements",
+      measurement
+    )
   }
 
   private fun deriveHeuristicTier(

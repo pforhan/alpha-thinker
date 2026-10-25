@@ -37,10 +37,34 @@ class ActivityRecordTest {
     val newer = now() - 2.days
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "input: synopsis=Build a rocketship", LogCategory.TitleRecommendation, timestamp = old),
-        entry(2, "task-1", "response: Rocketship", LogCategory.TitleRecommendation, timestamp = old),
-        entry(3, "task-2", "input: synopsis=Build a rocketship", LogCategory.TitleRecommendation, timestamp = newer),
-        entry(4, "task-2", "response: Rocketship", LogCategory.TitleRecommendation, timestamp = newer),
+        entry(
+          1,
+          "task-1",
+          "input: synopsis=Build a rocketship",
+          LogCategory.TitleRecommendation,
+          timestamp = old
+        ),
+        entry(
+          2,
+          "task-1",
+          "response: Rocketship",
+          LogCategory.TitleRecommendation,
+          timestamp = old
+        ),
+        entry(
+          3,
+          "task-2",
+          "input: synopsis=Build a rocketship",
+          LogCategory.TitleRecommendation,
+          timestamp = newer
+        ),
+        entry(
+          4,
+          "task-2",
+          "response: Rocketship",
+          LogCategory.TitleRecommendation,
+          timestamp = newer
+        ),
       )
     )
 
@@ -70,9 +94,27 @@ class ActivityRecordTest {
   fun `source prefers the engine over the task-runner wrapper`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
-        entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration, LogSource.RemoteLLM),
-        entry(3, "task-1", "response: 1 questions, done=false", LogCategory.QuestionGeneration, LogSource.RemoteLLM),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
+        entry(
+          2,
+          "task-1",
+          "input: phase=ScopeGoals, synopsis=S",
+          LogCategory.QuestionGeneration,
+          LogSource.RemoteLLM
+        ),
+        entry(
+          3,
+          "task-1",
+          "response: 1 questions, done=false",
+          LogCategory.QuestionGeneration,
+          LogSource.RemoteLLM
+        ),
         entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
@@ -84,7 +126,13 @@ class ActivityRecordTest {
   fun `source falls back to the wrapper when no engine row filed one`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
@@ -96,9 +144,27 @@ class ActivityRecordTest {
   fun `summary prefers the last response row else the newest row`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "input: synopsis=S", LogCategory.TitleRecommendation, timestamp = now() - 1.days),
-        entry(2, "task-1", "response: First title", LogCategory.TitleRecommendation, timestamp = now() - 1.days),
-        entry(3, "task-1", "response: Revised title", LogCategory.TitleRecommendation, timestamp = now()),
+        entry(
+          1,
+          "task-1",
+          "input: synopsis=S",
+          LogCategory.TitleRecommendation,
+          timestamp = now() - 1.days
+        ),
+        entry(
+          2,
+          "task-1",
+          "response: First title",
+          LogCategory.TitleRecommendation,
+          timestamp = now() - 1.days
+        ),
+        entry(
+          3,
+          "task-1",
+          "response: Revised title",
+          LogCategory.TitleRecommendation,
+          timestamp = now()
+        ),
       )
     ).single()
 
@@ -121,8 +187,22 @@ class ActivityRecordTest {
     val base = Instant.fromEpochMilliseconds(10_000_000_000)
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = base),
-        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = base + 5.days),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner,
+          timestamp = base
+        ),
+        entry(
+          2,
+          "task-1",
+          "succeeded",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner,
+          timestamp = base + 5.days
+        ),
       )
     ).single()
 
@@ -147,20 +227,44 @@ class ActivityRecordTest {
   fun `projectId is the first populated project id across the rows`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       ).map { it.copy(projectId = "p1") }
     ).single()
 
     assertEquals("p1", activity.projectId)
-    assertNull(titleActivity(listOf(entry(1, "task-1", "capability notice", LogCategory.Info, LogSource.App))).single().projectId)
+    assertNull(
+      titleActivity(
+        listOf(
+          entry(
+            1,
+            "task-1",
+            "capability notice",
+            LogCategory.Info,
+            LogSource.App
+          )
+        )
+      ).single().projectId
+    )
   }
 
   @Test
   fun `category aggregates the distinct work categories in order`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "prompt: SYSTEM\nSummarize", LogCategory.PriorSummary),
         entry(3, "task-1", "response: a summary", LogCategory.PriorSummary),
         entry(4, "task-1", "prompt: SYSTEM\nQuestions", LogCategory.QuestionGeneration),
@@ -176,7 +280,13 @@ class ActivityRecordTest {
   fun `category omits the task-run lifecycle wrapper`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "response: 1 questions, done=false", LogCategory.QuestionGeneration),
         entry(3, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
@@ -189,7 +299,13 @@ class ActivityRecordTest {
   fun `category falls back to Task for a pure lifecycle activity`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()
@@ -201,7 +317,13 @@ class ActivityRecordTest {
   fun `initial batches summarize the produced count`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
         entry(
           3,
@@ -224,8 +346,20 @@ class ActivityRecordTest {
   fun `a phase advance summarizes the new phase and the produced count`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
-        entry(2, "task-1", "Action: advance phase\nPhase: Design", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
+        entry(
+          2,
+          "task-1",
+          "Action: advance phase\nPhase: Design",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(3, "task-1", "response: 4 questions, done=false", LogCategory.QuestionGeneration),
         entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
@@ -239,8 +373,20 @@ class ActivityRecordTest {
   fun `a more-questions round is not read as an advance`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
-        entry(2, "task-1", "Action: more questions\nPhase: Design", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
+        entry(
+          2,
+          "task-1",
+          "Action: more questions\nPhase: Design",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(3, "task-1", "response: 2 questions, done=false", LogCategory.QuestionGeneration),
         entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
@@ -254,8 +400,20 @@ class ActivityRecordTest {
   fun `an advance that generated nothing still names the phase`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
-        entry(2, "task-1", "Action: advance phase\nPhase: Research", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
+        entry(
+          2,
+          "task-1",
+          "Action: advance phase\nPhase: Research",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(3, "task-1", "response: 0 questions, done=true", LogCategory.QuestionGeneration),
         entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
@@ -268,8 +426,19 @@ class ActivityRecordTest {
   fun `an exhausted follow-up batch summarizes the no-further signal`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
-        entry(2, "task-1", "input: phase=ExecutionPlan, previous questions=12", LogCategory.QuestionGeneration),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
+        entry(
+          2,
+          "task-1",
+          "input: phase=ExecutionPlan, previous questions=12",
+          LogCategory.QuestionGeneration
+        ),
         entry(3, "task-1", "response: 0 questions, done=true", LogCategory.QuestionGeneration),
         entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
@@ -287,9 +456,20 @@ class ActivityRecordTest {
   fun `a fan-out interaction summarizes off its last request`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "prompt: SYSTEM\nSummarize", LogCategory.QuestionGeneration),
-        entry(3, "task-1", "response: a summary of earlier answers", LogCategory.QuestionGeneration),
+        entry(
+          3,
+          "task-1",
+          "response: a summary of earlier answers",
+          LogCategory.QuestionGeneration
+        ),
         entry(4, "task-1", "prompt: SYSTEM\nQuestions", LogCategory.QuestionGeneration),
         entry(5, "task-1", "response: 4 questions, done=false", LogCategory.QuestionGeneration),
         entry(6, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
@@ -304,7 +484,13 @@ class ActivityRecordTest {
   fun `a title recommendation summarizes the recommended title`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: TitleRecommendation", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: TitleRecommendation",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "input: synopsis=Build a rocketship", LogCategory.TitleRecommendation),
         entry(3, "task-1", "response: Rocketship", LogCategory.TitleRecommendation),
         entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
@@ -318,7 +504,13 @@ class ActivityRecordTest {
   fun `a failing generation headlines with its topic`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
         entry(3, "task-1", "failed: model exploded", LogCategory.QuestionGeneration),
         entry(4, "task-1", "failed: model exploded", LogCategory.TaskRun, LogSource.TaskRunner),
@@ -332,7 +524,13 @@ class ActivityRecordTest {
   fun `a task lifecycle with no engine rows wraps the kind`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(
+          1,
+          "task-1",
+          "started: QuestionGeneration",
+          LogCategory.TaskRun,
+          LogSource.TaskRunner
+        ),
         entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
       )
     ).single()

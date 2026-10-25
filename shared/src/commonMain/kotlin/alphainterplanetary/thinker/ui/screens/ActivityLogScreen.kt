@@ -61,9 +61,9 @@ import kotlinx.coroutines.launch
  *
  * Each card is one activity (the [LogEntry] rows sharing an
  * [LogEntry.activityId]): its collapsed headline summarizes the outcome (a
-  * question count + `done` flag, a produced title, or an
-  * error), and tapping expands the full ordered rows with timestamps.
-  *
+ * question count + `done` flag, a produced title, or an
+ * error), and tapping expands the full ordered rows with timestamps.
+ *
  * This addresses IMPLEMENTATION-PLAN.md line 228 and the "why has the backend
  * stopped offering questions" audit: a `FollowUpQuestions` batch that produced
  * zero questions but marked `done`, or a failed/cancelled generation task with
@@ -213,11 +213,13 @@ private fun summaryColor(hasError: Boolean): Color =
 private fun EntryRow(entry: LogEntry) {
   var showFull by remember { mutableStateOf(false) }
   val raw = entry.raw
-  val isVerbose = entry.log.startsWith(LogMarkers.Prompt) || entry.log.startsWith(LogMarkers.Response)
+  val isVerbose =
+    entry.log.startsWith(LogMarkers.Prompt) || entry.log.startsWith(LogMarkers.Response)
   val valueColor = when {
     entry.log.startsWith(LogMarkers.Failed) || entry.log == LogMarkers.Cancelled -> {
       MaterialTheme.colorScheme.error
     }
+
     isVerbose -> MaterialTheme.colorScheme.onSurface
     else -> MaterialTheme.colorScheme.onSurfaceVariant
   }

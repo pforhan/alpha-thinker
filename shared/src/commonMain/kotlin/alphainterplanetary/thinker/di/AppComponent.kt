@@ -59,7 +59,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   @AppScope
   @Provides
-  fun providesActivityDatabase(): ActivityDatabase = getActivityDatabase(provideActivityDatabaseBuilder(platformContext))
+  fun providesActivityDatabase(): ActivityDatabase =
+    getActivityDatabase(provideActivityDatabaseBuilder(platformContext))
 
   @AppScope
   @Provides

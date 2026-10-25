@@ -21,7 +21,9 @@ import kotlinx.coroutines.test.runTest
 class RoomActivityLoggerTest {
 
   private fun inMemory(): ActivityDatabase =
-    getActivityDatabase(Room.inMemoryDatabaseBuilder<ActivityDatabase>().setDriver(BundledSQLiteDriver()))
+    getActivityDatabase(
+      Room.inMemoryDatabaseBuilder<ActivityDatabase>().setDriver(BundledSQLiteDriver())
+    )
 
   private fun Entry(
     activityId: String?,
@@ -57,7 +59,15 @@ class RoomActivityLoggerTest {
 
     dao.append(Entry("old-1", "response: x", timestamp = now - 40.days))
     dao.append(Entry("old-2", "response: y", timestamp = now - 20.days))
-    dao.append(Entry("fresh", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = now - 1.days))
+    dao.append(
+      Entry(
+        "fresh",
+        "started: QuestionGeneration",
+        LogCategory.TaskRun,
+        LogSource.TaskRunner,
+        timestamp = now - 1.days
+      )
+    )
 
     log(db, storage = storage).runStartupSweep()
 
@@ -88,9 +98,24 @@ class RoomActivityLoggerTest {
     val db = inMemory()
     val dao = db.logDao()
     val now = Instant.fromEpochMilliseconds(10_000_000_000)
-    dao.append(Entry("a1", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = now))
+    dao.append(
+      Entry(
+        "a1",
+        "started: QuestionGeneration",
+        LogCategory.TaskRun,
+        LogSource.TaskRunner,
+        timestamp = now
+      )
+    )
     dao.append(Entry("a1", "response: done", timestamp = now + 1.days))
-    dao.append(Entry("a2", "response: title", LogCategory.TitleRecommendation, timestamp = now + 2.days))
+    dao.append(
+      Entry(
+        "a2",
+        "response: title",
+        LogCategory.TitleRecommendation,
+        timestamp = now + 2.days
+      )
+    )
 
     val roomLog = log(db)
     val grouped = ActivityRecord.groupByActivity(roomLog.entries().first())
@@ -105,7 +130,15 @@ class RoomActivityLoggerTest {
     val dao = db.logDao()
     val now = Instant.fromEpochMilliseconds(10_000_000_000)
     dao.append(Entry("a1", "response: done", timestamp = now))
-    dao.append(Entry("a2", "started: QuestionGeneration", LogCategory.TaskRun, LogSource.TaskRunner, timestamp = now + 1.days))
+    dao.append(
+      Entry(
+        "a2",
+        "started: QuestionGeneration",
+        LogCategory.TaskRun,
+        LogSource.TaskRunner,
+        timestamp = now + 1.days
+      )
+    )
     dao.append(Entry("a2", "failed: model exploded", timestamp = now + 1.days))
 
     val latest = log(db).latestActivity().first()
@@ -125,7 +158,14 @@ class RoomActivityLoggerTest {
     repeat(ActivityLogger.RecentActivityRowLimit) {
       dao.append(Entry("old", "response: buried", timestamp = now))
     }
-    dao.append(Entry("new", "response: fresh", LogCategory.TitleRecommendation, timestamp = now + 1.days))
+    dao.append(
+      Entry(
+        "new",
+        "response: fresh",
+        LogCategory.TitleRecommendation,
+        timestamp = now + 1.days
+      )
+    )
 
     val latest = log(db).latestActivity().first()
 

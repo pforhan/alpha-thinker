@@ -14,10 +14,10 @@ enum class GenerationProblemKind(
 ) {
   /** No title landed for a project created without one. */
   Title("Couldn't suggest a title"),
+
   /** No questions landed for the phase's newest round. */
   Questions("Couldn't create questions"),
 }
-
 
 /**
  * The project's current generation problem, or null when there is nothing to act

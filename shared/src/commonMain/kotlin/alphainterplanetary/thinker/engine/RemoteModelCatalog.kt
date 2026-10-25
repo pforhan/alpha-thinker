@@ -226,7 +226,8 @@ class KoogRemoteModelCatalog(
       // provider is asked for.
       displayName = resolveLatestAlias(tag.id, show?.sizeLabel() ?: details?.parameterSize),
       contextLength = show?.contextLength() ?: tag.contextLength,
-      parameterSizeB = parseSizeLabel(details?.parameterSize) ?: sizeFromCount(show?.parameterCount()),
+      parameterSizeB = parseSizeLabel(details?.parameterSize)
+        ?: sizeFromCount(show?.parameterCount()),
       sizeLabel = details?.parameterSize,
       parameterCount = show?.parameterCount(),
       sizeBytes = tag.sizeBytes,

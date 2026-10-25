@@ -4,7 +4,9 @@ import ai.koog.prompt.Prompt
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.message.Message
+import alphainterplanetary.thinker.activitylog.LogRequest
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.activitylog.logRequest
 import alphainterplanetary.thinker.engine.PlanningContext.PhaseSummary
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOutcome
@@ -30,7 +32,7 @@ import kotlinx.serialization.json.Json
  * phase-summary interactions ask for prose and take it as written; only the
  * question batch has a shape to refuse.
  *
- * Each request is built once and reported into the ambient [LogScope] as it is
+ * Each request is built once and reported into the ambient LogScope as it is
  * sent ([logRequest]), so the `prompt:` row is read back off the very [Prompt]
  * the backend received and the reply is filed verbatim on that request's own
  * outcome row — including the ones we could not read, where the failing message
@@ -205,9 +207,54 @@ class KoogPlanningEngine(
       "${message.role()}\n${message.textContent()}"
     }
 
-  companion object {
-    const val DraftCount: Int = 5
+  private fun titleUserPrompt(synopsis: String): String =
+    "Project synopsis:\n$synopsis\n\nReturn the project title."
 
+  /**
+   * One past phase's answers, as the model saw them — the same
+   * [PlanningContext.line]s the question prompt renders, so a summary is
+   * written against exactly the transcript it is meant to replace.
+   */
+  private fun summarizeUserPrompt(
+    title: String,
+    synopsis: String,
+    phase: Phase,
+    transcript: String,
+  ): String =
+    "Planning a project titled \"$title\".\n" +
+      "Project synopsis:\n$synopsis\n\n" +
+      "This planning phase (${phase.label}) is finished:\n" +
+      "$transcript\n\n" +
+      "Summarize what this phase settled, so a later round does not ask again."
+
+  /**
+   * One prompt for every question round. The interview-so-far block is the
+   * whole transcript — every prior question with whatever the user has done
+   * with it (see [PlanningContext.line]) — and is always present, reading
+   * "(none)" on a project's opening round, so a first batch and a later one
+   * cannot drift into different shapes. The title reaches every round, not
+   * just the first. [priorSummaries] lead the block when the project's
+   * earlier phases were condensed to make room; the questions they stand in
+   * for are still in the transcript, marked as summarized rather than
+   * omitted, so a model never re-asks what the summary already answers.
+   */
+  private fun questionsUserPrompt(
+    title: String,
+    synopsis: String,
+    phase: Phase,
+    previousQuestions: List<Question>,
+    priorSummaries: List<PhaseSummary> = emptyList(),
+  ): String =
+    "Planning a project titled \"$title\".\n" +
+      "Project synopsis:\n$synopsis\n\n" +
+      "The interview so far:\n" +
+      PlanningContext.render(previousQuestions, priorSummaries).ifEmpty { "(none)" } + "\n\n" +
+      "Propose new questions for this phase. Focus on " +
+      "Phase: ${phase.label} — ${phase.description}\n" +
+      "but if there are crucial details missing that block this phase you may " +
+      "go deeper on what has been answered."
+
+  companion object {
     const val PromptRecommendTitle = "alpha-thinker-recommend-title"
     const val PromptInitialQuestions = "alpha-thinker-initial-questions"
     const val PromptFollowUpQuestions = "alpha-thinker-follow-up-questions"
@@ -248,52 +295,6 @@ class KoogPlanningEngine(
       isLenient = false
     }
 
-    fun titleUserPrompt(synopsis: String): String =
-      "Project synopsis:\n$synopsis\n\nReturn the project title."
-
-    /**
-     * One past phase's answers, as the model saw them — the same
-     * [PlanningContext.line]s the question prompt renders, so a summary is
-     * written against exactly the transcript it is meant to replace.
-     */
-    fun summarizeUserPrompt(
-      title: String,
-      synopsis: String,
-      phase: Phase,
-      transcript: String,
-    ): String =
-      "Planning a project titled \"$title\".\n" +
-        "Project synopsis:\n$synopsis\n\n" +
-        "This planning phase (${phase.label}) is finished:\n" +
-        "$transcript\n\n" +
-        "Summarize what this phase settled, so a later round does not ask again."
-
-    /**
-     * One prompt for every question round. The interview-so-far block is the
-     * whole transcript — every prior question with whatever the user has done
-     * with it (see [PlanningContext.line]) — and is always present, reading
-     * "(none)" on a project's opening round, so a first batch and a later one
-     * cannot drift into different shapes. The title reaches every round, not
-     * just the first. [priorSummaries] lead the block when the project's
-     * earlier phases were condensed to make room; the questions they stand in
-     * for are still in the transcript, marked as summarized rather than
-     * omitted, so a model never re-asks what the summary already answers.
-     */
-    fun questionsUserPrompt(
-      title: String,
-      synopsis: String,
-      phase: Phase,
-      previousQuestions: List<Question>,
-      priorSummaries: List<PhaseSummary> = emptyList(),
-    ): String =
-      "Planning a project titled \"$title\".\n" +
-        "Project synopsis:\n$synopsis\n\n" +
-        "The interview so far:\n" +
-        PlanningContext.render(previousQuestions, priorSummaries).ifEmpty { "(none)" } + "\n\n" +
-        "Propose new questions for this phase. Focus on " +
-        "Phase: ${phase.label} — ${phase.description}\n" +
-        "but if there are crucial details missing that block this phase you may " +
-        "go deeper on what has been answered."
   }
 }
 

@@ -124,15 +124,16 @@ class OfflinePlanningEngineTest {
   }
 
   @Test
-  fun `generateQuestions draws from the start of the phase's pool when nothing is asked`() = runTest {
-    val batch = generate(phase = BuiltInPhase.ScopeGoals)
+  fun `generateQuestions draws from the start of the phase's pool when nothing is asked`() =
+    runTest {
+      val batch = generate(phase = BuiltInPhase.ScopeGoals)
 
-    assertEquals(COUNT, batch.questions.size)
-    assertEquals(
-      poolOf(BuiltInPhase.ScopeGoals).take(COUNT),
-      batch.questions.map { it.text },
-    )
-  }
+      assertEquals(COUNT, batch.questions.size)
+      assertEquals(
+        poolOf(BuiltInPhase.ScopeGoals).take(COUNT),
+        batch.questions.map { it.text },
+      )
+    }
 
   @Test
   fun `generateQuestions draws from its own phase's pool`() = runTest {
@@ -193,15 +194,16 @@ class OfflinePlanningEngineTest {
   }
 
   @Test
-  fun `generateQuestions returns empty and reports done when the phase's pool is exhausted`() = runTest {
-    val asked = poolOf(BuiltInPhase.ValidationPlan)
-      .mapIndexed { index, text -> question(id = "q$index", text = text) }
+  fun `generateQuestions returns empty and reports done when the phase's pool is exhausted`() =
+    runTest {
+      val asked = poolOf(BuiltInPhase.ValidationPlan)
+        .mapIndexed { index, text -> question(id = "q$index", text = text) }
 
-    val batch = generate(phase = BuiltInPhase.ValidationPlan, previousQuestions = asked)
+      val batch = generate(phase = BuiltInPhase.ValidationPlan, previousQuestions = asked)
 
-    assertTrue(batch.questions.isEmpty())
-    assertTrue(batch.done)
-  }
+      assertTrue(batch.questions.isEmpty())
+      assertTrue(batch.done)
+    }
 
   @Test
   fun `generateQuestions reports done when the last of the remaining pool is served`() = runTest {
@@ -258,19 +260,20 @@ class OfflinePlanningEngineTest {
   }
 
   @Test
-  fun `done is true once the phase pool is exhausted even when other phases were asked in`() = runTest {
-    val research = generate(phase = BuiltInPhase.Research)
-    assertFalse(research.done)
+  fun `done is true once the phase pool is exhausted even when other phases were asked in`() =
+    runTest {
+      val research = generate(phase = BuiltInPhase.Research)
+      assertFalse(research.done)
 
-    // A batch that drains ValidationPlan ends the phase, even though the engine
-    // was asked about ScopeGoals and the caller mixes in another phase's history.
-    val asked = poolOf(BuiltInPhase.ValidationPlan)
-      .mapIndexed { index, text -> question(id = "q$index", text = text) } + research.questions
-    val batch = generate(phase = BuiltInPhase.ValidationPlan, previousQuestions = asked)
+      // A batch that drains ValidationPlan ends the phase, even though the engine
+      // was asked about ScopeGoals and the caller mixes in another phase's history.
+      val asked = poolOf(BuiltInPhase.ValidationPlan)
+        .mapIndexed { index, text -> question(id = "q$index", text = text) } + research.questions
+      val batch = generate(phase = BuiltInPhase.ValidationPlan, previousQuestions = asked)
 
-    assertTrue(batch.done)
-    assertEquals(emptyList(), batch.questions)
-  }
+      assertTrue(batch.done)
+      assertEquals(emptyList(), batch.questions)
+    }
 
   @Test
   fun `a batch that drains the pool mid-phase is done while still answering`() = runTest {

@@ -91,9 +91,10 @@ object EngineCatalog {
               // TODO: Implement actual file existence check here. Probably a checksum too, and/or ask litert-lm if ready
               NotImplemented
             }
+
             EngineKind.Remote -> {
               if (current.provider == null) {
-              // Remotes require a provider.
+                // Remotes require a provider.
                 Unavailable("Bad configuration")
               } else if (current.provider.requiresApiKey && current.apiKey.isBlank()) {
                 Unavailable("API key required")

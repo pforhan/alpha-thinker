@@ -49,7 +49,8 @@ class RemoteKoogPlanningBackendTest {
   @Test
   fun `a trailing v1 root is normalized to the server origin`() {
     val factory = RecordingFactory()
-    val backend = RemoteKoogPlanningBackend(connection(baseUrl = "http://localhost:11434/v1"), factory)
+    val backend =
+      RemoteKoogPlanningBackend(connection(baseUrl = "http://localhost:11434/v1"), factory)
 
     backend.executor
 

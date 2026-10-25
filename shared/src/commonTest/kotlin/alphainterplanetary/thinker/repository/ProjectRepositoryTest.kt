@@ -1210,7 +1210,11 @@ class ProjectRepositoryTest {
     val storage = FakeStorage(
       mutableMapOf(
         "p1" to phaseProject(
-          round = round(id = "r1", phase = BuiltInPhase.ScopeGoals, outcome = RoundOutcome.Exhausted),
+          round = round(
+            id = "r1",
+            phase = BuiltInPhase.ScopeGoals,
+            outcome = RoundOutcome.Exhausted
+          ),
         )
       )
     )
@@ -1244,7 +1248,10 @@ class ProjectRepositoryTest {
       listOf("First?"),
       storage.getProject(project.id)?.questions?.map { it.text },
     )
-    assertEquals(RoundOutcome.MoreAvailable, storage.getProject(project.id)?.rounds?.single()?.outcome)
+    assertEquals(
+      RoundOutcome.MoreAvailable,
+      storage.getProject(project.id)?.rounds?.single()?.outcome
+    )
   }
 
   @Test
@@ -1326,7 +1333,11 @@ class ProjectRepositoryTest {
     val storage = FakeStorage(
       mutableMapOf(
         "p1" to phaseProject(
-          round = round(id = "r1", phase = BuiltInPhase.ScopeGoals, outcome = RoundOutcome.Exhausted),
+          round = round(
+            id = "r1",
+            phase = BuiltInPhase.ScopeGoals,
+            outcome = RoundOutcome.Exhausted
+          ),
         )
       )
     )
@@ -1384,8 +1395,18 @@ class ProjectRepositoryTest {
     title = "t",
     status = "Draft",
     questions = listOf(
-      question("q1", "Q1?", answers = listOf(answer("q1", PhasedAnswerText, id = "a1")), roundId = "r1"),
-      question("q2", "Q2?", answers = listOf(answer("q2", PhasedAnswerText, id = "a2")), roundId = "r2"),
+      question(
+        "q1",
+        "Q1?",
+        answers = listOf(answer("q1", PhasedAnswerText, id = "a1")),
+        roundId = "r1"
+      ),
+      question(
+        "q2",
+        "Q2?",
+        answers = listOf(answer("q2", PhasedAnswerText, id = "a2")),
+        roundId = "r2"
+      ),
       question("q3", "Q3?", answers = listOf(answer("q3", "short", id = "a3")), roundId = "r3"),
     ),
     rounds = listOf(
@@ -1505,27 +1526,28 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `a batch of only already-asked questions with done false fails rather than quietly adding nothing`() = runTest {
-    val generator = FakePlanningEngine().apply {
-      questions += question("q1")
+  fun `a batch of only already-asked questions with done false fails rather than quietly adding nothing`() =
+    runTest {
+      val generator = FakePlanningEngine().apply {
+        questions += question("q1")
+      }
+      val storage = FakeStorage(
+        mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
+      )
+      val runner = TaskRunner(CoroutineScope(coroutineContext))
+      val repository = repo(storage = storage, generator = generator, runner = runner)
+
+      repository.generateMoreQuestions("p1")
+      testScheduler.advanceUntilIdle()
+
+      val persisted = assertNotNull(storage.getProject("p1"))
+      assertEquals(RoundOutcome.Failed, persisted.rounds.last().outcome)
+      assertEquals(listOf("q1"), persisted.questions.map { it.id })
+      assertEquals(
+        TaskStatus.Failed,
+        runner.tasks.value.single { it.kind == TaskKind.QuestionGeneration }.status,
+      )
     }
-    val storage = FakeStorage(
-      mutableMapOf("p1" to phaseProject(round("r1", phase = BuiltInPhase.Design)))
-    )
-    val runner = TaskRunner(CoroutineScope(coroutineContext))
-    val repository = repo(storage = storage, generator = generator, runner = runner)
-
-    repository.generateMoreQuestions("p1")
-    testScheduler.advanceUntilIdle()
-
-    val persisted = assertNotNull(storage.getProject("p1"))
-    assertEquals(RoundOutcome.Failed, persisted.rounds.last().outcome)
-    assertEquals(listOf("q1"), persisted.questions.map { it.id })
-    assertEquals(
-      TaskStatus.Failed,
-      runner.tasks.value.single { it.kind == TaskKind.QuestionGeneration }.status,
-    )
-  }
 
   @Test
   fun `an engine failure latches Failed with its message and rethrows to the task`() = runTest {
@@ -1574,34 +1596,45 @@ class ProjectRepositoryTest {
   }
 
   @Test
-  fun `the newest round in the phase decides exhaustion and nothing older overrides it`() = runTest {
-    val storage = FakeStorage(
-      mutableMapOf(
-        "p1" to phaseProject(
-          round = round(id = "r1", phase = BuiltInPhase.Design, roundNumber = 1, outcome = RoundOutcome.Exhausted),
-        ).copy(
-          rounds = listOf(
-            round(id = "r1", phase = BuiltInPhase.Design, roundNumber = 1, outcome = RoundOutcome.Exhausted),
-            round(
-              id = "r2",
+  fun `the newest round in the phase decides exhaustion and nothing older overrides it`() =
+    runTest {
+      val storage = FakeStorage(
+        mutableMapOf(
+          "p1" to phaseProject(
+            round = round(
+              id = "r1",
               phase = BuiltInPhase.Design,
-              roundNumber = 2,
-              origin = RoundOrigin.UserRequested,
-              outcome = RoundOutcome.Failed,
-              outcomeDetail = "boom",
+              roundNumber = 1,
+              outcome = RoundOutcome.Exhausted
             ),
+          ).copy(
+            rounds = listOf(
+              round(
+                id = "r1",
+                phase = BuiltInPhase.Design,
+                roundNumber = 1,
+                outcome = RoundOutcome.Exhausted
+              ),
+              round(
+                id = "r2",
+                phase = BuiltInPhase.Design,
+                roundNumber = 2,
+                origin = RoundOrigin.UserRequested,
+                outcome = RoundOutcome.Failed,
+                outcomeDetail = "boom",
+              ),
+            )
           )
         )
       )
-    )
-    val repository = repo(storage = storage)
+      val repository = repo(storage = storage)
 
-    // The newest round is the failed one, so the phase is open again.
-    val persisted = assertNotNull(storage.getProject("p1"))
-    assertFalse(persisted.currentPhaseExhausted)
-    assertEquals("boom", persisted.currentPhaseFailure)
-    assertNotNull(repository.generateMoreQuestions("p1"))
-  }
+      // The newest round is the failed one, so the phase is open again.
+      val persisted = assertNotNull(storage.getProject("p1"))
+      assertFalse(persisted.currentPhaseExhausted)
+      assertEquals("boom", persisted.currentPhaseFailure)
+      assertNotNull(repository.generateMoreQuestions("p1"))
+    }
 
   @Test
   fun `a round in an older phase never closes the current phase`() = runTest {
@@ -1620,7 +1653,12 @@ class ProjectRepositoryTest {
               roundNumber = 1,
               outcome = RoundOutcome.Exhausted,
             ),
-            round(id = "r2", phase = BuiltInPhase.Design, roundNumber = 2, origin = RoundOrigin.Initial),
+            round(
+              id = "r2",
+              phase = BuiltInPhase.Design,
+              roundNumber = 2,
+              origin = RoundOrigin.Initial
+            ),
           ),
           createdAt = now,
           updatedAt = now,
@@ -1854,7 +1892,8 @@ class ProjectRepositoryTest {
   @Test
   fun `advanceToPhase into a phase already exhausted by an earlier visit stays exhausted`() =
     runTest {
-      val generator = FakePlanningEngine() // no initial questions -> the revisit can't produce anything
+      val generator =
+        FakePlanningEngine() // no initial questions -> the revisit can't produce anything
       val repositoryStorage = storageWith(revisitedProject())
       val repository = repo(storage = repositoryStorage, generator = generator)
 
@@ -2121,7 +2160,10 @@ class ProjectRepositoryTest {
     assertEquals(0, check.droppableAnswers)
     assertEquals(emptyList(), check.summarizablePhases)
     assertFalse(check.canSummarize, "nothing to summarize, since nothing is read to summarize")
-    assertTrue(check.estimatedTokens > 500, "the transcript is still measured; it just doesn't bind")
+    assertTrue(
+      check.estimatedTokens > 500,
+      "the transcript is still measured; it just doesn't bind"
+    )
   }
 
   /**

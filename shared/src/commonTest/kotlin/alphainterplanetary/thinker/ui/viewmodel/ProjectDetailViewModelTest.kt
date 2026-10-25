@@ -71,7 +71,10 @@ class ProjectDetailViewModelTest {
   }
 
   /** A [PlanningEngine] that holds its follow-up generation for [holdSeconds]. */
-  private fun slowFollowUpGenerator(delegate: FakePlanningEngine, holdSeconds: Int): PlanningEngine =
+  private fun slowFollowUpGenerator(
+    delegate: FakePlanningEngine,
+    holdSeconds: Int,
+  ): PlanningEngine =
     SlowDownPlanningEngine(
       delegate = delegate,
       config = MutableStateFlow(
@@ -218,7 +221,12 @@ class ProjectDetailViewModelTest {
   fun `Success reports more questions available until a round latches Exhausted`() = runTest {
     val open = project().copy(
       rounds = listOf(
-        round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals, outcome = RoundOutcome.MoreAvailable),
+        round(
+          id = "r1",
+          projectId = "p1",
+          phase = BuiltInPhase.ScopeGoals,
+          outcome = RoundOutcome.MoreAvailable
+        ),
       )
     )
     withViewModel(FakeStorage(mutableMapOf("p1" to open))) { context ->
@@ -231,7 +239,12 @@ class ProjectDetailViewModelTest {
 
     val exhausted = open.copy(
       rounds = listOf(
-        round(id = "r1", projectId = "p1", phase = BuiltInPhase.ScopeGoals, outcome = RoundOutcome.Exhausted),
+        round(
+          id = "r1",
+          projectId = "p1",
+          phase = BuiltInPhase.ScopeGoals,
+          outcome = RoundOutcome.Exhausted
+        ),
       )
     )
     withViewModel(FakeStorage(mutableMapOf("p1" to exhausted))) { context ->
@@ -340,7 +353,11 @@ class ProjectDetailViewModelTest {
       assertIs<ContextPrompt.MoreQuestions>(prompt)
       assertTrue(prompt.check.nearLimit)
       assertTrue(prompt.check.canSummarize, "the engine can summarize, so the option is offered")
-      assertEquals(2, (vm.uiState.value as ProjectDetailUiState.Success).project.rounds.size, "no round yet")
+      assertEquals(
+        2,
+        (vm.uiState.value as ProjectDetailUiState.Success).project.rounds.size,
+        "no round yet"
+      )
       assertTrue(generator.calls.isEmpty(), "and no generation yet")
 
       vm.resolveContextPrompt(ContextCompaction.SummarizeEarlierPhases)
@@ -390,12 +407,18 @@ class ProjectDetailViewModelTest {
       val prompt = vm.contextPrompt.value
       assertIs<ContextPrompt.PhaseAdvance>(prompt)
       assertEquals(BuiltInPhase.Research, prompt.phase)
-      assertEquals(BuiltInPhase.Design, (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase)
+      assertEquals(
+        BuiltInPhase.Design,
+        (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase
+      )
 
       vm.resolveContextPrompt(ContextCompaction.KeepEverything)
       testScheduler.advanceUntilIdle()
 
-      assertEquals(BuiltInPhase.Research, (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase)
+      assertEquals(
+        BuiltInPhase.Research,
+        (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase
+      )
     }
   }
 
@@ -418,7 +441,10 @@ class ProjectDetailViewModelTest {
       assertIs<ContextPrompt.MoreQuestions>(prompt)
       assertTrue(prompt.check.nearLimit)
       assertFalse(prompt.check.canSummarize)
-      assertTrue(prompt.check.summarizablePhases.isNotEmpty(), "there is a phase; the engine just can't write it up")
+      assertTrue(
+        prompt.check.summarizablePhases.isNotEmpty(),
+        "there is a phase; the engine just can't write it up"
+      )
     }
   }
 
@@ -662,7 +688,10 @@ class ProjectDetailViewModelTest {
         // Entering the project replays the running task instead of waiting on a reload.
         vm.loadProject("p1")
         testScheduler.runCurrent()
-        assertEquals(BuiltInPhase.ScopeGoals, (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase)
+        assertEquals(
+          BuiltInPhase.ScopeGoals,
+          (vm.uiState.value as ProjectDetailUiState.Success).project.currentPhase
+        )
         assertTrue(vm.tasks.value.any { it.isActive })
 
         // Completing the task streams the generated batch into the loaded project.

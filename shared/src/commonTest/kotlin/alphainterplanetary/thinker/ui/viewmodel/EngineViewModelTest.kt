@@ -10,7 +10,6 @@ import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.testutil.FakeStorage
-import app.cash.turbine.test
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -504,8 +503,16 @@ class EngineViewModelTest {
       lastApiKey = apiKey
       if (throwOnList) error("probe failed")
       return listOf(
-        RemoteModelInfo(id = "model-a", source = ModelSource.OpenAiCompatible, contextLength = 32_768),
-        RemoteModelInfo(id = "model-b", source = ModelSource.OpenAiCompatible, contextLength = null),
+        RemoteModelInfo(
+          id = "model-a",
+          source = ModelSource.OpenAiCompatible,
+          contextLength = 32_768
+        ),
+        RemoteModelInfo(
+          id = "model-b",
+          source = ModelSource.OpenAiCompatible,
+          contextLength = null
+        ),
       )
     }
 
