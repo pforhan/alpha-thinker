@@ -158,20 +158,16 @@ browser chip shows the resolved name while the id stays canonical.
       short reason. Preserve tap-to-select.
       (Lands in the connection editor moved by ENGINE-CONFIG-PLAN.md stage 3b;
       that plan owns where the browser lives, this one owns what it shows.)
-- [ ] **Hostability flag:** estimate each model's memory footprint (on-disk size,
-      else `parameter_count × bytes/param`) and flag those that won't fit the
-      device's budget next to the size/context chips — a note, not a filter.
-      (`tools/eval_ollama_models.py --device-memory-gb` is the reference for the
-      estimate and the `>NG B` flag.)
-- [ ] **PRD updates:** PRD §4.3 already states the Verified / Recommended /
-      Others groupings, best-available auto-selection, and Ollama pull
-      (`PRD.md:63`); keep it in sync as the `latest` alias resolution and the
-      hostability flag land.
 
 **Proof:** `./gradlew :shared:allTests`.
 
 ### Stage 3 — Downloads & local models
 
+- [ ] **PRD updates:** PRD §4.3 already states the Verified / Recommended /
+      Others groupings -- update these to what we have in code.  Also include
+      best-available auto-selection, and Ollama pull plans (Stage 3)
+      (`PRD.md:63`); keep it in sync as the `latest` alias resolution and the
+      hostability flag land.
 - [ ] **Ollama model pull:** add `OllamaModelPuller` calling `POST /api/pull`
       with streaming NDJSON; expose a pull with progress/cancel/background; add a UI
       affordance to pull an ID (or show "Pull" for known IDs when missing);
@@ -187,6 +183,13 @@ browser chip shows the resolved name while the id stays canonical.
       models are `EngineKind.LocalFile` instance rows rendered under Local
       through the same list component (that plan's stage 3b).
       Platform-gate it (web/wasm on-device stays deferred).
+- [ ] **Hostability flag:** estimate each model's memory footprint (on-disk size,
+      else `parameter_count × bytes/param`) and flag those that won't fit the
+      device's budget next to the size/context chips — a note, not a filter.
+      we should consider altering the chip color for outliers.  Also things like
+      mlx versions would only run on recent macbooks.  A possible approach to
+      implementation in [this doc](llm-memory-fit.md). Note that hostability should
+      apply to local models *and also* to ollama instances on localhost.
 
 Note: the LiteRT client may require a beta version of Koog (see
 IMPLEMENTATION-PLAN.md Phase 5, "Revisit a newer Koog release when one lands").
