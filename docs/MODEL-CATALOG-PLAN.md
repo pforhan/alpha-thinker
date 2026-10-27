@@ -188,14 +188,14 @@ browser chip shows the resolved name while the id stays canonical.
         `"litert"`), `bytesTotal`, `bytesDone`, `throughputBps`, `downloadId`.
         Add `TaskRunner.setDownloadProgress(taskId, bytesDone, bytesTotal, throughputBps?)`
         to update fraction `progress` and metadata.
-- [ ] **Download abstractions:** Create a `downloads/` package with interfaces
+- [x] **Download abstractions:** Create a `downloads/` package with interfaces
       to enable testing and swappable implementations.
-  - [ ] Define `ModelDownloadManager` (`downloads()`, `pullOllama(modelId, baseUrl)`,
+  - [x] Define `ModelDownloader` (`downloads()`, `pullOllama(modelId, baseUrl)`,
         `downloadModel(spec)`, `cancel(handleId)`), `DownloadHandle(id, taskId)`,
         `DownloadState` (handle/task/kind/status/modelId/bytes/progress/message/source),
         `DownloadKind` (`OllamaPull`, `LocalFile`), `DownloadStatus` (`Queued`,
         `Running`, `Paused`, `Succeeded`, `Failed`, `Cancelled`).
-- [ ] **Ollama pull client:** Add `OllamaPullClient` using `KoogHttpClient` for
+- [x] **Ollama pull client:** Add `OllamaPullClient` using `KoogHttpClient` for
       streaming NDJSON from `POST /api/pull` with `{"model": ..., "stream": true}`.
       Normalize base URL like `RemoteModelCatalog` (strip `/v1`). Parse status
       messages (`status`, `digest`, `total`, `completed`, `error`), map phases
@@ -203,9 +203,9 @@ browser chip shows the resolved name while the id stays canonical.
       progress, support cancellation via stream closure, log via
       `ActivityLogger.taskContext(taskId, projectId = null)`, and refresh
       `RemoteModelCatalog` on completion (optionally auto-select).
-- [ ] **ModelDownloadManager + DI wiring:** Implement `ModelDownloadManager`
+- [x] **ModelDownloadManager + DI wiring:** Implement `ModelDownloader`
       that enqueues tasks via `TaskRunner`; wire `OllamaPullClient`,
-      `LocalFileDownloader`, and `ModelDownloadManager` into `AppComponent`.
+      `ModelFileTransferClient`, and `ModelDownloader` into `AppComponent`.
       Expose actions via `EngineViewModel` or a `DownloadViewModel`.
 - [ ] **Ollama model pull (curated):** Only present strong quality models from
       `model-evals/all.md` in the UI (no full browser). Implement end-to-end
@@ -231,8 +231,8 @@ browser chip shows the resolved name while the id stays canonical.
         apply context length if known, and consider best-available selection if
         the pulled model was the requested target. On failure/cancel, surface
         messages and clean up as appropriate.
-- [ ] **Local file downloads (LiteRT-LM, in-process):** Add `LocalFileDownloader`
-      interface + platform actuals for direct HTTP(S) downloads to app storage
+- [ ] **Local file downloads (LiteRT-LM, in-process):** Add `ModelFileTransferClient`
+      implementation + platform actuals for direct HTTP(S) downloads to app storage
       (via `PlatformContext`) with resume (Range), checksum verification (sha256),
       extraction if needed, disk space checks, cooperative cancellation, and
       throughput/ETA tracking. Add full LiteRT-LM support (Koog's

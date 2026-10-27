@@ -7,6 +7,11 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getActivityDatabase
 import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
+import alphainterplanetary.thinker.downloads.TaskBackedModelDownloader
+import alphainterplanetary.thinker.downloads.KoogOllamaPullClient
+import alphainterplanetary.thinker.downloads.ModelFileTransferClient
+import alphainterplanetary.thinker.downloads.ModelDownloader
+import alphainterplanetary.thinker.downloads.OllamaPullClient
 import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
@@ -23,6 +28,8 @@ import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.KmpComponentCreate
@@ -50,6 +57,12 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   abstract val taskRunner: TaskRunner
 
   abstract val activityLogger: ActivityLogger
+
+  abstract val ollamaPullClient: OllamaPullClient
+
+  abstract val modelFileTransferClient: ModelFileTransferClient
+
+  abstract val modelDownloader: ModelDownloader
 
   abstract val appScope: CoroutineScope
 
@@ -89,6 +102,38 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   @AppScope
   @Provides
   fun providesRemoteModelCatalog(): RemoteModelCatalog = KoogRemoteModelCatalog()
+
+  @AppScope
+  @Provides
+  fun providesOllamaPullClient(): OllamaPullClient = KoogOllamaPullClient()
+
+  @AppScope
+  @Provides
+  fun providesLocalFileDownloader(): ModelFileTransferClient = object : ModelFileTransferClient {
+    override fun download(spec: alphainterplanetary.thinker.downloads.ModelDownloadSpec): Flow<alphainterplanetary.thinker.downloads.LocalDownloadEvent> = flowOf(
+      alphainterplanetary.thinker.downloads.LocalDownloadEvent(
+        phase = alphainterplanetary.thinker.downloads.LocalDownloadPhase.Succeeded,
+      ),
+    )
+  }
+
+  @AppScope
+  @Provides
+  fun providesModelDownloadManager(
+    scope: CoroutineScope,
+    taskRunner: TaskRunner,
+    ollamaPullClient: OllamaPullClient,
+    modelFileTransferClient: ModelFileTransferClient,
+    remoteModelCatalog: RemoteModelCatalog,
+    activityLogger: ActivityLogger,
+  ): ModelDownloader = TaskBackedModelDownloader(
+    scope = scope,
+    taskRunner = taskRunner,
+    ollamaPullClient = ollamaPullClient,
+    modelFileTransferClient = modelFileTransferClient,
+    remoteModelCatalog = remoteModelCatalog,
+    activityLogger = activityLogger,
+  )
 
   @AppScope
   @Provides
