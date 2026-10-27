@@ -63,7 +63,7 @@ Both Editions share the same general UI, but differ in source of question materi
 - **Model selection & curation:** The app surfaces remote models in presentation groupings — **Recommended** (best balance of quality and speed for Alpha Thinker's planning tasks: concise title generation, JSON-conforming question lists, and phase summarization), **High-quality but Slower**, **Lower-quality but Fast**, **Unknown** (unmeasured models), and **Discouraged**. Groupings are presentational only; no model is ever hidden and every discovered model remains selectable. Rankings use measured eval data when available, falling back to family heuristics for unmeasured models. The app auto-selects the best available model from Recommended, falling back to High-quality but Slower, then Lower-quality but Fast (otherwise the first ranked model) when no valid model is selected or the current selection is missing. Model identities resolve `:latest` aliases for display while keeping canonical IDs for selection. When using a local **Ollama** server, the UI can pull models directly (by tag) with progress/cancel feedback (planned).
 
 ### 4.4 Seed Questions 
-The app ships with a large body of default questions; see [HardcodedQuestions.kt](shared/src/commonMain/kotlin/alphainterplanetary/thinker/engine/OfflinePlanningEngine.kt)
+The app ships with a large body of default questions; see [HardcodedQuestions.kt](../shared/src/commonMain/kotlin/alphainterplanetary/thinker/engine/OfflinePlanningEngine.kt)
 
 ### 5.1 Projects List
 - Display summary of all projects, including synopsis.

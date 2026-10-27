@@ -69,9 +69,9 @@ Build and run through Xcode (`iosApp/iosApp.xcodeproj`); Gradle provides the Kot
 
 ## Design Documentation
 
-See [PRD.md](PRD.md) for product requirements.
-See [ENG-DESIGN.md](ENG-DESIGN.md) for architecture, data model, LLM interface, and implementation details.
+See [PRD.md](docs/PRD.md) for product requirements.
+See [ENG-DESIGN.md](docs/ENG-DESIGN.md) for architecture, data model, LLM interface, and implementation details.
 
 ## Implementation Progress
 
-See [IMPLEMENTATION-PLAN.md](./IMPLEMENTATION-PLAN.md) for the project roadmap and status.
+See [IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md) for the project roadmap and status.

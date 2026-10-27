@@ -95,7 +95,7 @@ Plus `ModelProfiles` (family/pattern rules + measured seeds) and `ModelRanker`.
   bundled catalogue.
 - **OpenAI-compatible** — no standard; leave the new fields null.
 - **Measured rows** — `docs/model-evals/*.json`, produced by
-  `tools/eval_ollama_models.py` (the reference for both the `latest` resolution
+  `../tools/eval_ollama_models.py` (the reference for both the `latest` resolution
   and the footprint estimate).
 
 ---
@@ -163,20 +163,34 @@ browser chip shows the resolved name while the id stays canonical.
 
 ### Stage 3 — Downloads & local models
 
-- [ ] **PRD updates:** PRD §4.3 already states the Verified / Recommended /
-      Others groupings -- update these to what we have in code.  Also include
+- [x] **PRD updates:** PRD §4.3 already states the Verified / Recommended /
+      Others groupings — update these to what we have in code. Also include
       best-available auto-selection, and Ollama pull plans (Stage 3)
       (`PRD.md:63`); keep it in sync as the `latest` alias resolution and the
       hostability flag land.
-- [ ] **Ollama model pull:** add `OllamaModelPuller` calling `POST /api/pull`
-      with streaming NDJSON; expose a pull with progress/cancel/background; add a UI
-      affordance to pull an ID (or show "Pull" for known IDs when missing);
-      update the installed list on completion. Use a task to track the ongoing activity.
-      log interesting info about the download (start, end, cancelled, etc)
-- [ ] **Downloaded local models (LiteRT-LM, in-process):** Koog's official
-      `LiteRTLLMClient` on Android; a small JVM `LLMClient` adapter over
-      `litertlm-jvm` for desktop; a model download + management UI. Use the same
-      progress dialogs and tasks and logging functionality as in the above task.
+- [ ] **Download infrastructure:** Implement the download framework described in
+      [docs/download-integration.md](download-integration.md). This covers:
+      extending the task system (`TaskKind`, `ConcurrencyGroup`, `GenerationTask`),
+      abstractions (`ModelDownloadManager`, `OllamaPullClient`, `LocalFileDownloader`),
+      integration points, and UI/UX patterns for tracking downloads with
+      `TaskRunner`, `ActivityLogger`, and `TaskManager`.
+- [ ] **Ollama model pull (curated):** Only present strong quality models from
+      our findings in `model-evals/all.md` in the UI (do not build a full
+      model browser for Ollama). Use the download infrastructure to pull curated
+      models via `POST /api/pull` with streaming NDJSON, with progress/cancel/
+      background support and logging. Update the installed list on completion
+      and show quality/speed/size and hostability notes for each curated candidate.
+- [ ] **Downloaded local models (LiteRT-LM, in-process):** Add full LiteRT-LM
+      support. Koog's official `LiteRTLLMClient` on Android; a small JVM
+      `LLMClient` adapter over `litertlm-jvm` for desktop. Use the download
+      infrastructure for model download + management UI for `.litertlm` models,
+      reusing the same progress dialogs, tasks, and logging. Ensure downloaded
+      models become `EngineKind.LocalFile` instances.
+- [ ] **On-device evaluation harness (like eval_ollama_models.py):** Build an
+      on-device tool/capability that can capture similar evaluation data as
+      `../tools/eval_ollama_models.py` (per-interaction timing, ok/clean/json rates,
+      memory/footprint estimates, sleep/timeouts). This can be used to validate
+      LiteRT-LM models and to extend the curated set with device-local results.
 - [ ] **Track context length** as models are selected and downloaded.
 - [ ] **Make the Local tier real:** once this lands, ENGINE-CONFIG-PLAN.md
       stage 3's Local placeholder rows become enabled, and the downloaded
@@ -186,10 +200,10 @@ browser chip shows the resolved name while the id stays canonical.
 - [ ] **Hostability flag:** estimate each model's memory footprint (on-disk size,
       else `parameter_count × bytes/param`) and flag those that won't fit the
       device's budget next to the size/context chips — a note, not a filter.
-      we should consider altering the chip color for outliers.  Also things like
-      mlx versions would only run on recent macbooks.  A possible approach to
-      implementation in [this doc](llm-memory-fit.md). Note that hostability should
-      apply to local models *and also* to ollama instances on localhost.
+      Consider altering the chip color for outliers. MLX versions would only run
+      on recent MacBooks. See [llm-memory-fit.md](../llm-memory-fit.md) for
+      implementation approach. Hostability should apply to local models *and
+      also* to Ollama instances on localhost.
 
 Note: the LiteRT client may require a beta version of Koog (see
 IMPLEMENTATION-PLAN.md Phase 5, "Revisit a newer Koog release when one lands").
