@@ -24,7 +24,16 @@ enum class TaskKind {
   SynopsisRewrite,
 
   /** Deciding whether older questions should be auto-archived/deselected. */
-  AutoArchive;
+  AutoArchive,
+
+  /** Server-side model pull streamed from an Ollama instance. */
+  OllamaModelPull,
+
+  /** In-process download of a model file (e.g., LiteRT-LM). */
+  ModelFileDownload,
+
+  /** Checksum/extraction/integrity verification (often short). Used for explicit re-verification. */
+  ModelVerification;
 
   /**
    * The resource group this kind lands in by default ([TaskRunner] schedules
@@ -41,6 +50,10 @@ enum class TaskKind {
       SynopsisRewrite,
       AutoArchive,
         -> ConcurrencyGroup.Engine
+      OllamaModelPull,
+      ModelFileDownload,
+      ModelVerification,
+        -> ConcurrencyGroup.Download
     }
 }
 
@@ -72,6 +85,13 @@ data class GenerationTask(
   val createdAt: Instant,
   val startedAt: Instant? = null,
   val finishedAt: Instant? = null,
+  // Download-specific metadata (optional, backwards compatible)
+  val modelId: String? = null,
+  val source: String? = null,
+  val bytesTotal: Long? = null,
+  val bytesDone: Long? = null,
+  val throughputBps: Long? = null,
+  val downloadId: String? = null,
 ) {
   val isFinished: Boolean
     get() = status == TaskStatus.Succeeded || status == TaskStatus.Failed

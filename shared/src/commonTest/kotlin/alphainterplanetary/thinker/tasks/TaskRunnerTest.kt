@@ -66,13 +66,24 @@ class TaskRunnerTest {
 
   @Test
   fun `existing kinds default to the serial engine group`() {
+    val engineKinds = listOf(
+      TaskKind.QuestionGeneration,
+      TaskKind.TitleRecommendation,
+      TaskKind.SynopsisRewrite,
+      TaskKind.AutoArchive,
+    )
+    assertEquals(4, engineKinds.size)
     assertEquals(
       ConcurrencyGroup.Engine,
-      TaskKind.entries.map { it.group }.distinct().single(),
+      engineKinds.map { it.group }.distinct().single(),
     )
     assertEquals(
-      listOf(1, 4),
-      listOf(ConcurrencyGroup.Engine.concurrency, ConcurrencyGroup.Remote.concurrency),
+      listOf(1, 4, 2),
+      listOf(
+        ConcurrencyGroup.Engine.concurrency,
+        ConcurrencyGroup.Remote.concurrency,
+        ConcurrencyGroup.Download.concurrency,
+      ),
     )
   }
 

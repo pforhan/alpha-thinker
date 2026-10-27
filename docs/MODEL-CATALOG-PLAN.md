@@ -175,15 +175,15 @@ browser chip shows the resolved name while the id stays canonical.
       best-available auto-selection, and Ollama pull plans (Stage 3)
       (`PRD.md:63`); keep it in sync as the `latest` alias resolution and the
       hostability flag land.
-- [ ] **Download infrastructure (task system):** Extend the existing task
+- [x] **Download infrastructure (task system):** Extend the existing task
       infrastructure (`TaskRunner`, `ActivityLogger`, `TaskManager`) to be
       download-aware (no parallel systems).
-  - [ ] Add `Download` to `ConcurrencyGroup` (downloads are I/O-heavy; do not
+  - [x] Add `Download` to `ConcurrencyGroup` (downloads are I/O-heavy; do not
         block engine work; tune concurrency per platform).
-  - [ ] Add download task kinds to `TaskKind` (`OllamaModelPull`,
+  - [x] Add download task kinds to `TaskKind` (`OllamaModelPull`,
         `ModelFileDownload`, `ModelVerification`) with `group = ConcurrencyGroup.Download`
         and update `TaskLabels` for titles/progress.
-  - [ ] Extend `GenerationTask` with optional download metadata (backwards
+  - [x] Extend `GenerationTask` with optional download metadata (backwards
         compatible): `modelId`, `source` (e.g. `"ollama"`, `"huggingface"`,
         `"litert"`), `bytesTotal`, `bytesDone`, `throughputBps`, `downloadId`.
         Add `TaskRunner.setDownloadProgress(taskId, bytesDone, bytesTotal, throughputBps?)`
@@ -208,12 +208,29 @@ browser chip shows the resolved name while the id stays canonical.
       `LocalFileDownloader`, and `ModelDownloadManager` into `AppComponent`.
       Expose actions via `EngineViewModel` or a `DownloadViewModel`.
 - [ ] **Ollama model pull (curated):** Only present strong quality models from
-      `model-evals/all.md` in the UI (no full browser). Pull curated models via
-      `ModelDownloadManager.pullOllama(...)` using the download infrastructure,
-      with progress/cancel/background support and logging. Refresh installed
-      lists on completion and show quality/speed/size and hostability notes.
-      Update `ConnectionDialog` (Advanced) to show "Pull" for uninstalled curated
-      Ollama models with inline progress/cancel; refresh on completion.
+      `model-evals/all.md` in the UI (no full browser). Implement end-to-end
+      pull support for curated Ollama models via the download infrastructure.
+  - [ ] **Curated source of truth:** Derive the curated Ollama list from
+        `model-evals/all.md` (via `ModelProfiles`/eval artifacts), filtering to
+        strong-quality candidates. Track installed vs pullable state against
+        `RemoteModelCatalog` results.
+  - [ ] **Connection UI:** Update `ConnectionDialog` (Advanced) to render the
+        curated list with quality/speed/size and hostability notes. Show a
+        "Pull" affordance for uninstalled models, with inline progress/cancel
+        and automatic refresh on completion.
+  - [ ] **Pull execution:** Use `ModelDownloadManager.pullOllama(modelId, baseUrl)`
+        to enqueue an `OllamaModelPull` task via `TaskRunner`. Stream NDJSON via
+        `OllamaPullClient` (`POST /api/pull` with `stream: true`), treat server
+        phases (`pulling manifest`, `pulling <digest>`, `verifying sha256 digest`,
+        `writing manifest`, removing unused layers, etc.) as phases of the same
+        task (verification included), track `bytesDone`/`bytesTotal`/`progress`,
+        and log via `ActivityLogger.taskContext(taskId, projectId = null)`.
+  - [ ] **Lifecycle & refresh:** Support cancellation (stream closure),
+        background execution (app scope), and error handling. On success,
+        refresh `RemoteModelCatalog.list(Ollama, ...)`, update installed state,
+        apply context length if known, and consider best-available selection if
+        the pulled model was the requested target. On failure/cancel, surface
+        messages and clean up as appropriate.
 - [ ] **Local file downloads (LiteRT-LM, in-process):** Add `LocalFileDownloader`
       interface + platform actuals for direct HTTP(S) downloads to app storage
       (via `PlatformContext`) with resume (Range), checksum verification (sha256),

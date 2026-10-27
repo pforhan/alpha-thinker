@@ -7,6 +7,9 @@ val TaskKind.title: String
     TaskKind.TitleRecommendation -> "Title recommendation"
     TaskKind.SynopsisRewrite -> "Synopsis rewrite"
     TaskKind.AutoArchive -> "Auto-archive"
+    TaskKind.OllamaModelPull -> "Ollama model pull"
+    TaskKind.ModelFileDownload -> "Model download"
+    TaskKind.ModelVerification -> "Model verification"
   }
 
 /** Short label describing what a running task is doing, e.g. a list chip. */
@@ -16,4 +19,7 @@ val TaskKind.progressLabel: String
     TaskKind.TitleRecommendation -> "Generating title"
     TaskKind.SynopsisRewrite -> "Rewriting synopsis"
     TaskKind.AutoArchive -> "Reviewing answers"
+    TaskKind.OllamaModelPull -> "Pulling model"
+    TaskKind.ModelFileDownload -> "Downloading model"
+    TaskKind.ModelVerification -> "Verifying model"
   }

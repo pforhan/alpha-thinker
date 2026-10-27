@@ -28,4 +28,7 @@ enum class ConcurrencyGroup(val concurrency: Int) {
 
   /** Independent remote work (remote LLM, HTTP lookups) — bounded parallelism. */
   Remote(concurrency = 4),
+
+  /** Network/disk-heavy downloads — bounded parallelism to avoid saturating bandwidth. */
+  Download(concurrency = 2),
 }

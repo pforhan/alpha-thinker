@@ -256,6 +256,32 @@ class TaskRunner(
       list.map { task -> if (task.id == taskId) task.copy(progress = progress) else task }
     }
   }
+
+  /** Updates download progress and metadata (bytes/throughput) for a running task. */
+  fun setDownloadProgress(
+    taskId: String,
+    bytesDone: Long,
+    bytesTotal: Long? = null,
+    throughputBps: Long? = null,
+  ) {
+    val progress = bytesTotal?.let { total ->
+      if (total <= 0L) null else (bytesDone.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    }
+    _tasks.update { list ->
+      list.map { task ->
+        if (task.id == taskId) {
+          task.copy(
+            progress = progress ?: task.progress,
+            bytesDone = bytesDone,
+            bytesTotal = bytesTotal ?: task.bytesTotal,
+            throughputBps = throughputBps,
+          )
+        } else {
+          task
+        }
+      }
+    }
+  }
 }
 
 /**
