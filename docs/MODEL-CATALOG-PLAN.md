@@ -51,7 +51,14 @@ manage downloaded local files.
 6. **Downloads differ by kind** — an Ollama pull is a server-side stream on an
    instance; a downloaded LiteRT model is itself an `engine_instances` row of
    `EngineKind.LocalFile` (see ENGINE-CONFIG-PLAN.md, "Storage").
-7. **Hostability is a note, not a filter.**
+7. **Verification is part of the download by default** — for `ModelFileDownload`,
+   treat download → checksum → extraction as phases of the same task (log phases,
+   allocate progress across them, only mark succeeded after verification passes).
+   `ModelVerification` remains a separate `TaskKind` only for explicit
+   re-verification of already-installed models (not part of normal download
+   completion). For `OllamaModelPull`, verification continues as phases reported
+   by the server stream.
+8. **Hostability is a note, not a filter.**
 
 ## Target model
 
@@ -94,7 +101,7 @@ Plus `ModelProfiles` (family/pattern rules + measured seeds) and `ModelRanker`.
 - **Anthropic** — Koog `LLModel.capabilities` / `maxOutputTokens` from the
   bundled catalogue.
 - **OpenAI-compatible** — no standard; leave the new fields null.
-- **Measured rows** — `docs/model-evals/*.json`, produced by
+- **Measured rows** — `model-evals/*.json`, produced by
   `../tools/eval_ollama_models.py` (the reference for both the `latest` resolution
   and the footprint estimate).
 
@@ -168,42 +175,80 @@ browser chip shows the resolved name while the id stays canonical.
       best-available auto-selection, and Ollama pull plans (Stage 3)
       (`PRD.md:63`); keep it in sync as the `latest` alias resolution and the
       hostability flag land.
-- [ ] **Download infrastructure:** Implement the download framework described in
-      [docs/download-integration.md](download-integration.md). This covers:
-      extending the task system (`TaskKind`, `ConcurrencyGroup`, `GenerationTask`),
-      abstractions (`ModelDownloadManager`, `OllamaPullClient`, `LocalFileDownloader`),
-      integration points, and UI/UX patterns for tracking downloads with
-      `TaskRunner`, `ActivityLogger`, and `TaskManager`.
+- [ ] **Download infrastructure (task system):** Extend the existing task
+      infrastructure (`TaskRunner`, `ActivityLogger`, `TaskManager`) to be
+      download-aware (no parallel systems).
+  - [ ] Add `Download` to `ConcurrencyGroup` (downloads are I/O-heavy; do not
+        block engine work; tune concurrency per platform).
+  - [ ] Add download task kinds to `TaskKind` (`OllamaModelPull`,
+        `ModelFileDownload`, `ModelVerification`) with `group = ConcurrencyGroup.Download`
+        and update `TaskLabels` for titles/progress.
+  - [ ] Extend `GenerationTask` with optional download metadata (backwards
+        compatible): `modelId`, `source` (e.g. `"ollama"`, `"huggingface"`,
+        `"litert"`), `bytesTotal`, `bytesDone`, `throughputBps`, `downloadId`.
+        Add `TaskRunner.setDownloadProgress(taskId, bytesDone, bytesTotal, throughputBps?)`
+        to update fraction `progress` and metadata.
+- [ ] **Download abstractions:** Create a `downloads/` package with interfaces
+      to enable testing and swappable implementations.
+  - [ ] Define `ModelDownloadManager` (`downloads()`, `pullOllama(modelId, baseUrl)`,
+        `downloadModel(spec)`, `cancel(handleId)`), `DownloadHandle(id, taskId)`,
+        `DownloadState` (handle/task/kind/status/modelId/bytes/progress/message/source),
+        `DownloadKind` (`OllamaPull`, `LocalFile`), `DownloadStatus` (`Queued`,
+        `Running`, `Paused`, `Succeeded`, `Failed`, `Cancelled`).
+- [ ] **Ollama pull client:** Add `OllamaPullClient` using `KoogHttpClient` for
+      streaming NDJSON from `POST /api/pull` with `{"model": ..., "stream": true}`.
+      Normalize base URL like `RemoteModelCatalog` (strip `/v1`). Parse status
+      messages (`status`, `digest`, `total`, `completed`, `error`), map phases
+      (manifest/pulling/verifying/writing/removing/success/error), track bytes/
+      progress, support cancellation via stream closure, log via
+      `ActivityLogger.taskContext(taskId, projectId = null)`, and refresh
+      `RemoteModelCatalog` on completion (optionally auto-select).
+- [ ] **ModelDownloadManager + DI wiring:** Implement `ModelDownloadManager`
+      that enqueues tasks via `TaskRunner`; wire `OllamaPullClient`,
+      `LocalFileDownloader`, and `ModelDownloadManager` into `AppComponent`.
+      Expose actions via `EngineViewModel` or a `DownloadViewModel`.
 - [ ] **Ollama model pull (curated):** Only present strong quality models from
-      our findings in `model-evals/all.md` in the UI (do not build a full
-      model browser for Ollama). Use the download infrastructure to pull curated
-      models via `POST /api/pull` with streaming NDJSON, with progress/cancel/
-      background support and logging. Update the installed list on completion
-      and show quality/speed/size and hostability notes for each curated candidate.
-- [ ] **Downloaded local models (LiteRT-LM, in-process):** Add full LiteRT-LM
-      support. Koog's official `LiteRTLLMClient` on Android; a small JVM
-      `LLMClient` adapter over `litertlm-jvm` for desktop. Use the download
-      infrastructure for model download + management UI for `.litertlm` models,
-      reusing the same progress dialogs, tasks, and logging. Ensure downloaded
-      models become `EngineKind.LocalFile` instances.
-- [ ] **On-device evaluation harness (like eval_ollama_models.py):** Build an
-      on-device tool/capability that can capture similar evaluation data as
-      `../tools/eval_ollama_models.py` (per-interaction timing, ok/clean/json rates,
-      memory/footprint estimates, sleep/timeouts). This can be used to validate
-      LiteRT-LM models and to extend the curated set with device-local results.
+      `model-evals/all.md` in the UI (no full browser). Pull curated models via
+      `ModelDownloadManager.pullOllama(...)` using the download infrastructure,
+      with progress/cancel/background support and logging. Refresh installed
+      lists on completion and show quality/speed/size and hostability notes.
+      Update `ConnectionDialog` (Advanced) to show "Pull" for uninstalled curated
+      Ollama models with inline progress/cancel; refresh on completion.
+- [ ] **Local file downloads (LiteRT-LM, in-process):** Add `LocalFileDownloader`
+      interface + platform actuals for direct HTTP(S) downloads to app storage
+      (via `PlatformContext`) with resume (Range), checksum verification (sha256),
+      extraction if needed, disk space checks, cooperative cancellation, and
+      throughput/ETA tracking. Add full LiteRT-LM support (Koog's
+      `LiteRTLLMClient` on Android, JVM adapter over `litertlm-jvm` on desktop).
+      Use the download infrastructure for download + management UI of
+      `.litertlm` models; ensure downloaded models become `EngineKind.LocalFile`
+      instances. Run download → checksum → extraction as phases of the same
+      `ModelFileDownload` task (allocate progress across phases, only succeed after
+      verification passes); use `ModelVerification` only for explicit re-verification
+      of already-installed models. Create/update `EngineInstance(kind = LocalFile,
+      localPath = ...)`, update `EngineCatalog` availability (replace TODO with
+      actual file existence/checksum validation), and register with the engine
+      system. Add UI in the Local tier of `EnginePickerSheet` (list downloadable +
+      installed local models; "Download" starts `ModelFileDownload` task).
 - [ ] **Track context length** as models are selected and downloaded.
-- [ ] **Make the Local tier real:** once this lands, ENGINE-CONFIG-PLAN.md
-      stage 3's Local placeholder rows become enabled, and the downloaded
-      models are `EngineKind.LocalFile` instance rows rendered under Local
-      through the same list component (that plan's stage 3b).
-      Platform-gate it (web/wasm on-device stays deferred).
-- [ ] **Hostability flag:** estimate each model's memory footprint (on-disk size,
-      else `parameter_count × bytes/param`) and flag those that won't fit the
-      device's budget next to the size/context chips — a note, not a filter.
-      Consider altering the chip color for outliers. MLX versions would only run
-      on recent MacBooks. See [llm-memory-fit.md](../llm-memory-fit.md) for
-      implementation approach. Hostability should apply to local models *and
-      also* to Ollama instances on localhost.
+- [ ] **Make the Local tier real:** Enable Local placeholder rows per
+      ENGINE-CONFIG-PLAN.md stage 3; downloaded models render as `EngineKind.LocalFile`
+      instances under Local (platform-gate; web/wasm deferred).
+- [ ] **Hostability flag:** Apply memory fit heuristics (see
+      [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next
+      to size/context chips for local models and Ollama instances on localhost;
+      consider chip color changes for outliers (MLX versions may require recent
+      Macs).
+- [ ] **On-device evaluation harness:** Build an on-device tool similar to
+      `tools/eval_ollama_models.py` to capture timing, ok/clean/json rates,
+      memory/footprint estimates, and timeouts for validating LiteRT-LM models
+      and extending the curated set.
+- [ ] **Logging, progress/cancel/background, and tests:** Log all download
+      events (start/phases/errors/cancel/success) via `ActivityLogger` (use
+      `ActivityLogger.taskContext(taskId, projectId = null)` for downloads).
+      Ensure progress via metadata/`setProgress`, cancel via stream closure +
+      task cancellation, background via app scope. Add tests for the download
+      framework.
 
 Note: the LiteRT client may require a beta version of Koog (see
 IMPLEMENTATION-PLAN.md Phase 5, "Revisit a newer Koog release when one lands").
@@ -226,10 +271,7 @@ IMPLEMENTATION-PLAN.md Phase 5, "Revisit a newer Koog release when one lands").
 
 - Auto-promotion of tiers between evaluation batches (human-in-the-loop).
 - Hiding models.
-- Pull support for Anthropic / OpenAI-compatible endpoints (neither exposes a
-  pull API here).
-- Web (wasm) on-device — WebLLM / LiteRT JS interop remains its own roadmap item
-  (IMPLEMENTATION-PLAN.md Phase 3.7).
+- Pull support for Anthropic / OpenAI-compatible endpoints (which they don't really need anyway).
 - The actual **Alpha Interplanetary** free backend: this plan consumes its model
   catalogue, but the backend itself is a separate roadmap item, tracked in
   ENGINE-CONFIG-PLAN.md as a disabled Free-tier placeholder.
