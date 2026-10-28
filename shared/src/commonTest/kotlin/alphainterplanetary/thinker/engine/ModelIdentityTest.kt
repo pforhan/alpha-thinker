@@ -31,6 +31,14 @@ class ModelIdentityTest {
   }
 
   @Test
+  fun `a descriptive label is not treated as a size`() {
+    // `general.size_label` can hold a variant name such as "mini", which must
+    // not be turned into a bogus tag like "minib".
+    assertEquals("phi4-mini:latest", resolveLatestAlias("phi4-mini:latest", "mini"))
+    assertNull(parseSizeLabel("mini"))
+  }
+
+  @Test
   fun `a size label is read in billions`() {
     assertEquals(3, parseSizeLabel("3B"))
     assertEquals(3, parseSizeLabel("3.2B"))

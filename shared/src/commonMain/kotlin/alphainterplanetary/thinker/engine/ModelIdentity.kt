@@ -48,10 +48,15 @@ internal fun resolveLatestAlias(modelId: String, sizeLabel: String?): String {
  * meaningful fraction is kept ("7.6B" is "7.6b").
  */
 private fun sizeTagToken(sizeLabel: String?): String? {
-  val trimmed = sizeLabel?.trim()?.lowercase()?.trimEnd('b')?.trim() ?: return null
-  if (trimmed.isEmpty()) return null
-  val withoutRedundantZero = if (RedundantZero.matches(trimmed)) trimmed.dropLast(2) else trimmed
-  return "${withoutRedundantZero}b"
+  // A declared size must actually look like one ("3B", "7.6B", "873.44M"):
+  // a descriptive label such as "mini" is not a size and must not be turned
+  // into a bogus tag like "minib".
+  val match = sizeLabel?.trim()?.let { SizeLabel.matchEntire(it) } ?: return null
+  val amount = match.groupValues[1]
+  val unit = match.groupValues[2].lowercase().ifEmpty { "b" }
+  if (unit !in setOf("b", "m")) return null
+  val withoutRedundantZero = if (RedundantZero.matches(amount)) amount.dropLast(2) else amount
+  return "${withoutRedundantZero}${unit}"
 }
 
 /**

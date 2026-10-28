@@ -67,11 +67,11 @@ object ModelRanker {
 
     // Recommended = good tier from all.md: strong × fast
     if (q == ModelQuality.Strong && s == ModelSpeed.Fast) {
-      return ModelPresentationTier.Recommended to buildReason("Strong and fast", measurement)
+      return ModelPresentationTier.Recommended to buildReason("Reliable/fast", measurement)
     }
     // High-quality but slower: strong quality but fine or slow speed
     if (q == ModelQuality.Strong && (s == ModelSpeed.Fine || s == ModelSpeed.Slow)) {
-      return ModelPresentationTier.HighQualityButSlower to buildReason("High quality", measurement)
+      return ModelPresentationTier.HighQualityButSlower to buildReason("Reliable", measurement)
     }
     // Lower-quality but fast: adequate quality and fast or fine speeds
     if (q == ModelQuality.Adequate && (s == ModelSpeed.Fast || s == ModelSpeed.Fine)) {

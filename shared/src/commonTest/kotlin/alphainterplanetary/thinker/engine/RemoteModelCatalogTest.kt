@@ -209,6 +209,31 @@ class RemoteModelCatalogTest {
   }
 
   @Test
+  fun `a latest alias falls back when the descriptive label is not a size`() = runTest {
+    val client = FakeOllamaHttpClient(
+      tags = """{"models":[{"name":"phi4-mini:latest","model":"phi4-mini:latest"}]}""",
+      shows = listOf(
+        showPayload(
+          architecture = "phi3",
+          contextLength = 131072,
+          capabilities = "completion",
+          sizeLabel = "mini",
+          parameterCount = 3836021856,
+          parameterSize = "3.8B",
+          quantization = "Q4_K_M",
+        ),
+      ),
+    )
+
+    val model = KoogRemoteModelCatalog(RecordingFactory(client))
+      .list(RemoteProvider.Ollama, "http://localhost:11434", "")
+      .single()
+
+    assertEquals("phi4-mini:latest", model.id)
+    assertEquals("phi4-mini:3.8b", model.displayName)
+  }
+
+  @Test
   fun `a capability koog does not know does not fail the listing`() = runTest {
     // Ollama grew a `decision` capability after Koog 1.3.0 typed this field as a
     // closed enum, which made every `POST /api/show` fail. The capabilities are

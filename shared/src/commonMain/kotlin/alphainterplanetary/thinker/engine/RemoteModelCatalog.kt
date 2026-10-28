@@ -44,6 +44,8 @@ data class RemoteModelInfo(
   val parameterCount: Long? = null,
   /** The on-disk size of the weights, in bytes, where the source reports one. */
   val sizeBytes: Long? = null,
+  /** The model's manifest digest (Ollama SHA), where the source reports one. */
+  val digest: String? = null,
   val quantization: String? = null,
   val format: String? = null,
   val capabilities: Set<String> = emptySet(),
@@ -199,10 +201,32 @@ class KoogRemoteModelCatalog(
     return try {
       val tags = catalogJson.decodeFromString<OllamaTags>(
         client.get<String>(path = OllamaTagsPath),
-      )
-      tags.models
-        .filter { it.id.isNotBlank() }
-        .map { tag -> ollamaModel(client, tag) }
+      ).models.filter { it.id.isNotBlank() }
+      // Manifest digests let an alias (`:latest`) be recognized as the same
+      // model as its concrete tag (`:3b`) when both happen to be installed.
+      val concreteByDigest = tags
+        .filter { it.digest != null && it.id.substringAfter(':', "latest") != "latest" }
+        .associateBy { it.digest!! }
+      val resolved = tags.map { tag ->
+        val siblingAlias = if (tag.digest != null && tag.id.substringAfter(':', "latest") == "latest") {
+          concreteByDigest[tag.digest]?.id
+        } else {
+          null
+        }
+        ollamaModel(client, tag, siblingAlias)
+      }
+      // When a `:latest` alias resolves to a real tag that is also listed (or
+      // to the same display name as a sibling), drop the alias entry so the
+      // chip list doesn't show the same model twice.
+      val seen = linkedMapOf<String, RemoteModelInfo>()
+      for (model in resolved) {
+        val tag = model.id.substringAfter(':', "latest")
+        val existing = seen[model.displayName]
+        if (existing == null || (existing.id.substringAfter(':', "latest") == "latest" && tag != "latest")) {
+          seen[model.displayName] = model
+        }
+      }
+      seen.values.toList()
     } finally {
       client.close()
     }
@@ -216,7 +240,7 @@ class KoogRemoteModelCatalog(
    * in `POST /api/show`, and the listing's own details stand in for a model
    * whose details cannot be read.
    */
-  private suspend fun ollamaModel(client: KoogHttpClient, tag: OllamaTag): RemoteModelInfo {
+  private suspend fun ollamaModel(client: KoogHttpClient, tag: OllamaTag, siblingAlias: String? = null): RemoteModelInfo {
     val show = show(client, tag.id)
     val details = show?.details ?: tag.details
     return RemoteModelInfo(
@@ -224,13 +248,21 @@ class KoogRemoteModelCatalog(
       source = ModelSource.Ollama,
       // The alias is resolved for the eye only; the id stays the reference the
       // provider is asked for.
-      displayName = resolveLatestAlias(tag.id, show?.sizeLabel() ?: details?.parameterSize),
+      // Prefer the tag-shaped size when the source actually declares one
+      // ("3B"): a descriptive label such as "mini" is not a size, so fall back
+      // to the numeric parameter size ("3.8B") instead of inventing "minib".
+      displayName = siblingAlias
+        ?: resolveLatestAlias(
+          tag.id,
+          if (parseSizeLabel(show?.sizeLabel()) != null) show?.sizeLabel() else details?.parameterSize,
+        ),
       contextLength = show?.contextLength() ?: tag.contextLength,
       parameterSizeB = parseSizeLabel(details?.parameterSize)
         ?: sizeFromCount(show?.parameterCount()),
       sizeLabel = details?.parameterSize,
       parameterCount = show?.parameterCount(),
       sizeBytes = tag.sizeBytes,
+      digest = tag.digest,
       quantization = details?.quantizationLevel,
       format = details?.format,
       capabilities = show?.capabilities
@@ -298,6 +330,8 @@ private data class OllamaTag(
   val model: String = "",
   /** The on-disk size of the weights, in bytes. */
   @SerialName("size") val sizeBytes: Long? = null,
+  /** The model's manifest digest (Ollama SHA). */
+  @SerialName("digest") val digest: String? = null,
   val details: OllamaTagDetails? = null,
 ) {
   /** Ollama prints both; either serves as the id to ask for. */

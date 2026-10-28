@@ -693,17 +693,32 @@ def _fmt_size_label(size_label: Optional[str], size_bytes: Optional[int] = None,
     return "?"
 
 
+def _is_size_label(label: Optional[str]) -> bool:
+    """True when `label` is actually a numeric size ("3B", "7.6B", "873.44M").
+
+    `general.size_label` can hold a *variant* name such as "mini", which is
+    not a size and must not be turned into a tag like "minib".
+    """
+    if not label:
+        return False
+    return bool(re.fullmatch(r"[0-9]+(?:\.[0-9]+)?\s*[bBmM]?", str(label).strip()))
+
+
 def _size_tag(size_label: Optional[str]) -> Optional[str]:
-    """Turn a declared size ("3B", "7.6B", "8.0B") into an Ollama tag token ("3b", "7.6b", "8b")."""
+    """Turn a declared size ("3B", "7.6B", "8.0B", "135M") into an Ollama tag token ("3b", "7.6b", "8b", "135m")."""
     if not size_label:
         return None
-    s = str(size_label).strip().lower().rstrip("b").strip()
-    if not s:
+    # Refuse non-size labels such as "mini" instead of fabricating "minib".
+    if not _is_size_label(size_label):
         return None
+    m = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)\s*([bBmM]?)", str(size_label).strip())
+    if not m:
+        return None
+    amount, unit = m.group(1), (m.group(2) or "B").lower()
     # Drop a redundant trailing ".0" ("8.0" -> "8") but keep meaningful fractions ("7.6").
-    if re.fullmatch(r"\d+\.0", s):
-        s = s[:-2]
-    return f"{s}b"
+    if re.fullmatch(r"\d+\.0", amount):
+        amount = amount[:-2]
+    return f"{amount}{unit}"
 
 
 def resolve_alias(model_id: str, size_label: Optional[str]) -> str:
@@ -729,15 +744,26 @@ def model_meta(
     info: Optional[Dict[str, Any]],
     context_len: Optional[int],
     size_bytes: Optional[int] = None,
+    digest: Optional[str] = None,
 ) -> Dict[str, Any]:
     details = (info or {}).get("details", {}) or {}
     model_info = (info or {}).get("model_info", {}) or {}
-    # Prefer the numeric parameter size over the descriptive size label for tag resolution.
-    size_label = details.get("parameter_size") or model_info.get("general.size_label")
+    general_label = model_info.get("general.size_label")
+    details_label = details.get("parameter_size")
+    # Prefer a tag-shaped size label when the source declares one ("3B"); a
+    # descriptive label such as "mini" is not a size, so fall back to the
+    # numeric parameter size ("3.8B") instead of fabricating "minib".
+    if _is_size_label(general_label):
+        size_label = general_label
+    elif details_label:
+        size_label = details_label
+    else:
+        size_label = general_label
     return {
         "parameter_size": details.get("parameter_size"),
-        # The author-declared label ("3B"), and the exact count when present.
+        # The tag-shaped size used for alias resolution, plus the exact count.
         "size_label": size_label,
+        "size_label_general": general_label,
         "parameter_count": model_info.get("general.parameter_count"),
         "basename": model_info.get("general.basename"),
         "finetune": model_info.get("general.finetune"),
@@ -748,6 +774,8 @@ def model_meta(
         "capabilities": (info or {}).get("capabilities"),
         # On-disk weights size (from /api/tags), used for the footprint estimate.
         "size_bytes": size_bytes,
+        # The model's manifest digest (Ollama SHA), used to recognize aliases.
+        "digest": digest or (info or {}).get("digest"),
         # Distinct from model_id: `latest` resolved to the real size tag, for
         # display. model_id stays the canonical reference you'd pass to Ollama.
         "display_name": resolve_alias(model_id, size_label),
@@ -817,6 +845,7 @@ def run_model(
     on_cell_end: Callable[[str], None],
     on_flush: Optional[Callable[[Dict[str, Any]], None]] = None,
     size_bytes: Optional[int] = None,
+    digest: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Evaluate one model end to end and return its row.
 
@@ -829,7 +858,7 @@ def run_model(
     """
     started_at = datetime.now().isoformat(timespec="seconds")
     info = get_model_info(base_url, model_id, args.timeout)
-    meta = model_meta(model_id, info, context_length_of(info), size_bytes)
+    meta = model_meta(model_id, info, context_length_of(info), size_bytes, digest)
     cells: List[Dict[str, Any]] = []
 
     def flush(in_progress: bool, finished_at: Optional[str] = None) -> Dict[str, Any]:
@@ -1167,6 +1196,9 @@ def analyze_row(row: Dict[str, Any]) -> Dict[str, Any]:
     rollup = {
         "model_id": row.get("model_id"),
         "run_id": (row.get("run") or {}).get("id"),
+        # Recompute the display name from the stored metadata rather than
+        # trusting one baked in when the row was written, so changes in alias
+        # resolution land without re-running the sweep.
         "display_name": model.get("display_name") or row.get("model_id"),
         "size_label": _fmt_size_label(model.get("size_label") or model.get("parameter_size"), size_bytes, estimated_gb),
         "size_bytes": size_bytes,
@@ -1948,6 +1980,9 @@ def main_run(argv: Optional[List[str]] = None) -> int:
     size_by_name = {
         (m.get("name") or m.get("model")): m.get("size") for m in installed if (m.get("name") or m.get("model"))
     }
+    digest_by_name = {
+        (m.get("name") or m.get("model")): m.get("digest") for m in installed if (m.get("name") or m.get("model"))
+    }
 
     print(f"Found {len(installed)} installed, testing {len(selected)}", flush=True)
     print(f"Rows folder: {rows_dir}  (run id: {run_id})", flush=True)
@@ -2002,6 +2037,7 @@ def main_run(argv: Optional[List[str]] = None) -> int:
             on_cell_end=on_cell_end,
             on_flush=flush_row,
             size_bytes=size_by_name.get(model_id),
+            digest=digest_by_name.get(model_id),
         )
         flush_row(row)
         written.append(path)

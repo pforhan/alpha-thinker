@@ -207,30 +207,36 @@ browser chip shows the resolved name while the id stays canonical.
       that enqueues tasks via `TaskRunner`; wire `OllamaPullClient`,
       `ModelFileTransferClient`, and `ModelDownloader` into `AppComponent`.
       Expose actions via `EngineViewModel` or a `DownloadViewModel`.
+- [x] Revise how we understand model aliases.  Use manifest SHA to know two models are the same. Note: won't use manifest digests at this time. Curation is keyed by family/model-id patterns and measured seeds, and pull/availability matching stays tag-based. Digests are mainly for runtime alias detection, duplicate suppression, and future "are these the same model?" logic; storing them alongside cured entries would add maintenance burden without improving recommendation matching.
+  - [x] Determine scope: this is Ollama-only — other sources use their ids as-is, so alias reconciliation applies only to Ollama tags.
+  - [x] the app should recognize that llama3.2:latest is the same as llama3.2:3b — `RemoteModelInfo.digest` is captured from Ollama and a `:latest` alias sharing a digest with an installed concrete tag is shown under that tag.
+  - [x] Do we need to rebuild reports to gather manifest sha for everything? No, not necessary since we aren't using sha
+  - [x] eval_ollama_models.py rebuilds display names from a tag-shaped size label and refuses descriptive labels such as "mini", so alias resolution no longer fabricates tags like "minib".  Re-running a sweep picks up any alias-rule change.
 - [ ] **Ollama model pull (curated):** Only present strong quality models from
       `model-evals/all.md` in the UI (no full browser). Implement end-to-end
       pull support for curated Ollama models via the download infrastructure.
   - [ ] **Curated source of truth:** Derive the curated Ollama list from
-        `model-evals/all.md` (via `ModelProfiles`/eval artifacts), filtering to
-        strong-quality candidates. Track installed vs pullable state against
-        `RemoteModelCatalog` results.
-  - [ ] **Connection UI:** Update `ConnectionDialog` (Advanced) to render the
-        curated list with quality/speed/size and hostability notes. Show a
-        "Pull" affordance for uninstalled models, with inline progress/cancel
-        and automatic refresh on completion.
-  - [ ] **Pull execution:** Use `ModelDownloadManager.pullOllama(modelId, baseUrl)`
+        `ModelProfiles`, filtering to strong-quality candidates. Programmatically 
+        filter ModelProfiles.measuredSeeds rather than make a duplicate copy.
+        Track installed vs pullable state against `RemoteModelCatalog` results.
+  - [ ] **Connection UI:** Update `ConnectionDialog` (Advanced) to render any
+        curated items not already downloaded alongside other models in the chip list
+        prefixed with "↓ ". (Do not try to resolve aliases at this time, just use the
+        models as named. This means there may be apparent duplicates in the list, 
+        this is okay.) Any un-downloaded chips should also have a different background
+        color.
+  - [ ] **Pull execution:** Upon selection, kick off the download. Add a small
+        progress spinner to the chip that indicates the download. Do not block
+        saving the dialog configuration as ollama will continue to manage the 
+        download. Use `ModelDownloadManager.pullOllama(modelId, baseUrl)`
         to enqueue an `OllamaModelPull` task via `TaskRunner`. Stream NDJSON via
         `OllamaPullClient` (`POST /api/pull` with `stream: true`), treat server
         phases (`pulling manifest`, `pulling <digest>`, `verifying sha256 digest`,
         `writing manifest`, removing unused layers, etc.) as phases of the same
         task (verification included), track `bytesDone`/`bytesTotal`/`progress`,
         and log via `ActivityLogger.taskContext(taskId, projectId = null)`.
-  - [ ] **Lifecycle & refresh:** Support cancellation (stream closure),
-        background execution (app scope), and error handling. On success,
-        refresh `RemoteModelCatalog.list(Ollama, ...)`, update installed state,
-        apply context length if known, and consider best-available selection if
-        the pulled model was the requested target. On failure/cancel, surface
-        messages and clean up as appropriate.
+  - [ ] **Lifecycle & refresh:** Support background execution (app scope), and error
+        handling. On failure, surface messages and clean up as appropriate.
 - [ ] **Local file downloads (LiteRT-LM, in-process):** Add `ModelFileTransferClient`
       implementation + platform actuals for direct HTTP(S) downloads to app storage
       (via `PlatformContext`) with resume (Range), checksum verification (sha256),
