@@ -732,7 +732,8 @@ def model_meta(
 ) -> Dict[str, Any]:
     details = (info or {}).get("details", {}) or {}
     model_info = (info or {}).get("model_info", {}) or {}
-    size_label = model_info.get("general.size_label") or details.get("parameter_size")
+    # Prefer the numeric parameter size over the descriptive size label for tag resolution.
+    size_label = details.get("parameter_size") or model_info.get("general.size_label")
     return {
         "parameter_size": details.get("parameter_size"),
         # The author-declared label ("3B"), and the exact count when present.

@@ -2,7 +2,7 @@
 
 - rows: 52 file(s) read, 52 usable, 0 too old, 0 fixture mismatch, 0 unreadable
 - per-model: all — 52 row(s) pooled into 29 model(s)
-- run-ids: 20261023-201315, 20261023-211344, 20261023-211827, 20261024-090344, 20261027-172748, afternoon-20261015, morning-20261015, overnight-20261014
+- run-ids: 20261023-201315, 20261023-211344, 20261023-211827, 20261024-090344, 20261028-085730, 20261028-090953, 20261028-092552, afternoon-20261015, morning-20261015, overnight-20261014
 - params: base_url=http://localhost:11434, runs=mixed, num_ctx=2048, temp=0.0
 - hardware: "mixed"
 - device budget: 16GB (models above it are flagged, never hidden)
@@ -12,9 +12,9 @@
 | model | disksize | quality | tier | suite_s | ok | clean | json | notes |
 |---|---|---|---|---|---|---|---|---|
 | llama3.2:3b | 1.9 GB | 100.0 | good | 5.33 | 1.00 | 1.00 | 1.00 |  |
-| phi4-mini:minib | 3.3 GB* | 100.0 | good | 8.22 | 1.00 | 1.00 | 1.00 |  |
+| phi4-mini:3.8b | 3.3 GB* | 100.0 | good | 7.43 | 1.00 | 1.00 | 1.00 |  |
 | qwen2.5:7b | 4.4 GB | 100.0 | ok | 15.40 | 1.00 | 1.00 | 1.00 |  |
-| phi3.5:minib | 3.3 GB* | 96.7 | ok | 8.74 | 1.00 | 0.89 | 1.00 | Summaries include bullets/headings (simple-product) |
+| phi3.5:3.8b | 3.3 GB* | 96.7 | ok | 8.65 | 1.00 | 0.89 | 1.00 | Summaries include bullets/headings (simple-product) |
 | nemotron-mini:4b | 2.5 GB | 90.0 | ok | 5.78 | 1.00 | 0.67 | 1.00 | Titles wrapped in quotes (home-project, simple-product, software-plan) |
 | gemma4:e4b | 8.9 GB | 100.0 | discouraged | 82.79 | 1.00 | 1.00 | 1.00 |  |
 | qwen3.6:35b-mlx | 19.8 GB* | 100.0 | discouraged | 208.53 | 1.00 | 1.00 | 1.00 | >16GB |
@@ -27,7 +27,7 @@
 | deepseek-r1:8b | 4.9 GB | 94.1 | discouraged | 196.79 | 1.00 | 0.80 | 1.00 | Multi-line titles (home-project, software-plan)<br>slept×1 |
 | deepseek-r1:1.5b | 1.0 GB | 93.3 | discouraged | 27.91 | 1.00 | 0.78 | 1.00 | Titles over 60 chars (software-plan)<br>Summaries include bullets/headings (home-project) |
 | gemma4:26b-mlx | 15.0 GB* | 85.2 | discouraged | 90.74 | 0.70 | 0.70 | 1.00 | timeout×8 |
-| phi3:mini | 2.0 GB | 80.4 | discouraged | 49.32 | 0.85 | 0.44 | 1.00 | Titles wrapped in quotes (home-project)<br>Titles with trailing periods (software-plan)<br>Summaries include bullets/headings (simple-product, software-plan)<br>timeout×4 |
+| phi3:mini | 3.3 GB* | 80.7 | discouraged | 42.94 | 0.87 | 0.44 | 1.00 | Titles wrapped in quotes (home-project)<br>Titles with trailing periods (software-plan)<br>Summaries include bullets/headings (home-project, simple-product, software-plan)<br>timeout×4<br>error×2 |
 | gemma4:12b | 7.0 GB | 61.1 | discouraged | 592.47 | 0.56 | 0.56 | 0.67 | Questions failed to parse as JSON arrays (home-project) |
 | gemma4-12b-128k:12b | 8.2 GB* | 61.1 | discouraged | 626.29 | 0.56 | 0.56 | 0.67 | Questions failed to parse as JSON arrays (home-project) |
 | qwq:32b | 18.5 GB | 56.5 | discouraged | 414.07 | 0.92 | 0.16 | 0.67 | Multi-line titles (home-project, simple-product, software-plan)<br>Questions failed to parse as JSON arrays (home-project)<br>Summaries over 150 words (home-project, simple-product, software-plan)<br>in-progress<br>>16GB |
@@ -51,8 +51,8 @@ everything else is **discouraged**. No model is hidden by its cell.
 
 | quality \ speed | fast (<10s) | fine (<35s) | slow (≥35s) |
 |---|---|---|---|
-| **strong** | llama3.2:3b, phi4-mini:minib | qwen2.5:7b | gemma4:e4b, qwen3.6:35b-mlx, qwen3.8:27b-mlx, muse-glimmer:30b-mlx |
-| adequate | phi3.5:minib, nemotron-mini:4b | deepseek-r1:1.5b | deepseek-r1:14b, gemma4:26b, gemma4:31b-mlx, gemma4:31b, deepseek-r1:8b, gemma4:26b-mlx |
+| **strong** | llama3.2:3b, phi4-mini:3.8b | qwen2.5:7b | gemma4:e4b, qwen3.6:35b-mlx, qwen3.8:27b-mlx, muse-glimmer:30b-mlx |
+| adequate | phi3.5:3.8b, nemotron-mini:4b | deepseek-r1:1.5b | deepseek-r1:14b, gemma4:26b, gemma4:31b-mlx, gemma4:31b, deepseek-r1:8b, gemma4:26b-mlx |
 | weak | qwen2.5:1.5b |  | phi3:mini, gemma4:12b, gemma4-12b-128k:12b, qwq:32b, qwen3.6:36b, tev1:0.8b, qwen3.5:4b, qwen3-vl:4b, smollm2:135m, tinyllama:1b, qwen3.5:9.7b, qwen3.5:0.8b |
 
 ## Per-interaction detail (one table per model, same order as above)
@@ -98,19 +98,19 @@ everything else is **discouraged**. No model is hidden by its cell.
 | 20261024-090344 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.79 | 0.77 | 0.87 | 0.04 | 0.77 | 0.87 | 77.0 |
 | 20261024-090344 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.44 | 0.42 | 0.51 | 0.04 | 0.41 | 0.51 | 80.4 |
 
-### phi4-mini:minib (Est. size: 3.3 GB, Quant: Q4_K_M, Params: 3.8B)
+### phi4-mini:3.8b (Est. size: 3.3 GB, Quant: Q4_K_M, Params: 3.8B)
 
 | fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.10 | 0.06 | 0.27 | 0.08 | 0.06 | 0.27 | 112.6 |
-| home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.11 | 0.11 | 0.14 | 0.02 | 0.10 | 0.14 | 101.1 |
-| software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.09 | 0.08 | 0.12 | 0.02 | 0.08 | 0.12 | 105.0 |
-| simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.36 | 1.37 | 1.38 | 0.03 | 1.31 | 1.38 | 57.2 |
-| home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.66 | 1.61 | 1.80 | 0.08 | 1.58 | 1.80 | 56.8 |
-| software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.68 | 1.68 | 1.78 | 0.05 | 1.64 | 1.78 | 55.8 |
-| simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.25 | 1.20 | 1.47 | 0.11 | 1.19 | 1.47 | 56.2 |
-| home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.18 | 1.17 | 1.26 | 0.04 | 1.15 | 1.26 | 55.6 |
-| software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.78 | 0.77 | 0.84 | 0.03 | 0.74 | 0.84 | 56.7 |
+| simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.06 | 0.17 | 0.05 | 0.06 | 0.17 | 113.1 |
+| home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.11 | 0.10 | 0.14 | 0.02 | 0.10 | 0.14 | 101.7 |
+| software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.09 | 0.08 | 0.12 | 0.02 | 0.08 | 0.12 | 105.1 |
+| simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.10 | 1.01 | 1.40 | 0.24 | 0.86 | 1.40 | 91.0 |
+| home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.53 | 1.47 | 1.67 | 0.08 | 1.47 | 1.67 | 61.7 |
+| software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.54 | 1.50 | 1.73 | 0.09 | 1.49 | 1.73 | 61.1 |
+| simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.15 | 1.11 | 1.29 | 0.07 | 1.10 | 1.29 | 61.2 |
+| home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.11 | 1.08 | 1.20 | 0.05 | 1.07 | 1.20 | 60.2 |
+| software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.73 | 0.71 | 0.80 | 0.04 | 0.70 | 0.80 | 60.2 |
 
 ### qwen2.5:7b (Size: 4.36 GB, Quant: Q4_K_M, Params: 7.6B)
 
@@ -144,19 +144,19 @@ everything else is **discouraged**. No model is hidden by its cell.
 | afternoon-20261015 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 2.07 | 1.99 | 2.35 | 0.15 | 1.94 | 2.35 | 30.1 |
 | afternoon-20261015 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.65 | 0.61 | 0.82 | 0.09 | 0.58 | 0.82 | 33.1 |
 
-### phi3.5:minib (Est. size: 3.3 GB, Quant: Q4_0, Params: 3.8B)
+### phi3.5:3.8b (Est. size: 3.3 GB, Quant: Q4_0, Params: 3.8B)
 
 | fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.11 | 0.07 | 0.27 | 0.08 | 0.06 | 0.27 | 133.6 |
-| home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.13 | 0.03 | 0.07 | 0.13 | 132.3 |
-| software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.05 | 0.04 | 0.11 | 0.03 | 0.04 | 0.11 | 152.1 |
-| simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.79 | 1.94 | 2.23 | 0.33 | 1.33 | 2.23 | 76.8 |
-| home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.68 | 1.58 | 2.12 | 0.23 | 1.49 | 2.12 | 80.6 |
-| software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.99 | 1.94 | 2.21 | 0.11 | 1.93 | 2.21 | 84.0 |
-| simple-product | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 2.08 | 2.05 | 2.23 | 0.09 | 2.00 | 2.23 | 83.6 |
-| home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.74 | 0.72 | 0.83 | 0.04 | 0.71 | 0.83 | 84.0 |
-| software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.23 | 0.20 | 0.38 | 0.08 | 0.16 | 0.38 | 104.0 |
+| simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.11 | 0.10 | 0.19 | 0.04 | 0.07 | 0.19 | 105.4 |
+| home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.13 | 0.03 | 0.07 | 0.13 | 130.6 |
+| software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.06 | 0.05 | 0.11 | 0.03 | 0.04 | 0.11 | 136.1 |
+| simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.72 | 1.81 | 2.11 | 0.28 | 1.33 | 2.11 | 82.2 |
+| home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.56 | 1.53 | 1.72 | 0.08 | 1.51 | 1.72 | 83.7 |
+| software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 2.00 | 1.97 | 2.14 | 0.07 | 1.95 | 2.14 | 82.9 |
+| simple-product | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 2.13 | 2.11 | 2.26 | 0.07 | 2.04 | 2.26 | 79.8 |
+| home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.76 | 0.72 | 0.91 | 0.08 | 0.71 | 0.91 | 84.2 |
+| software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.23 | 0.20 | 0.39 | 0.08 | 0.16 | 0.39 | 103.8 |
 
 ### nemotron-mini:4b (Size: 2.51 GB, Quant: Q4_K_M, Params: 4.2B)
 
@@ -407,19 +407,19 @@ everything else is **discouraged**. No model is hidden by its cell.
 | home-project | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 8.30 | 8.10 | 8.79 | 0.34 | 8.02 | 8.79 | 59.8 |
 | software-plan | summarize | 3 | 1.00 | 1.00 | - | - | 0 | 10.75 | 10.46 | 11.70 | 0.68 | 10.10 | 11.70 | 58.5 |
 
-### phi3:mini (Size: 2.03 GB, Quant: Q4_0, Params: 3.8B)
+### phi3:mini (Est. size: 3.3 GB, Quant: Q4_0, Params: 3.8B)
 
 | fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| simple-product | title | 3 | 1.00 | 1.00 | - | - | 0 | 0.19 | 0.07 | 0.44 | 0.17 | 0.07 | 0.44 | 138.2 |
-| home-project | title | 3 | 1.00 | 0.00 | - | - | 0 | 0.12 | 0.09 | 0.16 | 0.03 | 0.09 | 0.16 | 130.6 |
-| software-plan | title | 3 | 1.00 | 0.00 | - | - | 0 | 16.61 | 16.93 | 17.15 | 0.62 | 15.74 | 17.15 | 75.0 |
-| simple-product | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 2.22 | 2.23 | 2.26 | 0.04 | 2.16 | 2.26 | 71.9 |
-| home-project | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.64 | 1.55 | 1.83 | 0.13 | 1.54 | 1.83 | 72.0 |
-| software-plan | initial_questions | 3 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.61 | 1.51 | 1.83 | 0.15 | 1.51 | 1.83 | 80.2 |
-| simple-product | summarize | 3 | 0.67 | 0.00 | - | - | 1 | 2.68 | 2.68 | 2.85 | 0.17 | 2.51 | 2.85 | 68.9 |
-| home-project | summarize | 3 | 0.00 | 0.00 | - | - | 3 | 120.00 | 120.00 | 120.00 | 0.00 | 120.00 | 120.00 | - |
-| software-plan | summarize | 3 | 1.00 | 0.00 | - | - | 0 | 25.15 | 20.42 | 51.43 | 19.81 | 3.59 | 51.43 | 74.3 |
+| simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.09 | 0.06 | 0.18 | 0.05 | 0.06 | 0.18 | 139.9 |
+| home-project | title | 5 | 1.00 | 0.00 | - | - | 0 | 0.10 | 0.08 | 0.15 | 0.03 | 0.08 | 0.15 | 130.6 |
+| software-plan | title | 5 | 1.00 | 0.00 | - | - | 0 | 16.34 | 16.31 | 17.31 | 0.74 | 15.23 | 17.31 | 77.4 |
+| simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 2.03 | 1.98 | 2.27 | 0.12 | 1.95 | 2.27 | 77.8 |
+| home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.45 | 1.41 | 1.60 | 0.07 | 1.40 | 1.60 | 77.2 |
+| software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.64 | 1.64 | 1.77 | 0.07 | 1.55 | 1.77 | 74.2 |
+| simple-product | summarize | 5 | 0.80 | 0.00 | - | - | 1 | 2.22 | 2.21 | 2.39 | 0.12 | 2.06 | 2.39 | 79.0 |
+| home-project | summarize | 5 | 0.60 | 0.00 | - | - | 2 | 29.50 | 3.81 | 81.23 | 36.58 | 3.46 | 81.23 | 78.2 |
+| software-plan | summarize | 5 | 0.40 | 0.00 | - | - | 1 | 4.55 | 4.55 | 4.73 | 0.18 | 4.36 | 4.73 | 80.0 |
 
 ### gemma4:12b (Size: 7.04 GB, Quant: Q4_K_M, Params: 11.9B)
 
