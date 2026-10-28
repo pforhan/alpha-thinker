@@ -1,10 +1,10 @@
-# Ollama evals — 27 model(s) from 50 row(s)
+# Ollama evals — 29 model(s) from 52 row(s)
 
-- rows: 50 file(s) read, 50 usable, 0 too old, 0 fixture mismatch, 0 unreadable
-- per-model: all — 50 row(s) pooled into 27 model(s)
-- run-ids: 20261023-201315, 20261023-211344, 20261023-211827, 20261024-090344, afternoon-20261015, morning-20261015, overnight-20261014
+- rows: 52 file(s) read, 52 usable, 0 too old, 0 fixture mismatch, 0 unreadable
+- per-model: all — 52 row(s) pooled into 29 model(s)
+- run-ids: 20261023-201315, 20261023-211344, 20261023-211827, 20261024-090344, 20261027-172748, afternoon-20261015, morning-20261015, overnight-20261014
 - params: base_url=http://localhost:11434, runs=mixed, num_ctx=2048, temp=0.0
-- hardware: {"cpu": "Apple M2 Max", "platform": "darwin", "python": "3.15.0", "ram_gb": 64.0}
+- hardware: "mixed"
 - device budget: 16GB (models above it are flagged, never hidden)
 
 ## Per-model (sorted by tier, then quality, then suite speed)
@@ -12,7 +12,9 @@
 | model | disksize | quality | tier | suite_s | ok | clean | json | notes |
 |---|---|---|---|---|---|---|---|---|
 | llama3.2:3b | 1.9 GB | 100.0 | good | 5.33 | 1.00 | 1.00 | 1.00 |  |
+| phi4-mini:minib | 3.3 GB* | 100.0 | good | 8.22 | 1.00 | 1.00 | 1.00 |  |
 | qwen2.5:7b | 4.4 GB | 100.0 | ok | 15.40 | 1.00 | 1.00 | 1.00 |  |
+| phi3.5:minib | 3.3 GB* | 96.7 | ok | 8.74 | 1.00 | 0.89 | 1.00 | Summaries include bullets/headings (simple-product) |
 | nemotron-mini:4b | 2.5 GB | 90.0 | ok | 5.78 | 1.00 | 0.67 | 1.00 | Titles wrapped in quotes (home-project, simple-product, software-plan) |
 | gemma4:e4b | 8.9 GB | 100.0 | discouraged | 82.79 | 1.00 | 1.00 | 1.00 |  |
 | qwen3.6:35b-mlx | 19.8 GB* | 100.0 | discouraged | 208.53 | 1.00 | 1.00 | 1.00 | >16GB |
@@ -49,8 +51,8 @@ everything else is **discouraged**. No model is hidden by its cell.
 
 | quality \ speed | fast (<10s) | fine (<35s) | slow (≥35s) |
 |---|---|---|---|
-| **strong** | llama3.2:3b | qwen2.5:7b | gemma4:e4b, qwen3.6:35b-mlx, qwen3.8:27b-mlx, muse-glimmer:30b-mlx |
-| adequate | nemotron-mini:4b | deepseek-r1:1.5b | deepseek-r1:14b, gemma4:26b, gemma4:31b-mlx, gemma4:31b, deepseek-r1:8b, gemma4:26b-mlx |
+| **strong** | llama3.2:3b, phi4-mini:minib | qwen2.5:7b | gemma4:e4b, qwen3.6:35b-mlx, qwen3.8:27b-mlx, muse-glimmer:30b-mlx |
+| adequate | phi3.5:minib, nemotron-mini:4b | deepseek-r1:1.5b | deepseek-r1:14b, gemma4:26b, gemma4:31b-mlx, gemma4:31b, deepseek-r1:8b, gemma4:26b-mlx |
 | weak | qwen2.5:1.5b |  | phi3:mini, gemma4:12b, gemma4-12b-128k:12b, qwq:32b, qwen3.6:36b, tev1:0.8b, qwen3.5:4b, qwen3-vl:4b, smollm2:135m, tinyllama:1b, qwen3.5:9.7b, qwen3.5:0.8b |
 
 ## Per-interaction detail (one table per model, same order as above)
@@ -96,6 +98,20 @@ everything else is **discouraged**. No model is hidden by its cell.
 | 20261024-090344 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.79 | 0.77 | 0.87 | 0.04 | 0.77 | 0.87 | 77.0 |
 | 20261024-090344 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.44 | 0.42 | 0.51 | 0.04 | 0.41 | 0.51 | 80.4 |
 
+### phi4-mini:minib (Est. size: 3.3 GB, Quant: Q4_K_M, Params: 3.8B)
+
+| fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.10 | 0.06 | 0.27 | 0.08 | 0.06 | 0.27 | 112.6 |
+| home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.11 | 0.11 | 0.14 | 0.02 | 0.10 | 0.14 | 101.1 |
+| software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.09 | 0.08 | 0.12 | 0.02 | 0.08 | 0.12 | 105.0 |
+| simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.36 | 1.37 | 1.38 | 0.03 | 1.31 | 1.38 | 57.2 |
+| home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.66 | 1.61 | 1.80 | 0.08 | 1.58 | 1.80 | 56.8 |
+| software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.68 | 1.68 | 1.78 | 0.05 | 1.64 | 1.78 | 55.8 |
+| simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.25 | 1.20 | 1.47 | 0.11 | 1.19 | 1.47 | 56.2 |
+| home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 1.18 | 1.17 | 1.26 | 0.04 | 1.15 | 1.26 | 55.6 |
+| software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.78 | 0.77 | 0.84 | 0.03 | 0.74 | 0.84 | 56.7 |
+
 ### qwen2.5:7b (Size: 4.36 GB, Quant: Q4_K_M, Params: 7.6B)
 
 | run | fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
@@ -127,6 +143,20 @@ everything else is **discouraged**. No model is hidden by its cell.
 | afternoon-20261015 | simple-product | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 2.93 | 2.86 | 3.30 | 0.19 | 2.79 | 3.30 | 29.9 |
 | afternoon-20261015 | home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 2.07 | 1.99 | 2.35 | 0.15 | 1.94 | 2.35 | 30.1 |
 | afternoon-20261015 | software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.65 | 0.61 | 0.82 | 0.09 | 0.58 | 0.82 | 33.1 |
+
+### phi3.5:minib (Est. size: 3.3 GB, Quant: Q4_0, Params: 3.8B)
+
+| fixture | interaction | reps | ok | clean | json | arr | timeouts | mean | p50 | p95 | std | min | max | tps |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| simple-product | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.11 | 0.07 | 0.27 | 0.08 | 0.06 | 0.27 | 133.6 |
+| home-project | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.08 | 0.07 | 0.13 | 0.03 | 0.07 | 0.13 | 132.3 |
+| software-plan | title | 5 | 1.00 | 1.00 | - | - | 0 | 0.05 | 0.04 | 0.11 | 0.03 | 0.04 | 0.11 | 152.1 |
+| simple-product | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.79 | 1.94 | 2.23 | 0.33 | 1.33 | 2.23 | 76.8 |
+| home-project | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.68 | 1.58 | 2.12 | 0.23 | 1.49 | 2.12 | 80.6 |
+| software-plan | initial_questions | 5 | 1.00 | 1.00 | 1.00 | 1.00 | 0 | 1.99 | 1.94 | 2.21 | 0.11 | 1.93 | 2.21 | 84.0 |
+| simple-product | summarize | 5 | 1.00 | 0.00 | - | - | 0 | 2.08 | 2.05 | 2.23 | 0.09 | 2.00 | 2.23 | 83.6 |
+| home-project | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.74 | 0.72 | 0.83 | 0.04 | 0.71 | 0.83 | 84.0 |
+| software-plan | summarize | 5 | 1.00 | 1.00 | - | - | 0 | 0.23 | 0.20 | 0.38 | 0.08 | 0.16 | 0.38 | 104.0 |
 
 ### nemotron-mini:4b (Size: 2.51 GB, Quant: Q4_K_M, Params: 4.2B)
 
