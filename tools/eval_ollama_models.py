@@ -1825,16 +1825,16 @@ def _speed_band_from_suite(suite_s: Optional[float]) -> str:
 
 def emit_curated_snippet(analyzed: List[Dict[str, Any]], fmt: str) -> str:
     """Emit source-ready data for ModelProfiles from evaluated rows."""
+    rollups = sorted((a["rollup"] for a in analyzed), key=_sort_key)
     items = []
-    for a in analyzed:
-        r = a["rollup"]
+    for r in rollups:
         items.append(
             {
-                "modelIdPattern": r["model_id"],
+                "modelIdPattern": r.get("display_name") or r["model_id"],
                 "displayName": r.get("display_name") or r["model_id"],
                 "qualityScore": round(r.get("quality"), 1) if r.get("quality") is not None else None,
                 "qualityBand": _quality_band_from_score(r.get("quality")),
-                "speedBand": r.get("speed_band") or _speed_band_from_suite(r.get("suite_s")),
+                "speedBand": (_speed_band_from_suite(r.get("suite_s"))),
                 "suiteSeconds": round(r.get("suite_s"), 2) if r.get("suite_s") is not None else None,
                 "okRate": round(r.get("ok_rate"), 3) if r.get("ok_rate") is not None else None,
                 "cleanRate": round(r.get("clean_rate"), 3) if r.get("clean_rate") is not None else None,
@@ -1847,7 +1847,8 @@ def emit_curated_snippet(analyzed: List[Dict[str, Any]], fmt: str) -> str:
         return json.dumps({"measuredSeeds": items}, indent=2) + "\n"
 
     # Kotlin snippet
-    lines = ["  /** Measured seeds from eval runs (paste into ModelProfiles.measuredSeeds). */"]
+    lines = ["  /** Measured seeds from docs/model-evals/all.md (pooled across runs). */"]
+    lines.append("  /** Ordered by the eval report's recommendation grid. */")
     lines.append("  val measuredSeeds = listOf(")
     for item in items:
         mid = item["modelIdPattern"]
@@ -1866,13 +1867,34 @@ def emit_curated_snippet(analyzed: List[Dict[str, Any]], fmt: str) -> str:
         lines.append(f"      qualityBand = ModelQuality.{qband},")
         lines.append(f"      speedBand = ModelSpeed.{sband},")
         if suite is not None:
-            lines.append(f"      suiteSeconds = {suite},")
+            # Format like original style
+            if isinstance(suite, float) and suite.is_integer():
+                lines.append(f"      suiteSeconds = {int(suite)}.0,")
+            elif suite == round(suite, 2):
+                # Keep reasonable precision
+                s = f"{suite:.2f}".rstrip('0').rstrip('.') if '.' in f"{suite:.2f}" else f"{suite:.2f}"
+                # But better to match style - use the original formatting
+                lines.append(f"      suiteSeconds = {suite},")
+            else:
+                lines.append(f"      suiteSeconds = {suite},")
         if ok is not None:
-            lines.append(f"      okRate = {ok},")
+            if ok == 1.0:
+                lines.append(f"      okRate = 1.0,")
+            else:
+                lines.append(f"      okRate = {ok},")
         if clean is not None:
-            lines.append(f"      cleanRate = {clean},")
+            if clean == 1.0:
+                lines.append(f"      cleanRate = 1.0,")
+            else:
+                # Use original precision style
+                lines.append(f"      cleanRate = {clean},")
         if json_ok is not None:
-            lines.append(f"      jsonOkRate = {json_ok},")
+            if json_ok == 1.0:
+                lines.append(f"      jsonOkRate = 1.0,")
+            elif json_ok == 0.0:
+                lines.append(f"      jsonOkRate = 0.0,")
+            else:
+                lines.append(f"      jsonOkRate = {json_ok},")
         if notes:
             notes_str = ", ".join(f'"{n}"' for n in notes)
             lines.append(f"      notes = listOf({notes_str}),")
