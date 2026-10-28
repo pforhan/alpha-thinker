@@ -120,14 +120,12 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   @AppScope
   @Provides
   fun providesModelDownloadManager(
-    scope: CoroutineScope,
     taskRunner: TaskRunner,
     ollamaPullClient: OllamaPullClient,
     modelFileTransferClient: ModelFileTransferClient,
     remoteModelCatalog: RemoteModelCatalog,
     activityLogger: ActivityLogger,
   ): ModelDownloader = TaskBackedModelDownloader(
-    scope = scope,
     taskRunner = taskRunner,
     ollamaPullClient = ollamaPullClient,
     modelFileTransferClient = modelFileTransferClient,
