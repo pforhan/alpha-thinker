@@ -2,12 +2,12 @@ package alphainterplanetary.thinker.downloads
 
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.http.client.ktor.KtorKoogHttpClient
-import ai.koog.http.client.post
+import ai.koog.http.client.lines
 import alphainterplanetary.thinker.engine.normalizeRemoteBaseUrl
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -32,6 +32,11 @@ data class OllamaPullEvent(
 /**
  * Default implementation using Koog HTTP client to stream NDJSON from
  * `POST /api/pull` with `{"model": ..., "stream": true}`.
+ *
+ * The response is consumed line by line as it arrives: a pull runs for minutes
+ * and reports per-layer byte counts throughout, so buffering the body until the
+ * server closes it would leave the UI with nothing but an indeterminate
+ * spinner and a final jump to 100%.
  */
 class KoogOllamaPullClient(
   private val httpClientFactory: KoogHttpClient.Factory = KtorKoogHttpClient.Factory(),
@@ -45,36 +50,28 @@ class KoogOllamaPullClient(
       json = json,
     )
     try {
-      // Koog's streaming API may vary; attempt to stream lines as NDJSON.
-      // We post and expect the client to provide streamed response content.
-      // Fall back to reading response body as a string sequence if needed.
-      val response = client.post<OllamaPullRequest, String>(
+      client.lines(
         path = OllamaPullPath,
         requestBody = OllamaPullRequest(model = modelId, stream = true),
         headers = JsonHeaders,
-      )
-      // If we got a single blob, split by newlines. Streaming clients would
-      // deliver chunks; this works for both cases in practice.
-      response.lineSequence()
-        .filter { it.isNotBlank() }
-        .forEach { line ->
-          val event = try {
-            json.decodeFromString<OllamaPullWire>(line)
-          } catch (e: Exception) {
-            return@forEach
-          }
-          val out = OllamaPullEvent(
-            status = event.status,
-            digest = event.digest,
-            total = event.total,
-            completed = event.completed,
-            error = event.error,
-          )
-          emit(out)
-          if (out.error != null) {
-            throw Exception(out.error)
-          }
+      ).collect { line ->
+        // A line that is not an event (a stray log line, a proxy banner) is
+        // skipped rather than failing a pull that is otherwise fine.
+        val event = runCatching { json.decodeFromString<OllamaPullWire>(line) }
+          .getOrNull()
+          ?: return@collect
+        val out = OllamaPullEvent(
+          status = event.status,
+          digest = event.digest,
+          total = event.total,
+          completed = event.completed,
+          error = event.error,
+        )
+        emit(out)
+        if (out.error != null) {
+          throw Exception(out.error)
         }
+      }
     } catch (e: CancellationException) {
       throw e
     } finally {

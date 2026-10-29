@@ -1,5 +1,11 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
+import alphainterplanetary.thinker.downloads.DownloadHandle
+import alphainterplanetary.thinker.downloads.DownloadKind
+import alphainterplanetary.thinker.downloads.DownloadState
+import alphainterplanetary.thinker.downloads.DownloadStatus
+import alphainterplanetary.thinker.downloads.ModelDownloadSpec
+import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
@@ -15,6 +21,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 
@@ -39,6 +48,7 @@ class EngineViewModelTest {
    */
   private fun TestScope.fixture(
     catalog: RemoteModelCatalog = FakeModelCatalog(),
+    downloader: ModelDownloader? = null,
   ): Fixture {
     val fakeStorage = FakeStorage()
     val scope = backgroundScope
@@ -47,6 +57,7 @@ class EngineViewModelTest {
       engineRepository = engines,
       modelCatalog = catalog,
       scope = scope,
+      modelDownloader = downloader,
     )
     settle()
     return Fixture(vm, engines, fakeStorage)
@@ -317,6 +328,29 @@ class EngineViewModelTest {
   }
 
   @Test
+  fun `a completed pull refreshes the draft model list`() = runTest {
+    // The list is a snapshot taken when the user browsed. Once a pull finishes,
+    // it no longer matches what the server serves, so the chip that started the
+    // download would keep offering it. Completing the pull re-reads the list.
+    val catalog = FakeModelCatalog()
+    val downloader = FakeDownloader()
+    val fixture = fixture(catalog, downloader)
+    fixture.vm.startAddConnection()
+    fixture.vm.refreshDraftModels()
+    settle()
+    assertEquals(1, catalog.listCalls)
+
+    fixture.vm.pullOllamaModel("model-c")
+    settle()
+    // Still running: no reason to probe the server yet.
+    assertEquals(1, catalog.listCalls)
+
+    downloader.succeed()
+    settle()
+    assertEquals(2, catalog.listCalls)
+  }
+
+  @Test
   fun `picking a model adopts its window`() = runTest {
     val fixture = fixture()
     fixture.vm.startAddConnection()
@@ -494,12 +528,14 @@ class EngineViewModelTest {
     private val windows: Map<String, Int> = emptyMap(),
   ) : RemoteModelCatalog {
     var lastApiKey: String? = null
+    var listCalls = 0
 
     override suspend fun list(
       provider: RemoteProvider,
       baseUrl: String,
       apiKey: String,
     ): List<RemoteModelInfo> {
+      listCalls++
       lastApiKey = apiKey
       if (throwOnList) error("probe failed")
       return listOf(
@@ -521,5 +557,41 @@ class EngineViewModelTest {
       baseUrl: String,
       model: String,
     ): Int? = windows[model]
+  }
+
+  /** A downloader whose pull the test completes by hand. */
+  private class FakeDownloader : ModelDownloader {
+    private val states = MutableStateFlow<List<DownloadState>>(emptyList())
+    private var nextId = 0
+    private var lastHandle: DownloadHandle? = null
+
+    override fun downloads(): StateFlow<List<DownloadState>> = states
+
+    override fun pullOllama(modelId: String, baseUrl: String): DownloadHandle {
+      val handle = DownloadHandle(id = "pull-${nextId++}", taskId = "task-$nextId")
+      lastHandle = handle
+      states.update {
+        it + DownloadState(
+          handle = handle,
+          kind = DownloadKind.OllamaPull,
+          status = DownloadStatus.Running,
+          modelId = modelId,
+          source = "ollama",
+        )
+      }
+      return handle
+    }
+
+    fun succeed() {
+      val id = checkNotNull(lastHandle).id
+      states.update { list ->
+        list.map { if (it.handle.id == id) it.copy(status = DownloadStatus.Succeeded) else it }
+      }
+    }
+
+    override fun downloadModel(spec: ModelDownloadSpec): DownloadHandle =
+      error("not used by these tests")
+
+    override fun cancel(handleId: String) = Unit
   }
 }

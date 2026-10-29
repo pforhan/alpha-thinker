@@ -18,10 +18,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.window.DialogProperties
+import kotlin.math.round
 
 /**
  * The add/edit dialog for a Remote connection (ENGINE-CONFIG-PLAN.md 3b).
@@ -397,15 +400,15 @@ private fun RenderTier(
           }
         },
         label = {
-          val prefix = if (isPull) "↓ " else ""
+          val prefix = when {
+            activePull?.progress != null -> activePull.progress.formatAsPercentage()
+            isPull -> "↓ "
+            else -> ""
+          }
           val suffix = if (!note.isNullOrBlank()) " · $note" else ""
           Text("$prefix${info.displayName}$suffix")
         },
-        leadingIcon = if (activePull != null) {
-          { TaskSpinner() }
-        } else {
-          null
-        },
+        leadingIcon = maybeDownloadSpinner(activePull = activePull),
         colors = if (isPull) {
           FilterChipDefaults.filterChipColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -416,5 +419,32 @@ private fun RenderTier(
         elevation = null,
       )
     }
+  }
+}
+
+fun Float.formatAsPercentage(): String {
+  val rounded = round(this * 1000) / 10f
+  val str = rounded.toString()
+  // Ensures an explicit .0 is appended if it turns into a whole number string
+  return if (!str.contains('.')) "$str.0% " else "$str% "
+}
+
+@Composable
+private fun maybeDownloadSpinner(
+  activePull: DownloadState?,
+): @Composable () -> Unit = {
+  if (activePull != null) {
+    if (activePull.progress != null) {
+      CircularProgressIndicator(
+        modifier = Modifier.size(Dimens.ProgressIndicatorSize),
+        strokeWidth = Dimens.ProgressStroke,
+        color = MaterialTheme.colorScheme.primary,
+        progress = { activePull.progress }
+      )
+    } else {
+      TaskSpinner()
+    }
+  } else {
+    null
   }
 }

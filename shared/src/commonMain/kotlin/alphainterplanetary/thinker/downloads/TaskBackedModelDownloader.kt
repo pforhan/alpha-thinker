@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.downloads
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
-import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.tasks.ConcurrencyGroup
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
@@ -19,7 +18,6 @@ class TaskBackedModelDownloader(
   private val taskRunner: TaskRunner,
   private val ollamaPullClient: OllamaPullClient,
   private val modelFileTransferClient: ModelFileTransferClient,
-  private val remoteModelCatalog: RemoteModelCatalog,
   private val activityLogger: ActivityLogger,
   scope: CoroutineScope,
 ) : ModelDownloader {
@@ -40,8 +38,11 @@ class TaskBackedModelDownloader(
             }
             state.copy(
               status = mappedStatus,
+              modelId = task.modelId ?: state.modelId,
+              source = task.source ?: state.source,
               bytesDone = task.bytesDone ?: state.bytesDone,
               bytesTotal = task.bytesTotal ?: state.bytesTotal,
+              throughputBps = task.throughputBps ?: state.throughputBps,
               progress = task.progress ?: state.progress,
               message = task.error ?: state.message,
             )
@@ -61,31 +62,28 @@ class TaskBackedModelDownloader(
       val logContext = activityLogger.taskContext(activityId = taskId, projectId = "")
       logContext.started("Pulling $modelId")
       try {
+        // A pull reports byte counts per layer, not for the model as a whole.
+        // Summing the layers lets the chip's ring track the whole pull instead
+        // of restarting from zero with every layer (which would make it look
+        // stuck at 100% on the small ones).
+        val layers = mutableMapOf<String, Pair<Long, Long>>()
         ollamaPullClient.pull(baseUrl, modelId).collect { event ->
           if (event.error != null) {
             throw Exception(event.error)
           }
           val total = event.total
-          val done = event.completed ?: 0L
           if (total != null && total > 0L) {
+            layers[event.digest ?: ""] = total to (event.completed ?: 0L).coerceIn(0L, total)
             taskRunner.setDownloadProgress(
               taskId = taskId,
-              bytesDone = done,
-              bytesTotal = total,
+              bytesDone = layers.values.sumOf { it.second },
+              bytesTotal = layers.values.sumOf { it.first },
               throughputBps = null,
             )
           }
           if (event.status != null) {
             logContext.append("status: ${event.status}")
           }
-        }
-        // Refresh catalog after successful pull
-        runCatching {
-          remoteModelCatalog.list(
-            alphainterplanetary.thinker.engine.RemoteProvider.Ollama,
-            baseUrl,
-            "",
-          )
         }
         logContext.closeSucceeded()
       } catch (e: Exception) {
@@ -126,12 +124,16 @@ class TaskBackedModelDownloader(
           if (event.error != null) {
             throw Exception(event.error)
           }
-          taskRunner.setDownloadProgress(
-            taskId = taskId,
-            bytesDone = event.bytesDone,
-            bytesTotal = event.bytesTotal,
-            throughputBps = event.throughputBps,
-          )
+          // Phase-only events (verifying, extracting, a bare "succeeded") carry
+          // no byte counts; reporting them would wipe the totals already shown.
+          if (event.bytesTotal != null || event.bytesDone > 0L) {
+            taskRunner.setDownloadProgress(
+              taskId = taskId,
+              bytesDone = event.bytesDone,
+              bytesTotal = event.bytesTotal,
+              throughputBps = event.throughputBps,
+            )
+          }
           logContext.append("phase: ${event.phase.name}")
         }
         logContext.closeSucceeded()

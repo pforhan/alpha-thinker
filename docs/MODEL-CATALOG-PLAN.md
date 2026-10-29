@@ -192,7 +192,7 @@ browser chip shows the resolved name while the id stays canonical.
       to enable testing and swappable implementations.
   - [x] Define `ModelDownloader` (`downloads()`, `pullOllama(modelId, baseUrl)`,
         `downloadModel(spec)`, `cancel(handleId)`), `DownloadHandle(id, taskId)`,
-        `DownloadState` (handle/task/kind/status/modelId/bytes/progress/message/source),
+        `DownloadState` (handle/task/kind/status/modelId/bytes/throughput/progress/message/source),
         `DownloadKind` (`OllamaPull`, `LocalFile`), `DownloadStatus` (`Queued`,
         `Running`, `Paused`, `Succeeded`, `Failed`, `Cancelled`).
 - [x] **Ollama pull client:** Add `OllamaPullClient` using `KoogHttpClient` for
@@ -235,10 +235,14 @@ browser chip shows the resolved name while the id stays canonical.
         `writing manifest`, removing unused layers, etc.) as phases of the same
         task (verification included), track `bytesDone`/`bytesTotal`/`progress`,
         and log via `ActivityLogger.taskContext(taskId, projectId = null)`.
+        The client consumes the NDJSON line by line as it arrives, and per-layer
+        totals are summed so the chip's ring tracks the whole pull.
   - [x] **Lifecycle & refresh:** Support background execution (app scope), and error
         handling. On failure, surface messages and clean up as appropriate.
-- [ ] After download completes, a pull chip should become a regular chip that takes
-      no further action. It should drop its arrow prefix and different color.
+- [x] After download completes, a pull chip should become a regular chip that takes
+      no further action. It should drop its arrow prefix and different color. A
+      completed pull re-reads the draft's model list, which turns the entry into a
+      normal installed model.
 - [ ] Model browser should hide discouraged models by default, with a Show button or
       link to toggle
 - [ ] Models with bad quality should sort after adequate quality models inside

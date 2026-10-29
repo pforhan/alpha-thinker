@@ -1,6 +1,8 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
+import alphainterplanetary.thinker.downloads.DownloadKind
 import alphainterplanetary.thinker.downloads.DownloadState
+import alphainterplanetary.thinker.downloads.DownloadStatus
 import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.engine.EngineAvailability
 import alphainterplanetary.thinker.engine.EngineCatalogEntry
@@ -221,6 +223,26 @@ class EngineViewModel(
   /** What the dialog's model browser is showing, from the last [refreshDraftModels]. */
   private val _draftModels = MutableStateFlow<RemoteModelListState>(RemoteModelListState.Idle)
   val draftModels: StateFlow<RemoteModelListState> = _draftModels.asStateFlow()
+
+  init {
+    // A finished Ollama pull changes what the server serves, so the browser's
+    // snapshot is stale: re-read it, and the pull chip becomes a normal model
+    // instead of enqueuing the same download again. Only a pull this app
+    // started can succeed, and refreshing with a dialog open is enough.
+    scope.launch {
+      var completed = emptySet<String>()
+      downloads.collect { states ->
+        val succeeded = states
+          .filter { it.kind == DownloadKind.OllamaPull && it.status == DownloadStatus.Succeeded }
+          .map { it.handle.id }
+          .toSet()
+        if ((succeeded - completed).isNotEmpty() && _draft.value != null) {
+          refreshDraftModels()
+        }
+        completed = succeeded
+      }
+    }
+  }
 
   /**
    * Reads the draft provider's model list for the draft endpoint. Instant for

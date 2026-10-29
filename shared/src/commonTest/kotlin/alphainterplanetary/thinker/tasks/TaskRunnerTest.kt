@@ -394,4 +394,24 @@ class TaskRunnerTest {
     assertEquals(TaskStatus.Succeeded, done.status)
     assertEquals(0.5f, done.progress)
   }
+
+  @Test
+  fun `download metadata set while queued survives the running transition`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+
+    val task = runner.enqueue("", TaskKind.OllamaModelPull) { id ->
+      val row = runner.tasks.value.single { it.id == id }
+      assertEquals("qwen2.5:7b", row.modelId, "the body sees the metadata set at enqueue")
+      assertEquals("ollama", row.source)
+    }
+    // Callers set this immediately after enqueue, before the body can start.
+    runner.setDownloadMetadata(task.id, modelId = "qwen2.5:7b", source = "ollama")
+
+    testScheduler.advanceUntilIdle()
+
+    val done = runner.tasks.value.single { it.id == task.id }
+    assertEquals(TaskStatus.Succeeded, done.status)
+    assertEquals("qwen2.5:7b", done.modelId)
+    assertEquals("ollama", done.source)
+  }
 }

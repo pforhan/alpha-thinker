@@ -136,7 +136,9 @@ class TaskRunner(
       guard.withLock {
         groupGate.withLock {
           val startedAt = now()
-          _tasks.update { it.replace(task.asStarted(startedAt)) }
+          // Start from the current row, not the enqueue-time snapshot: metadata
+          // (e.g. a download's model) may have been set while the task queued.
+          _tasks.update { list -> list.replace(list.first { it.id == task.id }.asStarted(startedAt)) }
           var cancelled = false
           var failure: String? = null
           try {
