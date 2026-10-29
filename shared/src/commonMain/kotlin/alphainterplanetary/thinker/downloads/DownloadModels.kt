@@ -11,13 +11,13 @@ enum class DownloadKind {
 /**
  * State of a download.
  */
-enum class DownloadStatus {
+enum class DownloadStatus(val finished: Boolean = false) {
   Queued,
   Running,
   Paused,
-  Succeeded,
-  Failed,
-  Cancelled,
+  Succeeded(true),
+  Failed(true),
+  Cancelled(true),
 }
 
 /**

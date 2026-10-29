@@ -212,18 +212,20 @@ browser chip shows the resolved name while the id stays canonical.
   - [x] the app should recognize that llama3.2:latest is the same as llama3.2:3b — `RemoteModelInfo.digest` is captured from Ollama and a `:latest` alias sharing a digest with an installed concrete tag is shown under that tag.
   - [x] Do we need to rebuild reports to gather manifest sha for everything? No, not necessary since we aren't using sha
   - [x] eval_ollama_models.py rebuilds display names from a tag-shaped size label and refuses descriptive labels such as "mini", so alias resolution no longer fabricates tags like "minib".  Re-running a sweep picks up any alias-rule change.
-- [ ] **Ollama model pull (curated):** Only present strong quality models from
+- [x] **Ollama model pull (curated):** Only present strong quality models from
       `model-evals/all.md` in the UI (no full browser). Implement end-to-end
       pull support for curated Ollama models via the download infrastructure.
-  - [ ] **Curated source of truth:** Derive the curated Ollama list from
+  - [x] **Curated source of truth:** Derive the curated Ollama list from
         `ModelProfiles`, filtering to strong-quality candidates. Programmatically 
         filter ModelProfiles.measuredSeeds rather than make a duplicate copy.
         Track installed vs pullable state against `RemoteModelCatalog` results.
-  - [ ] **Connection UI:** Update `ConnectionDialog` (Advanced) to render any
+  - [x] **Connection UI:** Update `ConnectionDialog` (Advanced) to render any
         curated items not already downloaded alongside other models in the chip list
-        as a pull chip.  Prefixed with "↓" or a similar material icon. Any pull 
-        chips should have a different background color.
-  - [ ] **Pull execution:** Upon selection of a pull chip, kick off the download. Add a small
+        as a pull chip once the model list has loaded. These chips should appear in
+        their respective tiers.
+        Prefixed with "↓" or a similar material icon. Any pull chips should have a
+        different background color.
+  - [x] **Pull execution:** Upon selection of a pull chip, kick off the download. Add a small
         progress spinner to the chip that indicates the download. Do not block
         saving the dialog configuration as ollama will continue to manage the 
         download. Use `ModelDownloadManager.pullOllama(modelId, baseUrl)`
@@ -233,8 +235,16 @@ browser chip shows the resolved name while the id stays canonical.
         `writing manifest`, removing unused layers, etc.) as phases of the same
         task (verification included), track `bytesDone`/`bytesTotal`/`progress`,
         and log via `ActivityLogger.taskContext(taskId, projectId = null)`.
-  - [ ] **Lifecycle & refresh:** Support background execution (app scope), and error
+  - [x] **Lifecycle & refresh:** Support background execution (app scope), and error
         handling. On failure, surface messages and clean up as appropriate.
+- [ ] After download completes, a pull chip should become a regular chip that takes
+      no further action. It should drop its arrow prefix and different color.
+- [ ] Model browser should hide discouraged models by default, with a Show button or
+      link to toggle
+- [ ] Models with bad quality should sort after adequate quality models inside
+      discouraged.
+- [ ] See if we can use material icons for llm tier display instead of unicode text.
+      See ModelPresentationTier.icon for what to replace.
 - [ ] **Local file downloads (LiteRT-LM, in-process):** Add `ModelFileTransferClient`
       implementation + platform actuals for direct HTTP(S) downloads to app storage
       (via `PlatformContext`) with resume (Range), checksum verification (sha256),

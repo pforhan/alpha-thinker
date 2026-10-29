@@ -7,11 +7,11 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.database.getActivityDatabase
 import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
-import alphainterplanetary.thinker.downloads.TaskBackedModelDownloader
 import alphainterplanetary.thinker.downloads.KoogOllamaPullClient
-import alphainterplanetary.thinker.downloads.ModelFileTransferClient
 import alphainterplanetary.thinker.downloads.ModelDownloader
+import alphainterplanetary.thinker.downloads.ModelFileTransferClient
 import alphainterplanetary.thinker.downloads.OllamaPullClient
+import alphainterplanetary.thinker.downloads.TaskBackedModelDownloader
 import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
@@ -125,12 +125,14 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
     modelFileTransferClient: ModelFileTransferClient,
     remoteModelCatalog: RemoteModelCatalog,
     activityLogger: ActivityLogger,
+    scope: CoroutineScope,
   ): ModelDownloader = TaskBackedModelDownloader(
     taskRunner = taskRunner,
     ollamaPullClient = ollamaPullClient,
     modelFileTransferClient = modelFileTransferClient,
     remoteModelCatalog = remoteModelCatalog,
     activityLogger = activityLogger,
+    scope = scope,
   )
 
   @AppScope

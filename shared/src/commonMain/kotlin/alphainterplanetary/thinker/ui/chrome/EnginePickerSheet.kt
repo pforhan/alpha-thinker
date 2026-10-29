@@ -73,6 +73,7 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
   val lastUsedAt by chrome.engines.lastUsedAt.collectAsState()
   val draft by chrome.engines.draft.collectAsState()
   val draftModels by chrome.engines.draftModels.collectAsState()
+  val pulls by chrome.engines.downloads.collectAsState()
   val engines = chrome.engines
 
   val groups = remember(instances, lastUsedAt) {
@@ -123,6 +124,10 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
       onModelSelected = { info ->
         engines.pickDraftModel(info.id, info.contextLength)
       },
+      onPullModel = { modelId ->
+        engines.pullCuratedOllamaModel(modelId, draft?.baseUrl)
+      },
+      pulls = pulls,
       onSave = engines::saveDraft,
       onDismiss = engines::cancelDraft,
     )

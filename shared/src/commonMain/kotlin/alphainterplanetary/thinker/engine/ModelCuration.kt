@@ -460,4 +460,12 @@ object ModelProfiles {
   fun findHeuristic(modelId: String): FamilyHeuristic? {
     return familyHeuristics.firstOrNull { it.familyPattern.containsMatchIn(modelId) }
   }
+
+  /**
+   * Measured models whose quality band is [ModelQuality.Strong]. Derived from [measuredSeeds].
+   */
+  val strongModelIds: List<String>
+    get() = measuredSeeds
+      .filter { it.qualityBand == ModelQuality.Strong }
+      .map { it.modelIdPattern }
 }

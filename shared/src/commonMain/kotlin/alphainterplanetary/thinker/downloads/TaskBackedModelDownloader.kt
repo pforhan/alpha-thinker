@@ -5,11 +5,14 @@ import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.tasks.ConcurrencyGroup
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
+import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.util.randomUUID
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** A Download manager that uses the task infrastructure to track tasks. */
 class TaskBackedModelDownloader(
@@ -18,9 +21,35 @@ class TaskBackedModelDownloader(
   private val modelFileTransferClient: ModelFileTransferClient,
   private val remoteModelCatalog: RemoteModelCatalog,
   private val activityLogger: ActivityLogger,
+  scope: CoroutineScope,
 ) : ModelDownloader {
   private val _downloads = MutableStateFlow<List<DownloadState>>(emptyList())
   override fun downloads(): StateFlow<List<DownloadState>> = _downloads.asStateFlow()
+
+  init {
+    scope.launch {
+      taskRunner.tasks.collect { tasks ->
+        _downloads.update { list ->
+          list.map { state ->
+            val task = tasks.firstOrNull { it.id == state.handle.taskId } ?: return@map state
+            val mappedStatus = when (task.status) {
+              TaskStatus.Queued -> DownloadStatus.Queued
+              TaskStatus.Running -> DownloadStatus.Running
+              TaskStatus.Succeeded -> DownloadStatus.Succeeded
+              TaskStatus.Failed -> DownloadStatus.Failed
+            }
+            state.copy(
+              status = mappedStatus,
+              bytesDone = task.bytesDone ?: state.bytesDone,
+              bytesTotal = task.bytesTotal ?: state.bytesTotal,
+              progress = task.progress ?: state.progress,
+              message = task.error ?: state.message,
+            )
+          }
+        }
+      }
+    }
+  }
 
   override fun pullOllama(modelId: String, baseUrl: String): DownloadHandle {
     val handleId = randomUUID()
@@ -64,6 +93,12 @@ class TaskBackedModelDownloader(
         throw e
       }
     }
+    taskRunner.setDownloadMetadata(
+      taskId = task.id,
+      modelId = modelId,
+      source = "ollama",
+      downloadId = handleId,
+    )
     val handle = DownloadHandle(id = handleId, taskId = task.id)
     _downloads.update {
       it + DownloadState(
@@ -105,6 +140,12 @@ class TaskBackedModelDownloader(
         throw e
       }
     }
+    taskRunner.setDownloadMetadata(
+      taskId = task.id,
+      modelId = spec.modelId,
+      source = "litert",
+      downloadId = handleId,
+    )
     val handle = DownloadHandle(id = handleId, taskId = task.id)
     _downloads.update {
       it + DownloadState(

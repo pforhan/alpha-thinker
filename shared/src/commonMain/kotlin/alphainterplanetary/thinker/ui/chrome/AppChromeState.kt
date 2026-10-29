@@ -161,6 +161,7 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
       engineRepository = appComponent.engineRepository,
       modelCatalog = appComponent.remoteModelCatalog,
       scope = appComponent.appScope,
+      modelDownloader = appComponent.modelDownloader,
     )
   }
   val tools = remember(appComponent) {

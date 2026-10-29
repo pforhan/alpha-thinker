@@ -1,8 +1,9 @@
 package alphainterplanetary.thinker.ui.chrome
 
+import alphainterplanetary.thinker.downloads.DownloadState
 import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.ModelBrowserEntry
 import alphainterplanetary.thinker.engine.ModelPresentationTier
-import alphainterplanetary.thinker.engine.ModelRanker
 import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
@@ -11,7 +12,6 @@ import alphainterplanetary.thinker.ui.components.TaskSpinner
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -57,6 +58,8 @@ internal fun ConnectionDialog(
   onContextTokensChange: (Int) -> Unit,
   onBrowseModels: () -> Unit,
   onModelSelected: (RemoteModelInfo) -> Unit,
+  onPullModel: (String) -> Unit,
+  pulls: List<DownloadState> = emptyList(),
   onSave: () -> Unit,
   onDismiss: () -> Unit,
 ) {
@@ -98,6 +101,8 @@ internal fun ConnectionDialog(
           },
           onBrowseModels = onBrowseModels,
           onModelSelected = onModelSelected,
+          onPullModel = onPullModel,
+          pulls = pulls,
         )
       }
     },
@@ -127,7 +132,6 @@ internal fun ConnectionDialog(
  * Changes take effect when the dialog is saved: the remote backend rebuilds
  * its client on the committed values, with no restart.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun RemoteConnectionFields(
   provider: RemoteProvider,
@@ -143,6 +147,8 @@ internal fun RemoteConnectionFields(
   onContextTokensChange: (String) -> Unit,
   onBrowseModels: () -> Unit,
   onModelSelected: (RemoteModelInfo) -> Unit,
+  onPullModel: (String) -> Unit = {},
+  pulls: List<DownloadState> = emptyList(),
 ) {
   RemoteProviderPicker(provider = provider, onProviderChange = onProviderChange)
   Spacer(modifier = Modifier.height(Dimens.ContentGap))
@@ -207,6 +213,9 @@ internal fun RemoteConnectionFields(
     state = models,
     onBrowse = onBrowseModels,
     onSelect = onModelSelected,
+    provider = provider,
+    onPullModel = onPullModel,
+    pulls = pulls,
   )
   Spacer(modifier = Modifier.height(Dimens.ContentGap))
   OutlinedTextField(
@@ -236,7 +245,6 @@ internal fun RemoteConnectionFields(
  * because the labels are the full user-facing names and a narrow phone has no
  * room for all three abreast.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RemoteProviderPicker(
   provider: RemoteProvider,
@@ -263,9 +271,11 @@ private fun RemoteProviderPicker(
  * [state] drives the affordance: idle shows only the button, loading a spinner
  * beside it, a failure the reason in place of the list, and a loaded list (even
  * an empty one — an empty Ollama server is an answer) the models as tappable
- * chips grouped by Verified/Recommended/Others. Picking one hands its id — and
- * the window the provider actually serves, when it said — back to the caller
- * through [onSelect].
+ * chips grouped by Verified/Recommended/Others. Curated Ollama models that are
+ * not installed appear as pull chips in those tiers, but only once a list has
+ * loaded — there is nothing to compare against before that. Picking one hands
+ * its id — and the window the provider actually serves, when it said — back to
+ * the caller through [onSelect].
  */
 @Composable
 private fun ModelBrowser(
@@ -273,23 +283,34 @@ private fun ModelBrowser(
   state: RemoteModelListState,
   onBrowse: () -> Unit,
   onSelect: (RemoteModelInfo) -> Unit,
+  provider: RemoteProvider = RemoteProvider.Default,
+  onPullModel: (String) -> Unit = {},
+  pulls: List<DownloadState> = emptyList(),
 ) {
   Row(verticalAlignment = Alignment.CenterVertically) {
+    val isLoading = state is RemoteModelListState.Loading
     OutlinedButton(
       onClick = onBrowse,
-      enabled = state !is RemoteModelListState.Loading,
+      enabled = !isLoading,
     ) {
       Text(if (state is RemoteModelListState.Loaded) "Refresh models" else "Browse models")
     }
-    if (state is RemoteModelListState.Loading) {
+    if (isLoading) {
       Spacer(modifier = Modifier.width(Dimens.ChipGap))
       TaskSpinner()
     }
   }
+
   when (state) {
-    RemoteModelListState.Idle, RemoteModelListState.Loading -> Unit
+    RemoteModelListState.Idle,
+    RemoteModelListState.Loading -> Unit
+
     is RemoteModelListState.Loaded -> {
-      if (state.models.isEmpty()) {
+      // Curated Ollama models that are not installed join the installed ones
+      // as pull chips. Filtering is tag-based against the loaded set, so this
+      // only runs once there is a list to compare with.
+      val entries = state.browserEntriesWithPulls(provider)
+      if (entries.isEmpty()) {
         Spacer(modifier = Modifier.height(Dimens.TightGap))
         Text(
           text = "No models found on this server.",
@@ -297,49 +318,7 @@ private fun ModelBrowser(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       } else {
-        val ranked = ModelRanker.rank(state.models)
-        Spacer(modifier = Modifier.height(Dimens.TightGap))
-        listOf(
-          ModelPresentationTier.Recommended,
-          ModelPresentationTier.HighQualityButSlower,
-          ModelPresentationTier.LowerQualityButFast,
-          ModelPresentationTier.Unknown,
-          ModelPresentationTier.Discouraged,
-        ).forEach { tier ->
-          val group = ranked.filter { it.presentationTier == tier }
-          if (group.isNotEmpty()) {
-            Text(
-              text = "${tier.icon} ${tier.description}",
-              style = MaterialTheme.typography.headlineSmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              modifier = Modifier.padding(top = Dimens.TightGap),
-            )
-            Spacer(modifier = Modifier.height(Dimens.TightGap))
-            FlowRow(
-              horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
-              verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-            ) {
-              group.forEach { rank ->
-                val info = rank.model
-                val note = rank.reason.takeIf {
-                  it.isNotBlank() && it != "Meets minimum requirements" && it != "Insufficient data" && !it.startsWith(
-                    "Unmeasured model"
-                  )
-                }
-                FilterChip(
-                  selected = info.id == current,
-                  onClick = { onSelect(info) },
-                  label = {
-                    Text(
-                      if (!note.isNullOrBlank()) "${info.displayName} · $note" else info.displayName,
-                    )
-                  },
-                  elevation = null,
-                )
-              }
-            }
-          }
-        }
+        AllTiers(entries, current, onSelect, onPullModel, pulls)
       }
     }
 
@@ -349,6 +328,92 @@ private fun ModelBrowser(
         text = "Couldn't load models: ${state.message}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
+      )
+    }
+  }
+}
+
+@Composable
+private fun AllTiers(
+  entries: List<ModelBrowserEntry>,
+  current: String,
+  onSelect: (RemoteModelInfo) -> Unit,
+  onPullModel: (String) -> Unit,
+  pulls: List<DownloadState>,
+) {
+  Spacer(modifier = Modifier.height(Dimens.TightGap))
+  listOf(
+    ModelPresentationTier.Recommended,
+    ModelPresentationTier.HighQualityButSlower,
+    ModelPresentationTier.LowerQualityButFast,
+    ModelPresentationTier.Unknown,
+    ModelPresentationTier.Discouraged,
+  ).forEach { tier ->
+    RenderTier(tier, entries, current, onSelect, onPullModel, pulls)
+  }
+}
+
+@Composable
+private fun RenderTier(
+  tier: ModelPresentationTier,
+  entries: List<ModelBrowserEntry>,
+  current: String,
+  onSelect: (RemoteModelInfo) -> Unit,
+  onPullModel: (String) -> Unit,
+  pulls: List<DownloadState>,
+) {
+  val group = entries.filter { it.rank.presentationTier == tier }
+  if (group.isEmpty()) return
+  Text(
+    text = "${tier.icon} ${tier.description}",
+    style = MaterialTheme.typography.headlineSmall,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier = Modifier.padding(top = Dimens.TightGap),
+  )
+  Spacer(modifier = Modifier.height(Dimens.TightGap))
+  FlowRow(
+    horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
+    verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+  ) {
+    group.forEach { entry ->
+      val rank = entry.rank
+      val info = rank.model
+      val isPull = entry.isPull
+      val note = rank.reason.takeIf {
+        it.isNotBlank() &&
+          it != "Meets minimum requirements" &&
+          it != "Insufficient data" &&
+          !it.startsWith("Unmeasured model")
+      }
+      val activePull =
+        pulls.lastOrNull { it.modelId == info.id && !it.status.finished }
+      FilterChip(
+        selected = info.id == current,
+        onClick = {
+          if (isPull) {
+            onPullModel(info.id)
+          } else {
+            onSelect(info)
+          }
+        },
+        label = {
+          val prefix = if (isPull) "↓ " else ""
+          val suffix = if (!note.isNullOrBlank()) " · $note" else ""
+          Text("$prefix${info.displayName}$suffix")
+        },
+        leadingIcon = if (activePull != null) {
+          { TaskSpinner() }
+        } else {
+          null
+        },
+        colors = if (isPull) {
+          FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+          )
+        } else {
+          FilterChipDefaults.filterChipColors()
+        },
+        elevation = null,
       )
     }
   }

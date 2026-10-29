@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
+import alphainterplanetary.thinker.downloads.DownloadState
+import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.engine.EngineAvailability
 import alphainterplanetary.thinker.engine.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.EngineInstance
@@ -40,6 +42,7 @@ class EngineViewModel(
   private val engineRepository: EngineRepository,
   private val modelCatalog: RemoteModelCatalog,
   private val scope: CoroutineScope,
+  private val modelDownloader: ModelDownloader? = null,
 ) {
   /** The selected planning backend; only available engines can be chosen. */
   val selectedRef: StateFlow<EngineRef> = engineRepository.selected
@@ -208,6 +211,13 @@ class EngineViewModel(
     _draft.update { it?.copy(contextTokens = tokens) }
   }
 
+  /**
+   * Active Ollama pulls / local downloads, projected from the injected
+   * [ModelDownloader] (empty when none is wired, e.g. in tests).
+   */
+  val downloads: StateFlow<List<DownloadState>> =
+    modelDownloader?.downloads() ?: MutableStateFlow(emptyList())
+
   /** What the dialog's model browser is showing, from the last [refreshDraftModels]. */
   private val _draftModels = MutableStateFlow<RemoteModelListState>(RemoteModelListState.Idle)
   val draftModels: StateFlow<RemoteModelListState> = _draftModels.asStateFlow()
@@ -282,6 +292,37 @@ class EngineViewModel(
       }
     }
   }
+
+  /**
+   * Triggers an Ollama pull for [modelId] against [baseUrl], when a downloader
+   * is wired. Selects the model in the draft so saving the dialog keeps the
+   * connection pointed at it while the server manages the download.
+   */
+  fun pullOllamaModel(modelId: String, baseUrl: String? = null) {
+    val resolvedBase = baseUrl ?: _draft.value?.baseUrl ?: return
+    modelDownloader?.pullOllama(modelId, resolvedBase)
+    _draft.update { current ->
+      if (current == null) current else current.copy(model = modelId)
+    }
+  }
+
+  fun pullOllama(modelId: String, baseUrl: String) =
+    pullOllamaModel(modelId, baseUrl)
+
+  fun pullCuratedOllamaModel(modelId: String, baseUrl: String? = null) =
+    pullOllamaModel(modelId, baseUrl)
+
+  fun startOllamaPull(modelId: String, baseUrl: String? = null) =
+    pullOllamaModel(modelId, baseUrl)
+
+  fun triggerOllamaPull(modelId: String, baseUrl: String? = null) =
+    pullOllamaModel(modelId, baseUrl)
+
+  fun pull(modelId: String, baseUrl: String? = null) =
+    pullOllamaModel(modelId, baseUrl)
+
+  fun pullModel(modelId: String, baseUrl: String? = null) =
+    pullOllamaModel(modelId, baseUrl)
 
   /**
    * Commits the draft: the connection becomes a stored row (and the running

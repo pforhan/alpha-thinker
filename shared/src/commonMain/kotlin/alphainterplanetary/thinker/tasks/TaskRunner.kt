@@ -257,6 +257,28 @@ class TaskRunner(
     }
   }
 
+  /** Updates download-specific identity metadata for a task. */
+  fun setDownloadMetadata(
+    taskId: String,
+    modelId: String? = null,
+    source: String? = null,
+    downloadId: String? = null,
+  ) {
+    _tasks.update { list ->
+      list.map { task ->
+        if (task.id == taskId) {
+          task.copy(
+            modelId = modelId ?: task.modelId,
+            source = source ?: task.source,
+            downloadId = downloadId ?: task.downloadId,
+          )
+        } else {
+          task
+        }
+      }
+    }
+  }
+
   /** Updates download progress and metadata (bytes/throughput) for a running task. */
   fun setDownloadProgress(
     taskId: String,
