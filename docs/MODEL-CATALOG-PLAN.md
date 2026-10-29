@@ -221,11 +221,9 @@ browser chip shows the resolved name while the id stays canonical.
         Track installed vs pullable state against `RemoteModelCatalog` results.
   - [ ] **Connection UI:** Update `ConnectionDialog` (Advanced) to render any
         curated items not already downloaded alongside other models in the chip list
-        prefixed with "↓ ". (Do not try to resolve aliases at this time, just use the
-        models as named. This means there may be apparent duplicates in the list, 
-        this is okay.) Any un-downloaded chips should also have a different background
-        color.
-  - [ ] **Pull execution:** Upon selection, kick off the download. Add a small
+        as a pull chip.  Prefixed with "↓" or a similar material icon. Any pull 
+        chips should have a different background color.
+  - [ ] **Pull execution:** Upon selection of a pull chip, kick off the download. Add a small
         progress spinner to the chip that indicates the download. Do not block
         saving the dialog configuration as ollama will continue to manage the 
         download. Use `ModelDownloadManager.pullOllama(modelId, baseUrl)`
