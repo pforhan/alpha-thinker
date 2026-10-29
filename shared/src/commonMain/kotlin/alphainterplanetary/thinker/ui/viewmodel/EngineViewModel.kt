@@ -319,10 +319,21 @@ class EngineViewModel(
    * Triggers an Ollama pull for [modelId] against [baseUrl], when a downloader
    * is wired. Selects the model in the draft so saving the dialog keeps the
    * connection pointed at it while the server manages the download.
+   *
+   * A tap while that model is already downloading is a no-op: starting a second
+   * pull would replace the chip's running download with a fresh one that has no
+   * byte counts yet, turning its determinate ring back into a spinner.
    */
   fun pullOllamaModel(modelId: String, baseUrl: String? = null) {
     val resolvedBase = baseUrl ?: _draft.value?.baseUrl ?: return
-    modelDownloader?.pullOllama(modelId, resolvedBase)
+    val alreadyPulling = downloads.value.any {
+      it.kind == DownloadKind.OllamaPull &&
+        it.modelId == modelId &&
+        !it.status.finished
+    }
+    if (!alreadyPulling) {
+      modelDownloader?.pullOllama(modelId, resolvedBase)
+    }
     _draft.update { current ->
       if (current == null) current else current.copy(model = modelId)
     }

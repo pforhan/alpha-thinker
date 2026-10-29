@@ -351,6 +351,30 @@ class EngineViewModelTest {
   }
 
   @Test
+  fun `tapping a pull chip again while it downloads starts no second pull`() = runTest {
+    // The chip stays a pull chip until the model finishes downloading, so a
+    // second tap is possible. It must not enqueue a duplicate pull: the new
+    // one would have no byte counts yet and replace the determinate ring with
+    // an indeterminate spinner.
+    val downloader = FakeDownloader()
+    val fixture = fixture(FakeModelCatalog(), downloader)
+    fixture.vm.startAddConnection()
+
+    fixture.vm.pullOllamaModel("model-c")
+    settle()
+    fixture.vm.pullOllamaModel("model-c")
+    settle()
+    assertEquals(1, downloader.pullCount)
+
+    // Once the pull has finished, tapping again is a fresh download.
+    downloader.succeed()
+    settle()
+    fixture.vm.pullOllamaModel("model-c")
+    settle()
+    assertEquals(2, downloader.pullCount)
+  }
+
+  @Test
   fun `picking a model adopts its window`() = runTest {
     val fixture = fixture()
     fixture.vm.startAddConnection()
@@ -564,10 +588,13 @@ class EngineViewModelTest {
     private val states = MutableStateFlow<List<DownloadState>>(emptyList())
     private var nextId = 0
     private var lastHandle: DownloadHandle? = null
+    var pullCount = 0
+      private set
 
     override fun downloads(): StateFlow<List<DownloadState>> = states
 
     override fun pullOllama(modelId: String, baseUrl: String): DownloadHandle {
+      pullCount++
       val handle = DownloadHandle(id = "pull-${nextId++}", taskId = "task-$nextId")
       lastHandle = handle
       states.update {
