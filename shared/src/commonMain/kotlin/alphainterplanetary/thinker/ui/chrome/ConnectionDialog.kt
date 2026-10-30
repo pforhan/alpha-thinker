@@ -506,7 +506,5 @@ private fun maybeDownloadSpinner(
     } else {
       TaskSpinner()
     }
-  } else {
-    null
   }
 }
