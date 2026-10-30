@@ -32,12 +32,12 @@ enum class ModelSpeed {
  * Unknown for unmeasured/unclear models.
  * Discouraged for everything else.
  */
-enum class ModelPresentationTier(val icon: String, val description: String) {
-  Recommended("★", "Recommended"),
-  HighQualityButSlower("✔", "High-quality but Slower"),
-  LowerQualityButFast("▶▶", "Lower-quality but Fast"),
-  Unknown("?", "Unknown"),
-  Discouraged("✗", "Discouraged"),
+enum class ModelPresentationTier(val description: String) {
+  Recommended("Recommended"),
+  HighQualityButSlower("High-quality but Slower"),
+  LowerQualityButFast("Lower-quality but Fast"),
+  Unknown("Unknown"),
+  Discouraged("Discouraged"),
   ;
 
   val presentationOrder: Int

@@ -22,10 +22,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -420,12 +423,23 @@ private fun RenderTier(
 
 @Composable
 private fun TierHeader(tier: ModelPresentationTier) {
-  Text(
-    text = "${tier.icon} ${tier.description}",
-    style = MaterialTheme.typography.headlineSmall,
-    color = MaterialTheme.colorScheme.onSurfaceVariant,
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(Dimens.IconLabelGap),
     modifier = Modifier.padding(top = Dimens.TightGap),
-  )
+  ) {
+    Icon(
+      imageVector = tier.glyph(),
+      contentDescription = null,
+      tint = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.size(Dimens.IconSizeMedium),
+    )
+    Text(
+      text = tier.description,
+      style = MaterialTheme.typography.headlineSmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+  }
 }
 
 @Composable
@@ -462,15 +476,11 @@ private fun TierChips(
           }
         },
         label = {
-          val prefix = when {
-            activePull?.progress != null -> activePull.progress.formatAsPercentage()
-            isPull -> "↓ "
-            else -> ""
-          }
+          val prefix = activePull?.progress?.let { it.formatAsPercentage() } ?: ""
           val suffix = if (!note.isNullOrBlank()) " · $note" else ""
           Text("$prefix${info.displayName}$suffix")
         },
-        leadingIcon = maybeDownloadSpinner(activePull = activePull),
+        leadingIcon = pullChipLeadingIcon(activePull = activePull, isPull = isPull),
         colors = if (isPull) {
           FilterChipDefaults.filterChipColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -491,20 +501,41 @@ fun Float.formatAsPercentage(): String {
   return if (!str.contains('.')) "$str.0% " else "$str% "
 }
 
+/**
+ * The glyph at the head of a model chip: a download arrow for a curated model
+ * that is not installed yet, or a ring/spinner for one whose pull is running.
+ * Null for a chip that needs no glyph, so its label starts at the chip's
+ * normal inset instead of leaving a gap where an icon would be.
+ */
 @Composable
-private fun maybeDownloadSpinner(
+private fun pullChipLeadingIcon(
   activePull: DownloadState?,
-): @Composable () -> Unit = {
-  if (activePull != null) {
-    if (activePull.progress != null) {
-      CircularProgressIndicator(
-        modifier = Modifier.size(Dimens.ProgressIndicatorSize),
-        strokeWidth = Dimens.ProgressStroke,
-        color = MaterialTheme.colorScheme.primary,
-        progress = { activePull.progress }
-      )
-    } else {
-      TaskSpinner()
+  isPull: Boolean,
+): (@Composable () -> Unit)? = when {
+  activePull != null -> {
+    {
+      if (activePull.progress != null) {
+        CircularProgressIndicator(
+          modifier = Modifier.size(Dimens.ProgressIndicatorSize),
+          strokeWidth = Dimens.ProgressStroke,
+          color = MaterialTheme.colorScheme.primary,
+          progress = { activePull.progress },
+        )
+      } else {
+        TaskSpinner()
+      }
     }
   }
+
+  isPull -> {
+    {
+      Icon(
+        imageVector = Icons.Filled.Download,
+        contentDescription = null,
+        modifier = Modifier.size(Dimens.IconSizeSmall),
+      )
+    }
+  }
+
+  else -> null
 }

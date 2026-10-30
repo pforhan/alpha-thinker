@@ -250,8 +250,9 @@ browser chip shows the resolved name while the id stays canonical.
 - [x] Models with bad quality should sort after adequate quality models inside
       discouraged. Within a tier, quality comes first and speed breaks ties, both
       best-first.
-- [ ] See if we can use material icons for llm tier display instead of unicode text.
-      See ModelPresentationTier.icon for what to replace.
+- [x] See if we can use material icons for llm tier display instead of unicode text.
+      `ModelPresentationTier` lost its glyph string; the UI now maps each tier to a
+      Material icon (`ModelTierVisuals.kt`), and the pull chip's `↓` is a Download icon.
 - [ ] **Local file downloads (LiteRT-LM, in-process):** Add `ModelFileTransferClient`
       implementation + platform actuals for direct HTTP(S) downloads to app storage
       (via `PlatformContext`) with resume (Range), checksum verification (sha256),
