@@ -97,4 +97,21 @@ class ModelRankerTest {
     assertEquals(ModelPresentationTier.Recommended, ranks[0].presentationTier)
     assertFalse(ranks[0].estimated)
   }
+
+  @Test
+  fun `discouraged models sort adequate quality before weak quality`() {
+    val ranks = ModelRanker.rank(
+      listOf(
+        info("gemma4:12b"), // discouraged, weak, slow
+        info("gemma4:26b"), // discouraged, adequate, slow
+        info("qwen2.5:1.5b"), // discouraged, weak, fast
+      ),
+    )
+    assertTrue(ranks.all { it.presentationTier == ModelPresentationTier.Discouraged })
+    // Adequate first, then weak fastest-first.
+    assertEquals(
+      listOf("gemma4:26b", "qwen2.5:1.5b", "gemma4:12b"),
+      ranks.map { it.model.id },
+    )
+  }
 }

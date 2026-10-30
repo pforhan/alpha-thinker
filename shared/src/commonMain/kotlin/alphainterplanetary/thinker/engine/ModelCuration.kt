@@ -24,7 +24,8 @@ enum class ModelSpeed {
 }
 
 /**
- * Presentation grouping only — no model is ever hidden.
+ * Presentation grouping only — no model is left out of the browser, though
+ * Discouraged starts collapsed and is revealed on request.
  * Recommended is the "good" tier (strong × fast).
  * High-quality but slower for strong models that aren't fast.
  * Lower-quality but fast for adequate models that are fast/fine.

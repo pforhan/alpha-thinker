@@ -37,7 +37,8 @@ manage downloaded local files.
 ## Decisions (locked)
 
 1. **Verified / Recommended / Others are presentation groupings only** — no
-   model is ever hidden.
+   model is ever left out of the browser. Discouraged models are collapsed by
+   default but can be shown.
 2. **Two independent axes** — quality and speed — with the
    `good` / `ok` / `discouraged` label *derived on that grid* rather than being
    an independent tier list. A model with no data is `unknown` on either axis
@@ -243,10 +244,12 @@ browser chip shows the resolved name while the id stays canonical.
       no further action. It should drop its arrow prefix and different color. A
       completed pull re-reads the draft's model list, which turns the entry into a
       normal installed model.
-- [ ] Model browser should hide discouraged models by default, with a Show button or
-      link to toggle
-- [ ] Models with bad quality should sort after adequate quality models inside
-      discouraged.
+- [x] Model browser should hide discouraged models by default, with a Show button or
+      link to toggle. The tier stays open while the current selection is in it, so
+      the chosen chip never disappears.
+- [x] Models with bad quality should sort after adequate quality models inside
+      discouraged. Within a tier, quality comes first and speed breaks ties, both
+      best-first.
 - [ ] See if we can use material icons for llm tier display instead of unicode text.
       See ModelPresentationTier.icon for what to replace.
 - [ ] **Local file downloads (LiteRT-LM, in-process):** Add `ModelFileTransferClient`
@@ -305,7 +308,8 @@ IMPLEMENTATION-PLAN.md Phase 5, "Revisit a newer Koog release when one lands").
 ## Out of scope
 
 - Auto-promotion of tiers between evaluation batches (human-in-the-loop).
-- Hiding models.
+- Hiding models outright. Discouraged models are collapsed by default but stay
+  reachable through the browser's Show toggle.
 - Pull support for Anthropic / OpenAI-compatible endpoints (which they don't really need anyway).
 - The actual **Alpha Interplanetary** free backend: this plan consumes its model
   catalogue, but the backend itself is a separate roadmap item, tracked in

@@ -4,14 +4,14 @@ package alphainterplanetary.thinker.engine
  * Ranks models using measured eval data when available, falling back to
  * family heuristics for unmeasured models (marked as estimated).
  * Presentation tiers follow the MODEL-CATALOG-PLAN: Verified/Recommended/Others.
- * No model is ever hidden.
+ * Within a tier, better quality comes first and speed breaks ties.
  */
 object ModelRanker {
   fun rank(models: List<RemoteModelInfo>): List<ModelRank> {
     return models.map { model -> rankModel(model) }
       .sortedWith(
         compareBy<ModelRank> { it.presentationTier.presentationOrder }
-          .thenByDescending { qualityOrder(it.quality) }
+          .thenBy { qualityOrder(it.quality) }
           .thenBy { speedOrder(it.speed) }
           .thenBy { it.model.displayName },
       )

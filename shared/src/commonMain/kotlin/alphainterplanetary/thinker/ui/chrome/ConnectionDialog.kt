@@ -32,6 +32,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -274,11 +278,12 @@ private fun RemoteProviderPicker(
  * [state] drives the affordance: idle shows only the button, loading a spinner
  * beside it, a failure the reason in place of the list, and a loaded list (even
  * an empty one — an empty Ollama server is an answer) the models as tappable
- * chips grouped by Verified/Recommended/Others. Curated Ollama models that are
- * not installed appear as pull chips in those tiers, but only once a list has
- * loaded — there is nothing to compare against before that. Picking one hands
- * its id — and the window the provider actually serves, when it said — back to
- * the caller through [onSelect].
+ * chips grouped by Verified/Recommended/Others. Discouraged models stay
+ * collapsed until asked for, so the browser leads with models likely to work.
+ * Curated Ollama models that are not installed appear as pull chips in those
+ * tiers, but only once a list has loaded — there is nothing to compare against
+ * before that. Picking one hands its id — and the window the provider actually
+ * serves, when it said — back to the caller through [onSelect].
  */
 @Composable
 private fun ModelBrowser(
@@ -350,9 +355,50 @@ private fun AllTiers(
     ModelPresentationTier.HighQualityButSlower,
     ModelPresentationTier.LowerQualityButFast,
     ModelPresentationTier.Unknown,
-    ModelPresentationTier.Discouraged,
   ).forEach { tier ->
     RenderTier(tier, entries, current, onSelect, onPullModel, pulls)
+  }
+  DiscouragedTier(entries, current, onSelect, onPullModel, pulls)
+}
+
+/**
+ * The discouraged tier, collapsed by default so a discouraging list of
+ * installed models does not bury the ones worth picking. The header stays
+ * visible with a Show/Hide toggle, and the tier stays open while the current
+ * model lives in it so an existing selection never looks like it vanished.
+ */
+@Composable
+private fun DiscouragedTier(
+  entries: List<ModelBrowserEntry>,
+  current: String,
+  onSelect: (RemoteModelInfo) -> Unit,
+  onPullModel: (String) -> Unit,
+  pulls: List<DownloadState>,
+) {
+  val tier = ModelPresentationTier.Discouraged
+  val group = entries.filter { it.rank.presentationTier == tier }
+  if (group.isEmpty()) return
+  var expandedChoice by rememberSaveable { mutableStateOf(false) }
+  var choseManually by rememberSaveable { mutableStateOf(false) }
+  val selectionIsDiscouraged = group.any { it.rank.model.id == current }
+  val expanded = if (choseManually) expandedChoice else selectionIsDiscouraged
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
+  ) {
+    TierHeader(tier)
+    TextButton(
+      onClick = {
+        expandedChoice = !expanded
+        choseManually = true
+      },
+    ) {
+      Text(if (expanded) "Hide" else "Show")
+    }
+  }
+  if (expanded) {
+    Spacer(modifier = Modifier.height(Dimens.TightGap))
+    TierChips(group, current, onSelect, onPullModel, pulls)
   }
 }
 
@@ -367,13 +413,29 @@ private fun RenderTier(
 ) {
   val group = entries.filter { it.rank.presentationTier == tier }
   if (group.isEmpty()) return
+  TierHeader(tier)
+  Spacer(modifier = Modifier.height(Dimens.TightGap))
+  TierChips(group, current, onSelect, onPullModel, pulls)
+}
+
+@Composable
+private fun TierHeader(tier: ModelPresentationTier) {
   Text(
     text = "${tier.icon} ${tier.description}",
     style = MaterialTheme.typography.headlineSmall,
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     modifier = Modifier.padding(top = Dimens.TightGap),
   )
-  Spacer(modifier = Modifier.height(Dimens.TightGap))
+}
+
+@Composable
+private fun TierChips(
+  group: List<ModelBrowserEntry>,
+  current: String,
+  onSelect: (RemoteModelInfo) -> Unit,
+  onPullModel: (String) -> Unit,
+  pulls: List<DownloadState>,
+) {
   FlowRow(
     horizontalArrangement = Arrangement.spacedBy(Dimens.ChipGap),
     verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
