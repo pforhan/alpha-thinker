@@ -49,8 +49,10 @@ object EngineCatalog {
       description = "The official Alpha Interplanetary cloud engine.",
       availability = { Unavailable("placeholder") },
     ),
-    // The Local card a fresh install shows: a placeholder until MODEL-CATALOG-PLAN.md
-    // stage 3 lands downloads, whose recommendation/download dialog replaces it.
+    // The Local card is the way into the model catalog: it is selectable when
+    // the platform can install/run local models, and the picker opens the
+    // download dialog instead of selecting a builtin (there is no builtin
+    // local engine — a downloaded instance is what runs).
     EngineCatalogEntry(
       ref = EngineRef.Builtin(EngineKind.LocalFile),
       kind = EngineKind.LocalFile,
@@ -58,7 +60,13 @@ object EngineCatalog {
       tier = EngineTier.Local,
       label = EngineKind.LocalFile.label,
       description = EngineKind.LocalFile.description,
-      availability = { Unavailable("no downloaded models yet") },
+      availability = {
+        if (LocalModelRuntime.inferenceSupported || LocalModelRuntime.downloadsSupported) {
+          Available
+        } else {
+          NotImplemented
+        }
+      },
     ),
   )
 
@@ -87,9 +95,14 @@ object EngineCatalog {
             ?: return@EngineCatalogEntry Unavailable("Instance missing")
 
           when (current.kind) {
-            EngineKind.LocalFile -> {
-              // TODO: Implement actual file existence check here. Probably a checksum too, and/or ask litert-lm if ready
-              NotImplemented
+            EngineKind.LocalFile -> when {
+              !LocalModelRuntime.inferenceSupported ->
+                Unavailable("Local models are not supported on this device")
+              current.localPath.isNullOrBlank() ->
+                Unavailable("Model file missing")
+              !LocalModelRuntime.fileExists(current.localPath) ->
+                Unavailable("Model file missing")
+              else -> Available
             }
 
             EngineKind.Remote -> {

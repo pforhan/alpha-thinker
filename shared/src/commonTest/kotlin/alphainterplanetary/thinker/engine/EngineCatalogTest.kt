@@ -84,9 +84,9 @@ class EngineCatalogTest {
   }
 
   @Test
-  fun `a downloaded model instance would land under Local`() {
-    // There is no LocalFile instance today — downloads land with
-    // MODEL-CATALOG-PLAN.md stage 3 — but the tier mapping is what places them.
+  fun `a downloaded model instance lands under Local`() {
+    // The tier mapping is what places a curated model's installed instance
+    // beside the Local builtin (MODEL-CATALOG-PLAN.md stage 3).
     val downloaded = EngineInstance(
       id = "model-1",
       kind = EngineKind.LocalFile,

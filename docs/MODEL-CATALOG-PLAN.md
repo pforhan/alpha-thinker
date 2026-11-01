@@ -253,7 +253,7 @@ browser chip shows the resolved name while the id stays canonical.
 - [x] See if we can use material icons for llm tier display instead of unicode text.
       `ModelPresentationTier` lost its glyph string; the UI now maps each tier to a
       Material icon (`ModelTierVisuals.kt`), and the pull chip's `↓` is a Download icon.
-- [ ] **Local file downloads (LiteRT-LM, in-process):** Add `ModelFileTransferClient`
+- [x] **Local file downloads (LiteRT-LM, in-process):** Add `ModelFileTransferClient`
       implementation + platform actuals for direct HTTP(S) downloads to app storage
       (via `PlatformContext`) with resume (Range), checksum verification (sha256),
       extraction if needed, disk space checks, cooperative cancellation, and
@@ -269,10 +269,16 @@ browser chip shows the resolved name while the id stays canonical.
       actual file existence/checksum validation), and register with the engine
       system. Add UI in the Local tier of `EnginePickerSheet` (list downloadable +
       installed local models; "Download" starts `ModelFileDownload` task).
+      Implemented for Android, the only target with a LiteRT runtime: the curated
+      `.litertlm` catalog downloads into app storage and installs LocalFile
+      instances. Desktop/iOS/wasm keep the Local tier disabled and compile against
+      the shared seams.
 - [ ] **Track context length** as models are selected and downloaded.
-- [ ] **Make the Local tier real:** Enable Local placeholder rows per
+- [x] **Make the Local tier real:** Enable Local placeholder rows per
       ENGINE-CONFIG-PLAN.md stage 3; downloaded models render as `EngineKind.LocalFile`
       instances under Local (platform-gate; web/wasm deferred).
+      Done with the item above: the Local card opens the model manager and its
+      installed instances render under Local wherever the runtime is supported.
 - [ ] **Hostability flag:** Apply memory fit heuristics (see
       [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next
       to size/context chips for local models and Ollama instances on localhost;

@@ -9,12 +9,16 @@ import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.LocalModelCatalog
+import alphainterplanetary.thinker.engine.LocalModelStore
 import alphainterplanetary.thinker.engine.ModelSource
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.repository.EngineRepository
+import alphainterplanetary.thinker.testutil.FakeModelDownloader
+import alphainterplanetary.thinker.testutil.FakePlatformContext
 import alphainterplanetary.thinker.testutil.FakeStorage
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -544,6 +548,91 @@ class EngineViewModelTest {
     settle()
 
     assertEquals(false, fixture.vm.firstRunPending.value)
+  }
+
+  @Test
+  fun `a finished local download installs the model without selecting it`() = runTest {
+    val storage = FakeStorage()
+    val engines = EngineRepository(storage, backgroundScope)
+    val platform = FakePlatformContext()
+    val downloader = FakeModelDownloader()
+    val store = LocalModelStore(engines, downloader, platform, downloadsSupported = true)
+    val vm = EngineViewModel(
+      engineRepository = engines,
+      modelCatalog = FakeModelCatalog(),
+      scope = backgroundScope,
+      modelDownloader = downloader,
+      localModelStore = store,
+    )
+    settle()
+    val model = LocalModelCatalog.models.first()
+    platform.files += checkNotNull(store.localPath(model))
+    val handle = DownloadHandle(id = "download-1", taskId = "task-1")
+
+    downloader.states.value = listOf(
+      DownloadState(
+        handle = handle,
+        kind = DownloadKind.LocalFile,
+        status = DownloadStatus.Running,
+        modelId = model.id,
+      ),
+    )
+    settle()
+    assertEquals(0, engines.instances.value.count { it.kind == EngineKind.LocalFile })
+
+    downloader.states.value = listOf(
+      DownloadState(
+        handle = handle,
+        kind = DownloadKind.LocalFile,
+        status = DownloadStatus.Succeeded,
+        modelId = model.id,
+      ),
+    )
+    settle()
+
+    val installed = engines.instances.value.single { it.kind == EngineKind.LocalFile }
+    assertEquals(LocalModelStore.instanceId(model), installed.id)
+    assertEquals(model.fileName, installed.model)
+    // Downloading is not using: the running engine stays where it was.
+    assertEquals(EngineRef.Builtin(EngineKind.Default), vm.selectedRef.value)
+  }
+
+  @Test
+  fun `local model actions reach the store and the downloader`() = runTest {
+    val storage = FakeStorage()
+    val engines = EngineRepository(storage, backgroundScope)
+    val platform = FakePlatformContext()
+    val downloader = FakeModelDownloader()
+    val store = LocalModelStore(engines, downloader, platform, downloadsSupported = true)
+    val vm = EngineViewModel(
+      engineRepository = engines,
+      modelCatalog = FakeModelCatalog(),
+      scope = backgroundScope,
+      modelDownloader = downloader,
+      localModelStore = store,
+    )
+    settle()
+    val model = LocalModelCatalog.models.first()
+
+    vm.downloadLocalModel(model)
+    assertEquals(model.id, downloader.specs.single().modelId)
+
+    platform.files += checkNotNull(store.localPath(model))
+    store.install(model)
+    settle()
+    vm.useLocalModel(model)
+    settle()
+    assertEquals(
+      EngineRef.Instance(LocalModelStore.instanceId(model)),
+      vm.selectedRef.value,
+    )
+
+    vm.deleteLocalModel(model)
+    settle()
+    assertEquals(0, engines.instances.value.count { it.kind == EngineKind.LocalFile })
+
+    vm.cancelDownload("download-1")
+    assertEquals(listOf("download-1"), downloader.cancelled)
   }
 
   /** A catalogue that answers without a network, and can be told to fail. */

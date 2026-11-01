@@ -10,6 +10,8 @@ data class ModelDownloadSpec(
   val url: String,
   val destination: String? = null,
   val expectedSha256: String? = null,
+  /** Size the server is expected to serve, for the disk check and progress. */
+  val expectedBytes: Long? = null,
   val extract: Boolean = false,
 )
 

@@ -8,6 +8,9 @@ import alphainterplanetary.thinker.engine.EngineAvailability
 import alphainterplanetary.thinker.engine.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.LocalModel
+import alphainterplanetary.thinker.engine.LocalModelCatalog
+import alphainterplanetary.thinker.engine.LocalModelStore
 import alphainterplanetary.thinker.engine.ModelPresentationTier
 import alphainterplanetary.thinker.engine.ModelRank
 import alphainterplanetary.thinker.engine.ModelRanker
@@ -45,6 +48,7 @@ class EngineViewModel(
   private val modelCatalog: RemoteModelCatalog,
   private val scope: CoroutineScope,
   private val modelDownloader: ModelDownloader? = null,
+  private val localModelStore: LocalModelStore? = null,
 ) {
   /** The selected planning backend; only available engines can be chosen. */
   val selectedRef: StateFlow<EngineRef> = engineRepository.selected
@@ -229,17 +233,32 @@ class EngineViewModel(
     // snapshot is stale: re-read it, and the pull chip becomes a normal model
     // instead of enqueuing the same download again. Only a pull this app
     // started can succeed, and refreshing with a dialog open is enough.
+    //
+    // A finished local download is different: the file is already verified on
+    // disk, so the model becomes a selectable [EngineKind.LocalFile] instance.
+    // It is installed rather than selected — downloading is not using.
     scope.launch {
-      var completed = emptySet<String>()
+      var completedPulls = emptySet<String>()
+      var completedLocal = emptySet<String>()
       downloads.collect { states ->
         val succeeded = states
           .filter { it.kind == DownloadKind.OllamaPull && it.status == DownloadStatus.Succeeded }
           .map { it.handle.id }
           .toSet()
-        if ((succeeded - completed).isNotEmpty() && _draft.value != null) {
+        if ((succeeded - completedPulls).isNotEmpty() && _draft.value != null) {
           refreshDraftModels()
         }
-        completed = succeeded
+        completedPulls = succeeded
+
+        val succeededLocal = states
+          .filter { it.kind == DownloadKind.LocalFile && it.status == DownloadStatus.Succeeded }
+        (succeededLocal.map { it.handle.id }.toSet() - completedLocal).forEach { handleId ->
+          val modelId = succeededLocal.firstOrNull { it.handle.id == handleId }?.modelId
+          modelId?.let(LocalModelCatalog::byId)?.let { model ->
+            localModelStore?.install(model)
+          }
+        }
+        completedLocal = succeededLocal.map { it.handle.id }.toSet()
       }
     }
   }
@@ -356,6 +375,30 @@ class EngineViewModel(
 
   fun pullModel(modelId: String, baseUrl: String? = null) =
     pullOllamaModel(modelId, baseUrl)
+
+  /** The curated models the Local tier can install. */
+  val localModels: List<LocalModel>
+    get() = LocalModelCatalog.models
+
+  /** Starts (or resumes) [model]'s download; a no-op when no store is wired. */
+  fun downloadLocalModel(model: LocalModel) {
+    localModelStore?.download(model)
+  }
+
+  /** Makes an installed local model the running engine. */
+  fun useLocalModel(model: LocalModel) {
+    localModelStore?.use(model)
+  }
+
+  /** Deletes an installed local model's instance and file. */
+  fun deleteLocalModel(model: LocalModel) {
+    localModelStore?.delete(model)
+  }
+
+  /** Cancels the download behind [handleId], leaving its `.part` resumable. */
+  fun cancelDownload(handleId: String) {
+    modelDownloader?.cancel(handleId)
+  }
 
   /**
    * Commits the draft: the connection becomes a stored row (and the running

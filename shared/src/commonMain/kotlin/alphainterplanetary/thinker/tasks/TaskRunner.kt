@@ -10,6 +10,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -80,6 +81,30 @@ class TaskRunner(
   /** Live tasks in insertion order; [GenerationTask.status] is the read model. */
   val tasks: StateFlow<List<GenerationTask>> = _tasks.asStateFlow()
 
+  /**
+   * The coroutine each task id runs in, kept so [cancel] can reach work that is
+   * still queued or in flight. Entries are left behind like the tasks they
+   * belong to; cancelling a finished job is a no-op.
+   */
+  private val jobs = MutableStateFlow<Map<String, Job>>(emptyMap())
+
+  /**
+   * Cancels [taskId]'s coroutine; a no-op when it already finished.
+   *
+   * A task that never started has no body to observe the cancellation, so its
+   * row is marked here. A task already running reports itself from the body's
+   * cancellation handler, which also closes its activity log.
+   */
+  fun cancel(taskId: String) {
+    jobs.value[taskId]?.cancel()
+    val current = _tasks.value.firstOrNull { it.id == taskId } ?: return
+    if (current.status != TaskStatus.Queued) return
+    val finishedAt = now()
+    _tasks.update { list ->
+      list.replace(list.first { it.id == taskId }.asFailed(finishedAt, "Task cancelled"))
+    }
+  }
+
   /** Live tasks for one project, in insertion order. */
   fun tasksFor(projectId: String): Flow<List<GenerationTask>> =
     _tasks.map { list -> list.filter { it.projectId == projectId } }
@@ -129,53 +154,64 @@ class TaskRunner(
       source = LogSource.TaskRunner,
       projectId = task.projectId,
     )
-    scope.launch {
+    val job = scope.launch {
       logContext?.started(task.kind.name)
-      val guard = projectGuard(task.projectId)
-      val groupGate = groupGates.getValue(task.group)
-      guard.withLock {
-        groupGate.withLock {
-          val startedAt = now()
-          // Start from the current row, not the enqueue-time snapshot: metadata
-          // (e.g. a download's model) may have been set while the task queued.
-          _tasks.update { list -> list.replace(list.first { it.id == task.id }.asStarted(startedAt)) }
-          var cancelled = false
-          var failure: String? = null
-          try {
-            // Installed for the body only — and only once both locks are held,
-            // which is exactly the window [await] refuses to suspend in.
-            withContext(TaskBodyContext(projectId = task.projectId, group = task.group)) {
-              produce(task.id)
+      try {
+        val guard = projectGuard(task.projectId)
+        val groupGate = groupGates.getValue(task.group)
+        guard.withLock {
+          groupGate.withLock {
+            val startedAt = now()
+            // Start from the current row, not the enqueue-time snapshot: metadata
+            // (e.g. a download's model) may have been set while the task queued.
+            _tasks.update { list ->
+              list.replace(list.first { it.id == task.id }.asStarted(startedAt))
             }
-          } catch (e: CancellationException) {
-            cancelled = true
-          } catch (e: Exception) {
-            failure = e.message ?: e.toString()
+            var cancelled = false
+            var failure: String? = null
+            try {
+              // Installed for the body only — and only once both locks are held,
+              // which is exactly the window [await] refuses to suspend in.
+              withContext(TaskBodyContext(projectId = task.projectId, group = task.group)) {
+                produce(task.id)
+              }
+            } catch (e: CancellationException) {
+              cancelled = true
+            } catch (e: Exception) {
+              failure = e.message ?: e.toString()
+            }
+            val finishedAt = now()
+            val terminal: (GenerationTask) -> GenerationTask = when {
+              cancelled -> { t -> t.asFailed(finishedAt, "Task cancelled") }
+              failure != null -> { t -> t.asFailed(finishedAt, failure) }
+              else -> { t -> t.asSucceeded(finishedAt) }
+            }
+            // The body may have streamed progress via [setProgress]; the durable
+            // log keeps just the terminal row (transient ticks are UI-only).
+            when {
+              cancelled -> logContext?.closeCancelled()
+              failure != null -> logContext?.closeFailed(failure)
+              else -> logContext?.closeSucceeded()
+            }
+            // Fold any progress/error published via [setProgress] into the terminal
+            // state instead of clobbering it with a stale local read.
+            _tasks.update { list -> list.replace(terminal(list.first { it.id == task.id })) }
           }
-          val finishedAt = now()
-          val outcome = when {
-            cancelled -> "cancelled"
-            failure != null -> "failed: $failure"
-            else -> "succeeded"
-          }
-          val terminal: (GenerationTask) -> GenerationTask = when {
-            cancelled -> { t -> t.asFailed(finishedAt, "Task cancelled") }
-            failure != null -> { t -> t.asFailed(finishedAt, failure) }
-            else -> { t -> t.asSucceeded(finishedAt) }
-          }
-          // The body may have streamed progress via [setProgress]; the durable
-          // log keeps just the terminal row (transient ticks are UI-only).
-          when {
-            cancelled -> logContext?.closeCancelled()
-            failure != null -> logContext?.closeFailed(failure)
-            else -> logContext?.closeSucceeded()
-          }
-          // Fold any progress/error published via [setProgress] into the terminal
-          // state instead of clobbering it with a stale local read.
-          _tasks.update { list -> list.replace(terminal(list.first { it.id == task.id })) }
+        }
+      } catch (e: CancellationException) {
+        // Cancelled while still queued, before a body could mark the row itself.
+        // Without this the task would stay [TaskStatus.Queued] forever, because
+        // the cancellation never reaches the body's own handler.
+        val finishedAt = now()
+        logContext?.closeCancelled()
+        _tasks.update { list ->
+          list.replace(
+            list.first { it.id == task.id }.asFailed(finishedAt, "Task cancelled"),
+          )
         }
       }
     }
+    jobs.update { it + (task.id to job) }
     return task
   }
 

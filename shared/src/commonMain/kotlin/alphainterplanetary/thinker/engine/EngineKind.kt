@@ -58,18 +58,18 @@ enum class EngineKind(
 
   /**
    * Whether this backend can be selected right now. [Offline] is always
-   * available, and [Remote] is selectable once configured — it talks to any
-   * OpenAI-compatible endpoint from the Settings fields. The on-device
-   * backends report their runtime availability once implemented (the
-   * on-device client exposes `Available / Downloadable / Downloading /
-   * Unavailable`); until then they gate the engine picker off.
+   * available and [Remote] is selectable once configured. [LocalFile] is
+   * available wherever the platform ships the in-process runtime — Android
+   * today; the other targets keep the Local tier disabled. The system
+   * [OnDevice] runtime has not landed yet.
    */
   fun available(): Boolean =
     when (this) {
       Offline -> true
       Remote -> true
+      LocalFile -> LocalModelRuntime.inferenceSupported
       // Not yet implemented:
-      OnDevice, LocalFile -> false
+      OnDevice -> false
     }
 
   companion object {

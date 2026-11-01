@@ -59,12 +59,12 @@ private val PreferredTiers = listOf(EngineTier.Offline, EngineTier.Free, EngineT
  * endpoints is behind a header that says it takes configuring.
  *
  * A preferred tier with no selectable entry is a card that says so rather than
- * an absent card, so the row keeps its three shapes as backends land. Free and
- * Local are placeholders today, and both wear the same treatment — a muted
- * card with the reason underneath and no select target — rather than each
- * inventing its own copy. The Local card is where the recommendation and
- * download dialog will live (MODEL-CATALOG-PLAN.md stage 3); nothing here has
- * to move when it arrives, because the card already owns that tier.
+ * an absent card, so the row keeps its three shapes as backends land. Free is
+ * still a placeholder and wears that treatment — a muted card with the reason
+ * underneath and no select target. The Local card owns its tier: where the
+ * platform supports it, the card opens the model manager (MODEL-CATALOG-PLAN.md
+ * stage 3) instead of selecting a builtin, because a downloaded instance is what
+ * runs.
  */
 @Composable
 internal fun EnginePickerSheetContent(chrome: AppChromeState) {
@@ -74,6 +74,7 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
   val draft by chrome.engines.draft.collectAsState()
   val draftModels by chrome.engines.draftModels.collectAsState()
   val pulls by chrome.engines.downloads.collectAsState()
+  var showLocalModels by rememberSaveable { mutableStateOf(false) }
   val engines = chrome.engines
 
   val groups = remember(instances, lastUsedAt) {
@@ -89,9 +90,11 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
   ) {
     PreferredEngines(
       groups = groups,
+      instances = instances,
       selectedRef = selectedRef,
       availability = engines::availability,
       onSelect = engines::selectEngine,
+      onOpenLocalModels = { showLocalModels = true },
     )
     AdvancedEngines(
       groups = groups,
@@ -132,6 +135,20 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
       onDismiss = engines::cancelDraft,
     )
   }
+
+  if (showLocalModels) {
+    LocalModelsDialog(
+      models = engines.localModels,
+      installed = instances.filter { it.kind == EngineKind.LocalFile },
+      selectedRef = selectedRef,
+      downloads = pulls,
+      onDownload = engines::downloadLocalModel,
+      onUse = engines::useLocalModel,
+      onDelete = engines::deleteLocalModel,
+      onCancelDownload = engines::cancelDownload,
+      onDismiss = { showLocalModels = false },
+    )
+  }
 }
 
 /**
@@ -144,10 +161,15 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
 @Composable
 private fun PreferredEngines(
   groups: List<EngineGroup>,
+  instances: List<EngineInstance>,
   selectedRef: EngineRef,
   availability: (EngineCatalogEntry) -> EngineAvailability,
   onSelect: (EngineRef) -> Unit,
+  onOpenLocalModels: () -> Unit,
 ) {
+  val localSelected = instances.any {
+    it.kind == EngineKind.LocalFile && EngineRef.Instance(it.id) == selectedRef
+  }
   Column(verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap)) {
     TierHeader(label = "Preferred")
     Row(
@@ -157,13 +179,31 @@ private fun PreferredEngines(
       horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
     ) {
       PreferredTiers.forEach { tier ->
-        val entry = groups.firstOrNull { it.first == tier }?.second?.firstOrNull()
+        // The Local card is the tier's entry point, not a model row: its
+        // enablement comes from the builtin (does this platform support local
+        // models at all), even when a used instance sorts ahead of the builtin
+        // or that instance's file has gone missing. The dialog is where the
+        // installed rows and their availability are shown.
+        val entry = groups.firstOrNull { it.first == tier }?.second
+          ?.firstOrNull { candidate ->
+            tier != EngineTier.Local || candidate.ref == EngineRef.Builtin(EngineKind.LocalFile)
+          }
         PreferredEngineCard(
           tier = tier,
           entry = entry,
-          selected = entry != null && entry.ref == selectedRef,
+          selected = if (tier == EngineTier.Local) {
+            localSelected || entry?.ref == selectedRef
+          } else {
+            entry != null && entry.ref == selectedRef
+          },
           availability = entry?.let(availability),
-          onSelect = { entry?.let { onSelect(it.ref) } },
+          onSelect = {
+            if (tier == EngineTier.Local) {
+              onOpenLocalModels()
+            } else {
+              entry?.let { onSelect(it.ref) }
+            }
+          },
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight(),

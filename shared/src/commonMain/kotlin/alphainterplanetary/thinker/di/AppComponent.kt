@@ -10,10 +10,14 @@ import alphainterplanetary.thinker.database.provideStorage
 import alphainterplanetary.thinker.downloads.KoogOllamaPullClient
 import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.downloads.ModelFileTransferClient
+import alphainterplanetary.thinker.downloads.ModelFileTransferClientFactory
 import alphainterplanetary.thinker.downloads.OllamaPullClient
 import alphainterplanetary.thinker.downloads.TaskBackedModelDownloader
+import alphainterplanetary.thinker.engine.DefaultLocalBackendFactory
 import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
+import alphainterplanetary.thinker.engine.LocalBackendFactory
+import alphainterplanetary.thinker.engine.LocalModelStore
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
@@ -28,8 +32,6 @@ import alphainterplanetary.thinker.tools.SampleProjectGenerator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.KmpComponentCreate
@@ -63,6 +65,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   abstract val modelFileTransferClient: ModelFileTransferClient
 
   abstract val modelDownloader: ModelDownloader
+
+  abstract val localModelStore: LocalModelStore
 
   abstract val appScope: CoroutineScope
 
@@ -109,13 +113,24 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   @AppScope
   @Provides
-  fun providesLocalFileDownloader(): ModelFileTransferClient = object : ModelFileTransferClient {
-    override fun download(spec: alphainterplanetary.thinker.downloads.ModelDownloadSpec): Flow<alphainterplanetary.thinker.downloads.LocalDownloadEvent> = flowOf(
-      alphainterplanetary.thinker.downloads.LocalDownloadEvent(
-        phase = alphainterplanetary.thinker.downloads.LocalDownloadPhase.Succeeded,
-      ),
-    )
-  }
+  fun providesLocalFileDownloader(): ModelFileTransferClient =
+    ModelFileTransferClientFactory.create(platformContext)
+
+  @AppScope
+  @Provides
+  fun providesLocalBackendFactory(): LocalBackendFactory = DefaultLocalBackendFactory
+
+  @AppScope
+  @Provides
+  fun providesLocalModelStore(
+    repository: EngineRepository,
+    modelDownloader: ModelDownloader,
+    platformContext: PlatformContext,
+  ): LocalModelStore = LocalModelStore(
+    repository = repository,
+    downloader = modelDownloader,
+    platformContext = platformContext,
+  )
 
   @AppScope
   @Provides

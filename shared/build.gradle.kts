@@ -99,6 +99,9 @@ kotlin {
       // For BackHandler only: Android's back event is the one platform back
       // affordance, and it used to arrive for free with Jetpack Navigation.
       implementation(libs.androidx.activity.compose)
+      // In-process LiteRT-LM inference. The client only publishes an Android
+      // implementation; every other target keeps the Local tier disabled.
+      implementation(libs.koog.prompt.executor.litert.client)
     }
 
     wasmJsMain.dependencies {

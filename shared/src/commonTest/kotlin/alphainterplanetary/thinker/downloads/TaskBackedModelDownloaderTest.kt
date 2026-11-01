@@ -1,10 +1,12 @@
 package alphainterplanetary.thinker.downloads
 
 import alphainterplanetary.thinker.tasks.TaskRunner
+import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
@@ -117,6 +119,58 @@ class TaskBackedModelDownloaderTest {
     assertEquals(0.5f, state.progress)
     assertEquals("litert:1b", state.modelId)
     assertEquals("litert", state.source)
+  }
+
+  @Test
+  fun `cancelling a local download keeps the cancelled state on its row`() = runTest {
+    val runner = TaskRunner(backgroundScope, RecordingActivityLogger())
+    val downloader = downloader(
+      runner = runner,
+      transferEvents = flow {
+        emit(LocalDownloadEvent(bytesDone = 10, bytesTotal = 100))
+        awaitCancellation()
+      },
+    )
+    val handle = downloader.downloadModel(
+      ModelDownloadSpec(modelId = "litert:1b", url = "https://example.test/model.bin"),
+    )
+    testScheduler.runCurrent()
+    assertEquals(
+      DownloadStatus.Running,
+      downloader.downloads().value.single { it.handle.id == handle.id }.status,
+    )
+
+    downloader.cancel(handle.id)
+    testScheduler.runCurrent()
+
+    val state = downloader.downloads().value.single { it.handle.id == handle.id }
+    assertEquals(DownloadStatus.Cancelled, state.status)
+    // The runner reports a cancelled body as failed; the downloader's own
+    // terminal state must win so the row the user stopped is not relabelled.
+    assertEquals(
+      TaskStatus.Failed,
+      runner.tasks.value.single { it.id == handle.taskId }.status,
+    )
+  }
+
+  @Test
+  fun `cancelling a finished download leaves its outcome alone`() = runTest {
+    val runner = TaskRunner(backgroundScope, RecordingActivityLogger())
+    val downloader = downloader(
+      runner = runner,
+      transferEvents = flowOf(LocalDownloadEvent(phase = LocalDownloadPhase.Succeeded)),
+    )
+    val handle = downloader.downloadModel(
+      ModelDownloadSpec(modelId = "litert:1b", url = "https://example.test/model.bin"),
+    )
+    testScheduler.runCurrent()
+
+    downloader.cancel(handle.id)
+    testScheduler.runCurrent()
+
+    val state = downloader.downloads().value.single { it.handle.id == handle.id }
+    assertEquals(DownloadStatus.Succeeded, state.status)
+    assertEquals(TaskStatus.Succeeded, runner.tasks.value.single { it.id == handle.taskId }.status)
   }
 
   private fun TestScope.downloader(

@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.util.randomUUID
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,10 @@ class TaskBackedModelDownloader(
         _downloads.update { list ->
           list.map { state ->
             val task = tasks.firstOrNull { it.id == state.handle.taskId } ?: return@map state
+            // A cancellation is the downloader's own terminal state: the task
+            // runner reports a cancelled body as failed, which would relabel
+            // the row the user just stopped.
+            if (state.status == DownloadStatus.Cancelled) return@map state
             val mappedStatus = when (task.status) {
               TaskStatus.Queued -> DownloadStatus.Queued
               TaskStatus.Running -> DownloadStatus.Running
@@ -86,6 +91,9 @@ class TaskBackedModelDownloader(
           }
         }
         logContext.closeSucceeded()
+      } catch (e: CancellationException) {
+        logContext.closeCancelled()
+        throw e
       } catch (e: Exception) {
         logContext.closeFailed(e.message ?: e.toString())
         throw e
@@ -137,6 +145,9 @@ class TaskBackedModelDownloader(
           logContext.append("phase: ${event.phase.name}")
         }
         logContext.closeSucceeded()
+      } catch (e: CancellationException) {
+        logContext.closeCancelled()
+        throw e
       } catch (e: Exception) {
         logContext.closeFailed(e.message ?: e.toString())
         throw e
@@ -162,14 +173,19 @@ class TaskBackedModelDownloader(
   }
 
   override fun cancel(handleId: String) {
-    // Cancellation is handled via task cancellation in the runner; for now
-    // mark state as cancelled.
+    val state = _downloads.value.firstOrNull { it.handle.id == handleId } ?: return
+    // A finished transfer (succeeded or failed) has nothing left to stop, and
+    // relabelling it cancelled would discard the outcome the user needs to see.
+    if (state.status.finished) return
+    // Cancelling the task closes the transfer's stream on the next loop check;
+    // marking the row here is what the UI reacts to immediately.
+    taskRunner.cancel(state.handle.taskId)
     _downloads.update { list ->
-      list.map { state ->
-        if (state.handle.id == handleId) {
-          state.copy(status = DownloadStatus.Cancelled)
+      list.map { current ->
+        if (current.handle.id == handleId) {
+          current.copy(status = DownloadStatus.Cancelled)
         } else {
-          state
+          current
         }
       }
     }

@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.tasks
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -413,5 +414,78 @@ class TaskRunnerTest {
     assertEquals(TaskStatus.Succeeded, done.status)
     assertEquals("qwen2.5:7b", done.modelId)
     assertEquals("ollama", done.source)
+  }
+
+  @Test
+  fun `cancelling a running task fails it as cancelled`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    var bodyReachedEnd = false
+
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      delay(1_000)
+      bodyReachedEnd = true
+    }
+    testScheduler.runCurrent()
+
+    runner.cancel(task.id)
+    testScheduler.advanceUntilIdle()
+
+    val cancelled = runner.tasks.value.single { it.id == task.id }
+    assertEquals(TaskStatus.Failed, cancelled.status)
+    assertEquals("Task cancelled", cancelled.error)
+    assertNotNull(cancelled.finishedAt)
+    assertFalse(bodyReachedEnd)
+  }
+
+  @Test
+  fun `cancelling a queued task fails it instead of leaving it queued`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    var bodyRan = false
+    runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      delay(1_000)
+    }
+    val queued = runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      bodyRan = true
+    }
+    testScheduler.runCurrent()
+    assertEquals(TaskStatus.Queued, runner.tasks.value.single { it.id == queued.id }.status)
+
+    runner.cancel(queued.id)
+    testScheduler.advanceUntilIdle()
+
+    val cancelled = runner.tasks.value.single { it.id == queued.id }
+    assertEquals(TaskStatus.Failed, cancelled.status)
+    assertEquals("Task cancelled", cancelled.error)
+    assertFalse(bodyRan)
+  }
+
+  @Test
+  fun `cancelling a never-started task fails it instead of leaving it queued`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    var bodyRan = false
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      bodyRan = true
+    }
+    // The job is dispatched but deliberately not run, so the body never gets a
+    // chance to observe the cancellation itself.
+    runner.cancel(task.id)
+    testScheduler.runCurrent()
+
+    val cancelled = runner.tasks.value.single { it.id == task.id }
+    assertEquals(TaskStatus.Failed, cancelled.status)
+    assertEquals("Task cancelled", cancelled.error)
+    assertNotNull(cancelled.finishedAt)
+    assertFalse(bodyRan)
+  }
+
+  @Test
+  fun `cancelling a finished task is a harmless no-op`() = runTest {
+    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
+    testScheduler.advanceUntilIdle()
+
+    runner.cancel(task.id)
+
+    assertEquals(TaskStatus.Succeeded, runner.tasks.value.single { it.id == task.id }.status)
   }
 }

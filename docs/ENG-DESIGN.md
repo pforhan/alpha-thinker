@@ -576,11 +576,14 @@ to drive engine-picker UI.
 
 **Downloaded local models (LiteRT-LM).** In-process `.litertlm` inference via
 Koog's official `LiteRTLLMClient` on Android plus a small JVM `LLMClient`
-adapter over `litertlm-jvm` for desktop. Roadmap: web (wasm) on-device via
-WebLLM / LiteRT JS. **Llamatik** (llama.cpp KMP covering Android, iOS, Desktop,
-WASM) was investigated as a single-dependency alternative; it has no Koog
-integration and bundles STT/image-generation this app never uses, so it is a
-**contingency** if the LiteRT-LM desktop path stalls.
+adapter over `litertlm-jvm` for desktop. iOS is reachable but not through
+Koog: LiteRT-LM ships an official Swift package (`CLiteRTLM.xcframework` via
+SPM, early preview) and Koog publishes no iOS LiteRT client, so that target
+needs a native bridge behind a hand-written `LLMClient`. Roadmap: web (wasm)
+on-device via WebLLM / LiteRT JS. **Llamatik** (llama.cpp KMP covering Android,
+iOS, Desktop, WASM) was investigated as a single-dependency alternative; it has
+no Koog integration and bundles STT/image-generation this app never uses, so it
+is a **contingency** if the LiteRT-LM desktop path stalls.
 
 **Web search / research augmentation — supported via Koog tools.** Search
 capable (tool-calling) backends can invoke custom tools we register (`webSearch`,
