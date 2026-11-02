@@ -431,7 +431,6 @@ Deferred from the Phase 3.6 vocabulary audit's `LogMarkers` item. Today the log'
 - [ ] **Reconcile the export with the transcript renderer:** `PlanningContext.kt:23-25` promises the phase-grouped export builds on the shared transcript "rather than write a second format", but `ProjectRepository.exportProject` predates phases — it ignores rounds and `phaseForQuestion`, renders drafts and ignored questions as plain unanswered, repeats the synopsis, and emits malformed tables. When the export is rebuilt, share the transcript's *state semantics* and phase grouping (`PhaseTranscript`) rather than a literal format: the export stays a detailed human document while the transcript stays the token-optimized prompt block. The flat renderer and its single test get replaced at that point.
 - [ ] testing tool: manual llm chat.  Very basic chat interface that lets the user type prompts and receive answers, and allows copy/paste. Needs planning: is this bare or does this make use of tools if configured?
 - [ ] **Export Pipeline:** Implement the Markdown synthesis and file system export.  Consider if we should use any of the summarization logic we added to the engines to support the export.
-- [ ] ProjectDetailScreen: dedicated landscape layout with project info on left and scrolling question area on right
 - [ ] Implement answer revision history UI (list with timestamps)
 - [ ] Track draft edits in revision history
 - [ ] SampleProjectGenerator should generate a history of answer revisions
@@ -444,6 +443,18 @@ Deferred from the Phase 3.6 vocabulary audit's `LogMarkers` item. Today the log'
 - [ ] Implement background notification for long-running LLM tasks
 
 ## Phase 5: Refinement & UX
+- [ ] ProjectDetailScreen: dedicated landscape layout with project info on left and scrolling question area on right
+- [ ] On mobile the text size for questions in AnswerDialog is entirely too large.  It's probably on the large size even for desktop.
+- [ ] AnswerDialog: may need dedicated landscape layout as well.  Question text should take up no more than about 25% of vertical space.
+- [ ] To encourage freeform thought, provide a minimum of 3 blank lines on the new project synopsis field.
+- [ ] Consider throwing out some starter text for some projects
+- [ ] On phone-sized devices shrink our engine status pills greatly, perhaps to just three dots. Project titles probably won't fit on a single line no matter what.
+- [ ] Consider task frameworks to deal with mobile going to sleep etc.
+- [ ] In progress task display is under system buttons.  Similarly dialogs and popups can go under the status bar especially on landscape.
+- [ ] Task manager UI status text should be more distinct. Consider text effects.  Queued should be italics for example, and perhaps grayed out a bit.
+- [ ] merge Task Manager and Activity Log UI.  They already cover some of the same basic work, and neither has complete information alone.
+- [ ] We need to assume tasks will take 30s or more; the UI should be consistent the whole time.  Example: while initial question generation is underway, the UI presents a phase complete empty state.  This task should build out into a comprehensive set of tasks to improve the situation 
+- [ ] Consider adding "Project suggest" to our engine interface.  This can be used as hint text for the synopsis field.  On app startup (and maybe engine switch?) we could grab 3 or 4 of them to cycle through.
 - [ ] on PhaseThemeOptions (ThemePreviewRow): "Light" and "dark" are different widths so the preview circles are subtly offset between them.  Line them up. 
 - [x] reload project list when generating sample projects completes — the generator counts completed runs and the project list reloads in place on each one, so samples land in a list the user is already looking at.
 - [ ] screen-specific button (like edit project) is weird next to the engine status bar. perhaps the status bar should be more clearly about the engine, like include its connection details etc?  Currently the edit button looks like it wants to edit the engine.

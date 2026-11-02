@@ -273,21 +273,53 @@ browser chip shows the resolved name while the id stays canonical.
       `.litertlm` catalog downloads into app storage and installs LocalFile
       instances. Desktop/iOS/wasm keep the Local tier disabled and compile against
       the shared seams.
+- [ ] **On-device evaluation harness:** Build an in-app tool similar to
+      `tools/eval_ollama_models.py` to capture timing, ok/clean/json rates,
+      memory/footprint estimates, and timeouts for validating models
+      and extending the curated set.  And write a script for a computer that lets me share 
+      this data on a local network back to my computer to add to our data sets.  If we
+      aren't already we should be grouping by hardware and os to form per-device recommendations.
+      Example: the two llama3.2 models we picked are slow and unable to comply on phone,
+      usually filling their output buffers with nonsense.  Phi4-mini seems to work though,
+      at least on a Nothing 3.  The tool should expect and ideally handle OOM crashes. If
+      it can't do it in-process then record enough data during the test that we can pick it
+      up next launch.
+- [ ] Ability to share models with nearby devices using industry standards (quick share, 
+      airdrop, etc) -- and between platforms if these models are platform independent.
+- [ ] **Improve logging** the activity log entries aren't very useful; the main entry
+      is called Task, from Task Runner, and there are way too many entries that just 
+      say phase: Downloading which is itself unuseful.  I'd recommend not logging any
+      intermediate download reports, or at most at 25% 50% 75%.
+- [ ] **Better ETA on downloads** on the local models dialog, use an Exponential 
+      Moving Average to smooth out speeds and estimated time left.  We should apply this 
+      to ollama downloads as well.
+- [ ] **Robust mobile downloads** consider using native download mechanisms (or industry 
+      standard ones) on android and ios to better deal with common mobile interruptions
+      like sleep, network problems, etc
+- [ ] Don't add new rows to "Advanced" for local models -- always use the local model
+      dialog. Only delete a model when deleted via that dialog. Use selectable cards
+      for models instead of the use button.  If a model is not fully downloaded, start
+      a download for it.  Keep the ability to cancel a download in progress. Display 
+      partial downloads and allow them to be removed. If we need to keep these as 
+      distinct records, that's fine, though probably shouldn't show them or allow them
+      to be edited.  Just make sure the records are accurate. Example: currently the 
+      edit dialog shows them as half-filled ollama models.   
+- [ ] when entering engine status, the title on the main gets a back button.  Sometimes
+      this remains even after closing any popups.  Requires a tap anywhere to dismiss,
+      but back does nothing.
 - [ ] **Track context length** as models are selected and downloaded.
 - [x] **Make the Local tier real:** Enable Local placeholder rows per
       ENGINE-CONFIG-PLAN.md stage 3; downloaded models render as `EngineKind.LocalFile`
       instances under Local (platform-gate; web/wasm deferred).
       Done with the item above: the Local card opens the model manager and its
       installed instances render under Local wherever the runtime is supported.
+- [ ] Even if we can't display anything while waiting for a full response consider 
+      showing some kind of display indicating characters / words received etc
 - [ ] **Hostability flag:** Apply memory fit heuristics (see
       [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next
       to size/context chips for local models and Ollama instances on localhost;
       consider chip color changes for outliers (MLX versions may require recent
       Macs).
-- [ ] **On-device evaluation harness:** Build an on-device tool similar to
-      `tools/eval_ollama_models.py` to capture timing, ok/clean/json rates,
-      memory/footprint estimates, and timeouts for validating LiteRT-LM models
-      and extending the curated set.
 - [ ] **Logging, progress/cancel/background, and tests:** Log all download
       events (start/phases/errors/cancel/success) via `ActivityLogger` (use
       `ActivityLogger.taskContext(taskId, projectId = null)` for downloads).
