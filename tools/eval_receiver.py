@@ -21,6 +21,10 @@ Usage:
 
     python tools/eval_receiver.py --port 9000 --rows-dir docs/model-evals/tmp
 
+The receiver is HTTPS-only. It loads `tools/eval_tls/cert.pem` and `key.pem` by
+default, and the app pins that certificate, so a plain-HTTP receiver or a
+different certificate is refused on the phone before any row is sent.
+
 Endpoints:
 
     POST /evals     one row, an array of rows, or {"rows": [...]}
@@ -33,6 +37,7 @@ import argparse
 import json
 import re
 import socket
+import ssl
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -42,6 +47,9 @@ from typing import Any, Dict, List, Optional, Tuple
 TOOLS_DIR = Path(__file__).parent
 ROOT_DIR = TOOLS_DIR.parent
 DEFAULT_ROWS_DIR = ROOT_DIR / "docs" / "model-evals"
+TLS_DIR = TOOLS_DIR / "eval_tls"
+DEFAULT_CERT = TLS_DIR / "cert.pem"
+DEFAULT_KEY = TLS_DIR / "key.pem"
 
 SCHEMA = 1
 FIXTURES_VERSION = 1
@@ -101,9 +109,16 @@ def write_row(rows_dir: Path, row: Dict[str, Any]) -> Tuple[str, Path]:
     path = (rows_dir / row_file_name(row)).resolve()
     if rows_dir.resolve() not in path.parents:
         raise ValueError("row file escapes the rows directory")
+    # Compare parsed values, not text: the app pretty-prints with a different
+    # indent than this script, and a resend that only differs in whitespace is
+    # still the same row.
+    if path.exists():
+        try:
+            if json.loads(path.read_text(encoding="utf-8")) == row:
+                return "unchanged", path
+        except (OSError, json.JSONDecodeError):
+            pass
     text = json.dumps(row, indent=2, ensure_ascii=False) + "\n"
-    if path.exists() and path.read_text(encoding="utf-8") == text:
-        return "unchanged", path
     rows_dir.mkdir(parents=True, exist_ok=True)
     partial = path.with_name(path.name + ".part")
     partial.write_text(text, encoding="utf-8")
@@ -282,6 +297,25 @@ def make_server(host: str, port: int, rows_dir: Path) -> ThreadingHTTPServer:
     return server
 
 
+def wrap_tls(server: ThreadingHTTPServer, cert: Path, key: Path) -> None:
+    """
+    Serve the receiver over HTTPS with the checked-in self-signed certificate.
+
+    The app pins exactly this certificate (`EvalRemote.pinnedCertificate`), so a
+    plain-HTTP receiver would be rejected before a row was sent. There is no
+    --no-tls escape hatch on purpose: cleartext on a shared Wi-Fi network is how
+    a row, including the model's whole raw replies, leaks.
+    """
+    if not cert.is_file():
+        raise SystemExit(f"TLS certificate not found: {cert}")
+    if not key.is_file():
+        raise SystemExit(f"TLS private key not found: {key}")
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.load_cert_chain(certfile=str(cert), keyfile=str(key))
+    server.socket = context.wrap_socket(server.socket, server_side=True)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="Receive Alpha Thinker evaluation rows over the LAN.",
@@ -308,8 +342,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     rows_dir = Path(args.rows_dir).expanduser()
     rows_dir.mkdir(parents=True, exist_ok=True)
     server = make_server(args.host, args.port, rows_dir)
+    wrap_tls(server, DEFAULT_CERT, DEFAULT_KEY)
 
-    print(f"Listening on {args.host}:{args.port}")
+    print(f"Listening on https://{args.host}:{args.port}")
     print(f"Filing rows in {rows_dir}")
     addresses = lan_addresses() if args.host in ("0.0.0.0", "::") else [args.host]
     for address in addresses:

@@ -17,6 +17,12 @@ actual object LocalModelRuntime {
     "Local model inference is not supported on desktop",
   )
 
+  actual fun createStreamingBackend(
+    fileName: String,
+    directory: String,
+    contextTokens: Int,
+  ): LocalStreamingBackend? = null
+
   actual fun fileExists(path: String): Boolean = false
 
   actual fun deleteFile(path: String): Boolean = false

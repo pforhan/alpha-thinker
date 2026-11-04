@@ -3,8 +3,8 @@ package alphainterplanetary.thinker.ui.screens
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.LocalModelRuntime
 import alphainterplanetary.thinker.eval.EvalReport
-import alphainterplanetary.thinker.eval.EvalRow
 import alphainterplanetary.thinker.eval.EvalRollup
+import alphainterplanetary.thinker.eval.EvalRow
 import alphainterplanetary.thinker.eval.EvalShareState
 import alphainterplanetary.thinker.eval.ModelEvalState
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
@@ -136,7 +136,8 @@ fun ModelEvalScreen(
       HorizontalDivider()
 
       val byDevice = remember(rows) { EvalReport.byDevice(rows) }
-      ModelEvalResults(byDevice)
+      val runningModelId = (state as? ModelEvalState.Running)?.modelId
+      ModelEvalResults(byDevice, runningModelId)
     }
   }
 }
@@ -335,7 +336,8 @@ private fun ModelEvalShareSection(
   Text(text = "Share with a computer", style = MaterialTheme.typography.titleSmall)
   Text(
     text = "Run tools/eval_receiver.py on the computer, then enter its address. " +
-      "The receiver files the rows in docs/model-evals; nothing is sent until you tap Share.",
+      "The receiver speaks HTTPS with a certificate this app pins, files the rows " +
+      "in docs/model-evals, and nothing is sent until you tap Share.",
     style = MaterialTheme.typography.bodySmall,
     color = MaterialTheme.colorScheme.onSurfaceVariant,
   )
@@ -345,7 +347,7 @@ private fun ModelEvalShareSection(
       receiver = it
       if (shareState !is EvalShareState.Sending) chrome.modelEval.clearShareState()
     },
-    label = { Text("Receiver address") },
+    label = { Text("Receiver address (https)") },
     placeholder = { Text("192.168.1.20:8765") },
     singleLine = true,
     modifier = Modifier.fillMaxWidth(),
@@ -390,7 +392,10 @@ private fun ModelEvalShareSection(
 
 /** Every stored row, grouped and ranked separately for each hardware/OS pair. */
 @Composable
-private fun ModelEvalResults(byDevice: Map<String, List<EvalRollup>>) {
+private fun ModelEvalResults(
+  byDevice: Map<String, List<EvalRollup>>,
+  runningModelId: String?,
+) {
   Text(text = "Results by device", style = MaterialTheme.typography.titleSmall)
   if (byDevice.isEmpty()) {
     Text(
@@ -408,13 +413,13 @@ private fun ModelEvalResults(byDevice: Map<String, List<EvalRollup>>) {
     )
     Spacer(modifier = Modifier.height(Dimens.TightGap))
     rollups.forEach { rollup ->
-      ModelEvalResultRow(rollup)
+      ModelEvalResultRow(rollup, evaluatingNow = rollup.modelId == runningModelId)
     }
   }
 }
 
 @Composable
-private fun ModelEvalResultRow(rollup: EvalRollup) {
+private fun ModelEvalResultRow(rollup: EvalRollup, evaluatingNow: Boolean) {
   Card(modifier = Modifier.fillMaxWidth()) {
     Column(
       modifier = Modifier.padding(Dimens.CardPadding),
@@ -430,7 +435,8 @@ private fun ModelEvalResultRow(rollup: EvalRollup) {
       Text(
         text = "ok ${rollup.okRate.percent()} · clean ${rollup.cleanRate.percent()} · " +
           "json ${rollup.jsonOkRate.percent()} · ${rollup.cells} cells · " +
-          "${rollup.timeouts} timeout(s) · ${rollup.errors} error(s)",
+          "${rollup.timeouts} timeout(s) · ${rollup.errors} error(s)" +
+          if (rollup.aborted > 0) " · ${rollup.aborted} loop(s)" else "",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
@@ -444,9 +450,17 @@ private fun ModelEvalResultRow(rollup: EvalRollup) {
       }
       if (rollup.inProgress) {
         Text(
-          text = "In progress — run again to resume.",
+          text = if (evaluatingNow) {
+            "Evaluating now — this row fills in as cells land."
+          } else {
+            "In progress — run again to resume."
+          },
           style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.error,
+          color = if (evaluatingNow) {
+            MaterialTheme.colorScheme.primary
+          } else {
+            MaterialTheme.colorScheme.error
+          },
         )
       }
       if (rollup.notes.isNotEmpty()) {

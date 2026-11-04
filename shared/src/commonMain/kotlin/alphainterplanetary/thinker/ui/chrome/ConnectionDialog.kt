@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.downloads.DownloadState
 import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.LocalModelRuntime
 import alphainterplanetary.thinker.engine.ModelBrowserEntry
 import alphainterplanetary.thinker.engine.ModelPresentationTier
 import alphainterplanetary.thinker.engine.PlanningContext
@@ -177,7 +178,17 @@ internal fun RemoteConnectionFields(
       singleLine = true,
       isError = baseUrl.isBlank(),
       supportingText = {
-        Text("A trailing /v1 endpoint root (as Ollama's docs print) works too.")
+        if (LocalModelRuntime.inferenceSupported && baseUrl.trim()
+            .startsWith("http://", ignoreCase = true)
+        ) {
+          Text(
+            "Android sends remote connections over HTTPS. An http: endpoint only " +
+              "works on a desktop build; prefer https:// or a localhost address.",
+            color = MaterialTheme.colorScheme.error,
+          )
+        } else {
+          Text("A trailing /v1 endpoint root (as Ollama's docs print) works too.")
+        }
       },
     )
   }

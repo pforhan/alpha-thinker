@@ -13,8 +13,6 @@ import alphainterplanetary.thinker.downloads.ModelFileTransferClient
 import alphainterplanetary.thinker.downloads.ModelFileTransferClientFactory
 import alphainterplanetary.thinker.downloads.OllamaPullClient
 import alphainterplanetary.thinker.downloads.TaskBackedModelDownloader
-import alphainterplanetary.thinker.eval.LocalStoreEvalModelSource
-import alphainterplanetary.thinker.eval.ModelEvaluator
 import alphainterplanetary.thinker.engine.DefaultLocalBackendFactory
 import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
@@ -24,6 +22,8 @@ import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
+import alphainterplanetary.thinker.eval.LocalStoreEvalModelSource
+import alphainterplanetary.thinker.eval.ModelEvaluator
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites

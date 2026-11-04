@@ -322,11 +322,18 @@ workflow.
 Two tools support the app-side rows:
 
 - `eval_receiver.py` — a LAN receiver for the app's **Share rows** button. It
-  validates and files incoming rows in `docs/model-evals`:
+  serves HTTPS with the checked-in certificate under `tools/eval_tls/`, which
+  the app pins, validates incoming rows, and files them in `docs/model-evals`:
 
   ```bash
   python tools/eval_receiver.py
   ```
+
+  The app refuses an `http://` address, so the receiver is the only way to hand
+  rows off without putting them on the network in plain text. `tools/eval_tls/`
+  holds the self-signed `cert.pem` and its development `key.pem`; both are
+  shared, not secret, and `EvalRemotePinnedTlsTest` checks the app's pinned copy
+  still matches the file.
 
 - `eval_report_by_device.py` — groups rows by hardware/OS (never pooling a
   phone with a laptop) and writes per-device recommendations:

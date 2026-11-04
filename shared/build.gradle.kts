@@ -102,6 +102,10 @@ kotlin {
       // In-process LiteRT-LM inference. The client only publishes an Android
       // implementation; every other target keeps the Local tier disabled.
       implementation(libs.koog.prompt.executor.litert.client)
+      // The Koog client declares the runtime as a runtime-only dependency, but
+      // the eval harness drives that runtime directly (streamed deltas, abort,
+      // benchmark timings), so the shared module compiles against it too.
+      implementation(libs.litertlm.android)
     }
 
     wasmJsMain.dependencies {

@@ -22,6 +22,12 @@ data class EvalCell(
   val raw: String? = null,
   val error: String? = null,
   val timeout: Boolean = false,
+  /**
+   * Why the harness stopped this cell before the runtime finished. A partial
+   * [raw] is kept for diagnosis, but the cell is scored as an error: a reply
+   * that looped was not a usable answer even if its first lines parsed.
+   */
+  val aborted: String? = null,
 )
 
 /** The unscored request that loads the model and measures that cold start. */
@@ -50,6 +56,7 @@ data class EvalTimings(
   @SerialName("eval_count") val evalCount: Int? = null,
   @SerialName("eval_s") val evalS: Double? = null,
   @SerialName("gen_tps") val genTps: Double? = null,
+  @SerialName("first_token_s") val firstTokenS: Double? = null,
 )
 
 /** The model metadata a row carries, mirroring the Python harness's shape. */

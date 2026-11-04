@@ -32,6 +32,20 @@ expect object LocalModelRuntime {
     contextTokens: Int,
   ): KoogPlanningBackend
 
+  /**
+   * Builds a token-streaming backend for [fileName] under [directory], or null
+   * when this platform has no runtime that can expose deltas.
+   *
+   * The evaluation harness prefers this path so it can abort a repetition loop
+   * while the model is still generating; the ordinary planning path keeps using
+   * [createBackend], which returns one complete reply.
+   */
+  fun createStreamingBackend(
+    fileName: String,
+    directory: String,
+    contextTokens: Int,
+  ): LocalStreamingBackend?
+
   /** Whether a model file exists at [path]. */
   fun fileExists(path: String): Boolean
 

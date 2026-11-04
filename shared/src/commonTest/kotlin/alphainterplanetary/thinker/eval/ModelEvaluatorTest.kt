@@ -10,6 +10,9 @@ import alphainterplanetary.thinker.engine.LocalBackendFactory
 import alphainterplanetary.thinker.engine.LocalKoogPlanningBackend
 import alphainterplanetary.thinker.engine.LocalModel
 import alphainterplanetary.thinker.engine.LocalModelCatalog
+import alphainterplanetary.thinker.engine.LocalStreamingBackend
+import alphainterplanetary.thinker.engine.LocalStreamingBackendFactory
+import alphainterplanetary.thinker.engine.LocalStreamingReply
 import alphainterplanetary.thinker.engine.ModelPresentationTier
 import alphainterplanetary.thinker.testutil.FakeLlmClient
 import alphainterplanetary.thinker.testutil.FakePlatformContext
@@ -81,6 +84,7 @@ class ModelEvaluatorTest {
     client: FakeLlmClient,
     platform: FakePlatformContext = FakePlatformContext(device = device),
     source: EvalModelSource = FakeEvalModelSource(listOf(model)),
+    streaming: LocalStreamingBackendFactory = LocalStreamingBackendFactory { null },
   ): ModelEvaluator = ModelEvaluator(
     models = source,
     backendFactory = LocalBackendFactory {
@@ -91,6 +95,7 @@ class ModelEvaluatorTest {
     },
     platform = platform,
     scope = CoroutineScope(coroutineContext),
+    streamingFactory = streaming,
   )
 
   @Test
@@ -120,6 +125,21 @@ class ModelEvaluatorTest {
     // The row also survives a fresh read of the platform's eval directory.
     val reloaded = EvalRowStore(platform).loadAll().single()
     assertEquals(row, reloaded)
+  }
+
+  @Test
+  fun `a second start while a sweep is running is ignored`() = runTest {
+    val client = cleanClient()
+    val evaluator = evaluator(client)
+
+    // The first start sets Running synchronously, so the second tap lands on a
+    // sweep that has already begun and must not queue a duplicate.
+    evaluator.start(listOf(model))
+    evaluator.start(listOf(model))
+    advanceUntilIdle()
+
+    assertEquals(1 + EvalFixtures.groups.size, client.calls)
+    assertEquals(1, evaluator.rows.value.size)
   }
 
   @Test
@@ -262,6 +282,61 @@ class ModelEvaluatorTest {
   }
 
   @Test
+  fun `a streaming runtime records time to first token and its own timing counters`() = runTest {
+    val backend = FakeStreamingBackend { call ->
+      if (call == 0) {
+        "ready"
+      } else {
+        val interaction = EvalFixtures.groups[call - 1].first
+        replyFor(interaction)
+      }
+    }
+    val evaluator = evaluator(
+      cleanClient(),
+      streaming = LocalStreamingBackendFactory { backend },
+    )
+
+    evaluator.start(listOf(model))
+    advanceUntilIdle()
+
+    assertIs<ModelEvalState.Finished>(evaluator.state.value)
+    // One warmup plus one request per cell went to the streaming runtime, not
+    // to the whole-reply KOog fallback.
+    assertEquals(1 + EvalFixtures.groups.size, backend.calls)
+    assertTrue(backend.closed)
+
+    val row = evaluator.rows.value.single()
+    assertEquals(EvalFixtures.groups.size, row.cells.size)
+    assertTrue(row.cells.all { it.error == null })
+    assertTrue(row.cells.all { it.timings?.firstTokenS == 0.05 })
+    assertTrue(row.cells.all { it.timings?.genTps == 12.0 })
+  }
+
+  @Test
+  fun `a streaming reply that loops is aborted instead of waiting for the timeout`() = runTest {
+    val looping = "The project needs a clearer answer. ".repeat(200)
+    val backend = FakeStreamingBackend { looping }
+    val evaluator = evaluator(
+      cleanClient(),
+      streaming = LocalStreamingBackendFactory { backend },
+    )
+
+    evaluator.start(listOf(model), cellTimeout = 30.seconds, loadTimeout = 30.seconds)
+    advanceUntilIdle()
+
+    assertIs<ModelEvalState.Finished>(evaluator.state.value)
+    val row = evaluator.rows.value.single()
+    assertEquals(EvalFixtures.groups.size, row.cells.size)
+    assertTrue(row.cells.all { it.aborted == "repetition" })
+    assertTrue(row.cells.all { it.error.orEmpty().contains("repetition loop") })
+    assertTrue(row.cells.all { it.timings?.firstTokenS != null })
+
+    val rollup = EvalReport.analyzeGroup(listOf(row))
+    assertEquals(EvalFixtures.groups.size, rollup.aborted)
+    assertEquals(0.0, rollup.okRate)
+  }
+
+  @Test
   fun `a platform with no installed models fails without measuring`() = runTest {
     val client = cleanClient()
     val evaluator = evaluator(client, source = FakeEvalModelSource(listOf(model), installed = emptySet()))
@@ -277,3 +352,31 @@ class ModelEvaluatorTest {
 
 /** An [Error], as a JVM OOM is, whose name is what the evaluator recognizes. */
 private class TestOutOfMemoryError(message: String) : Error(message)
+
+/** A token-streaming runtime whose whole reply is decided by the call number. */
+private class FakeStreamingBackend(
+  private val replyForCall: (Int) -> String,
+) : LocalStreamingBackend {
+  var calls = 0
+  var closed = false
+
+  override suspend fun execute(
+    text: String,
+    onToken: (String) -> Unit,
+  ): LocalStreamingReply {
+    val reply = replyForCall(calls)
+    calls++
+    reply.chunked(8).forEach(onToken)
+    return LocalStreamingReply(
+      text = reply,
+      inputTokens = 12,
+      outputTokens = reply.length / 4,
+      firstTokenS = 0.05,
+      genTps = 12.0,
+    )
+  }
+
+  override fun close() {
+    closed = true
+  }
+}

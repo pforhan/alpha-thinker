@@ -22,10 +22,12 @@ curated models whose `.litertlm` file is already installed.
 - **Cancel** — stops after the request in flight. The partial row is kept, so
   the next start resumes from the cell it reached.
 
-A sweep always uses a fresh backend for each model and the same
-`LocalBackendFactory` a real planning request uses. Local inference only exists
-on Android today, so that is the only target that can produce new rows; desktop,
-iOS, and wasm can still read and share rows.
+A sweep always uses a fresh backend for each model. On Android it prefers the
+token-streaming runtime (the same LiteRT engine the planning path loads) so it
+can watch the reply as it is generated and record time to first token; elsewhere
+it falls back to the same `LocalBackendFactory` a real planning request uses.
+Local inference only exists on Android today, so that is the only target that can
+produce new rows; desktop, iOS, and wasm can still read and share rows.
 
 ## What is measured
 
@@ -39,9 +41,20 @@ Per cell the row records:
 | field | meaning |
 |---|---|
 | `latency_s`, `wall_s` | request time, in seconds |
-| `timings.gen_tps` | output tokens divided by wall time, when the backend reports tokens |
+| `timings.gen_tps` | the runtime's decode rate, when it reports one |
+| `timings.first_token_s` | time until the first streamed token |
+| `timings.prompt_eval_s`, `timings.eval_s` | prefill and decode time, when the runtime splits them |
 | `raw` | the reply verbatim, so scoring can be recomputed later |
 | `error`, `timeout` | the failure and whether it was a timeout |
+| `aborted` | why the harness stopped a reply early (`repetition`) |
+
+On Android the harness drives LiteRT's token stream rather than one blocking
+call. That is what makes `first_token_s` real, and what lets a model that starts
+repeating itself be stopped in seconds instead of at the 120 s cell timeout. An
+aborted cell keeps its partial `raw` text, is scored as an error, and counts
+toward the row's loop total; the sweep then moves to the next cell. The Kotlin
+fallback used by platforms without a streaming runtime (and by the tests) still
+measures wall time and token counts.
 
 The model-level report derives:
 
@@ -106,6 +119,10 @@ old rows stay comparable.
 - Every warmup and cell has a timeout (`1 s` in tests, `120 s` per cell and
   `600 s` for the cold load in production defaults). A timeout is stored as a
   cell with `timeout: true` and an error string, and the sweep continues.
+- A streaming reply that starts repeating a unit or a line is cut off as soon as
+  the loop is unambiguous (at least six repeats covering 240 characters). That
+  is an early-failure signal, not a replacement for the timeout: a model that is
+  slow but still producing new text keeps its full budget.
 - A non-timeout exception is stored as that cell's error and the sweep continues.
 - An `Error` — the usual shape of a JVM out-of-memory — is caught, recorded as
   the cell it happened on, flushed, and then the sweep stops with an
@@ -120,14 +137,25 @@ the same Wi-Fi network:
 
 ```bash
 python tools/eval_receiver.py
-# Listening on 0.0.0.0:8765
+# Listening on https://0.0.0.0:8765
 #   In the app, share to: 192.168.1.20:8765
 ```
 
+The receiver speaks HTTPS only, using the self-signed certificate checked in at
+`tools/eval_tls/cert.pem`. The app pins that exact certificate and no other, so
+another server on the same network cannot accept the upload by presenting a
+different one. The certificate's private key is checked in beside it
+(`tools/eval_tls/key.pem`): it is a shared development key for a tool that only
+runs on your own LAN, not a secret, and both files must be present for the
+receiver to start.
+
 On the **Evaluate local models** screen, enter that address under **Share with a
-computer** and tap **Share rows**. The receiver validates each row and files it
-as `docs/model-evals/<model-slug>-<run-id>.json`. Resending is idempotent: a row
-the receiver already has is reported as up to date rather than duplicated.
+computer** and tap **Share rows**. A bare `host:port` is treated as `https://`;
+an explicit `http://` is rejected rather than silently downgraded, because that
+would put every raw model reply on the network in the clear. The receiver
+validates each row and files it as
+`docs/model-evals/<model-slug>-<run-id>.json`. Resending is idempotent: a row the
+receiver already has is reported as up to date rather than duplicated.
 
 Useful flags:
 
@@ -138,8 +166,9 @@ python tools/eval_receiver.py --once            # exit after the first batch
 ```
 
 `GET /health` reports the receiver's status and rows directory. The Android
-manifest enables cleartext HTTP for these private-network endpoints; a hosted
-provider still uses HTTPS.
+manifest no longer enables cleartext HTTP broadly: a network security config
+permits it only for the loopback names the default local Ollama connection uses,
+and a LAN server must be served over HTTPS.
 
 ## Per-device recommendations
 

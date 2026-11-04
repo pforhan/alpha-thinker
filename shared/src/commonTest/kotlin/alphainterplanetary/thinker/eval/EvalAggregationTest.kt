@@ -163,6 +163,31 @@ class EvalAggregationTest {
   }
 
   @Test
+  fun `an aborted cell is scored as an error and counted as a loop`() {
+    val rollup = EvalReport.analyzeGroup(
+      listOf(
+        row(
+          listOf(
+            cell(EvalFixtures.Interaction.Title, raw = cleanTitle),
+            cell(
+              EvalFixtures.Interaction.Title,
+              raw = cleanTitle,
+              error = "repetition loop after 4.2s (900 chars)",
+            ).copy(aborted = "repetition"),
+          ),
+        ),
+      ),
+    )
+
+    // The partial reply is not rescored: a loop that began with a valid title
+    // is still a failed answer, so one of the two title cells is an error.
+    assertEquals(1, rollup.aborted)
+    assertEquals(1, rollup.errors)
+    assertEquals(0.5, rollup.okRate)
+    assertContains(rollup.notes, "1 cell(s) stopped after a repetition loop")
+  }
+
+  @Test
   fun `rows for the same model on different devices never pool`() {
     val rollups = EvalReport.analyze(
       listOf(

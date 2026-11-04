@@ -23,6 +23,7 @@ data class EvalGroupStats(
   val timeouts: Int,
   val errors: Int,
   val sleeps: Int,
+  val aborted: Int,
   val latencyMeanS: Double,
   val latencyP50S: Double,
   val latencyP95S: Double,
@@ -54,6 +55,7 @@ data class EvalRollup(
   val timeouts: Int,
   val errors: Int,
   val sleeps: Int,
+  val aborted: Int,
   val okRate: Double?,
   val cleanRate: Double?,
   val jsonOkRate: Double?,
@@ -111,8 +113,15 @@ object EvalReport {
       val interaction = EvalFixtures.Interaction.fromWire(cell.interaction)
       EvalScoredCell(
         cell = cell,
-        eval = interaction?.let { EvalScoring.score(it, cell.raw.orEmpty()) }
-          ?: EvalScore(error = "unknown interaction"),
+        // A cell the harness cut short is a failure, not a scorable partial
+        // reply: a loop that happens to start with valid JSON did not answer
+        // the question. Everything else is re-scored from its raw text.
+        eval = if (cell.aborted != null) {
+          EvalScore(error = cell.error ?: cell.aborted)
+        } else {
+          interaction?.let { EvalScoring.score(it, cell.raw.orEmpty()) }
+            ?: EvalScore(error = "unknown interaction")
+        },
       )
     }
     val questions = scored.filter { it.cell.interaction == EvalFixtures.Interaction.InitialQuestions.wire }
@@ -157,6 +166,7 @@ object EvalReport {
       errors = cells.count { it.error != null } + if (warmup?.error != null) 1 else 0,
       sleeps = cells.count { it.sleepS != null && it.sleepS > 0.0 } +
         if (warmup?.sleepS != null && warmup.sleepS > 0.0) 1 else 0,
+      aborted = cells.count { it.aborted != null },
       okRate = okRate,
       cleanRate = cleanRate,
       jsonOkRate = jsonOkRate,
@@ -281,6 +291,7 @@ object EvalReport {
       timeouts = items.count { isTimeout(it.cell) },
       errors = items.count { it.cell.error != null },
       sleeps = items.count { it.cell.sleepS != null && it.cell.sleepS > 0.0 },
+      aborted = items.count { it.cell.aborted != null },
       latencyMeanS = mean(latencies),
       latencyP50S = round(median(latencies), 4),
       latencyP95S = round(p95(latencies), 4),
@@ -435,6 +446,8 @@ object EvalReport {
       addNote(this, summaryBullets, summaryTotal, "Summaries include bullets/headings")
       addNote(this, summaryPreamble, summaryTotal, "Summaries include preamble")
       addNote(this, summaryLong, summaryTotal, "Summaries over 150 words")
+      val aborted = scored.count { it.cell.aborted != null }
+      if (aborted > 0) add("$aborted cell(s) stopped after a repetition loop")
     }
   }
 

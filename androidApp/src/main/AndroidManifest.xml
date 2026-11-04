@@ -5,12 +5,7 @@
   <application
       android:label="Alpha Thinker"
       android:icon="@mipmap/ic_launcher"
-      android:theme="@style/Theme.AlphaThinker"
-      android:usesCleartextTraffic="true">
-    <!-- Cleartext is for the user's own local endpoints: a LAN Ollama server
-         and the evaluation receiver started with `tools/eval_receiver.py`.
-         Both are plain HTTP on a private network; a hosted provider still uses
-         HTTPS. -->
+      android:theme="@style/Theme.AlphaThinker">
     <activity
         android:name=".MainActivity"
         android:exported="true"

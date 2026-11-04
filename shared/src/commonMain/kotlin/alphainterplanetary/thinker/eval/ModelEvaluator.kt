@@ -3,11 +3,14 @@ package alphainterplanetary.thinker.eval
 import ai.koog.prompt.dsl.prompt
 import alphainterplanetary.thinker.di.DeviceInfo
 import alphainterplanetary.thinker.di.PlatformContext
+import alphainterplanetary.thinker.engine.DefaultLocalStreamingBackendFactory
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.KoogPlanningBackend
 import alphainterplanetary.thinker.engine.LocalBackendFactory
 import alphainterplanetary.thinker.engine.LocalModel
 import alphainterplanetary.thinker.engine.LocalModelStore
+import alphainterplanetary.thinker.engine.LocalStreamingBackend
+import alphainterplanetary.thinker.engine.LocalStreamingBackendFactory
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import kotlin.coroutines.cancellation.CancellationException
@@ -31,6 +34,7 @@ sealed interface ModelEvalState {
   data object Idle : ModelEvalState
 
   data class Running(
+    val modelId: String,
     val modelLabel: String,
     val modelNumber: Int,
     val modelCount: Int,
@@ -100,6 +104,7 @@ class ModelEvaluator(
   private val platform: PlatformContext,
   private val scope: CoroutineScope,
   private val store: EvalRowStore = EvalRowStore(platform),
+  private val streamingFactory: LocalStreamingBackendFactory = DefaultLocalStreamingBackendFactory,
 ) {
   private val _state = MutableStateFlow<ModelEvalState>(ModelEvalState.Idle)
   val state: StateFlow<ModelEvalState> = _state.asStateFlow()
@@ -157,6 +162,7 @@ class ModelEvaluator(
     val effectiveRuns = runs.coerceAtLeast(1)
     _share.value = EvalShareState.Idle
     _state.value = ModelEvalState.Running(
+      modelId = installed.first().id,
       modelLabel = installed.first().label,
       modelNumber = 1,
       modelCount = installed.size,
@@ -221,6 +227,7 @@ class ModelEvaluator(
     models.forEachIndexed { index, model ->
       currentCoroutineContext().ensureActive()
       _state.value = ModelEvalState.Running(
+        modelId = model.id,
         modelLabel = model.label,
         modelNumber = index + 1,
         modelCount = models.size,
@@ -239,6 +246,7 @@ class ModelEvaluator(
           loadTimeout = loadTimeout,
           onCell = { done, detail ->
             _state.value = ModelEvalState.Running(
+              modelId = model.id,
               modelLabel = model.label,
               modelNumber = index + 1,
               modelCount = models.size,
@@ -283,11 +291,15 @@ class ModelEvaluator(
       findResumable(model, hardware, runs) ?: newRow(model, instance, hardware, runId, startedAt, runs)
     }
     val cells = row.cells.toMutableList()
-    val backend = backendFactory.create(instance)
+    // Prefer the streaming runtime: it is what lets a repetition loop be cut
+    // off in seconds instead of at the request timeout. The Koog backend stays
+    // the path for platforms (and tests) that only produce a complete reply.
+    val runner = streamingFactory.create(instance)?.let(::StreamingEvalRunner)
+      ?: KoogEvalRunner(backendFactory.create(instance))
     try {
       if (row.warmup?.ok != true) {
         val warmup = try {
-          measureWarmup(backend, loadTimeout)
+          measureWarmup(runner, loadTimeout)
         } catch (e: CancellationException) {
           throw e
         } catch (t: Throwable) {
@@ -313,7 +325,7 @@ class ModelEvaluator(
           )
           val cell = try {
             measureCell(
-              backend = backend,
+              runner = runner,
               interaction = interaction,
               fixture = fixture,
               run = run,
@@ -348,18 +360,18 @@ class ModelEvaluator(
       publishQuietly(row.copy(cells = cells.toList(), inProgress = true))
       throw e
     } finally {
-      runCatching { backend.close() }
+      runCatching { runner.close() }
     }
   }
 
   private suspend fun measureWarmup(
-    backend: KoogPlanningBackend,
+    runner: EvalRunner,
     timeout: Duration,
   ): EvalWarmup {
     val mark = TimeSource.Monotonic.markNow()
     return try {
       val reply = withTimeoutOrNull(timeout) {
-        execute(backend, EvalFixtures.WarmupPrompt)
+        runner.execute(EvalFixtures.WarmupPrompt, onToken = null)
       }
       val wall = mark.elapsedSeconds()
       if (reply == null) {
@@ -380,16 +392,25 @@ class ModelEvaluator(
   }
 
   private suspend fun measureCell(
-    backend: KoogPlanningBackend,
+    runner: EvalRunner,
     interaction: EvalFixtures.Interaction,
     fixture: EvalFixtures.Fixture,
     run: Int,
     timeout: Duration,
   ): EvalCell {
     val text = EvalFixtures.prompt(interaction, fixture)
+    val detector = EvalRepetitionDetector()
     val mark = TimeSource.Monotonic.markNow()
     return try {
-      val reply = withTimeoutOrNull(timeout) { execute(backend, text) }
+      val reply = withTimeoutOrNull(timeout) {
+        runner.execute(text) { chunk ->
+          // Only the streaming path can act on this while the model is still
+          // generating; the Koog fallback hands over its whole reply at once.
+          if (runner.streamsTokens && detector.append(chunk)) {
+            throw EvalRepetitionLoop(detector.text)
+          }
+        }
+      }
       val wall = mark.elapsedSeconds()
       if (reply == null) {
         EvalCell(
@@ -398,6 +419,7 @@ class ModelEvaluator(
           run = run,
           latencyS = wall,
           wallS = wall,
+          timings = EvalTimings(totalS = wall, firstTokenS = runner.firstTokenS),
           error = "timeout after ${timeout.inWholeSeconds}s",
           timeout = true,
         )
@@ -412,6 +434,21 @@ class ModelEvaluator(
           raw = reply.text,
         )
       }
+    } catch (e: EvalRepetitionLoop) {
+      val wall = mark.elapsedSeconds()
+      EvalCell(
+        fixture = fixture.name,
+        interaction = interaction.wire,
+        run = run,
+        latencyS = wall,
+        wallS = wall,
+        timings = EvalTimings(totalS = wall, firstTokenS = runner.firstTokenS),
+        // Keep the loop as evidence, but mark the cell so scoring treats it as
+        // the failed answer it was rather than parsing its first lines.
+        raw = e.text,
+        error = "repetition loop after ${wall.roundedTenths()}s (${e.text.length} chars)",
+        aborted = "repetition",
+      )
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
@@ -422,21 +459,77 @@ class ModelEvaluator(
         run = run,
         latencyS = wall,
         wallS = wall,
+        timings = EvalTimings(totalS = wall, firstTokenS = runner.firstTokenS),
         error = e.describeFailure(),
       )
     }
   }
 
-  private suspend fun execute(backend: KoogPlanningBackend, text: String): EvalReply {
-    val message = backend.executor.execute(
-      prompt("model-eval") { user(text) },
-      backend.model,
-    )
-    return EvalReply(
-      text = message.textContent().trim(),
-      inputTokens = message.metaInfo.inputTokensCount,
-      outputTokens = message.metaInfo.outputTokensCount,
-    )
+  /** One inference path, streaming or whole-reply, behind the same calls. */
+  private interface EvalRunner {
+    val streamsTokens: Boolean
+    val firstTokenS: Double?
+    suspend fun execute(text: String, onToken: ((String) -> Unit)?): EvalReply
+    fun close()
+  }
+
+  private class StreamingEvalRunner(
+    private val backend: LocalStreamingBackend,
+  ) : EvalRunner {
+    override val streamsTokens: Boolean = true
+    override var firstTokenS: Double? = null
+      private set
+
+    override suspend fun execute(
+      text: String,
+      onToken: ((String) -> Unit)?,
+    ): EvalReply {
+      val mark = TimeSource.Monotonic.markNow()
+      firstTokenS = null
+      val reply = backend.execute(text) { chunk ->
+        if (firstTokenS == null && chunk.isNotBlank()) {
+          firstTokenS = mark.elapsedSeconds()
+        }
+        onToken?.invoke(chunk)
+      }
+      return EvalReply(
+        text = reply.text.trim(),
+        inputTokens = reply.inputTokens,
+        outputTokens = reply.outputTokens,
+        firstTokenS = reply.firstTokenS ?: firstTokenS,
+        promptEvalS = reply.promptEvalS,
+        evalS = reply.evalS,
+        genTps = reply.genTps,
+      )
+    }
+
+    override fun close() = backend.close()
+  }
+
+  private class KoogEvalRunner(
+    private val backend: KoogPlanningBackend,
+  ) : EvalRunner {
+    override val streamsTokens: Boolean = false
+    override val firstTokenS: Double? get() = null
+
+    override suspend fun execute(
+      text: String,
+      onToken: ((String) -> Unit)?,
+    ): EvalReply {
+      val message = backend.executor.execute(
+        prompt("model-eval") { user(text) },
+        backend.model,
+      )
+      val reply = EvalReply(
+        text = message.textContent().trim(),
+        inputTokens = message.metaInfo.inputTokensCount,
+        outputTokens = message.metaInfo.outputTokensCount,
+      )
+      onToken?.invoke(reply.text)
+      return reply
+    }
+
+    override fun close() = backend.close()
   }
 
   private fun findResumable(
@@ -503,22 +596,28 @@ class ModelEvaluator(
     runCatching { publish(row) }
   }
 
-  private fun TimeMark.elapsedSeconds(): Double =
-    elapsedNow().inWholeMicroseconds / 1_000_000.0
-
   private fun EvalReply.timings(wallS: Double): EvalTimings = EvalTimings(
     totalS = wallS,
     promptEvalCount = inputTokens,
     evalCount = outputTokens,
-    genTps = outputTokens?.takeIf { it > 0 && wallS > 0.0 }?.let { tokens ->
+    // The runtime's own decode rate is the honest number; dividing by the
+    // whole wall time would fold prefill and queueing into it.
+    genTps = genTps ?: outputTokens?.takeIf { it > 0 && wallS > 0.0 }?.let { tokens ->
       (tokens / wallS * 100.0).toLong() / 100.0
     },
+    firstTokenS = firstTokenS,
+    promptEvalS = promptEvalS,
+    evalS = evalS,
   )
 
   private data class EvalReply(
     val text: String,
     val inputTokens: Int?,
     val outputTokens: Int?,
+    val firstTokenS: Double? = null,
+    val promptEvalS: Double? = null,
+    val evalS: Double? = null,
+    val genTps: Double? = null,
   )
 
   private fun newRunId(): String {
@@ -548,6 +647,20 @@ private fun DeviceInfo.toEvalHardware(): EvalHardware = EvalHardware(
   apiLevel = apiLevel,
   key = key(),
 )
+
+/**
+ * Thrown from a streaming token callback once [EvalRepetitionDetector] sees a
+ * loop, carrying the partial reply so the cell can keep it as evidence.
+ *
+ * It is a plain exception rather than a cancellation because the sweep should
+ * record a scored failure and move on, not abort the whole model.
+ */
+private class EvalRepetitionLoop(val text: String) : Exception("repetition loop")
+
+private fun TimeMark.elapsedSeconds(): Double =
+  elapsedNow().inWholeMicroseconds / 1_000_000.0
+
+private fun Double.roundedTenths(): String = (kotlin.math.round(this * 10.0) / 10.0).toString()
 
 /**
  * OOM is an [Error] on the JVM and a runtime abort on native, so common code

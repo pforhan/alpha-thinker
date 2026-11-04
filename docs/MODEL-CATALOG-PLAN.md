@@ -287,15 +287,22 @@ browser chip shows the resolved name while the id stays canonical.
       Implemented as a Testing-sheet sweep that persists a resumable row per `(model, run)`
       and groups results by hardware/OS. `tools/eval_receiver.py` brings those rows back
       over the LAN and `tools/eval_report_by_device.py` writes per-device recommendations.
-    - [ ] Do not use usesCleartextTraffic in android manifest -- either set the script up to make
+    - [x] Do not use usesCleartextTraffic in android manifest -- either set the script up to make
           an https server (preferred) or use a Network Security Config file
+          The receiver now serves HTTPS with a checked-in certificate pinned by the app, and the
+          manifest replaced the flag with a network security config that allows only loopback HTTP.
     - [ ] Should be able to view and test a wider array of models from the community than we display
           in local engine. Related: need to manage the downloads like that dialog. Code may be
           sharable?
-    - [ ] If currently running just say a model is in progress -- not to run again
-    - [ ] We should narrow the timeout measurements across the board.  Perhaps 30s on each request?
+    - [x] If currently running just say a model is in progress -- not to run again
+    - [x] We should narrow the timeout measurements across the board.  Perhaps 30s on each request?
           Take a look at current data to see the impact it could have.  If some models go over, but
-          don't have good quality, the shorter time would still benefit.   
+          don't have good quality, the shorter time would still benefit.
+          Current data shows 30 s changes no recommendation tier but lowers measured quality for
+          eleven slow models, so the harness keeps 120 s and aborts repetition loops within seconds.   
+    - [ ] this tool doesn't need the engine status and popup menu in the top bar.
+    - [ ] is quality a percentage or what?  Display a % or indicate its max value
+    - [ ] Need a way to clear results
 - [ ] Ability to share models with nearby devices using industry standards (quick share, 
       airdrop, etc) -- and between platforms if these models are platform independent.
 - [ ] **Improve logging** the activity log entries aren't very useful; the main entry
