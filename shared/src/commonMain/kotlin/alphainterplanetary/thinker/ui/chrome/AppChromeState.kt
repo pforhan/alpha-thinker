@@ -5,6 +5,7 @@ import alphainterplanetary.thinker.di.AppComponent
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCatalog
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.eval.ModelEvaluator
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
@@ -86,6 +87,12 @@ class AppChromeState internal constructor(
   val engines: EngineViewModel,
   /** The hoisted tools: the sample generator, the simulator, the engine delay. */
   val tools: ToolsViewModel,
+  /**
+   * The on-device evaluation harness. App-scoped because a sweep is minutes of
+   * inference and has to keep writing rows after the screen that started it is
+   * gone; the Testing sheet only reports its state and links into its screen.
+   */
+  val modelEval: ModelEvaluator,
   /** The newest logged activity, or null on an empty log. */
   val latestActivity: StateFlow<ActivityRecord?>,
   /**
@@ -199,6 +206,7 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
       settings = settings,
       engines = engines,
       tools = tools,
+      modelEval = appComponent.modelEvaluator,
       latestActivity = latestActivity,
       engineStatus = status,
       stack = stack,

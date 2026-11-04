@@ -25,6 +25,13 @@ data class LocalModel(
   val sha256: String,
   val contextTokens: Int,
   val license: String,
+  /**
+   * Weight count and quantization when the catalog knows them. They drive the
+   * evaluation harness's footprint estimate and its report; a model whose file
+   * is already measured by [expectedBytes] can leave them null.
+   */
+  val parameterCount: Long? = null,
+  val quantization: String? = null,
 )
 
 /** The file name LiteRT will look up under the model directory. */

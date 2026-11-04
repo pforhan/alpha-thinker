@@ -273,7 +273,7 @@ browser chip shows the resolved name while the id stays canonical.
       `.litertlm` catalog downloads into app storage and installs LocalFile
       instances. Desktop/iOS/wasm keep the Local tier disabled and compile against
       the shared seams.
-- [ ] **On-device evaluation harness:** Build an in-app tool similar to
+- [x] **On-device evaluation harness:** Build an in-app tool similar to
       `tools/eval_ollama_models.py` to capture timing, ok/clean/json rates,
       memory/footprint estimates, and timeouts for validating models
       and extending the curated set.  And write a script for a computer that lets me share 
@@ -284,6 +284,18 @@ browser chip shows the resolved name while the id stays canonical.
       at least on a Nothing 3.  The tool should expect and ideally handle OOM crashes. If
       it can't do it in-process then record enough data during the test that we can pick it
       up next launch.
+      Implemented as a Testing-sheet sweep that persists a resumable row per `(model, run)`
+      and groups results by hardware/OS. `tools/eval_receiver.py` brings those rows back
+      over the LAN and `tools/eval_report_by_device.py` writes per-device recommendations.
+    - [ ] Do not use usesCleartextTraffic in android manifest -- either set the script up to make
+          an https server (preferred) or use a Network Security Config file
+    - [ ] Should be able to view and test a wider array of models from the community than we display
+          in local engine. Related: need to manage the downloads like that dialog. Code may be
+          sharable?
+    - [ ] If currently running just say a model is in progress -- not to run again
+    - [ ] We should narrow the timeout measurements across the board.  Perhaps 30s on each request?
+          Take a look at current data to see the impact it could have.  If some models go over, but
+          don't have good quality, the shorter time would still benefit.   
 - [ ] Ability to share models with nearby devices using industry standards (quick share, 
       airdrop, etc) -- and between platforms if these models are platform independent.
 - [ ] **Improve logging** the activity log entries aren't very useful; the main entry

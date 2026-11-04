@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.ui.chrome.OpenPickerOnFirstRun
 import alphainterplanetary.thinker.ui.chrome.rememberAppChromeState
 import alphainterplanetary.thinker.ui.components.GenerationTaskBar
 import alphainterplanetary.thinker.ui.screens.ActivityLogScreen
+import alphainterplanetary.thinker.ui.screens.ModelEvalScreen
 import alphainterplanetary.thinker.ui.screens.ProjectDetailScreen
 import alphainterplanetary.thinker.ui.screens.ProjectListScreen
 import alphainterplanetary.thinker.ui.screens.SimulatorScreen
@@ -107,6 +108,10 @@ internal fun NavApp(appComponent: AppComponent) {
           SimulatorScreen(chrome = chrome)
         }
 
+        AppRoute.ModelEval -> {
+          ModelEvalScreen(chrome = chrome)
+        }
+
         AppRoute.ActivityLog -> {
           val vm = remember {
             ActivityLogViewModel(
@@ -127,7 +132,11 @@ internal fun NavApp(appComponent: AppComponent) {
     // it yields while one is open. The simulator yields it too: its own row is
     // the run's progress, and a bar over the Run button is one more thing to
     // dismiss before the run can be started.
-    if (route != AppRoute.TaskManager && route != AppRoute.Simulator && !chrome.isSheetOpen) {
+    if (route != AppRoute.TaskManager &&
+      route != AppRoute.Simulator &&
+      route != AppRoute.ModelEval &&
+      !chrome.isSheetOpen
+    ) {
       GenerationTaskBar(
         taskRunner = appComponent.taskRunner,
         onTaskManagerClick = { chrome.navigate(AppRoute.TaskManager) },

@@ -310,6 +310,31 @@ preferring the on-disk `size` from `/api/tags` and falling back to
   (`keep_alive` expires), the next request can silently pay a reload — re-run a
   `slept` model rather than trust its timing.
 
+## App-side evaluation (LiteRT-LM)
+
+The app has an in-app port of this harness for models it runs itself: **Testing
+→ Evaluate local models**. It reads the same fixtures, scores the same way, and
+writes the same row shape, so its rows sit beside these Ollama rows in
+`docs/model-evals`. See
+[docs/MODEL-EVAL-HARNESS.md](../docs/MODEL-EVAL-HARNESS.md) for the full
+workflow.
+
+Two tools support the app-side rows:
+
+- `eval_receiver.py` — a LAN receiver for the app's **Share rows** button. It
+  validates and files incoming rows in `docs/model-evals`:
+
+  ```bash
+  python tools/eval_receiver.py
+  ```
+
+- `eval_report_by_device.py` — groups rows by hardware/OS (never pooling a
+  phone with a laptop) and writes per-device recommendations:
+
+  ```bash
+  python tools/eval_report_by_device.py --details --out docs/model-evals/by-device.md
+  ```
+
 ## Committing results
 
 `docs/model-evals/.gitignore` ignores all row JSON (verbatim replies, local-only).

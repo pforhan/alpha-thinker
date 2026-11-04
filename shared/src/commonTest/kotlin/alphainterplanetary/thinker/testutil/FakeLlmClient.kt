@@ -10,6 +10,7 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
 import kotlin.time.Instant
+import kotlinx.coroutines.delay
 
 /**
  * A Koog [LLMClient] for tests: answers each [execute] from a canned [responses]
@@ -33,6 +34,16 @@ class FakeLlmClient(
   /** When set, [execute] throws this instead of answering. */
   var failure: Throwable? = null
 
+  /** When set, the first [failureAfterCalls] requests run before [failure] starts. */
+  var failureAfterCalls: Int? = null
+
+  /** Simulated model latency, for timeout tests. */
+  var delayMillis: Long = 0
+
+  /** How many requests this client has answered or failed. */
+  var calls: Int = 0
+    private set
+
   override fun llmProvider(): LLMProvider = provider
 
   override suspend fun execute(
@@ -41,7 +52,11 @@ class FakeLlmClient(
     tools: List<ToolDescriptor>,
   ): Message.Assistant {
     lastPrompt = prompt
-    failure?.let { throw it }
+    calls++
+    failureAfterCalls?.let { threshold ->
+      if (calls > threshold) failure?.let { throw it }
+    } ?: failure?.let { throw it }
+    if (delayMillis > 0) delay(delayMillis)
     val text = queue.removeFirstOrNull() ?: ""
     return Message.Assistant(text, ResponseMetaInfo(Instant.fromEpochMilliseconds(0)))
   }
