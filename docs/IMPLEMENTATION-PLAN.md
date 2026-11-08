@@ -445,6 +445,10 @@ Deferred from the Phase 3.6 vocabulary audit's `LogMarkers` item. Today the log'
 - [ ] Implement background notification for long-running LLM tasks
 
 ## Phase 5: Refinement & UX
+- [ ] activitylog: timing is off when things are queued and waiting; we should not count queue time in execution time. may need an extra event when execution starts?
+- [ ] activitylog: no indication of which engine / which config was in use -- maybe log the remote when the task begins full execution?
+- [ ] activitylog: http errors do not have detail affordances and can't be copied.
+- [ ] projectdetailscreen: retry title generation - try a second time automatically, after that offer a button on the edit title/synposis page.
 - [ ] ProjectDetailScreen: dedicated landscape layout with project info on left and scrolling question area on right
 - [ ] On mobile the text size for questions in AnswerDialog is entirely too large.  It's probably on the large size even for desktop.
 - [ ] AnswerDialog: may need dedicated landscape layout as well.  Question text should take up no more than about 25% of vertical space.
