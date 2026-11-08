@@ -144,6 +144,69 @@ enum class RemoteProvider(
  * and as [RemoteProvider.OpenAiCompatible]'s default does) is stripped to avoid
  * a doubled segment. Shared by the backend and the model catalogue so the two
  * cannot disagree about where a server lives.
+ *
+ * A scheme is required: without one a URL is parsed as a bare path, and the
+ * client falls back to `http://localhost/...` instead of the host the user
+ * typed ("it thinks it's talking to localhost"). A user who omits the scheme
+ * almost always means plain HTTP on their own machine or LAN and HTTPS
+ * everywhere else, which is what [schemeFor] assumes.
  */
-internal fun normalizeRemoteBaseUrl(url: String): String =
-  url.trim().trimEnd('/').removeSuffix("/v1")
+internal fun normalizeRemoteBaseUrl(url: String): String {
+  val trimmed = url.trim()
+  if (trimmed.isEmpty()) return trimmed
+  val withScheme = when {
+    trimmed.contains("://") -> trimmed
+    trimmed.startsWith("//") -> "${schemeFor(trimmed.substring(2))}:$trimmed"
+    else -> "${schemeFor(trimmed)}://$trimmed"
+  }
+  return withScheme.trimEnd('/').removeSuffix("/v1")
+}
+
+/**
+ * The scheme assumed for a user-supplied endpoint that omitted one. Loopback
+ * addresses (and mDNS/LAN names, which cannot present a public certificate) are
+ * plain HTTP; anything else is treated as a public, TLS-terminated host.
+ */
+private fun schemeFor(urlWithoutScheme: String): String =
+  if (isLocalHost(hostOf(authorityOf(urlWithoutScheme)))) "http" else "https"
+
+/** The `host[:port]` part of a scheme-less URL, without any user info. */
+private fun authorityOf(url: String): String = url
+  .substringBefore('/')
+  .substringBefore('?')
+  .substringBefore('#')
+  .substringAfterLast('@')
+
+/** The host of an authority, dropping any port and IPv6 brackets. */
+private fun hostOf(authority: String): String = when {
+  authority.startsWith("[") -> authority.substringAfter('[').substringBefore(']')
+  else -> authority.substringBeforeLast(':', authority)
+}
+
+private fun isLocalHost(host: String): Boolean {
+  val name = host.trim().lowercase().trimEnd('.')
+  if (name.isEmpty()) return true
+  if (name == "localhost" || name.endsWith(".localhost")) return true
+  if (name == "::1" || name == "0:0:0:0:0:0:0:1") return true
+  if (name == "0.0.0.0") return true
+  if (name.startsWith("127.")) return true
+  // mDNS and common private-DNS suffixes name a LAN host that speaks plain HTTP.
+  if (listOf(".local", ".lan", ".home", ".internal", ".localdomain").any { name.endsWith(it) }) {
+    return true
+  }
+  // A single-label name (a container/Docker name, say) only resolves on a LAN.
+  if (!name.contains('.') && !name.contains(':')) return true
+  return isPrivateIpv4(name)
+}
+
+private fun isPrivateIpv4(host: String): Boolean {
+  val octets = host.split('.').map { it.toIntOrNull() ?: return false }
+  if (octets.size != 4 || octets.any { it !in 0..255 }) return false
+  return when (octets[0]) {
+    10 -> true
+    172 -> octets[1] in 16..31
+    192 -> octets[1] == 168
+    169 -> octets[1] == 254
+    else -> false
+  }
+}

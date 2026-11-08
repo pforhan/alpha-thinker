@@ -187,7 +187,10 @@ internal fun RemoteConnectionFields(
             color = MaterialTheme.colorScheme.error,
           )
         } else {
-          Text("A trailing /v1 endpoint root (as Ollama's docs print) works too.")
+          Text(
+            "No scheme is assumed: https:// for remote hosts, http:// for " +
+              "localhost or a LAN host. A trailing /v1 root works too.",
+          )
         }
       },
     )

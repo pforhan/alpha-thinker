@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.repository.EngineRepository
 import me.tatarka.inject.annotations.Inject
 
@@ -10,6 +11,7 @@ import me.tatarka.inject.annotations.Inject
  * it evicts, so the next request builds a fresh one and the released engine does
  * not hold its client open for the life of the app.
  */
+@AppScope
 class EngineRegistry @Inject constructor(
   private val repository: EngineRepository,
   private val localBackends: LocalBackendFactory,

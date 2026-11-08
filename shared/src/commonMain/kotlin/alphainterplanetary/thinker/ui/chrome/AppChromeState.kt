@@ -167,6 +167,7 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
     EngineViewModel(
       engineRepository = appComponent.engineRepository,
       modelCatalog = appComponent.remoteModelCatalog,
+      engineRegistry = appComponent.engineRegistry,
       scope = appComponent.appScope,
       modelDownloader = appComponent.modelDownloader,
       localModelStore = appComponent.localModelStore,

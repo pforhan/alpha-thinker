@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.engine.EngineAvailability
 import alphainterplanetary.thinker.engine.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.LocalModel
 import alphainterplanetary.thinker.engine.LocalModelCatalog
 import alphainterplanetary.thinker.engine.LocalModelStore
@@ -17,6 +18,7 @@ import alphainterplanetary.thinker.engine.ModelRanker
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
+import alphainterplanetary.thinker.engine.normalizeRemoteBaseUrl
 import alphainterplanetary.thinker.repository.EngineRepository
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -46,6 +48,7 @@ import kotlinx.coroutines.launch
 class EngineViewModel(
   private val engineRepository: EngineRepository,
   private val modelCatalog: RemoteModelCatalog,
+  private val engineRegistry: EngineRegistry,
   private val scope: CoroutineScope,
   private val modelDownloader: ModelDownloader? = null,
   private val localModelStore: LocalModelStore? = null,
@@ -405,13 +408,27 @@ class EngineViewModel(
    * engine when it is new — it was made to be used), and the dialog closes.
    * A name the picker can show is required, so a blank one is rejected rather
    * than rendered as an unnamed engine.
+   *
+   * The stored fields are tidied first: surrounding whitespace is never
+   * meaningful, and a Base URL without a scheme would otherwise be parsed as a
+   * path and silently sent to `localhost` (see [normalizeRemoteBaseUrl]).
    */
   fun saveDraft() {
     val draft = _draft.value ?: return
-    require(draft.label.isNotBlank()) { "an engine needs a label" }
-    val isNew = engineRepository.getInstance(draft.id) == null
-    engineRepository.addOrUpdate(draft)
-    if (isNew) selectEngine(EngineRef.Instance(draft.id))
+    val saved = draft.copy(
+      label = draft.label.trim(),
+      baseUrl = normalizeRemoteBaseUrl(draft.baseUrl),
+      apiKey = draft.apiKey.trim(),
+      model = draft.model.trim(),
+    )
+    require(saved.label.isNotBlank()) { "an engine needs a label" }
+    val isNew = engineRepository.getInstance(saved.id) == null
+    engineRepository.addOrUpdate(saved)
+    // The registry caches one engine per instance and bakes the instance's
+    // fields into it, so an edited row is not live until the stale engine is
+    // dropped; the next request rebuilds from the saved values.
+    engineRegistry.invalidate(EngineRef.Instance(saved.id))
+    if (isNew) selectEngine(EngineRef.Instance(saved.id))
     cancelDraft()
   }
 
@@ -422,5 +439,6 @@ class EngineViewModel(
    */
   fun deleteInstance(id: String) {
     engineRepository.delete(id)
+    engineRegistry.invalidate(EngineRef.Instance(id))
   }
 }

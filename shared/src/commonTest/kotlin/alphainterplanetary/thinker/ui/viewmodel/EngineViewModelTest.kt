@@ -9,6 +9,7 @@ import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.LocalModelCatalog
 import alphainterplanetary.thinker.engine.LocalModelStore
 import alphainterplanetary.thinker.engine.ModelSource
@@ -24,6 +25,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,14 +59,16 @@ class EngineViewModelTest {
     val fakeStorage = FakeStorage()
     val scope = backgroundScope
     val engines = EngineRepository(fakeStorage, scope)
+    val registry = EngineRegistry(engines)
     val vm = EngineViewModel(
       engineRepository = engines,
       modelCatalog = catalog,
+      engineRegistry = registry,
       scope = scope,
       modelDownloader = downloader,
     )
     settle()
-    return Fixture(vm, engines, fakeStorage)
+    return Fixture(vm, engines, fakeStorage, registry)
   }
 
   private fun TestScope.viewModel(
@@ -75,6 +79,7 @@ class EngineViewModelTest {
     val vm: EngineViewModel,
     val engines: EngineRepository,
     val storage: FakeStorage,
+    val registry: EngineRegistry,
   )
 
   /** Adds a second connection through the dialog flow and returns its ref. */
@@ -482,6 +487,57 @@ class EngineViewModelTest {
   }
 
   @Test
+  fun `saving tidies whitespace and gives a scheme-less endpoint a scheme`() = runTest {
+    val fixture = fixture()
+    fixture.vm.startAddConnection()
+    fixture.vm.setDraftLabel("  Work  ")
+    fixture.vm.setDraftBaseUrl("  acerswitch.local:11435  ")
+    fixture.vm.setDraftModel("  llama3.2:latest  ")
+    fixture.vm.setDraftApiKey("  sk-secret  ")
+    val id = checkNotNull(fixture.vm.draft.value).id
+
+    fixture.vm.saveDraft()
+    settle()
+
+    val saved = checkNotNull(fixture.engines.getInstance(id))
+    assertEquals("Work", saved.label)
+    assertEquals("http://acerswitch.local:11435", saved.baseUrl)
+    assertEquals("llama3.2:latest", saved.model)
+    assertEquals("sk-secret", saved.apiKey)
+  }
+
+  @Test
+  fun `saving an edit drops the cached engine so the next request rebuilds`() = runTest {
+    val fixture = fixture()
+    val id = fixture.engines.instances.value.first().id
+    val ref = EngineRef.Instance(id)
+    val before = fixture.registry.getEngine(ref)
+
+    fixture.vm.startEditConnection(id)
+    fixture.vm.setDraftBaseUrl("http://example.com:11434")
+    fixture.vm.saveDraft()
+    settle()
+
+    // The stored row and the running engine must agree: the old engine baked in
+    // the old endpoint, so it cannot survive the edit.
+    assertNotSame(before, fixture.registry.getEngine(ref))
+  }
+
+  @Test
+  fun `deleting a row drops the cached engine`() = runTest {
+    val fixture = fixture()
+    val id = fixture.engines.instances.value.first().id
+    val ref = EngineRef.Instance(id)
+    fixture.registry.getEngine(ref)
+
+    fixture.vm.deleteInstance(id)
+    settle()
+
+    // A cached engine would still be served even though its row is gone.
+    assertFailsWith<IllegalStateException> { fixture.registry.getEngine(ref) }
+  }
+
+  @Test
   fun `deleting a row removes it and leaves the other engines alone`() = runTest {
     val fixture = fixture()
     val firstId = fixture.engines.instances.value.first().id
@@ -560,6 +616,7 @@ class EngineViewModelTest {
     val vm = EngineViewModel(
       engineRepository = engines,
       modelCatalog = FakeModelCatalog(),
+      engineRegistry = EngineRegistry(engines),
       scope = backgroundScope,
       modelDownloader = downloader,
       localModelStore = store,
@@ -607,6 +664,7 @@ class EngineViewModelTest {
     val vm = EngineViewModel(
       engineRepository = engines,
       modelCatalog = FakeModelCatalog(),
+      engineRegistry = EngineRegistry(engines),
       scope = backgroundScope,
       modelDownloader = downloader,
       localModelStore = store,

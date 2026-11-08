@@ -90,4 +90,60 @@ class RemoteProviderTest {
     assertTrue(RemoteProvider.Ollama.configurableBaseUrl)
     assertTrue(RemoteProvider.OpenAiCompatible.configurableBaseUrl)
   }
+
+  @Test
+  fun `an endpoint keeps its explicit scheme`() {
+    assertEquals(
+      "https://alpha.tail2dd774.ts.net",
+      normalizeRemoteBaseUrl("https://alpha.tail2dd774.ts.net"),
+    )
+    assertEquals(
+      "http://localhost:11434",
+      normalizeRemoteBaseUrl("http://localhost:11434"),
+    )
+  }
+
+  @Test
+  fun `a scheme-less endpoint is given the scheme its host implies`() {
+    // Without a scheme Ktor parses the host as a path and sends the request to
+    // localhost — the bug behind "it always talks to localhost". A public host
+    // is assumed TLS-terminated; loopback and LAN names are plain HTTP.
+    assertEquals(
+      "https://alpha.tail2dd774.ts.net",
+      normalizeRemoteBaseUrl(" alpha.tail2dd774.ts.net "),
+    )
+    assertEquals(
+      "http://localhost:11434",
+      normalizeRemoteBaseUrl("localhost:11434"),
+    )
+    assertEquals(
+      "http://127.0.0.1:11434",
+      normalizeRemoteBaseUrl("127.0.0.1:11434"),
+    )
+    assertEquals(
+      "http://acerswitch.local:11435",
+      normalizeRemoteBaseUrl("acerswitch.local:11435"),
+    )
+    assertEquals(
+      "http://192.168.72.120:11435",
+      normalizeRemoteBaseUrl("192.168.72.120:11435"),
+    )
+  }
+
+  @Test
+  fun `the trailing slash and a v1 root are trimmed in either order`() {
+    assertEquals(
+      "https://example.com",
+      normalizeRemoteBaseUrl("https://example.com/"),
+    )
+    assertEquals(
+      "https://example.com",
+      normalizeRemoteBaseUrl("https://example.com/v1"),
+    )
+    assertEquals(
+      "https://example.com",
+      normalizeRemoteBaseUrl(" https://example.com/v1/ "),
+    )
+    assertEquals("", normalizeRemoteBaseUrl("   "))
+  }
 }

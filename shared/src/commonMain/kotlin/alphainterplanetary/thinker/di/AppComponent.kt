@@ -48,6 +48,8 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   abstract val engineRepository: EngineRepository
 
+  abstract val engineRegistry: EngineRegistry
+
   abstract val projectWrites: ProjectWrites
 
   abstract val sampleProjectGenerator: SampleProjectGenerator
