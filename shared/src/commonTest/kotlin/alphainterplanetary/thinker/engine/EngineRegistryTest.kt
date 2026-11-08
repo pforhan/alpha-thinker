@@ -132,7 +132,7 @@ class EngineRegistryTest {
     val registry = EngineRegistry(loadedRepository(instance))
 
     assertFailsWith<IllegalStateException> {
-      registry.getEngine(EngineRef.Builtin(EngineKind.OnDevice))
+      registry.getEngine(EngineRef.Builtin(EngineKind.Remote))
     }
   }
 

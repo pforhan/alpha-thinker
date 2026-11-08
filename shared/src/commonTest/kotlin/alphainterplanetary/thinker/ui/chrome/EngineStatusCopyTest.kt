@@ -33,7 +33,7 @@ class EngineStatusCopyTest {
   @Test
   fun anUnavailableEngineIsDescribedAsNeedingSetup() {
     val status = engineStatus(
-      ref = EngineRef.Builtin(EngineKind.OnDevice),
+      ref = EngineRef.Builtin(EngineKind.LocalFile),
       availability = Unavailable("some fancy reason why not avail"),
     )
 
@@ -118,7 +118,7 @@ class EngineStatusCopyTest {
   @Test
   fun aNotImplementedEngineIsDescribedAsNeedingSetup() {
     val status = engineStatus(
-      ref = EngineRef.Builtin(EngineKind.OnDevice),
+      ref = EngineRef.Builtin(EngineKind.LocalFile),
       availability = NotImplemented,
     )
 

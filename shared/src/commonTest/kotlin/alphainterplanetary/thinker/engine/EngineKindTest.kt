@@ -16,17 +16,16 @@ class EngineKindTest {
   @Test
   fun `fromKey resolves known kinds and ignores unknowns`() {
     assertEquals(EngineKind.Offline, EngineKind.fromKey("offline"))
-    assertEquals(EngineKind.OnDevice, EngineKind.fromKey("on-device"))
     assertEquals(EngineKind.Remote, EngineKind.fromKey("remote"))
     assertEquals(EngineKind.LocalFile, EngineKind.fromKey("downloaded"))
     assertNull(EngineKind.fromKey("telepathy"))
+    assertNull(EngineKind.fromKey("on-device"))
   }
 
   @Test
-  fun `offline and Remote are selectable while the on-device kinds are not yet`() {
+  fun `offline and Remote are selectable while the local runtime is absent`() {
     assertTrue(EngineKind.Offline.available())
     assertTrue(EngineKind.Remote.available())
-    assertFalse(EngineKind.OnDevice.available())
     assertFalse(EngineKind.LocalFile.available())
   }
 }

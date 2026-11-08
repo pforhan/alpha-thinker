@@ -129,13 +129,13 @@ fun engineStatus(
       else -> url.ifBlank { null }
     }
     // No endpoint is involved at all: only Remote egresses.
-    EngineKind.OnDevice, EngineKind.LocalFile -> null
+    EngineKind.LocalFile -> null
   }
   val llmDetail: String? = when (kind) {
     EngineKind.Offline -> null
     EngineKind.Remote -> model.ifBlank { null }
     // The runtime names its own model; the mode is how the user selected it.
-    EngineKind.OnDevice, EngineKind.LocalFile ->
+    EngineKind.LocalFile ->
       if (availability is Unavailable || availability is NotImplemented) null else kind.label
   }
 

@@ -34,12 +34,6 @@ enum class EngineKind(
     description = "Built-in question library. Runs entirely on this device — no network, no language model.",
     emptySet(),
   ),
-  OnDevice(
-    key = "on-device",
-    label = "On device",
-    description = "System models (Gemini Nano / Apple Foundation) running locally.",
-    setOf(EngineCapability.Llm),
-  ),
   Remote(
     key = "remote",
     label = "Remote",
@@ -60,16 +54,13 @@ enum class EngineKind(
    * Whether this backend can be selected right now. [Offline] is always
    * available and [Remote] is selectable once configured. [LocalFile] is
    * available wherever the platform ships the in-process runtime — Android
-   * today; the other targets keep the Local tier disabled. The system
-   * [OnDevice] runtime has not landed yet.
+   * today; the other targets keep the Local tier disabled.
    */
   fun available(): Boolean =
     when (this) {
       Offline -> true
       Remote -> true
       LocalFile -> LocalModelRuntime.inferenceSupported
-      // Not yet implemented:
-      OnDevice -> false
     }
 
   companion object {

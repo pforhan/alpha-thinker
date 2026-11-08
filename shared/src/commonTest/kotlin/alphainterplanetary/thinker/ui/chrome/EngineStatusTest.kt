@@ -174,8 +174,8 @@ class EngineStatusTest {
   }
 
   @Test
-  fun onDeviceAndLocalFileInstancesAreLlmOnly() {
-    listOf(EngineKind.OnDevice, EngineKind.LocalFile).forEach { kind ->
+  fun localFileInstancesAreLlmOnly() {
+    listOf(EngineKind.LocalFile).forEach { kind ->
       val instance = EngineInstance(
         id = "conn-1",
         kind = kind,

@@ -78,18 +78,18 @@ class EngineRepositoryTest {
   }
 
   @Test
-  fun `selecting the built-in Offline persists too`() = runTest {
+  fun `selecting a built-in kind persists too`() = runTest {
     val storage = FakeStorage()
     val repo = repository(storage)
     testScheduler.advanceUntilIdle()
     repo.select(EngineRef.Builtin(EngineKind.Offline))
     testScheduler.advanceUntilIdle()
-    repo.select(EngineRef.Builtin(EngineKind.OnDevice))
+    repo.select(EngineRef.Builtin(EngineKind.Remote))
     testScheduler.advanceUntilIdle()
 
     val reopened = repository(storage)
     testScheduler.advanceUntilIdle()
-    assertEquals(EngineRef.Builtin(EngineKind.OnDevice), reopened.selected.value)
+    assertEquals(EngineRef.Builtin(EngineKind.Remote), reopened.selected.value)
   }
 
   @Test

@@ -142,17 +142,17 @@ class AppChromeStateTest {
 
   @Test
   fun `an unavailable engine derives its supported slots as incomplete`() = runTest {
-    // Builtin OnDevice is catalogued Unavailable, so its LLM slot reads
-    // Incomplete rather than Active even though the kind supports it.
+    // Builtin LocalFile is catalogued NotImplemented on desktop, so its LLM
+    // slot reads Incomplete rather than Active even though the kind supports it.
     val repository = engineRepository()
 
     engineStatusFlow(repository).test {
       assertEquals(EngineKind.Offline, awaitItem().kind)
 
-      repository.select(EngineRef.Builtin(EngineKind.OnDevice))
+      repository.select(EngineRef.Builtin(EngineKind.LocalFile))
 
       val status = awaitItem()
-      assertEquals(EngineKind.OnDevice, status.kind)
+      assertEquals(EngineKind.LocalFile, status.kind)
       assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
       assertEquals(CapabilityState.Unused, status.slot(EngineCapability.Network).state)
       cancelAndIgnoreRemainingEvents()

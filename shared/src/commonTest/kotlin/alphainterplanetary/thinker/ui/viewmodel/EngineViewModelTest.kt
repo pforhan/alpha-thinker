@@ -103,10 +103,10 @@ class EngineViewModelTest {
     val vm = viewModel()
     settle()
 
-    vm.selectEngine(EngineRef.Builtin(EngineKind.OnDevice))
+    vm.selectEngine(EngineRef.Builtin(EngineKind.Remote))
     settle()
 
-    assertEquals(EngineRef.Builtin(EngineKind.OnDevice), vm.selectedRef.value)
+    assertEquals(EngineRef.Builtin(EngineKind.Remote), vm.selectedRef.value)
   }
 
   @Test

@@ -68,14 +68,13 @@ class EngineCatalogTest {
   }
 
   @Test
-  fun `connections and the on-device runtime land under Advanced`() {
+  fun `connections land under Advanced`() {
     val advanced = EngineCatalog.groupedByTier(listOf(ollama, claude))
       .first { it.first == EngineTier.Advanced }
       .second
 
     assertEquals(
       setOf(
-        EngineRef.Builtin(EngineKind.OnDevice),
         EngineRef.Instance("conn-1"),
         EngineRef.Instance("conn-2"),
       ),
@@ -125,16 +124,14 @@ class EngineCatalogTest {
   fun `never-used engines keep their order behind the used ones`() {
     val advanced = EngineCatalog.groupedByTier(
       instances = listOf(ollama, claude),
-      // Only the second connection has ever run. The never-used engines — the
-      // on-device builtin and the first connection — keep the catalog's own
-      // order behind it.
+      // Only the second connection has ever run. The never-used connection
+      // keeps the catalog's own order behind it.
       lastUsedAt = mapOf(EngineRef.Instance("conn-2") to 2_000L),
     ).first { it.first == EngineTier.Advanced }.second
 
     assertEquals(
       listOf(
         EngineRef.Instance("conn-2"),
-        EngineRef.Builtin(EngineKind.OnDevice),
         EngineRef.Instance("conn-1"),
       ),
       advanced.map { it.ref },

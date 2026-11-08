@@ -387,9 +387,11 @@ on-device eval items in stage 3.
 
 ### 1. Engine domain and catalog
 
-- [ ] Remove `EngineKind.OnDevice` and `EngineKind.LocalFile` from
-      `engine/EngineKind.kt`; update the type docs, `available()` (only
-      `Offline` and `Remote` remain), and keep `Default = Offline`.
+- [x] Remove `EngineKind.OnDevice` from `engine/EngineKind.kt`; update the
+      type docs and `available()`, and keep `Default = Offline`. `fromKey` now
+      returns null for the retired `"on-device"` key.
+- [ ] Remove `EngineKind.LocalFile` from `engine/EngineKind.kt`; `available()`
+      then covers only `Offline` and `Remote`.
 - [ ] Remove `EngineTier.Local` from `engine/EngineTier.kt`; update
       `EngineCatalog.groupedByTier` and the picker's preferred-tier list so
       `Offline` and `Free` are the two preferred cards and `Advanced` holds
@@ -402,17 +404,19 @@ on-device eval items in stage 3.
       `LocalModelRuntime.kt` plus its `androidMain` / `desktopMain` /
       `iosMain` / `wasmJsMain` actuals, `LocalBackendFactory.kt`,
       `LocalKoogPlanningBackend.kt`, and `LocalStreamingBackend.kt`.
-- [ ] `EngineCatalog`: delete the `OnDevice` and `LocalFile` built-in entries;
-      remove the `LocalFile` → `Local` tier mapping and the `LocalFile`
-      availability branches from `entries()`; update the `EngineCatalogEntry`
-      doc.
+- [x] `EngineCatalog`: delete the `OnDevice` built-in entry and its
+      `entries()` availability branch; update the `EngineCatalogEntry` doc.
+- [ ] `EngineCatalog`: delete the `LocalFile` built-in entry, the
+      `LocalFile` → `Local` tier mapping, and its availability branches.
 - [ ] `EngineRegistry`: remove the `LocalBackendFactory` constructor parameter,
       the convenience constructor, and the `LocalFile` instance branch. Keep
       `Offline` and `Remote`.
-- [ ] `ui/chrome/EngineStatus.kt`: remove the `OnDevice` / `LocalFile` cases
-      from `networkDetail` and `llmDetail` so the `when (kind)` is exhaustive
-      over `Offline` / `Remote`. `EngineStatusCopy.kt` has no kind branches, so
-      it only needs its test fixtures updated (section 6).
+- [x] `ui/chrome/EngineStatus.kt`: remove the `OnDevice` cases from
+      `networkDetail` and `llmDetail`.
+- [ ] `ui/chrome/EngineStatus.kt`: remove the `LocalFile` cases from
+      `networkDetail` and `llmDetail` so the `when (kind)` is exhaustive over
+      `Offline` / `Remote`. `EngineStatusCopy.kt` has no kind branches, so it
+      only needs its test fixtures updated (section 6).
 - [ ] Remove `EngineAvailability.NotImplemented` once no entry reports it. It
       exists only for the removed kinds: delete the case from
       `engine/EngineAvailability.kt` and the `is NotImplemented` branches in

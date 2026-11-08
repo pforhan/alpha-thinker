@@ -6,7 +6,7 @@ import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.repository.EngineRepository
 
 /**
- * A code-defined built-in entry (Offline, Free/Alpha Interplanetary, On-device).
+ * A code-defined built-in entry (Offline, Free/Alpha Interplanetary, Local).
  */
 data class EngineCatalogEntry(
   val ref: EngineRef,
@@ -28,15 +28,6 @@ object EngineCatalog {
       label = "Offline",
       description = "Built-in question library. Runs entirely on this device — no network, no language model.",
       availability = { Available },
-    ),
-    EngineCatalogEntry(
-      ref = EngineRef.Builtin(EngineKind.OnDevice),
-      kind = EngineKind.OnDevice,
-      provider = null,
-      tier = EngineTier.Advanced,
-      label = "On device",
-      description = "System models (Gemini Nano / Apple Foundation) running locally.",
-      availability = { Unavailable("runtime not implemented") },
     ),
     // The free Alpha Interplanetary backend is a placeholder for now.
     // It is a Remote kind but fixed to a specific provider.
@@ -119,7 +110,6 @@ object EngineCatalog {
             }
 
             EngineKind.Offline -> Available
-            EngineKind.OnDevice -> NotImplemented
           }
         },
       )

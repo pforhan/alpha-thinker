@@ -22,7 +22,7 @@ class EngineCapabilitiesTest {
   @Test
   fun `local model kinds run a model without reaching the network`() {
     EngineKind.entries
-      .filter { it == EngineKind.OnDevice || it == EngineKind.LocalFile }
+      .filter { it == EngineKind.LocalFile }
       .forEach { mode ->
         assertEquals(setOf(EngineCapability.Llm), mode.capabilities, mode.name)
       }
