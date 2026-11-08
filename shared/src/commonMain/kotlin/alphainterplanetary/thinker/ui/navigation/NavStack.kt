@@ -36,15 +36,6 @@ internal sealed interface AppRoute {
    * the right sheet. See `SimulatorScreen`.
    */
   data object Simulator : AppRoute
-
-  /**
-   * The on-device model evaluation harness, full-screen.
-   *
-   * Like the simulator, a sweep is minutes of real inference with its own
-   * progress, its own Cancel, and results worth reading in place, so it is a
-   * destination rather than a control in the Testing sheet.
-   */
-  data object ModelEval : AppRoute
 }
 
 /**
@@ -208,7 +199,6 @@ internal fun NavEntry.toKey(): String = when (this) {
     AppRoute.ActivityLog -> "route:activity_log"
     AppRoute.TaskManager -> "route:task_manager"
     AppRoute.Simulator -> "route:simulator"
-    AppRoute.ModelEval -> "route:model_eval"
   }
 
   is NavEntry.Sheet -> "sheet:${target.name}"
@@ -224,7 +214,6 @@ internal fun navEntryFromKey(key: String): NavEntry? = when {
   key == "route:activity_log" -> NavEntry.Screen(AppRoute.ActivityLog)
   key == "route:task_manager" -> NavEntry.Screen(AppRoute.TaskManager)
   key == "route:simulator" -> NavEntry.Screen(AppRoute.Simulator)
-  key == "route:model_eval" -> NavEntry.Screen(AppRoute.ModelEval)
   key.startsWith("route:project_detail:") -> key
     .removePrefix("route:project_detail:")
     .takeIf { it.isNotEmpty() }

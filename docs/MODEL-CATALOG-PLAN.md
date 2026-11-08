@@ -467,29 +467,29 @@ on-device eval items in stage 3.
 
 ### 3. Remove the on-device evaluation harness
 
-- [ ] Delete the `eval/` package: `ModelEvaluator.kt`, `EvalAggregation.kt`,
+- [x] Delete the `eval/` package: `ModelEvaluator.kt`, `EvalAggregation.kt`,
       `EvalFixtures.kt`, `EvalMemory.kt`, `EvalRemote.kt`,
       `EvalRepetition.kt`, `EvalRows.kt`, `EvalRowStore.kt`, and
       `EvalScoring.kt`; delete `ui/screens/ModelEvalScreen.kt`.
-- [ ] Remove `AppRoute.ModelEval` from `ui/navigation/NavStack.kt` (the
+- [x] Remove `AppRoute.ModelEval` from `ui/navigation/NavStack.kt` (the
       `NavEntry.toKey()` branch and the `navEntryFromKey` case) and its
       `NavApp` branch plus the `route != AppRoute.ModelEval` guard in
       `ui/navigation/NavApp.kt`.
-- [ ] Remove the Testing-sheet launcher from `ui/chrome/TestingSheet.kt` and
+- [x] Remove the Testing-sheet launcher from `ui/chrome/TestingSheet.kt` and
       `AppChromeState.modelEval`; update `AppChromeState` construction.
-- [ ] Delete the `EvalRemote` actuals (`androidMain`, `desktopMain`,
+- [x] Delete the `EvalRemote` actuals (`androidMain`, `desktopMain`,
       `iosMain`, `wasmJsMain`) and the desktop TLS tests
       `EvalRemotePinnedTlsTest` / `EvalRemotePinningTest`.
-- [ ] Remove `PlatformContext.evalDirectory`, `readTextFile`, `writeTextFile`,
+- [x] Remove `PlatformContext.evalDirectory`, `readTextFile`, `writeTextFile`,
       `listFiles`, and `deviceInfo`; delete `di/DeviceInfo.kt` and the
       platform/`FakePlatformContext` overrides.
-- [ ] Delete `tools/eval_receiver.py`, `tools/eval_tls/`,
+- [x] Delete `tools/eval_receiver.py`, `tools/eval_tls/`,
       `tools/eval_report_by_device.py`, and `docs/MODEL-EVAL-HARNESS.md`;
       remove the app-side evaluation section from `tools/README.md`. Keep
       `tools/eval_ollama_models.py` and `docs/model-evals/`.
-- [ ] Confirm no manifest cleartext/network-security exception existed only for
+- [x] Confirm no manifest cleartext/network-security exception existed only for
       the receiver. Keep loopback HTTP support only if localhost Ollama still
-      needs it.
+      needs it. No such exception existed in `AndroidManifest.xml`.
 
 ### 4. Persistence and stale rows
 

@@ -22,8 +22,6 @@ import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
-import alphainterplanetary.thinker.eval.LocalStoreEvalModelSource
-import alphainterplanetary.thinker.eval.ModelEvaluator
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites
@@ -71,8 +69,6 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   abstract val modelDownloader: ModelDownloader
 
   abstract val localModelStore: LocalModelStore
-
-  abstract val modelEvaluator: ModelEvaluator
 
   abstract val appScope: CoroutineScope
 
@@ -136,20 +132,6 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
     repository = repository,
     downloader = modelDownloader,
     platformContext = platformContext,
-  )
-
-  @AppScope
-  @Provides
-  fun providesModelEvaluator(
-    localModelStore: LocalModelStore,
-    platformContext: PlatformContext,
-    localBackendFactory: LocalBackendFactory,
-    scope: CoroutineScope,
-  ): ModelEvaluator = ModelEvaluator(
-    models = LocalStoreEvalModelSource(localModelStore),
-    backendFactory = localBackendFactory,
-    platform = platformContext,
-    scope = scope,
   )
 
   @AppScope

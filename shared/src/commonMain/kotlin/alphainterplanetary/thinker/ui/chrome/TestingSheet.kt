@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.eval.ModelEvalState
 import alphainterplanetary.thinker.tools.SimulationState
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.theme.Dimens
@@ -45,8 +44,6 @@ import androidx.compose.ui.Modifier
 internal fun TestingSheetContent(chrome: AppChromeState) {
   val engineDelay by chrome.tools.engineDelay.collectAsState()
   val simulation by chrome.tools.simulation.collectAsState()
-  val evalState by chrome.modelEval.state.collectAsState()
-  val evalRows by chrome.modelEval.rows.collectAsState()
   val scrollState = rememberScrollState()
   var expandedHeight by remember { mutableIntStateOf(0) }
   var previousEnabled by remember { mutableStateOf(engineDelay.enabled) }
@@ -80,14 +77,6 @@ internal fun TestingSheetContent(chrome: AppChromeState) {
     SimulatorLauncherItem(
       state = simulation,
       onOpen = { chrome.navigate(AppRoute.Simulator) },
-    )
-
-    HorizontalDivider()
-
-    ModelEvalLauncherItem(
-      state = evalState,
-      rowCount = evalRows.size,
-      onOpen = { chrome.navigate(AppRoute.ModelEval) },
     )
   }
 }
@@ -136,61 +125,3 @@ private fun SimulatorLauncherItem(
   }
 }
 
-/**
- * The way into the on-device evaluation harness, and a line about what the last
- * sweep left behind.
- *
- * The harness itself is a full screen for the same reason the simulator is:
- * a sweep is minutes of real inference, and its results are worth reading
- * without first finding the sheet they were started from.
- */
-@Composable
-private fun ModelEvalLauncherItem(
-  state: ModelEvalState,
-  rowCount: Int,
-  onOpen: () -> Unit,
-) {
-  Card(modifier = Modifier.fillMaxWidth()) {
-    Column(
-      modifier = Modifier.padding(Dimens.CardPadding),
-      verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
-    ) {
-      Text(
-        text = "Evaluate local models",
-        style = MaterialTheme.typography.titleSmall,
-      )
-      Text(
-        text = when (state) {
-          is ModelEvalState.Running ->
-            "Evaluating ${state.modelLabel} (${state.modelNumber} of ${state.modelCount})."
-
-          is ModelEvalState.Finished ->
-            "Last sweep measured ${state.cells} cells across ${state.models} model(s)."
-
-          is ModelEvalState.Failed ->
-            if (state.outOfMemory) {
-              "The last sweep ran out of memory. Its partial row can be resumed."
-            } else {
-              "The last sweep failed: ${state.message}"
-            }
-
-          ModelEvalState.Cancelled ->
-            "The last sweep was cancelled. Its partial row can be resumed."
-
-          ModelEvalState.Idle ->
-            if (rowCount > 0) {
-              "$rowCount stored row(s) from earlier sweeps."
-            } else {
-              "Times the planning suite against installed local models and keeps " +
-                "a row after every request."
-            }
-        },
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-      Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-        Text("Open model evaluation")
-      }
-    }
-  }
-}
