@@ -314,9 +314,6 @@ browser chip shows the resolved name while the id stays canonical.
       is called Task, from Task Runner, and there are way too many entries that just 
       say phase: Downloading which is itself unuseful.  I'd recommend not logging any
       intermediate download reports, or at most at 25% 50% 75%.
-- [ ] **Better ETA on downloads** on the local models dialog, use an Exponential 
-      Moving Average to smooth out speeds and estimated time left.  We should apply this 
-      to ollama downloads as well.
 - [ ] **Robust mobile downloads** consider using native download mechanisms (or industry 
       standard ones) on android and ios to better deal with common mobile interruptions
       like sleep, network problems, etc
@@ -568,9 +565,9 @@ on-device eval items in stage 3.
       models (LiteRT-LM)" paragraph; keep the remote and Ollama paths.
 - [ ] `docs/PRD.md`: correct the "Alpha Thinker Edge" local-LLM wording and the
       Ollama pull "planned" note (pull exists; local models do not).
-- [ ] `docs/MODEL-CATALOG-PLAN.md`: mark the stage 3 local-model and eval items
-      superseded, keep the pull items, and refresh "Blast radius" / "Out of
-      scope".
+- [ ] `docs/MODEL-CATALOG-PLAN.md`: Move the stage 3 local-model and eval items
+      to an ARCHIVED-LOCAL-MODELS.md, keep the pull items, and refresh 
+      "Blast radius" / "Out of scope".
 - [ ] Update `README.md` / `tools/README.md` wherever local models are
       advertised.
 - [ ] Verify with `./gradlew :shared:desktopTest`, then search for leftovers:
