@@ -171,6 +171,11 @@ browser chip shows the resolved name while the id stays canonical.
 
 ### Stage 3 — Downloads & local models
 
+> **Superseded in part:** local models, local-file downloads, and the in-app
+> on-device eval harness are being removed rather than finished. Ollama pull
+> stays. See [Removal plan](#removal-plan--local-models-local-downloads-and-ondevice)
+> below.
+
 - [x] **PRD updates:** PRD §4.3 already states the Verified / Recommended /
       Others groupings — update these to what we have in code. Also include
       best-available auto-selection, and Ollama pull plans (Stage 3)
@@ -353,19 +358,242 @@ IMPLEMENTATION-PLAN.md Phase 5, "Revisit a newer Koog release when one lands").
 
 ---
 
+## Removal plan — local models, local downloads, and `OnDevice`
+
+**Status: queued.** The local-model track is being cut, not finished. This is
+the execution checklist for removing it; it supersedes the local-model and
+on-device eval items in stage 3.
+
+### Scope decisions (locked)
+
+- **Keep Ollama pull.** `OllamaPullClient`, the curated pull chips,
+  `OllamaModelPull`, `ConcurrencyGroup.Download`, and the pull half of the
+  `downloads/` package stay. The app can still pull a model onto the Ollama
+  server and select it.
+- **Remove local-file models and downloads.** Delete LiteRT inference, the
+  `Local` tier, `EngineKind.LocalFile`, `ModelFileTransferClient`, the local
+  model manager, and the local-file download path. The `downloads/` package is
+  narrowed, not deleted wholesale.
+- **Remove every `OnDevice` leftover.** Delete the kind, catalog entry,
+  capabilities/status branches, and the never-shipped system-model runtime
+  references.
+- **Remove the in-app on-device eval harness.** Delete `ModelEvalScreen`, the
+  `eval/` package, the LAN receiver, and their docs/tests. Keep
+  `tools/eval_ollama_models.py` and `docs/model-evals/` for remote Ollama
+  evaluation.
+- **Preserve the remote-model improvements.** `RemoteModelInfo` metadata,
+  alias resolution, curation/ranking, the grouped browser, and pull chips are
+  not local-model code and stay.
+
+### 1. Engine domain and catalog
+
+- [ ] Remove `EngineKind.OnDevice` and `EngineKind.LocalFile` from
+      `engine/EngineKind.kt`; update the type docs, `available()` (only
+      `Offline` and `Remote` remain), and keep `Default = Offline`.
+- [ ] Remove `EngineTier.Local` from `engine/EngineTier.kt`; update
+      `EngineCatalog.groupedByTier` and the picker's preferred-tier list so
+      `Offline` and `Free` are the two preferred cards and `Advanced` holds
+      remote connections.
+- [ ] Remove `ModelSource.LiteRt` from `engine/ModelSource.kt` (it has no
+      remaining call sites).
+- [ ] Remove `localPath` from `engine/EngineInstance.kt` and its docs.
+- [ ] Delete the local engine seams:
+      `LocalModel.kt`, `LocalModelCatalog.kt`, `LocalModelStore.kt`,
+      `LocalModelRuntime.kt` plus its `androidMain` / `desktopMain` /
+      `iosMain` / `wasmJsMain` actuals, `LocalBackendFactory.kt`,
+      `LocalKoogPlanningBackend.kt`, and `LocalStreamingBackend.kt`.
+- [ ] `EngineCatalog`: delete the `OnDevice` and `LocalFile` built-in entries;
+      remove the `LocalFile` → `Local` tier mapping and the `LocalFile`
+      availability branches from `entries()`; update the `EngineCatalogEntry`
+      doc.
+- [ ] `EngineRegistry`: remove the `LocalBackendFactory` constructor parameter,
+      the convenience constructor, and the `LocalFile` instance branch. Keep
+      `Offline` and `Remote`.
+- [ ] `ui/chrome/EngineStatus.kt`: remove the `OnDevice` / `LocalFile` cases
+      from `networkDetail` and `llmDetail` so the `when (kind)` is exhaustive
+      over `Offline` / `Remote`. `EngineStatusCopy.kt` has no kind branches, so
+      it only needs its test fixtures updated (section 6).
+- [ ] Remove `EngineAvailability.NotImplemented` once no entry reports it. It
+      exists only for the removed kinds: delete the case from
+      `engine/EngineAvailability.kt` and the `is NotImplemented` branches in
+      `EngineCatalog`, `EnginePickerSheet` ("Not available on this device
+      yet."), and `EngineStatus`; update `EngineStatusTest`.
+- [ ] Remove `LogSource.LocalLLM` after `LocalKoogPlanningBackend` is gone;
+      `parseSource` already degrades unknown stored names to null, but update
+      the enum, its label, and `EngineRegistryTest`'s local assertion.
+- [ ] Update `EngineCapabilities` docs/tests so only `Remote` reports
+      `Network + Llm` and `Offline` reports none.
+
+### 2. Narrow downloads to Ollama pull
+
+- [ ] `downloads/ModelDownloader.kt`: delete `ModelDownloadSpec` and
+      `downloadModel`; keep `downloads()`, `pullOllama`, and `cancel`.
+- [ ] Delete `ModelFileTransferClient.kt`, `ModelFileTransferClientFactory.kt`,
+      `androidMain/.../AndroidModelFileTransferClient.kt`, and the
+      `ModelFileTransferClientFactory` actuals for Android, desktop, iOS, and
+      wasm.
+- [ ] Remove `DownloadKind.LocalFile`; keep `OllamaPull`.
+- [ ] `TaskBackedModelDownloader`: drop the `modelFileTransferClient`
+      dependency, `downloadModel`, and local-only imports; keep the pull path
+      and its per-layer progress summing.
+- [ ] Remove `TaskKind.ModelFileDownload` and `TaskKind.ModelVerification`
+      (and their `TaskLabels` entries); keep `OllamaModelPull` in
+      `ConcurrencyGroup.Download`.
+- [ ] Keep the download metadata on `GenerationTask` and
+      `TaskRunner.setDownloadProgress` / `setDownloadMetadata` for pulls;
+      update comments that still mention local files.
+- [ ] `di/AppComponent.kt`: remove `modelFileTransferClient`,
+      `localModelStore`, and `modelEvaluator`; delete
+      `providesLocalFileDownloader`, `providesLocalBackendFactory`,
+      `providesLocalModelStore`, and `providesModelEvaluator`; simplify
+      `providesModelDownloadManager`.
+- [ ] `EngineViewModel`: drop the `localModelStore` parameter and local-model
+      imports; remove `localModels`, `downloadLocalModel`, `useLocalModel`,
+      `deleteLocalModel`, and the local-download completion collector. Keep
+      the pull collector and `downloads`.
+- [ ] Collapse the redundant pull aliases (`pullOllama`,
+      `pullCuratedOllamaModel`, `startOllamaPull`, `triggerOllamaPull`, `pull`,
+      `pullModel`) into `pullOllamaModel`; update `EnginePickerSheet` and tests.
+- [ ] `ConnectionDialog`: keep pull chips, the download glyph, and the progress
+      ring, but replace the `LocalModelRuntime.inferenceSupported` proxy in the
+      HTTP warning with an explicit platform capability (or an equivalent
+      Android check). That warning is about HTTPS policy, not local models.
+- [ ] Delete `ui/chrome/LocalModelsDialog.kt`; remove `showLocalModels`,
+      `onOpenLocalModels`, `localSelected`, the Local-tier special cases, and
+      the related comments from `EnginePickerSheet.kt`.
+- [ ] Leave `ModelBrowserMerge`, `RemoteModelInfo`, `ModelIdentity`,
+      `ModelProfiles`, and `ModelRanker` untouched.
+
+### 3. Remove the on-device evaluation harness
+
+- [ ] Delete the `eval/` package: `ModelEvaluator.kt`, `EvalAggregation.kt`,
+      `EvalFixtures.kt`, `EvalMemory.kt`, `EvalRemote.kt`,
+      `EvalRepetition.kt`, `EvalRows.kt`, `EvalRowStore.kt`, and
+      `EvalScoring.kt`; delete `ui/screens/ModelEvalScreen.kt`.
+- [ ] Remove `AppRoute.ModelEval` from `ui/navigation/NavStack.kt` (the
+      `NavEntry.toKey()` branch and the `navEntryFromKey` case) and its
+      `NavApp` branch plus the `route != AppRoute.ModelEval` guard in
+      `ui/navigation/NavApp.kt`.
+- [ ] Remove the Testing-sheet launcher from `ui/chrome/TestingSheet.kt` and
+      `AppChromeState.modelEval`; update `AppChromeState` construction.
+- [ ] Delete the `EvalRemote` actuals (`androidMain`, `desktopMain`,
+      `iosMain`, `wasmJsMain`) and the desktop TLS tests
+      `EvalRemotePinnedTlsTest` / `EvalRemotePinningTest`.
+- [ ] Remove `PlatformContext.evalDirectory`, `readTextFile`, `writeTextFile`,
+      `listFiles`, and `deviceInfo`; delete `di/DeviceInfo.kt` and the
+      platform/`FakePlatformContext` overrides.
+- [ ] Delete `tools/eval_receiver.py`, `tools/eval_tls/`,
+      `tools/eval_report_by_device.py`, and `docs/MODEL-EVAL-HARNESS.md`;
+      remove the app-side evaluation section from `tools/README.md`. Keep
+      `tools/eval_ollama_models.py` and `docs/model-evals/`.
+- [ ] Confirm no manifest cleartext/network-security exception existed only for
+      the receiver. Keep loopback HTTP support only if localhost Ollama still
+      needs it.
+
+### 4. Persistence and stale rows
+
+- [ ] Remove `localPath` from `EngineInstanceEntity`, `EngineInstance.toEntity`,
+      and `EngineInstanceEntity.toModel`.
+- [ ] Bump `AppDatabase.version` (12 → 13). `getRoomDatabase` uses
+      `fallbackToDestructiveMigration()`, so the upgrade rebuilds local
+      storage; call that out in the change because it also clears projects and
+      settings. If preserving data matters more, keep the column and skip the
+      bump.
+- [ ] Make removed kinds harmless. `EngineInstanceEntity.toModel()` currently
+      does `requireNotNull(EngineKind.fromKey(kind))`, so old `"on-device"` /
+      `"downloaded"` rows throw. Either rely on the destructive rebuild or
+      change the mapper to skip unknown kinds and delete those rows.
+- [ ] Prune stale `engine_state` rows. After the enum change,
+      `EngineRef.fromStorageKey("on-device")` and `"downloaded"` resolve to
+      `Instance(...)` instead of a builtin. In `EngineRepository.load`, drop
+      state rows whose ref is not a known builtin or a live instance and fall
+      back to `EngineRef.Builtin(EngineKind.Default)` when the selected ref is
+      gone. `EngineStateDao` has no delete yet, so add
+      `deleteByKey(refKey)` (plus a `Storage` method) to remove them.
+- [ ] Also delete orphaned `engine_state` rows for removed local instances, and
+      verify `firstRunPending` and last-used ordering still behave.
+- [ ] Add a mapper/repository regression test proving a stored
+      `"on-device"` / `"downloaded"` row or selection cannot crash the app.
+
+### 5. Platform seams and dependencies
+
+- [ ] Remove `PlatformContext.modelDirectory`, `fileExists`, and `deleteFile`
+      plus the Android/desktop/iOS/wasm overrides and
+      `FakePlatformContext` fields (after `LocalModelStore` and the transfer
+      client are gone).
+- [ ] Remove `libs.koog.prompt.executor.litert.client` and
+      `libs.litertlm.android` from `shared/build.gradle.kts`; remove
+      `koogLitert`, `litertlm`, and their aliases from
+      `gradle/libs.versions.toml`.
+- [ ] Check `androidApp`, `iosApp`, and `webApp` for leftover LiteRT or
+      model-storage references (none expected).
+- [ ] If `ConnectionDialog` still needs the HTTPS-only platform flag, add it
+      here rather than keeping `LocalModelRuntime` as a proxy.
+
+### 6. Tests
+
+- [ ] Delete local/download/eval tests: `LocalModelCatalogTest`,
+      `LocalModelStoreTest`, `ModelEvaluatorTest`, `EvalAggregationTest`,
+      `EvalMemoryTest`, `EvalRemoteTest`, `EvalRepetitionDetectorTest`,
+      `EvalRowStoreTest`, `EvalScoringTest`, `EvalRemotePinnedTlsTest`, and
+      `EvalRemotePinningTest`; trim `TaskBackedModelDownloaderTest` and
+      `FakeModelDownloader` (drop `specs` / `downloadModel`) to the pull cases.
+- [ ] Update `EngineKindTest`, `EngineCatalogTest`, `EngineCapabilitiesTest`,
+      `EngineRegistryTest`, `EngineRepositoryTest`, `EngineStatusTest`,
+      `EngineStatusCopyTest`, `AppChromeStateTest`, and `EngineViewModelTest`
+      to remove `OnDevice` / `LocalFile` expectations and local-download cases.
+- [ ] Keep `OllamaPullClientTest`, the pull cases in
+      `TaskBackedModelDownloaderTest`, `ModelBrowserMergeTest`,
+      `ModelIdentityTest`, `ModelProfilesTest`, `ModelRankerTest`, and
+      `RemoteModelCatalogTest` green.
+
+### 7. Docs and verification
+
+- [ ] `docs/ENGINE-CONFIG-PLAN.md`: update the engine kinds
+      (`Offline` / `Remote`), tiers (`Offline` / `Free` / `Advanced`), storage
+      shape without `localPath`, and the local-model stage notes.
+- [ ] `docs/IMPLEMENTATION-PLAN.md`: mark the local-model items as
+      removed/superseded with at most two sentences each — Phase 3.7's
+      "Model catalog … downloads" item, Web (wasm) on-device, desktop
+      in-process LiteRT, iOS in-process local models, and the Llamatik
+      contingency; plus Phase 4's `OnDeviceLLMClient`. Keep the Ollama eval and
+      pull items. (The in-app eval harness is only documented in
+      `docs/MODEL-EVAL-HARNESS.md`, with no plan row.)
+- [ ] `docs/ENG-DESIGN.md`: remove the On-device / Downloaded rows from the
+      engine-mode table in "LLM Inference Layer" and the "Downloaded local
+      models (LiteRT-LM)" paragraph; keep the remote and Ollama paths.
+- [ ] `docs/PRD.md`: correct the "Alpha Thinker Edge" local-LLM wording and the
+      Ollama pull "planned" note (pull exists; local models do not).
+- [ ] `docs/MODEL-CATALOG-PLAN.md`: mark the stage 3 local-model and eval items
+      superseded, keep the pull items, and refresh "Blast radius" / "Out of
+      scope".
+- [ ] Update `README.md` / `tools/README.md` wherever local models are
+      advertised.
+- [ ] Verify with `./gradlew :shared:desktopTest`, then search for leftovers:
+      `OnDevice`, `LocalFile`, `LocalModel`, `LiteRT`, `litert`,
+      `ModelFileTransfer`, `ModelEvaluator`, `EvalRemote`, and
+      `MODEL-EVAL-HARNESS`. Only intentional history/docs references should
+      remain.
+- [ ] Smoke-test `Offline` and `Remote` selection plus one Ollama pull in the
+      connection editor.
+
+---
+
 ## Blast radius
 
 - `RemoteModelCatalog` / `RemoteModelInfo` / `KoogRemoteModelCatalog`;
   `SettingsViewModel.refreshRemoteModels` / `selectRemoteModel`; `ModelBrowser`
-  (`ui/chrome/EngineOptions.kt`); new `ModelProfiles` / `ModelRanker`; new
-  download managers; PRD §4.3 wording.
+  (`ui/chrome/ConnectionDialog.kt`); `ModelProfiles` / `ModelRanker`; the
+  Ollama pull download path; PRD §4.3 wording.
 - Tests: the `RemoteModelCatalog` cases and `SettingsViewModelTest`.
-- Stage 3 adds the first real "download" UI, which shares its progress/cancel
-  component across the Ollama pull and local downloads.
+- Stage 3 adds the first real "download" UI. After the removal plan it serves
+  only the Ollama pull: the progress ring and cancel in the connection editor.
 
 ## Out of scope
 
 - Auto-promotion of tiers between evaluation batches (human-in-the-loop).
+- Local (on-device) models, local-file downloads, and the in-app eval harness:
+  removed by the removal plan above, not deferred.
 - Hiding models outright. Discouraged models are collapsed by default but stay
   reachable through the browser's Show toggle.
 - Pull support for Anthropic / OpenAI-compatible endpoints (which they don't really need anyway).

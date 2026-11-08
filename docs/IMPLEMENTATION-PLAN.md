@@ -448,13 +448,16 @@ Deferred from the Phase 3.6 vocabulary audit's `LogMarkers` item. Today the log'
 - [ ] activitylog: timing is off when things are queued and waiting; we should not count queue time in execution time. may need an extra event when execution starts?
 - [ ] activitylog: no indication of which engine / which config was in use -- maybe log the remote when the task begins full execution?
 - [ ] activitylog: http errors do not have detail affordances and can't be copied.
+- [ ] add/edit connection: handle pull requests failing
+- [ ] add/edit connection: if url is invalid on focus change show an error about it.
 - [ ] projectdetailscreen: retry title generation - try a second time automatically, after that offer a button on the edit title/synposis page.
 - [ ] ProjectDetailScreen: dedicated landscape layout with project info on left and scrolling question area on right
-- [ ] On mobile the text size for questions in AnswerDialog is entirely too large.  It's probably on the large size even for desktop.
+- [ ] AnswerDialog mobile: text size for questions is entirely too large.  It's probably on the large size even for desktop.
+- [ ] AnswerDialog mobile: need more horizontal space for answers in portrait 
 - [ ] AnswerDialog: may need dedicated landscape layout as well.  Question text should take up no more than about 25% of vertical space.
 - [ ] To encourage freeform thought, provide a minimum of 3 blank lines on the new project synopsis field.
 - [ ] Consider throwing out some starter text for some projects
-- [ ] On phone-sized devices shrink our engine status pills greatly, perhaps to just three dots. Project titles probably won't fit on a single line no matter what.
+- [ ] On phone-sized devices shrink our engine status pills greatly, perhaps to just three dots. Project titles probably won't fit on a single line no matter what.  Some screens seem to shrink this to a single icon already, so it may be project detail in particular with a problem
 - [ ] Consider task frameworks to deal with mobile going to sleep etc.
 - [ ] In progress task display is under system buttons.  Similarly dialogs and popups can go under the status bar especially on landscape.
 - [ ] Task manager UI status text should be more distinct. Consider text effects.  Queued should be italics for example, and perhaps grayed out a bit.
