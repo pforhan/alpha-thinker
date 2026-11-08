@@ -2,15 +2,12 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineAvailability
 import alphainterplanetary.thinker.engine.EngineAvailability.Available
-import alphainterplanetary.thinker.engine.EngineAvailability.NotImplemented
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCatalog
 import alphainterplanetary.thinker.engine.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.EngineInstance
-import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.EngineTier
-import alphainterplanetary.thinker.ui.components.OptionHeader
 import alphainterplanetary.thinker.ui.components.SelectionDot
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
@@ -43,7 +40,7 @@ import androidx.compose.ui.Modifier
 private typealias EngineGroup = Pair<EngineTier, List<EngineCatalogEntry>>
 
 /** The tiers shown as preferred cards, in the order the row renders them. */
-private val PreferredTiers = listOf(EngineTier.Offline, EngineTier.Free, EngineTier.Local)
+private val PreferredTiers = listOf(EngineTier.Offline, EngineTier.Free)
 
 /**
  * The planning-backend picker: the one place the engine can change, whether it
@@ -51,20 +48,17 @@ private val PreferredTiers = listOf(EngineTier.Offline, EngineTier.Free, EngineT
  * the app's first frames (ENGINE-CONFIG-PLAN.md stages 3c/3d).
  *
  * It is a projection of [EngineCatalog.groupedByTier] over the user's
- * instances: a **Preferred** row of three large cards — Offline, Free, Local —
- * over an **Advanced** disclosure holding the on-device runtime and
- * [ConnectionsList] (3b's list verbatim, so a tap selects and the per-row icons
- * open the add/edit dialog). The split is the whole new-user story: the common
- * choices are named cards with one-line taglines, and the ever-growing list of
- * endpoints is behind a header that says it takes configuring.
+ * instances: a **Preferred** row of two large cards — Offline and Free — over
+ * an **Advanced** disclosure holding [ConnectionsList] (3b's list verbatim, so
+ * a tap selects and the per-row icons open the add/edit dialog). The split is
+ * the whole new-user story: the common choices are named cards with one-line
+ * taglines, and the ever-growing list of endpoints is behind a header that says
+ * it takes configuring.
  *
  * A preferred tier with no selectable entry is a card that says so rather than
- * an absent card, so the row keeps its three shapes as backends land. Free is
- * still a placeholder and wears that treatment — a muted card with the reason
- * underneath and no select target. The Local card owns its tier: where the
- * platform supports it, the card opens the model manager (MODEL-CATALOG-PLAN.md
- * stage 3) instead of selecting a builtin, because a downloaded instance is what
- * runs.
+ * an absent card, so the row keeps its shapes as backends land. Free is still a
+ * placeholder and wears that treatment — a muted card with the reason
+ * underneath and no select target.
  */
 @Composable
 internal fun EnginePickerSheetContent(chrome: AppChromeState) {
@@ -74,7 +68,6 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
   val draft by chrome.engines.draft.collectAsState()
   val draftModels by chrome.engines.draftModels.collectAsState()
   val pulls by chrome.engines.downloads.collectAsState()
-  var showLocalModels by rememberSaveable { mutableStateOf(false) }
   val engines = chrome.engines
 
   val groups = remember(instances, lastUsedAt) {
@@ -90,21 +83,17 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
   ) {
     PreferredEngines(
       groups = groups,
-      instances = instances,
       selectedRef = selectedRef,
       availability = engines::availability,
       onSelect = engines::selectEngine,
-      onOpenLocalModels = { showLocalModels = true },
     )
     AdvancedEngines(
-      groups = groups,
       instances = instances,
       selectedRef = selectedRef,
       advancedSelected = groups
         .firstOrNull { it.first == EngineTier.Advanced }
         ?.second
         ?.any { it.ref == selectedRef } == true,
-      availability = engines::availability,
       onSelect = engines::selectEngine,
       onEdit = { ref -> engines.startEditConnection(ref.id) },
       onDelete = { ref -> engines.deleteInstance(ref.id) },
@@ -128,48 +117,29 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
         engines.pickDraftModel(info.id, info.contextLength)
       },
       onPullModel = { modelId ->
-        engines.pullCuratedOllamaModel(modelId, draft?.baseUrl)
+        engines.pullOllamaModel(modelId, draft?.baseUrl)
       },
       pulls = pulls,
       onSave = engines::saveDraft,
       onDismiss = engines::cancelDraft,
     )
   }
-
-  if (showLocalModels) {
-    LocalModelsDialog(
-      models = engines.localModels,
-      installed = instances.filter { it.kind == EngineKind.LocalFile },
-      selectedRef = selectedRef,
-      downloads = pulls,
-      onDownload = engines::downloadLocalModel,
-      onUse = engines::useLocalModel,
-      onDelete = engines::deleteLocalModel,
-      onCancelDownload = engines::cancelDownload,
-      onDismiss = { showLocalModels = false },
-    )
-  }
 }
 
 /**
  * The preferred tiers as one row of equal-width, equal-height cards. Height is
- * matched by [IntrinsicSize.Min] on the row, so the three cards share the
- * tallest one's height rather than each stopping at its own text: the cards are
- * read as a set, and a ragged bottom edge makes the shortest one look like the
- * lesser choice.
+ * matched by [IntrinsicSize.Min] on the row, so the cards share the tallest
+ * one's height rather than each stopping at its own text: the cards are read as
+ * a set, and a ragged bottom edge makes the shortest one look like the lesser
+ * choice.
  */
 @Composable
 private fun PreferredEngines(
   groups: List<EngineGroup>,
-  instances: List<EngineInstance>,
   selectedRef: EngineRef,
   availability: (EngineCatalogEntry) -> EngineAvailability,
   onSelect: (EngineRef) -> Unit,
-  onOpenLocalModels: () -> Unit,
 ) {
-  val localSelected = instances.any {
-    it.kind == EngineKind.LocalFile && EngineRef.Instance(it.id) == selectedRef
-  }
   Column(verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap)) {
     TierHeader(label = "Preferred")
     Row(
@@ -179,31 +149,13 @@ private fun PreferredEngines(
       horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
     ) {
       PreferredTiers.forEach { tier ->
-        // The Local card is the tier's entry point, not a model row: its
-        // enablement comes from the builtin (does this platform support local
-        // models at all), even when a used instance sorts ahead of the builtin
-        // or that instance's file has gone missing. The dialog is where the
-        // installed rows and their availability are shown.
-        val entry = groups.firstOrNull { it.first == tier }?.second
-          ?.firstOrNull { candidate ->
-            tier != EngineTier.Local || candidate.ref == EngineRef.Builtin(EngineKind.LocalFile)
-          }
+        val entry = groups.firstOrNull { it.first == tier }?.second?.firstOrNull()
         PreferredEngineCard(
           tier = tier,
           entry = entry,
-          selected = if (tier == EngineTier.Local) {
-            localSelected || entry?.ref == selectedRef
-          } else {
-            entry != null && entry.ref == selectedRef
-          },
+          selected = entry != null && entry.ref == selectedRef,
           availability = entry?.let(availability),
-          onSelect = {
-            if (tier == EngineTier.Local) {
-              onOpenLocalModels()
-            } else {
-              entry?.let { onSelect(it.ref) }
-            }
-          },
+          onSelect = { entry?.let { onSelect(it.ref) } },
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight(),
@@ -274,7 +226,6 @@ private fun unavailableNote(
 ): String? = when {
   entry == null -> "Not available on this device yet."
   availability is Unavailable -> "Coming soon · ${availability.reason}"
-  availability is NotImplemented -> "Not available on this device yet."
   else -> null
 }
 
@@ -289,28 +240,19 @@ private fun PlaceholderNote(text: String) {
 }
 
 /**
- * The Advanced disclosure: the configured connections and the system
- * on-device runtime.
+ * The Advanced disclosure: the configured connections.
  *
- * The built-in rows come first (the on-device runtime is the one non-Remote
- * Advanced entry today) and the connections follow as separate rows of their
- * own — there is no "Remote" card or heading grouping them: the two are
- * different kinds of thing, and a heading for the kind would be a label the
- * user never chose between. Selection is the [SelectionDot] every row carries,
- * and the row's own icons edit and delete it. It opens by default when the
- * running engine is one of these, so a user who has already gone advanced does
- * not have to find it again.
- *
- * The on-device runtime may later become a subset of the Local tier rather
- * than a row here; it lives in this area until that UI is ready.
+ * There is no "Remote" card or heading grouping them: a heading for the kind
+ * would be a label the user never chose between. Selection is the
+ * [SelectionDot] every row carries, and the row's own icons edit and delete
+ * it. It opens by default when the running engine is one of these, so a user
+ * who has already gone advanced does not have to find it again.
  */
 @Composable
 private fun AdvancedEngines(
-  groups: List<EngineGroup>,
   instances: List<EngineInstance>,
   selectedRef: EngineRef,
   advancedSelected: Boolean,
-  availability: (EngineCatalogEntry) -> EngineAvailability,
   onSelect: (EngineRef) -> Unit,
   onEdit: (EngineRef.Instance) -> Unit,
   onDelete: (EngineRef.Instance) -> Unit,
@@ -334,17 +276,6 @@ private fun AdvancedEngines(
       }
     }
     if (expanded) {
-      groups.firstOrNull { it.first == EngineTier.Advanced }?.second
-        .orEmpty()
-        .filter { it.kind != EngineKind.Remote }
-        .forEach { entry ->
-          AdvancedBuiltinRow(
-            entry = entry,
-            selected = entry.ref == selectedRef,
-            availability = availability(entry),
-            onSelect = { onSelect(entry.ref) },
-          )
-        }
       ConnectionsList(
         instances = instances,
         selectedRef = selectedRef,
@@ -383,38 +314,3 @@ internal fun selectedEngineColors(selected: Boolean): CardColors = if (selected)
   CardDefaults.cardColors()
 }
 
-/**
- * A non-Remote built-in in the disclosure — today only the system on-device
- * runtime. A card so it matches the connection cards below it, and takes the
- * same [selectedEngineColors] fill when it is the running engine.
- */
-@Composable
-private fun AdvancedBuiltinRow(
-  entry: EngineCatalogEntry,
-  selected: Boolean,
-  availability: EngineAvailability,
-  onSelect: () -> Unit,
-) {
-  val selectable = availability is Available
-  Card(
-    onClick = onSelect,
-    enabled = selectable,
-    modifier = Modifier.fillMaxWidth(),
-    colors = selectedEngineColors(selected),
-  ) {
-    Column(
-      modifier = Modifier.padding(Dimens.CardPadding),
-      verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-    ) {
-      OptionHeader(
-        label = entry.label,
-        description = entry.description,
-      ) {
-        SelectionDot(selected)
-      }
-      if (!selectable) {
-        PlaceholderNote("Not available on this device yet.")
-      }
-    }
-  }
-}

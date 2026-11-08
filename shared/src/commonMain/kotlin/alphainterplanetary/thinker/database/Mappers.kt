@@ -146,21 +146,26 @@ fun EngineInstance.toEntity() = EngineInstanceEntity(
   apiKey = apiKey,
   model = model,
   contextTokens = contextTokens,
-  localPath = localPath,
+  localPath = null,
 )
 
-/** An unknown stored kind is a corrupt row; [EngineKind.fromKey] returning null here is a bug. */
-fun EngineInstanceEntity.toModel() = EngineInstance(
-  id = id,
-  kind = requireNotNull(EngineKind.fromKey(kind)) { "Unknown engine kind key: $kind" },
-  provider = provider?.let(RemoteProvider::fromKey),
-  label = label,
-  baseUrl = baseUrl,
-  apiKey = apiKey,
-  model = model,
-  contextTokens = contextTokens,
-  localPath = localPath,
-)
+/**
+ * A row whose kind no longer exists is dropped rather than crashed on: the
+ * caller prunes it. See `EngineRepository.load`.
+ */
+fun EngineInstanceEntity.toModel(): EngineInstance? {
+  val kind = EngineKind.fromKey(kind) ?: return null
+  return EngineInstance(
+    id = id,
+    kind = kind,
+    provider = provider?.let(RemoteProvider::fromKey),
+    label = label,
+    baseUrl = baseUrl,
+    apiKey = apiKey,
+    model = model,
+    contextTokens = contextTokens,
+  )
+}
 
 fun EngineState.toEntity() = EngineStateEntity(
   refKey = ref.storageKey,

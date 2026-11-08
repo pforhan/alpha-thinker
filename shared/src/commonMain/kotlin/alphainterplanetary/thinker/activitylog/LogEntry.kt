@@ -37,9 +37,6 @@ enum class LogSource(val label: String) {
   /** The built-in hardcoded Offline engine. */
   Offline("Offline"),
 
-  /** An on-device / system LLM. */
-  LocalLLM("On-device LLM"),
-
   /** A remote / cloud LLM endpoint. */
   RemoteLLM("Remote LLM"),
 

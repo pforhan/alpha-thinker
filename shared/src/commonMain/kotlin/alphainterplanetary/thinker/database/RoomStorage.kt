@@ -113,7 +113,7 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
   }
 
   override suspend fun getEngineInstances(): List<EngineInstance> =
-    database.engineInstanceDao().getAll().map { it.toModel() }
+    database.engineInstanceDao().getAll().mapNotNull { it.toModel() }
 
   override suspend fun upsertEngineInstance(instance: EngineInstance) {
     database.engineInstanceDao().upsert(instance.toEntity())

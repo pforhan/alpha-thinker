@@ -2,8 +2,8 @@ package alphainterplanetary.thinker.engine
 
 /**
  * The archetype of a planning backend (ENG-DESIGN.md "Engine modes"). `Offline`
- * is the built-in fallback ([OfflinePlanningEngine]); the other kinds host LLM
- * inference via the Koog seam ([KoogPlanningEngine]) once their backend lands.
+ * is the built-in fallback ([OfflinePlanningEngine]); [Remote] hosts LLM
+ * inference via the Koog seam ([KoogPlanningEngine]).
  *
  * A kind is the *category*, not the connection: [Remote] covers every endpoint
  * a user configures, and the specific endpoint is a per-instance identity
@@ -18,9 +18,9 @@ enum class EngineKind(
   val description: String,
   /**
    * The capabilities implied by choosing this kind. [EngineKind.Offline] runs
-   * the built-in question library entirely on device, so it has none; the LLM
-   * kinds all run a model locally; only [EngineKind.Remote] egresses, because it
-   * talks to a cloud or localhost endpoint.
+   * the built-in question library entirely on device, so it has none; only
+   * [EngineKind.Remote] egresses, because it talks to a cloud or localhost
+   * endpoint.
    *
    * [EngineCapability.Tools] is absent from every kind until the agentic-lookup
    * work lands a tool registry — at which point a Koog backend can report its own
@@ -40,27 +40,16 @@ enum class EngineKind(
     description = "A cloud or localhost endpoint (OpenAI-compatible / Ollama).",
     setOf(EngineCapability.Network, EngineCapability.Llm),
   ),
-  LocalFile(
-    // The key keeps its historical "downloaded" spelling: it is the durable
-    // value a saved choice persists under, not a label (see the type doc).
-    key = "downloaded",
-    label = "Local file",
-    description = "An in-process model installed on this device (LiteRT-LM).",
-    setOf(EngineCapability.Llm),
-  ),
   ;
 
   /**
    * Whether this backend can be selected right now. [Offline] is always
-   * available and [Remote] is selectable once configured. [LocalFile] is
-   * available wherever the platform ships the in-process runtime — Android
-   * today; the other targets keep the Local tier disabled.
+   * available and [Remote] is selectable once configured.
    */
   fun available(): Boolean =
     when (this) {
       Offline -> true
       Remote -> true
-      LocalFile -> LocalModelRuntime.inferenceSupported
     }
 
   companion object {

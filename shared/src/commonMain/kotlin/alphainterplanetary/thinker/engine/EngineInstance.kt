@@ -4,18 +4,15 @@ import alphainterplanetary.thinker.util.randomUUID
 
 /**
  * A user-created engine: one configured connection (an [EngineKind.Remote] with
- * a [provider], endpoint, key, and model) or one downloaded local model (an
- * [EngineKind.LocalFile] with a [localPath]). Code-defined backends have no row
+ * a [provider], endpoint, key, and model). Code-defined backends have no row
  * here — they are described by the catalog, not stored.
  *
- * The fields are a superset: a Remote instance reads [baseUrl], [apiKey],
- * [model], and [contextTokens], while a Local file instance reads [localPath].
- * Which fields matter is decided by [kind], so the others keep their defaults.
+ * A Remote instance reads [baseUrl], [apiKey], [model], and [contextTokens].
  */
 data class EngineInstance(
   val id: String,
   val kind: EngineKind,
-  /** Remote only: which protocol the connection speaks. */
+  /** Which protocol the connection speaks. */
   val provider: RemoteProvider?,
   /** The user-facing name shown in the picker. */
   val label: String,
@@ -23,8 +20,6 @@ data class EngineInstance(
   val apiKey: String = "",
   val model: String = "",
   val contextTokens: Int = 0,
-  /** Local file only: where the downloaded model lives. */
-  val localPath: String? = null,
 ) {
   companion object {
     /**

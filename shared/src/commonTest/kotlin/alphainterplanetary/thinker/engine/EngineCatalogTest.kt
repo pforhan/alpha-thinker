@@ -39,7 +39,7 @@ class EngineCatalogTest {
     val groups = EngineCatalog.groupedByTier(listOf(ollama))
 
     assertEquals(
-      listOf(EngineTier.Offline, EngineTier.Free, EngineTier.Local, EngineTier.Advanced),
+      listOf(EngineTier.Offline, EngineTier.Free, EngineTier.Advanced),
       groups.map { it.first },
     )
   }
@@ -47,7 +47,7 @@ class EngineCatalogTest {
   @Test
   fun `built-ins land in their own tiers`() {
     val groups = EngineCatalog.groupedByTier(emptyList()).toMap()
-    val preferred = listOf(EngineTier.Offline, EngineTier.Free, EngineTier.Local)
+    val preferred = listOf(EngineTier.Offline, EngineTier.Free)
 
     assertEquals(
       preferred,
@@ -60,10 +60,6 @@ class EngineCatalogTest {
     assertEquals(
       EngineRef.Builtin(EngineKind.Remote),
       groups.getValue(EngineTier.Free).single().ref,
-    )
-    assertEquals(
-      EngineRef.Builtin(EngineKind.LocalFile),
-      groups.getValue(EngineTier.Local).single().ref,
     )
   }
 
@@ -79,28 +75,6 @@ class EngineCatalogTest {
         EngineRef.Instance("conn-2"),
       ),
       advanced.map { it.ref }.toSet(),
-    )
-  }
-
-  @Test
-  fun `a downloaded model instance lands under Local`() {
-    // The tier mapping is what places a curated model's installed instance
-    // beside the Local builtin (MODEL-CATALOG-PLAN.md stage 3).
-    val downloaded = EngineInstance(
-      id = "model-1",
-      kind = EngineKind.LocalFile,
-      provider = null,
-      label = "Qwen 2.5",
-      localPath = "/models/qwen",
-    )
-
-    val local = EngineCatalog.groupedByTier(listOf(downloaded))
-      .first { it.first == EngineTier.Local }
-      .second
-
-    assertEquals(
-      listOf(EngineRef.Builtin(EngineKind.LocalFile), EngineRef.Instance("model-1")),
-      local.map { it.ref },
     )
   }
 

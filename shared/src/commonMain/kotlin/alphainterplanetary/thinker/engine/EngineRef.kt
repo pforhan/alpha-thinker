@@ -2,17 +2,16 @@ package alphainterplanetary.thinker.engine
 
 /**
  * Identifies one selectable engine. An [EngineKind] is only the *archetype*
- * (Offline / On device / Local file / Remote); a ref is the specific thing the
- * user has selected, which for a Remote backend is one configured endpoint
- * rather than "Remote in general" (see ENGINE-CONFIG-PLAN.md).
+ * (Offline / Remote); a ref is the specific thing the user has selected, which
+ * for a Remote backend is one configured endpoint rather than "Remote in
+ * general" (see ENGINE-CONFIG-PLAN.md).
  *
  * Two refs anchor the model:
  *
  * - [Builtin] is a code-defined backend with no stored configuration — the
- *   built-in `Offline` library, the system on-device runtime, and (once it
- *   exists) the free Alpha Interplanetary backend.
- * - [Instance] is a row in `engine_instances`, a user-created connection or a
- *   downloaded local model.
+ *   built-in `Offline` library and (once it exists) the free Alpha
+ *   Interplanetary backend.
+ * - [Instance] is a row in `engine_instances`, a user-created connection.
  *
  * The durable [storageKey] is what `engine_state` is keyed by, so selection and
  * last-use survive as long as the underlying kind key or instance id does.

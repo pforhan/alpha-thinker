@@ -2,7 +2,6 @@ package alphainterplanetary.thinker.engine
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -14,18 +13,17 @@ class EngineKindTest {
   }
 
   @Test
-  fun `fromKey resolves known kinds and ignores unknowns`() {
+  fun `fromKey resolves known kinds and ignores retired ones`() {
     assertEquals(EngineKind.Offline, EngineKind.fromKey("offline"))
     assertEquals(EngineKind.Remote, EngineKind.fromKey("remote"))
-    assertEquals(EngineKind.LocalFile, EngineKind.fromKey("downloaded"))
     assertNull(EngineKind.fromKey("telepathy"))
     assertNull(EngineKind.fromKey("on-device"))
+    assertNull(EngineKind.fromKey("downloaded"))
   }
 
   @Test
-  fun `offline and Remote are selectable while the local runtime is absent`() {
+  fun `offline and Remote are both selectable`() {
     assertTrue(EngineKind.Offline.available())
     assertTrue(EngineKind.Remote.available())
-    assertFalse(EngineKind.LocalFile.available())
   }
 }

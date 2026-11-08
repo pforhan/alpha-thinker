@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
+import alphainterplanetary.thinker.engine.EngineCatalog
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
@@ -73,8 +74,14 @@ class EngineRepository @Inject constructor(
 
   /** Reads the persisted engines and selection; seeds a default Remote on first read. */
   suspend fun load() {
-    _instances.value = readInstances()
-    val states = storage.getEngineStates()
+    val instances = readInstances()
+    _instances.value = instances
+    // A retired kind can still be sitting in `engine_state` (an old "on-device"
+    // or "downloaded" key parses as an Instance ref that no longer exists).
+    // Keep only rows that name a live builtin or a stored instance.
+    val liveKeys = EngineCatalog.builtins.mapTo(mutableSetOf()) { it.ref.storageKey }
+    instances.mapTo(liveKeys) { EngineRef.Instance(it.id).storageKey }
+    val states = storage.getEngineStates().filter { it.ref.storageKey in liveKeys }
     _firstRunPending.value = shouldOfferFirstRun(states)
     _selected.value = states.firstOrNull { it.selected }?.ref
       ?: EngineRef.Builtin(EngineKind.Default)

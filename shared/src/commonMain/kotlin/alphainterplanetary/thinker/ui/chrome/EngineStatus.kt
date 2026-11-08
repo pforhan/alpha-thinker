@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineAvailability
-import alphainterplanetary.thinker.engine.EngineAvailability.NotImplemented
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineCatalog
@@ -128,15 +127,10 @@ fun engineStatus(
       !provider.configurableBaseUrl -> provider.defaultBaseUrl
       else -> url.ifBlank { null }
     }
-    // No endpoint is involved at all: only Remote egresses.
-    EngineKind.LocalFile -> null
   }
   val llmDetail: String? = when (kind) {
     EngineKind.Offline -> null
     EngineKind.Remote -> model.ifBlank { null }
-    // The runtime names its own model; the mode is how the user selected it.
-    EngineKind.LocalFile ->
-      if (availability is Unavailable || availability is NotImplemented) null else kind.label
   }
 
   fun statusFor(capability: EngineCapability): CapabilityStatus {
@@ -153,9 +147,9 @@ fun engineStatus(
       capability = capability,
       state = when {
         !supported -> CapabilityState.Unused
-        // Even if detail is present, the engine might be unavailable (e.g. runtime missing)
-        // or not implemented yet.
-        availability is Unavailable || availability is NotImplemented -> CapabilityState.Incomplete
+        // Even if detail is present, the engine might be unavailable (e.g. a
+        // missing endpoint or API key).
+        availability is Unavailable -> CapabilityState.Incomplete
         detail == null -> CapabilityState.Incomplete
         else -> CapabilityState.Active
       },

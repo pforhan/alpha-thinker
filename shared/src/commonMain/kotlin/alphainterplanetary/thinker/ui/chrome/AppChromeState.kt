@@ -163,7 +163,6 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
       engineRegistry = appComponent.engineRegistry,
       scope = appComponent.appScope,
       modelDownloader = appComponent.modelDownloader,
-      localModelStore = appComponent.localModelStore,
     )
   }
   val tools = remember(appComponent) {

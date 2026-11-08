@@ -3,20 +3,7 @@ package alphainterplanetary.thinker.downloads
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Specification for downloading a local model file.
- */
-data class ModelDownloadSpec(
-  val modelId: String,
-  val url: String,
-  val destination: String? = null,
-  val expectedSha256: String? = null,
-  /** Size the server is expected to serve, for the disk check and progress. */
-  val expectedBytes: Long? = null,
-  val extract: Boolean = false,
-)
-
-/**
- * Manages downloads (Ollama pulls, local file downloads).
+ * Manages Ollama model pulls.
  */
 interface ModelDownloader {
   /** All current downloads. */
@@ -24,9 +11,6 @@ interface ModelDownloader {
 
   /** Pull a model from an Ollama instance. */
   fun pullOllama(modelId: String, baseUrl: String): DownloadHandle
-
-  /** Download a local model file. */
-  fun downloadModel(spec: ModelDownloadSpec): DownloadHandle
 
   /** Cancel a download by handle id. */
   fun cancel(handleId: String)

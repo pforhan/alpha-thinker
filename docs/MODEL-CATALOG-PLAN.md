@@ -387,82 +387,82 @@ on-device eval items in stage 3.
 - [x] Remove `EngineKind.OnDevice` from `engine/EngineKind.kt`; update the
       type docs and `available()`, and keep `Default = Offline`. `fromKey` now
       returns null for the retired `"on-device"` key.
-- [ ] Remove `EngineKind.LocalFile` from `engine/EngineKind.kt`; `available()`
+- [x] Remove `EngineKind.LocalFile` from `engine/EngineKind.kt`; `available()`
       then covers only `Offline` and `Remote`.
-- [ ] Remove `EngineTier.Local` from `engine/EngineTier.kt`; update
+- [x] Remove `EngineTier.Local` from `engine/EngineTier.kt`; update
       `EngineCatalog.groupedByTier` and the picker's preferred-tier list so
       `Offline` and `Free` are the two preferred cards and `Advanced` holds
       remote connections.
-- [ ] Remove `ModelSource.LiteRt` from `engine/ModelSource.kt` (it has no
+- [x] Remove `ModelSource.LiteRt` from `engine/ModelSource.kt` (it has no
       remaining call sites).
-- [ ] Remove `localPath` from `engine/EngineInstance.kt` and its docs.
-- [ ] Delete the local engine seams:
+- [x] Remove `localPath` from `engine/EngineInstance.kt` and its docs.
+- [x] Delete the local engine seams:
       `LocalModel.kt`, `LocalModelCatalog.kt`, `LocalModelStore.kt`,
       `LocalModelRuntime.kt` plus its `androidMain` / `desktopMain` /
       `iosMain` / `wasmJsMain` actuals, `LocalBackendFactory.kt`,
       `LocalKoogPlanningBackend.kt`, and `LocalStreamingBackend.kt`.
 - [x] `EngineCatalog`: delete the `OnDevice` built-in entry and its
       `entries()` availability branch; update the `EngineCatalogEntry` doc.
-- [ ] `EngineCatalog`: delete the `LocalFile` built-in entry, the
+- [x] `EngineCatalog`: delete the `LocalFile` built-in entry, the
       `LocalFile` → `Local` tier mapping, and its availability branches.
-- [ ] `EngineRegistry`: remove the `LocalBackendFactory` constructor parameter,
+- [x] `EngineRegistry`: remove the `LocalBackendFactory` constructor parameter,
       the convenience constructor, and the `LocalFile` instance branch. Keep
       `Offline` and `Remote`.
 - [x] `ui/chrome/EngineStatus.kt`: remove the `OnDevice` cases from
       `networkDetail` and `llmDetail`.
-- [ ] `ui/chrome/EngineStatus.kt`: remove the `LocalFile` cases from
+- [x] `ui/chrome/EngineStatus.kt`: remove the `LocalFile` cases from
       `networkDetail` and `llmDetail` so the `when (kind)` is exhaustive over
       `Offline` / `Remote`. `EngineStatusCopy.kt` has no kind branches, so it
       only needs its test fixtures updated (section 6).
-- [ ] Remove `EngineAvailability.NotImplemented` once no entry reports it. It
+- [x] Remove `EngineAvailability.NotImplemented` once no entry reports it. It
       exists only for the removed kinds: delete the case from
       `engine/EngineAvailability.kt` and the `is NotImplemented` branches in
       `EngineCatalog`, `EnginePickerSheet` ("Not available on this device
       yet."), and `EngineStatus`; update `EngineStatusTest`.
-- [ ] Remove `LogSource.LocalLLM` after `LocalKoogPlanningBackend` is gone;
+- [x] Remove `LogSource.LocalLLM` after `LocalKoogPlanningBackend` is gone;
       `parseSource` already degrades unknown stored names to null, but update
       the enum, its label, and `EngineRegistryTest`'s local assertion.
-- [ ] Update `EngineCapabilities` docs/tests so only `Remote` reports
+- [x] Update `EngineCapabilities` docs/tests so only `Remote` reports
       `Network + Llm` and `Offline` reports none.
 
 ### 2. Narrow downloads to Ollama pull
 
-- [ ] `downloads/ModelDownloader.kt`: delete `ModelDownloadSpec` and
+- [x] `downloads/ModelDownloader.kt`: delete `ModelDownloadSpec` and
       `downloadModel`; keep `downloads()`, `pullOllama`, and `cancel`.
-- [ ] Delete `ModelFileTransferClient.kt`, `ModelFileTransferClientFactory.kt`,
+- [x] Delete `ModelFileTransferClient.kt`, `ModelFileTransferClientFactory.kt`,
       `androidMain/.../AndroidModelFileTransferClient.kt`, and the
       `ModelFileTransferClientFactory` actuals for Android, desktop, iOS, and
       wasm.
-- [ ] Remove `DownloadKind.LocalFile`; keep `OllamaPull`.
-- [ ] `TaskBackedModelDownloader`: drop the `modelFileTransferClient`
+- [x] Remove `DownloadKind.LocalFile`; keep `OllamaPull`.
+- [x] `TaskBackedModelDownloader`: drop the `modelFileTransferClient`
       dependency, `downloadModel`, and local-only imports; keep the pull path
       and its per-layer progress summing.
-- [ ] Remove `TaskKind.ModelFileDownload` and `TaskKind.ModelVerification`
+- [x] Remove `TaskKind.ModelFileDownload` and `TaskKind.ModelVerification`
       (and their `TaskLabels` entries); keep `OllamaModelPull` in
       `ConcurrencyGroup.Download`.
-- [ ] Keep the download metadata on `GenerationTask` and
+- [x] Keep the download metadata on `GenerationTask` and
       `TaskRunner.setDownloadProgress` / `setDownloadMetadata` for pulls;
       update comments that still mention local files.
-- [ ] `di/AppComponent.kt`: remove `modelFileTransferClient`,
+- [x] `di/AppComponent.kt`: remove `modelFileTransferClient`,
       `localModelStore`, and `modelEvaluator`; delete
       `providesLocalFileDownloader`, `providesLocalBackendFactory`,
       `providesLocalModelStore`, and `providesModelEvaluator`; simplify
       `providesModelDownloadManager`.
-- [ ] `EngineViewModel`: drop the `localModelStore` parameter and local-model
+- [x] `EngineViewModel`: drop the `localModelStore` parameter and local-model
       imports; remove `localModels`, `downloadLocalModel`, `useLocalModel`,
       `deleteLocalModel`, and the local-download completion collector. Keep
       the pull collector and `downloads`.
-- [ ] Collapse the redundant pull aliases (`pullOllama`,
+- [x] Collapse the redundant pull aliases (`pullOllama`,
       `pullCuratedOllamaModel`, `startOllamaPull`, `triggerOllamaPull`, `pull`,
       `pullModel`) into `pullOllamaModel`; update `EnginePickerSheet` and tests.
-- [ ] `ConnectionDialog`: keep pull chips, the download glyph, and the progress
+- [x] `ConnectionDialog`: keep pull chips, the download glyph, and the progress
       ring, but replace the `LocalModelRuntime.inferenceSupported` proxy in the
       HTTP warning with an explicit platform capability (or an equivalent
       Android check). That warning is about HTTPS policy, not local models.
-- [ ] Delete `ui/chrome/LocalModelsDialog.kt`; remove `showLocalModels`,
+- [x] Delete `ui/chrome/LocalModelsDialog.kt`; remove `showLocalModels`,
       `onOpenLocalModels`, `localSelected`, the Local-tier special cases, and
       the related comments from `EnginePickerSheet.kt`.
-- [ ] Leave `ModelBrowserMerge`, `RemoteModelInfo`, `ModelIdentity`,
+- [x] Leave `ModelBrowserMerge`, `RemoteModelInfo`, `ModelIdentity`,
       `ModelProfiles`, and `ModelRanker` untouched.
 
 ### 3. Remove the on-device evaluation harness
@@ -528,22 +528,22 @@ on-device eval items in stage 3.
       `gradle/libs.versions.toml`.
 - [ ] Check `androidApp`, `iosApp`, and `webApp` for leftover LiteRT or
       model-storage references (none expected).
-- [ ] If `ConnectionDialog` still needs the HTTPS-only platform flag, add it
+- [x] If `ConnectionDialog` still needs the HTTPS-only platform flag, add it
       here rather than keeping `LocalModelRuntime` as a proxy.
 
 ### 6. Tests
 
-- [ ] Delete local/download/eval tests: `LocalModelCatalogTest`,
+- [x] Delete local/download/eval tests: `LocalModelCatalogTest`,
       `LocalModelStoreTest`, `ModelEvaluatorTest`, `EvalAggregationTest`,
       `EvalMemoryTest`, `EvalRemoteTest`, `EvalRepetitionDetectorTest`,
       `EvalRowStoreTest`, `EvalScoringTest`, `EvalRemotePinnedTlsTest`, and
       `EvalRemotePinningTest`; trim `TaskBackedModelDownloaderTest` and
       `FakeModelDownloader` (drop `specs` / `downloadModel`) to the pull cases.
-- [ ] Update `EngineKindTest`, `EngineCatalogTest`, `EngineCapabilitiesTest`,
+- [x] Update `EngineKindTest`, `EngineCatalogTest`, `EngineCapabilitiesTest`,
       `EngineRegistryTest`, `EngineRepositoryTest`, `EngineStatusTest`,
       `EngineStatusCopyTest`, `AppChromeStateTest`, and `EngineViewModelTest`
       to remove `OnDevice` / `LocalFile` expectations and local-download cases.
-- [ ] Keep `OllamaPullClientTest`, the pull cases in
+- [x] Keep `OllamaPullClientTest`, the pull cases in
       `TaskBackedModelDownloaderTest`, `ModelBrowserMergeTest`,
       `ModelIdentityTest`, `ModelProfilesTest`, `ModelRankerTest`, and
       `RemoteModelCatalogTest` green.

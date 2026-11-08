@@ -20,15 +20,6 @@ class EngineCapabilitiesTest {
   }
 
   @Test
-  fun `local model kinds run a model without reaching the network`() {
-    EngineKind.entries
-      .filter { it == EngineKind.LocalFile }
-      .forEach { mode ->
-        assertEquals(setOf(EngineCapability.Llm), mode.capabilities, mode.name)
-      }
-  }
-
-  @Test
   fun `only remote egresses over the network`() {
     EngineKind.entries.forEach { mode ->
       assertEquals(

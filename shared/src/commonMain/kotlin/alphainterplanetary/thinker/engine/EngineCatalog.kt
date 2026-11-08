@@ -1,12 +1,11 @@
 package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.engine.EngineAvailability.Available
-import alphainterplanetary.thinker.engine.EngineAvailability.NotImplemented
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.repository.EngineRepository
 
 /**
- * A code-defined built-in entry (Offline, Free/Alpha Interplanetary, Local).
+ * A code-defined built-in entry (Offline, Free/Alpha Interplanetary).
  */
 data class EngineCatalogEntry(
   val ref: EngineRef,
@@ -40,25 +39,6 @@ object EngineCatalog {
       description = "The official Alpha Interplanetary cloud engine.",
       availability = { Unavailable("placeholder") },
     ),
-    // The Local card is the way into the model catalog: it is selectable when
-    // the platform can install/run local models, and the picker opens the
-    // download dialog instead of selecting a builtin (there is no builtin
-    // local engine — a downloaded instance is what runs).
-    EngineCatalogEntry(
-      ref = EngineRef.Builtin(EngineKind.LocalFile),
-      kind = EngineKind.LocalFile,
-      provider = null,
-      tier = EngineTier.Local,
-      label = EngineKind.LocalFile.label,
-      description = EngineKind.LocalFile.description,
-      availability = {
-        if (LocalModelRuntime.inferenceSupported || LocalModelRuntime.downloadsSupported) {
-          Available
-        } else {
-          NotImplemented
-        }
-      },
-    ),
   )
 
   /**
@@ -73,11 +53,7 @@ object EngineCatalog {
         ref = EngineRef.Instance(instance.id),
         kind = instance.kind,
         provider = instance.provider,
-        tier = when (instance.kind) {
-          EngineKind.Remote -> EngineTier.Advanced
-          EngineKind.LocalFile -> EngineTier.Local
-          else -> EngineTier.Advanced
-        },
+        tier = EngineTier.Advanced,
         label = instance.label,
         description = instance.kind.description,
         availability = { repo ->
@@ -86,16 +62,6 @@ object EngineCatalog {
             ?: return@EngineCatalogEntry Unavailable("Instance missing")
 
           when (current.kind) {
-            EngineKind.LocalFile -> when {
-              !LocalModelRuntime.inferenceSupported ->
-                Unavailable("Local models are not supported on this device")
-              current.localPath.isNullOrBlank() ->
-                Unavailable("Model file missing")
-              !LocalModelRuntime.fileExists(current.localPath) ->
-                Unavailable("Model file missing")
-              else -> Available
-            }
-
             EngineKind.Remote -> {
               if (current.provider == null) {
                 // Remotes require a provider.
@@ -119,10 +85,10 @@ object EngineCatalog {
 
   /**
    * The picker's view of [entries]: one group per [EngineTier] in display
-   * order — `Offline`, `Free`, `Local` (the preferred cards) then `Advanced`
-   * (the disclosure) — each group ordered by recency, most recently used
-   * first, with never-used engines keeping the list's creation order behind
-   * them. Empty tiers are dropped.
+   * order — `Offline` and `Free` (the preferred cards) then `Advanced` (the
+   * disclosure) — each group ordered by recency, most recently used first,
+   * with never-used engines keeping the list's creation order behind them.
+   * Empty tiers are dropped.
    *
    * Pure over its inputs, so the picker renders from the merge alone and the
    * ordering rule has one home (ENGINE-CONFIG-PLAN.md stage 3c).

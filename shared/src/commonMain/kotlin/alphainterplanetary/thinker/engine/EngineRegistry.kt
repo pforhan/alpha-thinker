@@ -14,11 +14,7 @@ import me.tatarka.inject.annotations.Inject
 @AppScope
 class EngineRegistry @Inject constructor(
   private val repository: EngineRepository,
-  private val localBackends: LocalBackendFactory,
 ) {
-  /** Convenience for callers (and tests) that only need the production factory. */
-  constructor(repository: EngineRepository) : this(repository, DefaultLocalBackendFactory)
-
   private val cache = mutableMapOf<EngineRef, PlanningEngine>()
 
   /** The [PlanningEngine] tied to this ref. */
@@ -50,15 +46,8 @@ class EngineRegistry @Inject constructor(
           KoogPlanningEngine(RemoteKoogPlanningBackend(connection))
         }
 
-        EngineKind.LocalFile -> {
-          if (instance.localPath.isNullOrBlank()) {
-            throw IllegalStateException("Local model instance ${instance.id} has no file path")
-          }
-          KoogPlanningEngine(localBackends.create(instance))
-        }
-
-        else -> throw IllegalStateException(
-          "Engine instance kind ${instance.kind} not yet implemented",
+        EngineKind.Offline -> throw IllegalStateException(
+          "Offline is a built-in engine and cannot be an instance",
         )
       }
     }

@@ -5,7 +5,6 @@ package alphainterplanetary.thinker.downloads
  */
 enum class DownloadKind {
   OllamaPull,
-  LocalFile,
 }
 
 /**

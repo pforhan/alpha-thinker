@@ -1,8 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineAvailability
 import alphainterplanetary.thinker.engine.EngineAvailability.Available
-import alphainterplanetary.thinker.engine.EngineAvailability.NotImplemented
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineInstance
@@ -149,49 +147,21 @@ class EngineStatusTest {
 
   @Test
   fun unavailableRuntimeMakesSupportedSlotsIncomplete() {
-    listOf<EngineAvailability>(
-      Unavailable("runtime not implemented"),
-      NotImplemented,
-    ).forEach { availability ->
-      val status = engineStatus(
-        ref = EngineRef.Instance("conn-1"),
-        instance = remoteInstance(),
-        availability = availability,
-      )
+    val status = engineStatus(
+      ref = EngineRef.Instance("conn-1"),
+      instance = remoteInstance(),
+      availability = Unavailable("runtime not implemented"),
+    )
 
-      assertEquals(
-        CapabilityState.Incomplete,
-        status.slot(EngineCapability.Network).state,
-        "$availability"
-      )
-      assertEquals(
-        CapabilityState.Incomplete,
-        status.slot(EngineCapability.Llm).state,
-        "$availability"
-      )
-      assertTrue(status.needsAttention, "$availability")
-    }
-  }
-
-  @Test
-  fun localFileInstancesAreLlmOnly() {
-    listOf(EngineKind.LocalFile).forEach { kind ->
-      val instance = EngineInstance(
-        id = "conn-1",
-        kind = kind,
-        provider = null,
-        label = "Test instance",
-      )
-      val status = engineStatus(
-        ref = EngineRef.Instance("conn-1"),
-        instance = instance,
-        availability = Available,
-      )
-
-      assertEquals(CapabilityState.Unused, status.slot(EngineCapability.Network).state, "$kind")
-      assertEquals(CapabilityState.Active, status.slot(EngineCapability.Llm).state, "$kind")
-      assertEquals(kind.label, status.slot(EngineCapability.Llm).detail, "$kind")
-    }
+    assertEquals(
+      CapabilityState.Incomplete,
+      status.slot(EngineCapability.Network).state,
+    )
+    assertEquals(
+      CapabilityState.Incomplete,
+      status.slot(EngineCapability.Llm).state,
+    )
+    assertTrue(status.needsAttention)
   }
 
   @Test

@@ -97,7 +97,7 @@ data class SettingsEntity(
 )
 
 /**
- * One user-created engine (a Remote connection or a downloaded local model).
+ * One user-created engine (a Remote connection).
  * Code-defined built-ins have no row here; they are described by the catalog.
  * See [alphainterplanetary.thinker.engine.EngineInstance].
  */
@@ -111,6 +111,7 @@ data class EngineInstanceEntity(
   val apiKey: String,
   val model: String,
   val contextTokens: Int,
+  /** Retired: always null now. Removed with the local-model feature in v13. */
   val localPath: String?,
 )
 

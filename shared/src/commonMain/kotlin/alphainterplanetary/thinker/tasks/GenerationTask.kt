@@ -27,13 +27,7 @@ enum class TaskKind {
   AutoArchive,
 
   /** Server-side model pull streamed from an Ollama instance. */
-  OllamaModelPull,
-
-  /** In-process download of a model file (e.g., LiteRT-LM). */
-  ModelFileDownload,
-
-  /** Checksum/extraction/integrity verification (often short). Used for explicit re-verification. */
-  ModelVerification;
+  OllamaModelPull;
 
   /**
    * The resource group this kind lands in by default ([TaskRunner] schedules
@@ -50,10 +44,7 @@ enum class TaskKind {
       SynopsisRewrite,
       AutoArchive,
         -> ConcurrencyGroup.Engine
-      OllamaModelPull,
-      ModelFileDownload,
-      ModelVerification,
-        -> ConcurrencyGroup.Download
+      OllamaModelPull -> ConcurrencyGroup.Download
     }
 }
 

@@ -15,9 +15,9 @@ package alphainterplanetary.thinker.tasks
  * [Engine] is not "the local engine": the selected engine may be a remote
  * inference backend, and its tasks land in [Engine] all the same, so the limit
  * here is a conservative policy rather than a hardware constraint. The limit
- * that reflects the actual resource — on-device inference admits one batch at a
- * time, a remote endpoint several — is not derivable from a [TaskKind], since
- * the engine is resolved per task at enqueue time (see
+ * that reflects the actual resource — a remote endpoint admits several at a
+ * time — is not derivable from a [TaskKind], since the engine is resolved per
+ * task at enqueue time (see
  * [alphainterplanetary.thinker.engine.PlanningEngineSelector]). Until the call
  * site derives the group from the engine it resolved, [Engine] serializes across
  * every project.

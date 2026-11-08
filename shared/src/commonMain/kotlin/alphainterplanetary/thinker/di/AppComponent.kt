@@ -9,15 +9,10 @@ import alphainterplanetary.thinker.database.provideActivityDatabaseBuilder
 import alphainterplanetary.thinker.database.provideStorage
 import alphainterplanetary.thinker.downloads.KoogOllamaPullClient
 import alphainterplanetary.thinker.downloads.ModelDownloader
-import alphainterplanetary.thinker.downloads.ModelFileTransferClient
-import alphainterplanetary.thinker.downloads.ModelFileTransferClientFactory
 import alphainterplanetary.thinker.downloads.OllamaPullClient
 import alphainterplanetary.thinker.downloads.TaskBackedModelDownloader
-import alphainterplanetary.thinker.engine.DefaultLocalBackendFactory
 import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
-import alphainterplanetary.thinker.engine.LocalBackendFactory
-import alphainterplanetary.thinker.engine.LocalModelStore
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
@@ -64,11 +59,7 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   abstract val ollamaPullClient: OllamaPullClient
 
-  abstract val modelFileTransferClient: ModelFileTransferClient
-
   abstract val modelDownloader: ModelDownloader
-
-  abstract val localModelStore: LocalModelStore
 
   abstract val appScope: CoroutineScope
 
@@ -115,37 +106,14 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
 
   @AppScope
   @Provides
-  fun providesLocalFileDownloader(): ModelFileTransferClient =
-    ModelFileTransferClientFactory.create(platformContext)
-
-  @AppScope
-  @Provides
-  fun providesLocalBackendFactory(): LocalBackendFactory = DefaultLocalBackendFactory
-
-  @AppScope
-  @Provides
-  fun providesLocalModelStore(
-    repository: EngineRepository,
-    modelDownloader: ModelDownloader,
-    platformContext: PlatformContext,
-  ): LocalModelStore = LocalModelStore(
-    repository = repository,
-    downloader = modelDownloader,
-    platformContext = platformContext,
-  )
-
-  @AppScope
-  @Provides
   fun providesModelDownloadManager(
     taskRunner: TaskRunner,
     ollamaPullClient: OllamaPullClient,
-    modelFileTransferClient: ModelFileTransferClient,
     activityLogger: ActivityLogger,
     scope: CoroutineScope,
   ): ModelDownloader = TaskBackedModelDownloader(
     taskRunner = taskRunner,
     ollamaPullClient = ollamaPullClient,
-    modelFileTransferClient = modelFileTransferClient,
     activityLogger = activityLogger,
     scope = scope,
   )

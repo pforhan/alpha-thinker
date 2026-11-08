@@ -20,7 +20,4 @@ enum class ModelSource {
 
   /** Anthropic's Claude models, from Koog's bundled catalogue. */
   Anthropic,
-
-  /** A model downloaded to the device and run in-process (LiteRT-LM). */
-  LiteRt,
 }

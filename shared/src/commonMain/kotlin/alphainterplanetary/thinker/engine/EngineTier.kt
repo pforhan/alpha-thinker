@@ -2,11 +2,10 @@ package alphainterplanetary.thinker.engine
 
 /**
  * Where an engine appears in the picker. Tiers are a presentation grouping
- * (ENGINE-CONFIG-PLAN.md stage 3): `Offline`, `Free`, and `Local` are the
- * preferred cards up top, `Local` becomes real once downloaded models land
- * (MODEL-CATALOG-PLAN.md stage 3), and every user-configured connection lives
- * under the `Advanced` disclosure so the ever-growing list of endpoints never
- * crowds the common choice.
+ * (ENGINE-CONFIG-PLAN.md stage 3): `Offline` and `Free` are the preferred cards
+ * up top, and every user-configured connection lives under the `Advanced`
+ * disclosure so the ever-growing list of endpoints never crowds the common
+ * choice.
  *
  * The [label] and [tagline] are the tier's user-facing copy on those cards, so
  * the picker renders a preferred engine from the tier alone.
@@ -29,13 +28,7 @@ enum class EngineTier(
     tagline = "Alpha Interplanetary's cloud engine. Powered by a known-solid model.",
   ),
 
-  /** Downloaded in-process models. */
-  Local(
-    label = "Local",
-    tagline = "Models downloaded onto this device.",
-  ),
-
-  /** Configured Remote connections and the system on-device runtime. */
+  /** Configured Remote connections. */
   Advanced(
     label = "Advanced",
     tagline = null,

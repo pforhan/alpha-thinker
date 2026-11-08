@@ -9,9 +9,6 @@ import alphainterplanetary.thinker.engine.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.EngineRegistry
-import alphainterplanetary.thinker.engine.LocalModel
-import alphainterplanetary.thinker.engine.LocalModelCatalog
-import alphainterplanetary.thinker.engine.LocalModelStore
 import alphainterplanetary.thinker.engine.ModelPresentationTier
 import alphainterplanetary.thinker.engine.ModelRank
 import alphainterplanetary.thinker.engine.ModelRanker
@@ -51,7 +48,6 @@ class EngineViewModel(
   private val engineRegistry: EngineRegistry,
   private val scope: CoroutineScope,
   private val modelDownloader: ModelDownloader? = null,
-  private val localModelStore: LocalModelStore? = null,
 ) {
   /** The selected planning backend; only available engines can be chosen. */
   val selectedRef: StateFlow<EngineRef> = engineRepository.selected
@@ -221,8 +217,8 @@ class EngineViewModel(
   }
 
   /**
-   * Active Ollama pulls / local downloads, projected from the injected
-   * [ModelDownloader] (empty when none is wired, e.g. in tests).
+   * Active Ollama pulls, projected from the injected [ModelDownloader] (empty
+   * when none is wired, e.g. in tests).
    */
   val downloads: StateFlow<List<DownloadState>> =
     modelDownloader?.downloads() ?: MutableStateFlow(emptyList())
@@ -236,13 +232,8 @@ class EngineViewModel(
     // snapshot is stale: re-read it, and the pull chip becomes a normal model
     // instead of enqueuing the same download again. Only a pull this app
     // started can succeed, and refreshing with a dialog open is enough.
-    //
-    // A finished local download is different: the file is already verified on
-    // disk, so the model becomes a selectable [EngineKind.LocalFile] instance.
-    // It is installed rather than selected — downloading is not using.
     scope.launch {
       var completedPulls = emptySet<String>()
-      var completedLocal = emptySet<String>()
       downloads.collect { states ->
         val succeeded = states
           .filter { it.kind == DownloadKind.OllamaPull && it.status == DownloadStatus.Succeeded }
@@ -252,16 +243,6 @@ class EngineViewModel(
           refreshDraftModels()
         }
         completedPulls = succeeded
-
-        val succeededLocal = states
-          .filter { it.kind == DownloadKind.LocalFile && it.status == DownloadStatus.Succeeded }
-        (succeededLocal.map { it.handle.id }.toSet() - completedLocal).forEach { handleId ->
-          val modelId = succeededLocal.firstOrNull { it.handle.id == handleId }?.modelId
-          modelId?.let(LocalModelCatalog::byId)?.let { model ->
-            localModelStore?.install(model)
-          }
-        }
-        completedLocal = succeededLocal.map { it.handle.id }.toSet()
       }
     }
   }
@@ -361,44 +342,7 @@ class EngineViewModel(
     }
   }
 
-  fun pullOllama(modelId: String, baseUrl: String) =
-    pullOllamaModel(modelId, baseUrl)
-
-  fun pullCuratedOllamaModel(modelId: String, baseUrl: String? = null) =
-    pullOllamaModel(modelId, baseUrl)
-
-  fun startOllamaPull(modelId: String, baseUrl: String? = null) =
-    pullOllamaModel(modelId, baseUrl)
-
-  fun triggerOllamaPull(modelId: String, baseUrl: String? = null) =
-    pullOllamaModel(modelId, baseUrl)
-
-  fun pull(modelId: String, baseUrl: String? = null) =
-    pullOllamaModel(modelId, baseUrl)
-
-  fun pullModel(modelId: String, baseUrl: String? = null) =
-    pullOllamaModel(modelId, baseUrl)
-
-  /** The curated models the Local tier can install. */
-  val localModels: List<LocalModel>
-    get() = LocalModelCatalog.models
-
-  /** Starts (or resumes) [model]'s download; a no-op when no store is wired. */
-  fun downloadLocalModel(model: LocalModel) {
-    localModelStore?.download(model)
-  }
-
-  /** Makes an installed local model the running engine. */
-  fun useLocalModel(model: LocalModel) {
-    localModelStore?.use(model)
-  }
-
-  /** Deletes an installed local model's instance and file. */
-  fun deleteLocalModel(model: LocalModel) {
-    localModelStore?.delete(model)
-  }
-
-  /** Cancels the download behind [handleId], leaving its `.part` resumable. */
+  /** Cancels the pull behind [handleId]. */
   fun cancelDownload(handleId: String) {
     modelDownloader?.cancel(handleId)
   }

@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 class TaskBackedModelDownloader(
   private val taskRunner: TaskRunner,
   private val ollamaPullClient: OllamaPullClient,
-  private val modelFileTransferClient: ModelFileTransferClient,
   private val activityLogger: ActivityLogger,
   scope: CoroutineScope,
 ) : ModelDownloader {
@@ -113,60 +112,6 @@ class TaskBackedModelDownloader(
         status = DownloadStatus.Running,
         modelId = modelId,
         source = "ollama",
-      )
-    }
-    return handle
-  }
-
-  override fun downloadModel(spec: ModelDownloadSpec): DownloadHandle {
-    val handleId = randomUUID()
-    val task = taskRunner.enqueue(
-      projectId = "",
-      kind = TaskKind.ModelFileDownload,
-      group = ConcurrencyGroup.Download,
-    ) { taskId ->
-      val logContext = activityLogger.taskContext(activityId = taskId, projectId = "")
-      logContext.started("Downloading ${spec.modelId}")
-      try {
-        modelFileTransferClient.download(spec).collect { event ->
-          if (event.error != null) {
-            throw Exception(event.error)
-          }
-          // Phase-only events (verifying, extracting, a bare "succeeded") carry
-          // no byte counts; reporting them would wipe the totals already shown.
-          if (event.bytesTotal != null || event.bytesDone > 0L) {
-            taskRunner.setDownloadProgress(
-              taskId = taskId,
-              bytesDone = event.bytesDone,
-              bytesTotal = event.bytesTotal,
-              throughputBps = event.throughputBps,
-            )
-          }
-          logContext.append("phase: ${event.phase.name}")
-        }
-        logContext.closeSucceeded()
-      } catch (e: CancellationException) {
-        logContext.closeCancelled()
-        throw e
-      } catch (e: Exception) {
-        logContext.closeFailed(e.message ?: e.toString())
-        throw e
-      }
-    }
-    taskRunner.setDownloadMetadata(
-      taskId = task.id,
-      modelId = spec.modelId,
-      source = "litert",
-      downloadId = handleId,
-    )
-    val handle = DownloadHandle(id = handleId, taskId = task.id)
-    _downloads.update {
-      it + DownloadState(
-        handle = handle,
-        kind = DownloadKind.LocalFile,
-        status = DownloadStatus.Running,
-        modelId = spec.modelId,
-        source = "litert",
       )
     }
     return handle

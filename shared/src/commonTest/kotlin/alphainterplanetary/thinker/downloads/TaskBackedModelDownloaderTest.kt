@@ -1,12 +1,10 @@
 package alphainterplanetary.thinker.downloads
 
 import alphainterplanetary.thinker.tasks.TaskRunner
-import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
@@ -92,95 +90,12 @@ class TaskBackedModelDownloaderTest {
     assertEquals(null, state.progress)
   }
 
-  @Test
-  fun `a local download reports its bytes and throughput`() = runTest {
-    val runner = TaskRunner(backgroundScope, RecordingActivityLogger())
-    val downloader = downloader(
-      runner = runner,
-      transferEvents = flowOf(
-        LocalDownloadEvent(bytesDone = 512, bytesTotal = 1024, throughputBps = 2048),
-        // A bare terminal phase carries no byte counts; it must not wipe the
-        // totals the UI is already showing.
-        LocalDownloadEvent(phase = LocalDownloadPhase.Succeeded),
-      ),
-    )
-
-    val handle = downloader.downloadModel(
-      ModelDownloadSpec(modelId = "litert:1b", url = "https://example.test/model.bin"),
-    )
-    testScheduler.runCurrent()
-
-    val state = downloader.downloads().value.single { it.handle.id == handle.id }
-    assertEquals(DownloadStatus.Succeeded, state.status)
-    assertEquals(DownloadKind.LocalFile, state.kind)
-    assertEquals(512L, state.bytesDone)
-    assertEquals(1024L, state.bytesTotal)
-    assertEquals(2048L, state.throughputBps)
-    assertEquals(0.5f, state.progress)
-    assertEquals("litert:1b", state.modelId)
-    assertEquals("litert", state.source)
-  }
-
-  @Test
-  fun `cancelling a local download keeps the cancelled state on its row`() = runTest {
-    val runner = TaskRunner(backgroundScope, RecordingActivityLogger())
-    val downloader = downloader(
-      runner = runner,
-      transferEvents = flow {
-        emit(LocalDownloadEvent(bytesDone = 10, bytesTotal = 100))
-        awaitCancellation()
-      },
-    )
-    val handle = downloader.downloadModel(
-      ModelDownloadSpec(modelId = "litert:1b", url = "https://example.test/model.bin"),
-    )
-    testScheduler.runCurrent()
-    assertEquals(
-      DownloadStatus.Running,
-      downloader.downloads().value.single { it.handle.id == handle.id }.status,
-    )
-
-    downloader.cancel(handle.id)
-    testScheduler.runCurrent()
-
-    val state = downloader.downloads().value.single { it.handle.id == handle.id }
-    assertEquals(DownloadStatus.Cancelled, state.status)
-    // The runner reports a cancelled body as failed; the downloader's own
-    // terminal state must win so the row the user stopped is not relabelled.
-    assertEquals(
-      TaskStatus.Failed,
-      runner.tasks.value.single { it.id == handle.taskId }.status,
-    )
-  }
-
-  @Test
-  fun `cancelling a finished download leaves its outcome alone`() = runTest {
-    val runner = TaskRunner(backgroundScope, RecordingActivityLogger())
-    val downloader = downloader(
-      runner = runner,
-      transferEvents = flowOf(LocalDownloadEvent(phase = LocalDownloadPhase.Succeeded)),
-    )
-    val handle = downloader.downloadModel(
-      ModelDownloadSpec(modelId = "litert:1b", url = "https://example.test/model.bin"),
-    )
-    testScheduler.runCurrent()
-
-    downloader.cancel(handle.id)
-    testScheduler.runCurrent()
-
-    val state = downloader.downloads().value.single { it.handle.id == handle.id }
-    assertEquals(DownloadStatus.Succeeded, state.status)
-    assertEquals(TaskStatus.Succeeded, runner.tasks.value.single { it.id == handle.taskId }.status)
-  }
-
   private fun TestScope.downloader(
     runner: TaskRunner,
     pullEvents: Flow<OllamaPullEvent> = emptyFlow(),
-    transferEvents: Flow<LocalDownloadEvent> = emptyFlow(),
   ): TaskBackedModelDownloader = TaskBackedModelDownloader(
     taskRunner = runner,
     ollamaPullClient = FakeOllamaPullClient(pullEvents),
-    modelFileTransferClient = FakeModelFileTransferClient(transferEvents),
     activityLogger = RecordingActivityLogger(),
     scope = backgroundScope,
   )
@@ -189,12 +104,5 @@ class TaskBackedModelDownloaderTest {
     private val events: Flow<OllamaPullEvent>,
   ) : OllamaPullClient {
     override fun pull(baseUrl: String, modelId: String): Flow<OllamaPullEvent> = events
-  }
-
-  /** Local file downloads are not exercised here; the DI stub is not a client. */
-  private class FakeModelFileTransferClient(
-    private val events: Flow<LocalDownloadEvent>,
-  ) : ModelFileTransferClient {
-    override fun download(spec: ModelDownloadSpec): Flow<LocalDownloadEvent> = events
   }
 }

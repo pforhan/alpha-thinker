@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.engine.EngineAvailability.Available
-import alphainterplanetary.thinker.engine.EngineAvailability.NotImplemented
 import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCapability
 import alphainterplanetary.thinker.engine.EngineInstance
@@ -33,7 +32,7 @@ class EngineStatusCopyTest {
   @Test
   fun anUnavailableEngineIsDescribedAsNeedingSetup() {
     val status = engineStatus(
-      ref = EngineRef.Builtin(EngineKind.LocalFile),
+      ref = EngineRef.Builtin(EngineKind.Remote),
       availability = Unavailable("some fancy reason why not avail"),
     )
 
@@ -108,18 +107,6 @@ class EngineStatusCopyTest {
         model = "",
       ),
       availability = Available,
-    )
-
-    val slot = status.slot(EngineCapability.Llm)
-    assertEquals("Needs setup", slot.displayDetail())
-    assertTrue(slot.sentence().contains("needs setup"))
-  }
-
-  @Test
-  fun aNotImplementedEngineIsDescribedAsNeedingSetup() {
-    val status = engineStatus(
-      ref = EngineRef.Builtin(EngineKind.LocalFile),
-      availability = NotImplemented,
     )
 
     val slot = status.slot(EngineCapability.Llm)
