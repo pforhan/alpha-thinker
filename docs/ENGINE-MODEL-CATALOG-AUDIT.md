@@ -23,7 +23,7 @@ this audit except 26.2, which landed first.
 | `EngineAvailability` | `engine/EngineAvailability.kt` | `Available` / `Unavailable(reason)` for whether an engine can run now. | `EngineCatalog` entries, `ui/chrome/EngineStatus`. | **Keep**. | Distinct from archetype; the one readiness concept (pairs with 26.3). |
 | `EngineCapability` | `engine/EngineCapabilities.kt` | Capability vocabulary (`Network`/`Llm`/`Tools`) implied by a kind/mode. | `EngineKind.capabilities`, `ui/chrome` capability slots/copy/status. | **Keep**. | Stable shared vocabulary across engine and chrome. |
 | `PlanningEngineSelector` | `engine/PlanningEngineSelector.kt` | Fun-interface seam freezing the resolved engine per task (lock-in). | `ProjectRepository`/task execution, tests. | **Keep**. | Tiny, justified indirection. |
-| `RemoteConnection` | `engine/RemoteKoogPlanningBackend.kt` | Config DTO (provider/baseUrl/apiKey/model/contextLength) for the remote backend. | `EngineRegistry` construction, `RemoteKoogPlanningBackend`. | **Keep, relocate/split**. | Config DTO buried in the backend impl file (2 public types). Extract to its own file/subpackage (26.9). |
+| `RemoteConnection` | `engine/RemoteConnection.kt` | Config DTO (provider/baseUrl/apiKey/model/contextLength) for the remote backend. | `EngineRegistry` construction, `RemoteKoogPlanningBackend`. | **Keep** (26.9). | Extracted from `RemoteKoogPlanningBackend.kt`. |
 | `RemoteProvider` | `engine/RemoteProvider.kt` | Vendor catalogue (connection/protocol + defaults): endpoint defaults, key requirements, base-URL configurability, wire/client mapping metadata. | `EngineInstance`, `RemoteConnection`/backends, `RemoteModelCatalog`, `ModelBrowserMerge`, connection UI. | **Keep** (26.4 done). | Boundary clarified: provider = how to connect; provenance = `ModelMetadataSource`. Exposes the single explicit mapping `RemoteProvider.metadataSource` so the enums are not assumed equivalent. |
 
 ## Engine runtime / plumbing (in package; repackaging targets, not config/catalog domain)
@@ -82,18 +82,58 @@ this audit except 26.2, which landed first.
   types (`ForwardingPlanningEngine`, `PlanningEngineSelector`) have live roles
   but should be re-checked when 27.1 defines the runtime subpackage.
 
-## Notes for 26.x / 27.x
+## 27.1 Target package map (no moves yet)
 
-- `engine/` mixes config/identity, model catalog/curation, and runtime/plumbing.
-  27.1 should lock a package map + dependency direction before moves
-  (suggested: `engine.core` / `engine.runtime|koog` / `engine.config` /
-  `engine.model`), keeping `ui/chrome` and `downloads` dependencies one-way.
-- One-type-per-file (AGENTS): `ModelCuration` (6) split in 26.6; still violated in
-  `RemoteModelCatalog` (4), `DownloadModels` (4), `OllamaPullClient` (3), and several
-  2-type files (`EngineCatalog`, `ModelBrowserMerge`, `RemoteKoogPlanningBackend`,
-  `PlanningEngine`, `EngineDelayConfig`) — normalize in 27.2.
-- `RemoteModelListState` was a UI concern defined in the engine catalog — re-homed to
-  `ui/chrome/RemoteModelListState.kt` in 26.7.
-- Dev-tool delay types (`SlowDownPlanningEngine`, `EngineInteraction`,
-  `EngineDelayConfig`) must not land beside product catalog types (27.5).
-- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1 → 26.6(done)/26.7(done)/26.9/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.
+Recorded for [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) 27.1. This defines
+target subpackages and dependency direction only; 27.2–27.5 perform the splits
+and moves, and 27.6 verifies.
+
+### Target subpackages
+
+| Target package | Contents (current names/types) | Concern |
+|---|---|---|
+| `engine.core` | `PlanningEngine`, `QuestionBatch`, `PlanningEngineSelector`, `ForwardingPlanningEngine`, `PlanningContext` | Core engine contract, task lock-in seam, prompt/transcript plumbing. No Koog/client, config persistence, or model-catalog impl deps. |
+| `engine.runtime` | `KoogPlanningEngine`, `KoogPlanningBackend`, `RemoteKoogPlanningBackend`, `OfflinePlanningEngine`, `LoggingPlanningEngine`; dev-tool `SlowDownPlanningEngine`, `EngineInteraction`, `EngineDelayConfig` kept isolated (see 27.5 — e.g. `engine.runtime.dev` or a clearly separated file group, not beside product catalog config) | Runtime engine implementations, decorators, and backend wiring. Depends on `engine.core` and config/model types it consumes. |
+| `engine.config` | `EngineKind`, `EngineRef`, `EngineInstance`, `EnginePickerTier`, `EngineSelectionState`, `EngineAvailability`, `EngineCapability`, `RemoteProvider`, `RemoteConnection`, `EngineCatalogEntry`, `EngineCatalog`, `EngineRegistry` | Engine identity, picker/catalog grouping, persisted selection state, availability/capability vocabulary, provider/connection config, and the catalog/registry that resolve a ref to an engine. |
+| `engine.model` | `RemoteModelInfo`, `ModelMetadataSource`, `ModelIdentity` helpers, `RemoteModelCatalog` (contract), `KoogRemoteModelCatalog` (impl) *(split in 27.2)*, `ModelBrowserMerge`/`ModelBrowserEntry`, `ModelQuality`, `ModelSpeed`, `ModelPresentationTier`, `ModelRank`, `ModelMeasurement`, `ModelProfiles`, `ModelRanker` | Model metadata/provenance, remote model discovery/catalog, browser merge, and curation/ranking. |
+
+`downloads/` remains a top-level sibling package (narrowed to the Ollama pull).
+`RemoteModelListState` stays in `ui/chrome` (26.7).
+
+### Dependency direction (acyclic target)
+
+```text
+ui/*  ->  engine.{core,runtime,config,model}, downloads, repository, ...
+downloads  ->  tasks/logging (+ narrow engine helper noted below)
+engine.runtime  ->  engine.core, engine.config, engine.model
+engine.config   ->  engine.core (engine refs/selection surface) + engine.runtime construction targets used by EngineRegistry
+engine.model    ->  engine.config/provider types only where required (e.g. RemoteProvider/connection context), else standalone
+engine.core     ->  (no engine subpackage deps)
+```
+
+Confirmed/required one-way constraints:
+- `ui/chrome` and `downloads` depend inward; neither `engine` nor `downloads` imports `ui` (`grep` over `engine/` found no `alphainterplanetary.thinker.ui` imports).
+- `downloads` currently imports only `engine.normalizeRemoteBaseUrl` (`OllamaPullClient`) — a narrow `downloads -> engine` helper dep. 27.x should place/share that helper deliberately (e.g. a small `engine.core`/`engine.model`-adjacent utility) so `downloads` does not reach into runtime internals.
+
+Known coupling to resolve deliberately during moves (not pure-domain):
+- `engine.config`'s `EngineCatalog` imports `repository.EngineRepository` and
+  `EngineRegistry` imports `repository.EngineRepository` + `di.AppScope` (verified
+  by grep). The map keeps them in `engine.config` as the config/assembly layer;
+  27.3 must preserve this upward dependency direction (or extract a port) rather
+  than hiding it. `EngineSelectionState` and the pure identity types have no
+  repository/di/ui/downloads deps.
+- `EngineRegistry` constructs `engine.runtime` implementations; placing registry
+  in `engine.config` means config -> runtime at the composition edge. Keep that
+  edge explicit (registry is the composition root for engines) and avoid cycles
+  back into config from runtime beyond shared types.
+
+### Notes carried forward
+
+- One-type-per-file (AGENTS): `ModelCuration` split in 26.6, `RemoteConnection`
+  extracted in 26.9; still violated in `RemoteModelCatalog` (4), `DownloadModels` (4),
+  `OllamaPullClient` (3), and 2-type files (`EngineCatalog`, `ModelBrowserMerge`,
+  `PlanningEngine`, `EngineDelayConfig`) — normalize in 27.2 (`KoogRemoteModelCatalog`
+  vs contract is the key `RemoteModelCatalog` split decision).
+- `RemoteModelListState` re-homed to `ui/chrome/RemoteModelListState.kt` in 26.7.
+- Dev-tool delay types must not land beside product catalog types (27.5).
+- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1(done) → 26.6(done)/26.7(done)/26.9(done)/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.
