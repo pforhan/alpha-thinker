@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD): Alpha Thinker
 
 ## 1. Product Vision
-Alpha Thinker is a project planning application that transforms a vague project idea (synopsis) into a detailed plan through iterative, synthesized questions. It is available in two editions: **Alpha Thinker Edge**, powered by a local LLM, and **Alpha Thinker Lite**, a lightweight version focused on manual user-driven planning.
+Alpha Thinker is a project planning application that transforms a vague project idea (synopsis) into a detailed plan through iterative, synthesized questions. It is available in two editions: **Alpha Thinker Edge**, powered by an LLM, and **Alpha Thinker Lite**, a lightweight version focused on manual user-driven planning.
 
 ## 2. Product Editions
 
@@ -11,8 +11,8 @@ Both Editions share the same general UI, but differ in source of question materi
 - **Custom Questions**: Users can extend the question pool by adding their own questions, specifying whether they are unique to the current project or added to a global pool for use in all projects.
 
 ### 2.1 Alpha Thinker Edge
-- **Feature Set**: Full iterative synthesis using a local edge-LLM.
-- **Intelligence**: Automatically generates tailored questions and suggested answers based on the specific project synopsis and history. Includes any global questions added by the user. Every round is grounded in the project's accumulated Q&A — committed answers, drafts, and ignored marks — so questions sharpen as the plan fills in; 4.3 bounds that context for edge models.
+- **Feature Set**: Full iterative synthesis using a remote or localhost LLM.
+- **Intelligence**: Automatically generates tailored questions and suggested answers based on the specific project synopsis and history. Includes any global questions added by the user. Every round is grounded in the project's accumulated Q&A — committed answers, drafts, and ignored marks — so questions sharpen as the plan fills in; 4.3 bounds that context for the model's window.
 - **Automation**: LLM-driven question archiving and synopsis updates.
 
 ### 2.2 Alpha Thinker Lite
@@ -60,7 +60,7 @@ Both Editions share the same general UI, but differ in source of question materi
 - Generate initial and follow-up questions grounded in the project's accumulated Q&A (committed answers, drafts, and ignored questions), not just the synopsis — a wrap-up advancing to a new phase seeds that phase's first round with everything already written. When the accumulated context exceeds a configurable token budget, answers from the earliest phases are dropped (question text retained; the current phase's answers are never cut) to stay within the model's window. Planned refinement (IMPLEMENTATION-PLAN.md Phase 3.5): a near-limit choice to keep everything, drop early answers, or ask the LLM to summarize earlier phases.
 - Optional lookup and web search capabilities, invoked by the LLM as needed (e.g., via agentic tools such as Koog) rather than always-on.
 - Lookup and web search are reported to the user as a **capability** of the selected engine, not as a switch of their own: the header shows one read-only pill per capability (Network, LLM, Tools) and the Tools pill stays muted until an engine actually offers the tools. A per-capability on/off control is deliberately not planned — a switch the engine selection can override is a second source of truth, and it is not a security boundary (airplane mode is).
-- **Model selection & curation:** The app surfaces remote models in presentation groupings — **Recommended** (best balance of quality and speed for Alpha Thinker's planning tasks: concise title generation, JSON-conforming question lists, and phase summarization), **High-quality but Slower**, **Lower-quality but Fast**, **Unknown** (unmeasured models), and **Discouraged**. Groupings are presentational only; no model is ever hidden and every discovered model remains selectable. Rankings use measured eval data when available, falling back to family heuristics for unmeasured models. The app auto-selects the best available model from Recommended, falling back to High-quality but Slower, then Lower-quality but Fast (otherwise the first ranked model) when no valid model is selected or the current selection is missing. Model identities resolve `:latest` aliases for display while keeping canonical IDs for selection. When using a local **Ollama** server, the UI can pull models directly (by tag) with progress/cancel feedback (planned).
+- **Model selection & curation:** The app surfaces remote models in presentation groupings — **Recommended** (best balance of quality and speed for Alpha Thinker's planning tasks: concise title generation, JSON-conforming question lists, and phase summarization), **High-quality but Slower**, **Lower-quality but Fast**, **Unknown** (unmeasured models), and **Discouraged**. Groupings are presentational only; no model is ever hidden and every discovered model remains selectable. Rankings use measured eval data when available, falling back to family heuristics for unmeasured models. The app auto-selects the best available model from Recommended, falling back to High-quality but Slower, then Lower-quality but Fast (otherwise the first ranked model) when no valid model is selected or the current selection is missing. Model identities resolve `:latest` aliases for display while keeping canonical IDs for selection. When using an **Ollama** server, the UI can pull models directly (by tag) with progress/cancel feedback.
 
 ### 4.4 Seed Questions 
 The app ships with a large body of default questions; see [HardcodedQuestions.kt](../shared/src/commonMain/kotlin/alphainterplanetary/thinker/engine/OfflinePlanningEngine.kt)
@@ -123,7 +123,7 @@ The app ships with a large body of default questions; see [HardcodedQuestions.kt
 - Alpha Thinker Edge can also ask the LLM to rewrite the above as a cohesive doc.
 
 ## 7. Non-Functional Requirements
-- **Offline First**: The app should rely on edge-LLMs or local mocks to ensure rapid iteration and privacy.
+- **Offline First**: The app should rely on the built-in Offline engine or local mocks to ensure rapid iteration and privacy.
 - **Cross-Platform**: The application should support multiple platforms (e.g., Mobile and Desktop) with shared business logic.
 - **Persistence**: Durable local storage of projects and their history.
 

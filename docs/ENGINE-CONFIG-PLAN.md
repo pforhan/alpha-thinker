@@ -14,9 +14,9 @@ was previously sketched as a cluster of loose items in
 
 It is presented alongside [MODEL-CATALOG-PLAN.md](MODEL-CATALOG-PLAN.md), which
 covers the models *inside* an engine — their discovery, curation
-(Verified / Recommended / Others), and acquisition (Ollama pull, downloaded
-local models). This plan's stage 3 leaves room in the picker for that plan's
-Local tier, which becomes real when its downloads land.
+(Verified / Recommended / Others), and acquisition (the Ollama pull). Local
+models and local-file downloads were removed; their design is archived in
+[ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
 
 **Status: in progress.** Stage 1's foundation has landed and is wired in:
 `EngineMode` renamed to `EngineKind`, the `EngineRef` / `EngineInstance` /
@@ -38,9 +38,9 @@ independently, green on `./gradlew :shared:desktopTest`.
 
 The engine layer carries three axes that do not compose:
 
-- `EngineMode` (`shared/.../engine/EngineMode.kt`) is a fixed four-entry enum
-  (Offline / OnDevice / Remote / Downloaded) whose `Remote` entry is stretched
-  to cover every provider — it cannot express "which connection".
+- `EngineMode` (`shared/.../engine/EngineMode.kt`, now `EngineKind`) is a fixed
+  enum whose `Remote` entry is stretched to cover every provider — it cannot
+  express "which connection".
 - `RemoteProvider` (`shared/.../engine/RemoteProvider.kt`) is the vendor
   catalogue (defaults, key requirements, base-URL configurability, model
   listing) but it is applied globally, not per connection.
@@ -76,11 +76,11 @@ Consequences:
 ## Target model
 
 ```kotlin
-enum class EngineKind { Offline, OnDevice, LocalFile, Remote }
+enum class EngineKind { Offline, Remote }
 
-enum class RemoteProvider { Ollama, OpenAiCompatible, Anthropic, AlphaInterplanetary }
+enum class RemoteProvider { Ollama, OpenAiCompatible, Anthropic }
 
-enum class EngineTier { Offline, Free, Local, Advanced }   // presentation grouping
+enum class EngineTier { Offline, Free, Advanced }   // presentation grouping
 
 sealed interface EngineRef {
   data class Builtin(val kind: EngineKind) : EngineRef
@@ -97,10 +97,9 @@ data class EngineInstance(
   val apiKey: String,
   val model: String,
   val contextTokens: Int,
-  val localPath: String?,          // LocalFile only
 )
 
-/** A code-defined built-in entry (Offline, Free/Alpha Interplanetary, On-device). */
+/** A code-defined built-in entry (Offline, Free/Alpha Interplanetary). */
 data class EngineCatalogEntry(
   val ref: EngineRef,
   val kind: EngineKind,
@@ -125,8 +124,8 @@ by `EngineTier` and ordered by `lastUsedAt`.
 
 ## Storage
 
-- `engine_instances` — one row per user engine (Remote connection or downloaded
-  model). Own DAO; one type per file per AGENTS.md.
+- `engine_instances` — one row per user engine (a Remote connection). Own DAO;
+  one type per file per AGENTS.md.
 - `engine_state` — one row per `EngineRef` that has ever been selected/used:
   `selected: Boolean` and `lastUsedAt`. Built-ins appear here only once touched.
 - Retire the flat `SettingsKey.RemoteLlm*` keys (destructive migration era —
@@ -197,8 +196,9 @@ already applied to the DAOs.
       `EngineRepositoryTest` coverage of field edits).
 - [x] 2a5. Retire the flat RemoteLlm* settings. SettingsViewModel no longer reads them, but SettingsRepository still declares/loads/persists remoteLlmProvider/BaseUrl/ApiKey/Model/ContextTokens, Storage.SettingsKey still holds the five RemoteLlm* keys, and SettingsRepositoryTest still exercises them. Delete all of it (and the now-unused defaults/imports). 
 - [x] 2a6. Engine-layer cleanup. RemoteKoogPlanningBackend no longer needs its SettingsRepository import/doc (it takes a RemoteConnection); resolveSelectedEngine + PlanningEngineSelectionTest are dead after the EngineRegistry swap, and PlanningEngineSelector's doc and AppComponent's import still name SettingsRepository.
-- [x] **2c. Per-ref self-validation.** On-device and LocalFile availability feeds
-      `CapabilityState` (file present, runtime available).
+- [x] **2c. Per-ref self-validation.** Each ref's availability feeds
+      `CapabilityState`: a Remote missing its model or key reads "needs setup".
+      The local/on-device kinds this originally covered were removed.
 - [x] **2d. Tests.** EngineStatusTest, EngineRegistryTest, RemoteKoog... etc per checklist.
   **Test checklist (Stage 2 deliverables):**
 - [x] **EngineRepositoryTest** — create / update / delete; `addOrUpdate`
@@ -210,9 +210,8 @@ already applied to the DAOs.
   → all slots `Unused`; complete `Instance` Remote → all `Active` with detail
   sourced from instance fields; missing model/key → `Incomplete` +
   `needsAttention`; Anthropic without key → Incomplete even at its fixed
-  origin; Anthropic with key → fixed origin as active; OnDevice/LocalFile
-  instances → Llm-only Active with mode label; `Tools` remains `Unused` for
-  every ref kind.
+  origin; Anthropic with key → fixed origin as active; `Tools` remains
+  `Unused` for every ref kind.
 - [x] **EngineRegistryTest** — `getEngine(Offline)` returns
   `OfflinePlanningEngine`; a Remote instance returns a `KoogPlanningEngine`
   whose backend reads only from its instance fields; repeat calls for the
@@ -267,11 +266,8 @@ are built as one consistent surface.
       announcement, so its tests live in `EngineViewModelTest`.*
 - [x] **3b. Connections CRUD UI.** Advanced list screen: add / edit / delete /
       select a Remote instance, reusing `RemoteConnectionFields` moved out of
-      the kind card; the On-device entry is read-only. Deletion of the selected
-      falls back to `EngineRef.Builtin(Offline)`. Downloaded `LocalFile` rows
-      render under the Local tier through the same list component once
-      MODEL-CATALOG-PLAN.md stage 3 lands; that plan owns their download and
-      management UI.
+      the kind card. Deletion of the selected falls back to
+      `EngineRef.Builtin(Offline)`.
       *Landed as an in-sheet section: the Remote slot in `IntelligenceSheet`
       now holds `ConnectionsList` — divider-separated rows where a tap selects
       (dot on the right edge, inline with the kind cards) and per-row
@@ -288,36 +284,29 @@ are built as one consistent surface.
 - [x] **3c. `EnginePickerSheet`.** One sheet, used for first run and every later
       engine change: a pure merge of `EngineCatalog.entries(instances)` grouped
       by `EngineTier` and ordered by `lastUsedAt`; visible tiers **Offline /
-      Free (disabled placeholder) / Local (placeholder rows disabled until
-      MODEL-CATALOG-PLAN.md stage 3; existing `LocalFile` instances
-      selectable)**; an **Advanced** disclosure holding the connections list
-      (3b) and On-device. Swap it into the existing `ChromeSheet.Intelligence`
+      Free (disabled placeholder)**; an **Advanced** disclosure holding the
+      connections list (3b). Swap it into the existing `ChromeSheet.Intelligence`
       route — keep the enum entry name so saved stacks survive `NavStack`'s
       name-based restore, or rename to `Picker` and accept the pre-release
       drop; say which.
       *Decision: the enum entry name is kept (`ChromeSheet.Intelligence`) so a
       saved stack's `sheet:Intelligence` key still decodes; the sheet's visible
       title changes to "Engine" and its body moves from per-kind cards to
-      `EnginePickerSheet`, rendering Preferred (three tier cards in a row,
-      Offline/Free/Local) over an Advanced disclosure holding the On-device
-      runtime and `ConnectionsList`. The Local card is a disabled placeholder
-      that owns its tier — the recommendation/download dialog lands there
-      (MODEL-CATALOG-PLAN.md stage 3), not in instance rows. The merge is
-      `EngineCatalog.groupedByTier(instances, lastUsedAt)`, ordered by
+      `EnginePickerSheet`, rendering Preferred (two tier cards in a row,
+      Offline/Free) over an Advanced disclosure holding `ConnectionsList`. The
+      merge is `EngineCatalog.groupedByTier(instances, lastUsedAt)`, ordered by
       `lastUsedAt` with never-used engines keeping catalog order;
       `IntelligenceSheet` and `EngineOptions` are deleted (3f) as part of this
       landing; the card gate is catalog availability rather than the
       `EngineKind.available()` predicate the old cards used.*
       *Selection is a colour as well as a marker: a selected card takes the
       `primaryContainer` fill and a `SelectionDot` in its top/trailing corner,
-      and that pair is shared by the three preferred cards, the on-device card,
-      and every connection card — connection cards are individual `Card`s
-      rather than rows in a wrapper, so they can take the same fill. The
-      Preferred row's cards are height-matched to the tallest
-      (`IntrinsicSize.Min` + `fillMaxHeight`). The Advanced area still carries
-      no "Remote" heading or description: a connection's own name is its card's
-      title. The on-device runtime stays in Advanced until its UI is ready; it
-      may later become a subset of the Local tier.*
+      and that pair is shared by the preferred cards and every connection card
+      — connection cards are individual `Card`s rather than rows in a wrapper,
+      so they can take the same fill. The Preferred row's cards are
+      height-matched to the tallest (`IntrinsicSize.Min` + `fillMaxHeight`).
+      The Advanced area still carries no "Remote" heading or description: a
+      connection's own name is its card's title.*
 - [x] **3d. First run.** Open `EnginePickerSheet` on first launch — the trigger
       is a pure function (no `engine_state` rows yet); no separate onboarding
       gate or tutorial (Decision 3).
@@ -359,10 +348,9 @@ are built as one consistent surface.
       entry, and an instance that is not configured reads "needs setup".*
 - [x] **EngineCatalog grouping** (in `EngineRepositoryTest` or a new
       `EngineCatalogTest`) — tier merge of built-ins + instances and
-      `lastUsedAt` ordering; `LocalFile` instances land under Local.
+      `lastUsedAt` ordering.
       *Landed as `EngineCatalogTest` covering tier order, built-in placement,
-      Advanced membership, the `LocalFile` tier mapping, recency ordering, and
-      dropping empty tiers.*
+      Advanced membership, recency ordering, and dropping empty tiers.*
 
 **Proof:** `./gradlew :shared:desktopTest`; eyeball via `:desktopApp:run`
 (first run opens the picker; a connection can be created, edited, selected,
@@ -378,11 +366,10 @@ component plugs into the same editor.
 
 ### Related — companion plan
 
-Model-level work (metadata, curation, and downloads) is tracked separately in
-[MODEL-CATALOG-PLAN.md](MODEL-CATALOG-PLAN.md). It depends on this plan's
-stages 1–2 and enables this plan's stage 3 Local tier; its stage 2/3 UI work
-additionally follows this plan's stage 3b move of `ModelBrowser` (see Stage 3,
-"Coordination — companion plan").
+Model-level work (metadata, curation, and the Ollama pull) is tracked separately
+in [MODEL-CATALOG-PLAN.md](MODEL-CATALOG-PLAN.md). It depends on this plan's
+stages 1–2, and its stage 2/3 UI work additionally follows this plan's stage 3b
+move of `ModelBrowser` (see Stage 3, "Coordination — companion plan").
 
 ---
 
@@ -400,5 +387,5 @@ additionally follows this plan's stage 3b move of `ModelBrowser` (see Stage 3,
 
 - An onboarding gate or guided tutorial (first run reuses the picker).
 - The actual Alpha Interplanetary backend (placeholder entry only).
-- The system on-device runtime beyond its tier entry; per-capability toggles
-  (already parked in IMPLEMENTATION-PLAN.md Phase 4).
+- Local/on-device models and their runtimes: removed, not deferred.
+- Per-capability toggles (already parked in IMPLEMENTATION-PLAN.md Phase 4).

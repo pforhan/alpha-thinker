@@ -1,7 +1,7 @@
 # Model Catalog Plan
 
 This plan covers how Alpha Thinker discovers, describes, ranks, and obtains the
-**models** used by remote and local engines. It is the companion to
+**models** used by remote engines. It is the companion to
 [ENGINE-CONFIG-PLAN.md](ENGINE-CONFIG-PLAN.md): that plan reworks the engines
 themselves (how they are modeled, stored, and presented), while this one is
 about the models inside an engine.
@@ -14,13 +14,17 @@ It is a dedicated tracker for work previously itemized in
   families, the ranking function, source-ready eval output, best-available
   selection, the grouped browser, and the hostability flag).
 - "Ollama model pull".
-- "Downloaded local models (LiteRT-LM, in-process)".
+- "Downloaded local models (LiteRT-LM, in-process)" — removed; see
+  [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
 
-**Status: not started.** Depends on ENGINE-CONFIG-PLAN.md stages 1–2
-(per-instance config), because model state is per engine instance. Its stage
-2/3 UI work additionally comes after that plan's stage 3b, which moves
-`ModelBrowser` into the Advanced connection editor — build the grouped browser
-and the pull affordance there, not in `IntelligenceSheet`.
+**Status: stages 1–2 and the Ollama pull landed.** Local models, local-file
+downloads, and the in-app eval harness were removed rather than finished; their
+design is archived in [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
+The plan depends on ENGINE-CONFIG-PLAN.md stages 1–2 (per-instance config),
+because model state is per engine instance; its stage 2/3 UI work additionally
+comes after that plan's stage 3b, which moves `ModelBrowser` into the Advanced
+connection editor — the grouped browser and pull affordance live there, not in
+`IntelligenceSheet`.
 
 ---
 
@@ -31,8 +35,7 @@ Today a model is a bare id plus an optional context length —
 The catalogue (`KoogRemoteModelCatalog`) parses only what it needs to fill that
 shape, the browser lists whatever the server returns in one flat `FlowRow`, and
 the selected model carries across provider switches. There is no notion of model
-quality, no capability signal, no way to pull a missing model, and no place to
-manage downloaded local files.
+quality, no capability signal, and no way to pull a missing model.
 
 ## Decisions (locked)
 
@@ -49,22 +52,18 @@ manage downloaded local files.
    the Anthropic catalogue via Koog; leave null for the OpenAI-compatible path.
 5. **Resolve the `latest` alias for display** while keeping the canonical id for
    selection.
-6. **Downloads differ by kind** — an Ollama pull is a server-side stream on an
-   instance; a downloaded LiteRT model is itself an `engine_instances` row of
-   `EngineKind.LocalFile` (see ENGINE-CONFIG-PLAN.md, "Storage").
-7. **Verification is part of the download by default** — for `ModelFileDownload`,
-   treat download → checksum → extraction as phases of the same task (log phases,
-   allocate progress across them, only mark succeeded after verification passes).
-   `ModelVerification` remains a separate `TaskKind` only for explicit
-   re-verification of already-installed models (not part of normal download
-   completion). For `OllamaModelPull`, verification continues as phases reported
-   by the server stream.
+6. **The only download is the Ollama pull** — a server-side stream on an
+   instance. Local-file downloads and their `EngineKind.LocalFile` rows were
+   removed.
+7. **Verification is part of the pull** — for `OllamaModelPull`, server-reported
+   phases (including digest verification) are phases of the same task, and it is
+   only marked succeeded once the stream reports success.
 8. **Hostability is a note, not a filter.**
 
 ## Target model
 
 ```kotlin
-enum class ModelSource { Ollama, OpenAiCompatible, Anthropic, LiteRt }
+enum class ModelSource { Ollama, OpenAiCompatible, Anthropic }
 
 enum class ModelQuality { Strong, Adequate, Weak, Unknown }
 enum class ModelSpeed { Fast, Fine, Slow, Unknown }
@@ -169,16 +168,16 @@ browser chip shows the resolved name while the id stays canonical.
 
 **Proof:** `./gradlew :shared:allTests`.
 
-### Stage 3 — Downloads & local models
+### Stage 3 — The Ollama pull
 
-> **Superseded in part:** local models, local-file downloads, and the in-app
-> on-device eval harness are being removed rather than finished. Ollama pull
-> stays. See [Removal plan](#removal-plan--local-models-local-downloads-and-ondevice)
-> below.
+> **Scope after removal:** local models, local-file downloads, and the in-app
+> on-device eval harness were removed rather than finished; their design is
+> archived in [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md). This stage
+> keeps only the Ollama pull, which is a server-side stream on an instance.
 
 - [x] **PRD updates:** PRD §4.3 already states the Verified / Recommended /
       Others groupings — update these to what we have in code. Also include
-      best-available auto-selection, and Ollama pull plans (Stage 3)
+      best-available auto-selection, and the Ollama pull (Stage 3)
       (`PRD.md:63`); keep it in sync as the `latest` alias resolution and the
       hostability flag land.
 - [x] **Download infrastructure (task system):** Extend the existing task
@@ -186,20 +185,20 @@ browser chip shows the resolved name while the id stays canonical.
       download-aware (no parallel systems).
   - [x] Add `Download` to `ConcurrencyGroup` (downloads are I/O-heavy; do not
         block engine work; tune concurrency per platform).
-  - [x] Add download task kinds to `TaskKind` (`OllamaModelPull`,
-        `ModelFileDownload`, `ModelVerification`) with `group = ConcurrencyGroup.Download`
-        and update `TaskLabels` for titles/progress.
+  - [x] Add the `OllamaModelPull` task kind to `TaskKind` with
+        `group = ConcurrencyGroup.Download` and update `TaskLabels` for
+        titles/progress.
   - [x] Extend `GenerationTask` with optional download metadata (backwards
-        compatible): `modelId`, `source` (e.g. `"ollama"`, `"huggingface"`,
-        `"litert"`), `bytesTotal`, `bytesDone`, `throughputBps`, `downloadId`.
+        compatible): `modelId`, `source` (e.g. `"ollama"`), `bytesTotal`,
+        `bytesDone`, `throughputBps`, `downloadId`.
         Add `TaskRunner.setDownloadProgress(taskId, bytesDone, bytesTotal, throughputBps?)`
         to update fraction `progress` and metadata.
 - [x] **Download abstractions:** Create a `downloads/` package with interfaces
       to enable testing and swappable implementations.
   - [x] Define `ModelDownloader` (`downloads()`, `pullOllama(modelId, baseUrl)`,
-        `downloadModel(spec)`, `cancel(handleId)`), `DownloadHandle(id, taskId)`,
+        `cancel(handleId)`), `DownloadHandle(id, taskId)`,
         `DownloadState` (handle/task/kind/status/modelId/bytes/throughput/progress/message/source),
-        `DownloadKind` (`OllamaPull`, `LocalFile`), `DownloadStatus` (`Queued`,
+        `DownloadKind` (`OllamaPull`), `DownloadStatus` (`Queued`,
         `Running`, `Paused`, `Succeeded`, `Failed`, `Cancelled`).
 - [x] **Ollama pull client:** Add `OllamaPullClient` using `KoogHttpClient` for
       streaming NDJSON from `POST /api/pull` with `{"model": ..., "stream": true}`.
@@ -210,9 +209,9 @@ browser chip shows the resolved name while the id stays canonical.
       `ActivityLogger.taskContext(taskId, projectId = null)`, and refresh
       `RemoteModelCatalog` on completion (optionally auto-select).
 - [x] **ModelDownloadManager + DI wiring:** Implement `ModelDownloader`
-      that enqueues tasks via `TaskRunner`; wire `OllamaPullClient`,
-      `ModelFileTransferClient`, and `ModelDownloader` into `AppComponent`.
-      Expose actions via `EngineViewModel` or a `DownloadViewModel`.
+      that enqueues tasks via `TaskRunner`; wire `OllamaPullClient` and
+      `ModelDownloader` into `AppComponent`. Expose actions via
+      `EngineViewModel` or a `DownloadViewModel`.
 - [x] Revise how we understand model aliases.  Use manifest SHA to know two models are the same. Note: won't use manifest digests at this time. Curation is keyed by family/model-id patterns and measured seeds, and pull/availability matching stays tag-based. Digests are mainly for runtime alias detection, duplicate suppression, and future "are these the same model?" logic; storing them alongside cured entries would add maintenance burden without improving recommendation matching.
   - [x] Determine scope: this is Ollama-only — other sources use their ids as-is, so alias reconciliation applies only to Ollama tags.
   - [x] the app should recognize that llama3.2:latest is the same as llama3.2:3b — `RemoteModelInfo.digest` is captured from Ollama and a `:latest` alias sharing a digest with an installed concrete tag is shown under that tag.
@@ -258,98 +257,27 @@ browser chip shows the resolved name while the id stays canonical.
 - [x] See if we can use material icons for llm tier display instead of unicode text.
       `ModelPresentationTier` lost its glyph string; the UI now maps each tier to a
       Material icon (`ModelTierVisuals.kt`), and the pull chip's `↓` is a Download icon.
-- [x] **Local file downloads (LiteRT-LM, in-process):** Add `ModelFileTransferClient`
-      implementation + platform actuals for direct HTTP(S) downloads to app storage
-      (via `PlatformContext`) with resume (Range), checksum verification (sha256),
-      extraction if needed, disk space checks, cooperative cancellation, and
-      throughput/ETA tracking. Add full LiteRT-LM support (Koog's
-      `LiteRTLLMClient` on Android, JVM adapter over `litertlm-jvm` on desktop).
-      Use the download infrastructure for download + management UI of
-      `.litertlm` models; ensure downloaded models become `EngineKind.LocalFile`
-      instances. Run download → checksum → extraction as phases of the same
-      `ModelFileDownload` task (allocate progress across phases, only succeed after
-      verification passes); use `ModelVerification` only for explicit re-verification
-      of already-installed models. Create/update `EngineInstance(kind = LocalFile,
-      localPath = ...)`, update `EngineCatalog` availability (replace TODO with
-      actual file existence/checksum validation), and register with the engine
-      system. Add UI in the Local tier of `EnginePickerSheet` (list downloadable +
-      installed local models; "Download" starts `ModelFileDownload` task).
-      Implemented for Android, the only target with a LiteRT runtime: the curated
-      `.litertlm` catalog downloads into app storage and installs LocalFile
-      instances. Desktop/iOS/wasm keep the Local tier disabled and compile against
-      the shared seams.
-- [x] **On-device evaluation harness:** Build an in-app tool similar to
-      `tools/eval_ollama_models.py` to capture timing, ok/clean/json rates,
-      memory/footprint estimates, and timeouts for validating models
-      and extending the curated set.  And write a script for a computer that lets me share 
-      this data on a local network back to my computer to add to our data sets.  If we
-      aren't already we should be grouping by hardware and os to form per-device recommendations.
-      Example: the two llama3.2 models we picked are slow and unable to comply on phone,
-      usually filling their output buffers with nonsense.  Phi4-mini seems to work though,
-      at least on a Nothing 3.  The tool should expect and ideally handle OOM crashes. If
-      it can't do it in-process then record enough data during the test that we can pick it
-      up next launch.
-      Implemented as a Testing-sheet sweep that persists a resumable row per `(model, run)`
-      and groups results by hardware/OS. `tools/eval_receiver.py` brings those rows back
-      over the LAN and `tools/eval_report_by_device.py` writes per-device recommendations.
-    - [x] Do not use usesCleartextTraffic in android manifest -- either set the script up to make
-          an https server (preferred) or use a Network Security Config file
-          The receiver now serves HTTPS with a checked-in certificate pinned by the app, and the
-          manifest replaced the flag with a network security config that allows only loopback HTTP.
-    - [ ] Should be able to view and test a wider array of models from the community than we display
-          in local engine. Related: need to manage the downloads like that dialog. Code may be
-          sharable?
-    - [x] If currently running just say a model is in progress -- not to run again
-    - [x] We should narrow the timeout measurements across the board.  Perhaps 30s on each request?
-          Take a look at current data to see the impact it could have.  If some models go over, but
-          don't have good quality, the shorter time would still benefit.
-          Current data shows 30 s changes no recommendation tier but lowers measured quality for
-          eleven slow models, so the harness keeps 120 s and aborts repetition loops within seconds.   
-    - [ ] this tool doesn't need the engine status and popup menu in the top bar.
-    - [ ] is quality a percentage or what?  Display a % or indicate its max value
-    - [ ] Need a way to clear results
-- [ ] Ability to share models with nearby devices using industry standards (quick share, 
-      airdrop, etc) -- and between platforms if these models are platform independent.
 - [ ] **Improve logging** the activity log entries aren't very useful; the main entry
-      is called Task, from Task Runner, and there are way too many entries that just 
+      is called Task, from Task Runner, and there are way too many entries that just
       say phase: Downloading which is itself unuseful.  I'd recommend not logging any
       intermediate download reports, or at most at 25% 50% 75%.
-- [ ] **Robust mobile downloads** consider using native download mechanisms (or industry 
-      standard ones) on android and ios to better deal with common mobile interruptions
-      like sleep, network problems, etc
-- [ ] Don't add new rows to "Advanced" for local models -- always use the local model
-      dialog. Only delete a model when deleted via that dialog. Use selectable cards
-      for models instead of the use button.  If a model is not fully downloaded, start
-      a download for it.  Keep the ability to cancel a download in progress. Display 
-      partial downloads and allow them to be removed. If we need to keep these as 
-      distinct records, that's fine, though probably shouldn't show them or allow them
-      to be edited.  Just make sure the records are accurate. Example: currently the 
-      edit dialog shows them as half-filled ollama models.   
 - [ ] when entering engine status, the title on the main gets a back button.  Sometimes
       this remains even after closing any popups.  Requires a tap anywhere to dismiss,
       but back does nothing.
-- [ ] **Track context length** as models are selected and downloaded.
-- [x] **Make the Local tier real:** Enable Local placeholder rows per
-      ENGINE-CONFIG-PLAN.md stage 3; downloaded models render as `EngineKind.LocalFile`
-      instances under Local (platform-gate; web/wasm deferred).
-      Done with the item above: the Local card opens the model manager and its
-      installed instances render under Local wherever the runtime is supported.
-- [ ] Even if we can't display anything while waiting for a full response consider 
+- [ ] **Track context length** as models are selected and pulled.
+- [ ] Even if we can't display anything while waiting for a full response consider
       showing some kind of display indicating characters / words received etc
 - [ ] **Hostability flag:** Apply memory fit heuristics (see
       [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next
-      to size/context chips for local models and Ollama instances on localhost;
+      to size/context chips for Ollama instances on localhost;
       consider chip color changes for outliers (MLX versions may require recent
       Macs).
-- [ ] **Logging, progress/cancel/background, and tests:** Log all download
-      events (start/phases/errors/cancel/success) via `ActivityLogger` (use
-      `ActivityLogger.taskContext(taskId, projectId = null)` for downloads).
+- [ ] **Logging, progress/cancel/background, and tests:** Log pull events
+      (start/phases/errors/cancel/success) via `ActivityLogger` (use
+      `ActivityLogger.taskContext(taskId, projectId = null)` for pulls).
       Ensure progress via metadata/`setProgress`, cancel via stream closure +
-      task cancellation, background via app scope. Add tests for the download
+      task cancellation, background via app scope. Add tests for the pull
       framework.
-
-Note: the LiteRT client may require a beta version of Koog (see
-IMPLEMENTATION-PLAN.md Phase 5, "Revisit a newer Koog release when one lands").
 
 **Proof:** `./gradlew :shared:allTests`; a manual pull against a local Ollama.
 
@@ -357,9 +285,10 @@ IMPLEMENTATION-PLAN.md Phase 5, "Revisit a newer Koog release when one lands").
 
 ## Removal plan — local models, local downloads, and `OnDevice`
 
-**Status: queued.** The local-model track is being cut, not finished. This is
-the execution checklist for removing it; it supersedes the local-model and
-on-device eval items in stage 3.
+**Status: done, except the manual smoke test.** The local-model track was cut,
+not finished. This is the execution checklist for the removal; it supersedes the
+local-model and on-device eval items in stage 3, whose design is preserved in
+[ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
 
 ### Scope decisions (locked)
 
@@ -550,27 +479,27 @@ on-device eval items in stage 3.
 
 ### 7. Docs and verification
 
-- [ ] `docs/ENGINE-CONFIG-PLAN.md`: update the engine kinds
+- [x] `docs/ENGINE-CONFIG-PLAN.md`: update the engine kinds
       (`Offline` / `Remote`), tiers (`Offline` / `Free` / `Advanced`), storage
       shape without `localPath`, and the local-model stage notes.
-- [ ] `docs/IMPLEMENTATION-PLAN.md`: mark the local-model items as
+- [x] `docs/IMPLEMENTATION-PLAN.md`: mark the local-model items as
       removed/superseded with at most two sentences each — Phase 3.7's
       "Model catalog … downloads" item, Web (wasm) on-device, desktop
       in-process LiteRT, iOS in-process local models, and the Llamatik
       contingency; plus Phase 4's `OnDeviceLLMClient`. Keep the Ollama eval and
       pull items. (The in-app eval harness is only documented in
       `docs/MODEL-EVAL-HARNESS.md`, with no plan row.)
-- [ ] `docs/ENG-DESIGN.md`: remove the On-device / Downloaded rows from the
+- [x] `docs/ENG-DESIGN.md`: remove the On-device / Downloaded rows from the
       engine-mode table in "LLM Inference Layer" and the "Downloaded local
       models (LiteRT-LM)" paragraph; keep the remote and Ollama paths.
-- [ ] `docs/PRD.md`: correct the "Alpha Thinker Edge" local-LLM wording and the
+- [x] `docs/PRD.md`: correct the "Alpha Thinker Edge" local-LLM wording and the
       Ollama pull "planned" note (pull exists; local models do not).
-- [ ] `docs/MODEL-CATALOG-PLAN.md`: Move the stage 3 local-model and eval items
-      to an ARCHIVED-LOCAL-MODELS.md, keep the pull items, and refresh 
+- [x] `docs/MODEL-CATALOG-PLAN.md`: Move the stage 3 local-model and eval items
+      to an ARCHIVED-LOCAL-MODELS.md, keep the pull items, and refresh
       "Blast radius" / "Out of scope".
-- [ ] Update `README.md` / `tools/README.md` wherever local models are
+- [x] Update `README.md` / `tools/README.md` wherever local models are
       advertised.
-- [ ] Verify with `./gradlew :shared:desktopTest`, then search for leftovers:
+- [x] Verify with `./gradlew :shared:desktopTest`, then search for leftovers:
       `OnDevice`, `LocalFile`, `LocalModel`, `LiteRT`, `litert`,
       `ModelFileTransfer`, `ModelEvaluator`, `EvalRemote`, and
       `MODEL-EVAL-HARNESS`. Only intentional history/docs references should
@@ -587,8 +516,9 @@ on-device eval items in stage 3.
   (`ui/chrome/ConnectionDialog.kt`); `ModelProfiles` / `ModelRanker`; the
   Ollama pull download path; PRD §4.3 wording.
 - Tests: the `RemoteModelCatalog` cases and `SettingsViewModelTest`.
-- Stage 3 adds the first real "download" UI. After the removal plan it serves
-  only the Ollama pull: the progress ring and cancel in the connection editor.
+- Stage 3's only download is the Ollama pull: the progress ring and cancel in the
+  connection editor. Local-file downloads and the in-app eval harness are
+  archived in [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
 
 ## Out of scope
 
