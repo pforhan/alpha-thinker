@@ -17,7 +17,8 @@ this audit except 26.2, which landed first.
 | `EngineRef` (`Builtin`/`Instance`) | `engine/EngineRef.kt` | Selectable engine identity; durable `storageKey` for selection/last-use. | `EngineSelectionState`, `EngineCatalog`, `EngineRegistry`, `EngineRepository`, `Storage`/DAOs, `ui/chrome/EngineStatus`, viewmodels. | **Keep**. | The per-selection unit the plan needed; small, well-scoped. |
 | `EngineInstance` | `engine/EngineInstance.kt` | User-created connection row (provider/endpoint/key/model/window). | `EngineCatalog`, `EngineRegistry`, `EngineRepository`, `RemoteConnection` construction, storage/mappers, connection UI/VM. | **Keep**. | Carries the fields the registry/backend consume; `remote()`/`defaultRemote()` centralize construction. |
 | `EnginePickerTier` *(renamed from `EngineTier`, 26.5)* | `engine/EnginePickerTier.kt` | Picker grouping (`Offline`/`Free`/`Advanced`) + display order. | `EngineCatalog.groupedByTier`, picker UI. | **Keep** (done). | Engine-picker grouping, disambiguated from `ModelPresentationTier` (model curation). |
-| `EngineCatalogEntry` + `EngineCatalog` | `engine/EngineCatalog.kt` | Code-defined built-ins + pure merge/grouping of instances by tier/recency; per-ref `availability(repo)`. | `EngineRepository` (live keys/pruning), `EngineRegistry` consumers, picker, `EngineStatus` derivation. | **Keep, split file**. | Right responsibility. Two public types in one file (AGENTS: one type per file). Availability lambda reads the repo — acceptable, but note the behavioral coupling. |
+| `EngineCatalogEntry` | `engine/EngineCatalogEntry.kt` | Code-defined built-in/user instance entry with per-ref `availability(repo)`. | `EngineCatalog`, picker, status derivation. | **Keep** (27.2). | Split from `EngineCatalog.kt`; availability lambda reads the repo (coupling to preserve deliberately). |
+| `EngineCatalog` | `engine/EngineCatalog.kt` | Pure merge/grouping of built-ins + instances by picker tier/recency. | `EngineRepository` (live keys/pruning), `EngineRegistry` consumers, picker, `EngineStatus` derivation. | **Keep** (27.2). | Split from `EngineCatalogEntry`. |
 | `EngineRegistry` | `engine/EngineRegistry.kt` | Builds/caches `PlanningEngine` per `EngineRef`; `invalidate` closes evicted engines. | `AppComponent`/DI, task execution path (`PlanningEngineSelector` seam), settings/engine viewmodels. | **Keep**. | Replaced the parallel mode maps and `DynamicKoogPlanningBackend`. |
 | `EngineSelectionState` *(renamed from `EngineState`, 26.2)* | `engine/EngineSelectionState.kt` | Domain record: `selected` + `lastUsedAt` per `EngineRef`; persisted via `engine_selection_state`. | `EngineRepository` (`load`/`markUsed`/`shouldOfferFirstRun`), `Storage`/`Mappers`/`EngineSelectionStateEntity`/DAO. | **Keep** (done). | 26.2 resolved the collision with UI `EngineStatus`; table/entity/DAO/storage names kept coherent and DB bumped to v14 (destructive migration). |
 | `EngineAvailability` | `engine/EngineAvailability.kt` | `Available` / `Unavailable(reason)` for whether an engine can run now. | `EngineCatalog` entries, `ui/chrome/EngineStatus`. | **Keep**. | Distinct from archetype; the one readiness concept (pairs with 26.3). |
@@ -30,7 +31,8 @@ this audit except 26.2, which landed first.
 
 | Type | File | Responsibility | Key call sites | Verdict | Rationale |
 |---|---|---|---|---|---|
-| `PlanningEngine` + `QuestionBatch` | `engine/PlanningEngine.kt` | Core engine contract and batch result. | All engines, registry, selector, repository/tasks, logging/decorators. | **Keep, split file**. | Core seam; 2 public types. |
+| `QuestionBatch` | `engine/QuestionBatch.kt` | Question-generation batch result + `summary()` contract. | `PlanningEngine`, engines, logging, tasks/repository. | **Keep** (27.2). | Split from `PlanningEngine.kt`. |
+| `PlanningEngine` | `engine/PlanningEngine.kt` | Core engine contract. | All engines, registry, selector, repository/tasks, logging/decorators. | **Keep** (27.2). | Core seam. |
 | `KoogPlanningEngine` | `engine/KoogPlanningEngine.kt` | `PlanningEngine` over a `KoogPlanningBackend`. | `EngineRegistry` (Remote). | **Keep**. | Runtime impl. |
 | `KoogPlanningBackend` | `engine/KoogPlanningBackend.kt` | Backend seam (model/JSON/streaming) for Koog engine. | `KoogPlanningEngine`, `RemoteKoogPlanningBackend`. | **Keep**. | Abstraction enabling the remote backend. |
 | `RemoteKoogPlanningBackend` | `engine/RemoteKoogPlanningBackend.kt` | Koog client/backend over a `RemoteConnection`. | `EngineRegistry`. | **Keep, split file**. | Carries `RemoteConnection` (relocate, 26.9). |
@@ -38,7 +40,8 @@ this audit except 26.2, which landed first.
 | `LoggingPlanningEngine` | `engine/LoggingPlanningEngine.kt` | Decorator logging prompts/responses/raw capture. | Engine composition/DI. | **Keep**. | Cross-cutting runtime decorator. |
 | `ForwardingPlanningEngine` | `engine/ForwardingPlanningEngine.kt` | Delegating base for decorators. | Decorator implementations (e.g. slowdown/logging patterns). | **Keep**. | Small reuse seam; verify live subclasses during moves. |
 | `SlowDownPlanningEngine` | `engine/SlowDownPlanningEngine.kt` | Dev-tool delay decorator. | Dev tooling/DI composition (Phase 8-adjacent). | **Keep, repackage carefully**. | Dev-tool concern — keep out of "product catalog" neighbors (27.5). |
-| `EngineInteraction` + `EngineDelayConfig` | `engine/EngineDelayConfig.kt` | Dev-tool delay config. | Slowdown/developer settings. | **Keep, split/repackage carefully**. | Dev-tool concern (27.5). |
+| `EngineInteraction` | `engine/EngineInteraction.kt` | Dev-tool delay interaction enum. | Slowdown/developer settings. | **Keep, repackage carefully** (27.2 split). | Dev-tool concern (27.5). |
+| `EngineDelayConfig` | `engine/EngineDelayConfig.kt` | Dev-tool delay config. | Slowdown/developer settings. | **Keep, repackage carefully** (27.2 split). | Dev-tool concern (27.5). |
 | `PlanningContext` | `engine/PlanningContext.kt` | Prompt/transcript context rendering. | `KoogPlanningEngine`/prompt building, export (future). | **Keep**. | Prompt plumbing, not catalog. |
 | `ModelIdentity` helpers | `engine/ModelIdentity.kt` | Alias/size/count parsing helpers (top-level, no class). | `RemoteModelCatalog` parsing, display/ranking inputs. | **Keep, relocate**. | Model metadata helpers; fits the model subpackage (27.4), not engine config. |
 
@@ -47,9 +50,9 @@ this audit except 26.2, which landed first.
 | Type | File | Responsibility | Key call sites | Verdict | Rationale |
 |---|---|---|---|---|---|
 | `ModelMetadataSource` *(renamed from `ModelSource`, 26.4)* | `engine/ModelMetadataSource.kt` | Metadata provenance (`Ollama`/`OpenAiCompatible`/`Anthropic`) — explains which fields can be known. | `RemoteModelInfo.source`, `RemoteModelCatalog` impl, `ModelBrowserMerge`, tests. | **Keep** (done). | Renamed for clarity and KDoc'd as provenance (not `RemoteProvider`); mapped explicitly via `RemoteProvider.metadataSource`. |
-| `RemoteModelInfo` | `engine/RemoteModelCatalog.kt` | Canonical model record (id + `displayName` alias + context/size/capability metadata). | Catalog, `ModelRanker`/`ModelBrowserMerge`, `EngineViewModel` auto-select, connection UI. | **Keep, relocate/split**. | Core data; currently co-located with catalog contract/impl/UI state (4 public types). |
-| `RemoteModelCatalog` (interface) | `engine/RemoteModelCatalog.kt` | Contract to list models / resolve context length for a provider. | `KoogRemoteModelCatalog`, `EngineViewModel`, fakes/tests. | **Keep, relocate/split**. | Enables fakes; separate from impl. |
-| `KoogRemoteModelCatalog` | `engine/RemoteModelCatalog.kt` | HTTP/catalog impl (Anthropic bundled, OpenAI-compatible `/v1`, Ollama tags+show). | DI/provisioning, `EngineViewModel` (via interface). | **Keep, relocate/split**. | Substantial impl; decide file placement vs. contract in 27.2/27.4. |
+| `RemoteModelInfo` | `engine/RemoteModelInfo.kt` | Canonical model record (id + `displayName` alias + context/size/capability metadata). | Catalog, `ModelRanker`/`ModelBrowserMerge`, `EngineViewModel` auto-select, connection UI. | **Keep** (27.2). | Split out of `RemoteModelCatalog.kt`. |
+| `RemoteModelCatalog` (interface) | `engine/RemoteModelCatalog.kt` | Contract to list models / resolve context length for a provider. | `KoogRemoteModelCatalog`, `EngineViewModel`, fakes/tests. | **Keep** (27.2). | Contract separated from impl; enables fakes. |
+| `KoogRemoteModelCatalog` | `engine/KoogRemoteModelCatalog.kt` | HTTP/catalog impl (Anthropic bundled, OpenAI-compatible `/v1`, Ollama tags+show). | DI/provisioning, `EngineViewModel` (via interface). | **Keep** (27.2). | Impl split out; private serialization DTOs/helpers kept local to the impl file. |
 | `RemoteModelListState` | `ui/chrome/RemoteModelListState.kt` | Browse UI state (`Idle`/`Loading`/`Loaded`/`Failed`); `Loaded.browserEntriesWithPulls()`. | `EngineViewModel`, `ConnectionDialog`, `EngineViewModelTest`. | **Keep** (26.7). | Re-homed out of `engine/RemoteModelCatalog.kt` (catalog contract + model info only) to chrome view state shared by VM and connection UI. |
 | `ModelQuality` | `engine/ModelQuality.kt` | Quality axis for curation/ranking. | `ModelMeasurement`/`ModelProfiles`, `ModelRanker`, UI chips. | **Keep** (26.6). | Split out of `ModelCuration.kt`. |
 | `ModelSpeed` | `engine/ModelSpeed.kt` | Speed axis for curation/ranking. | Curation/ranking/UI. | **Keep** (26.6). | Split out of `ModelCuration.kt`. |
@@ -58,19 +61,22 @@ this audit except 26.2, which landed first.
 | `ModelMeasurement` | `engine/ModelMeasurement.kt` | Measured seed record from eval rows. | `ModelProfiles.measuredSeeds`, `ModelRanker`. | **Keep** (26.6). | Evidence backing curation; eval snippet shape (`ModelMeasurement`, `measuredSeeds`) preserved. |
 | `ModelProfiles` (object) | `engine/ModelProfiles.kt` | Measured seeds, family heuristics, lookup/strong-id helpers. | `ModelRanker`, `ModelBrowserMerge` (`strongModelIds`), tests, `tools/eval_ollama_models.py` snippet expectations. | **Keep** (26.6). | Reconciled to `ModelProfiles.kt` (as the plan expected), split from `ModelCuration.kt`. |
 | `ModelRanker` (object) | `engine/ModelRanker.kt` | Deterministic ranking over measurements/heuristics into `ModelRank`. | `ModelBrowserMerge`, `EngineViewModel` auto-select. | **Keep**. | Clean data-vs-logic split; already separate. |
-| `ModelBrowserMerge` + `ModelBrowserEntry` | `engine/ModelBrowserMerge.kt` | Pure merge of installed + pullable curated models into ranked, `isPull`-marked entries. | `RemoteModelListState.Loaded.browserEntriesWithPulls()`, connection UI. | **Keep, split file**. | Small/testable; 2 public types. |
+| `ModelBrowserEntry` | `engine/ModelBrowserEntry.kt` | One ranked browser entry, marked `isPull` when not yet installed. | `ModelBrowserMerge`, `RemoteModelListState`/connection UI. | **Keep** (27.2). | Split from `ModelBrowserMerge.kt`. |
+| `ModelBrowserMerge` | `engine/ModelBrowserMerge.kt` | Pure merge of installed + pullable curated models into ranked, `isPull`-marked entries. | `RemoteModelListState.Loaded.browserEntriesWithPulls()`, connection UI. | **Keep** (27.2). | Small/testable merge logic. |
 
 ## Downloads / Ollama pull (kept after local-model removal)
 
 | Type | File | Responsibility | Key call sites | Verdict | Rationale |
 |---|---|---|---|---|---|
-| `DownloadKind` | `downloads/DownloadModels.kt` | Download kind (`OllamaPull`). | `DownloadState`, downloader/VM/UI. | **Keep, split file**. | Narrowed per removal plan. |
-| `DownloadStatus` | `downloads/DownloadModels.kt` | Lifecycle phase enum (`Queued`…`Cancelled`, `finished`). | `DownloadState`, `TaskBackedModelDownloader` status mapping, pull UI/tests. | **Keep, naming review**. | Phase enum vs. aggregate `DownloadState` — readable but easy to misread; also parallels `TaskStatus`. Decide rename to `DownloadPhase` only if low churn (26.8). |
-| `DownloadHandle` | `downloads/DownloadModels.kt` | Download handle linking `id` to task id. | `ModelDownloader`/`TaskBackedModelDownloader`, VM/UI cancel. | **Keep, split file**. | Simple handle. |
-| `DownloadState` | `downloads/DownloadModels.kt` | Observable aggregate snapshot of a download. | `ModelDownloader.downloads()`, pull chips/progress/cancel UI, tests. | **Keep, split file**. | The observed shape; distinct from `DownloadStatus` phase. |
+| `DownloadKind` | `downloads/DownloadKind.kt` | Download kind (`OllamaPull`). | `DownloadState`, downloader/VM/UI. | **Keep** (27.2). | Split from `DownloadModels.kt`. |
+| `DownloadStatus` | `downloads/DownloadStatus.kt` | Lifecycle phase enum (`Queued`…`Cancelled`, `finished`). | `DownloadState`, `TaskBackedModelDownloader` status mapping, pull UI/tests. | **Keep, naming review** (27.2 split). | Phase enum vs. aggregate `DownloadState`; parallels `TaskStatus`. Decide rename to `DownloadPhase` only if low churn (26.8). |
+| `DownloadHandle` | `downloads/DownloadHandle.kt` | Download handle linking `id` to task id. | `ModelDownloader`/`TaskBackedModelDownloader`, VM/UI cancel. | **Keep** (27.2). | Split from `DownloadModels.kt`. |
+| `DownloadState` | `downloads/DownloadState.kt` | Observable aggregate snapshot of a download. | `ModelDownloader.downloads()`, pull chips/progress/cancel UI, tests. | **Keep** (27.2). | The observed shape; distinct from `DownloadStatus` phase. |
 | `ModelDownloader` (interface) | `downloads/ModelDownloader.kt` | Narrow pull API: observe, `pullOllama`, `cancel`. | `TaskBackedModelDownloader`, `EngineViewModel`/DI. | **Keep**. | Contract for fakes and the task-backed impl. |
 | `TaskBackedModelDownloader` | `downloads/TaskBackedModelDownloader.kt` | Bridges Ollama pulls to `TaskRunner`/progress/metadata/cancel. | DI, `ModelDownloader` impl, tests. | **Keep**. | The live pull path. |
-| `OllamaPullClient` / `OllamaPullEvent` / `KoogOllamaPullClient` | `downloads/OllamaPullClient.kt` | Streaming NDJSON pull contract + event + Koog/HTTP impl. | `TaskBackedModelDownloader`, tests. | **Keep, split file**. | 3 public types in one file; pull transport isolated from UI. |
+| `OllamaPullClient` (interface) | `downloads/OllamaPullClient.kt` | Streaming pull contract. | `KoogOllamaPullClient`, `TaskBackedModelDownloader`, tests. | **Keep** (27.2). | Split from impl/event. |
+| `OllamaPullEvent` | `downloads/OllamaPullEvent.kt` | Pull progress/error event. | `OllamaPullClient`/impl, downloader. | **Keep** (27.2). | Split out. |
+| `KoogOllamaPullClient` | `downloads/KoogOllamaPullClient.kt` | Koog/HTTP NDJSON pull impl. | DI, `TaskBackedModelDownloader`, tests. | **Keep** (27.2). | Private serialization DTOs/helpers kept local to the impl file. |
 | `EmaThroughput` | `downloads/EmaThroughput.kt` | Smoothed transfer-rate/ETA helper. | `TaskBackedModelDownloader` progress. | **Keep**. | Small, focused utility. |
 
 ## Confirmed fold candidates (evidence)
@@ -129,11 +135,13 @@ Known coupling to resolve deliberately during moves (not pure-domain):
 
 ### Notes carried forward
 
-- One-type-per-file (AGENTS): `ModelCuration` split in 26.6, `RemoteConnection`
-  extracted in 26.9; still violated in `RemoteModelCatalog` (4), `DownloadModels` (4),
-  `OllamaPullClient` (3), and 2-type files (`EngineCatalog`, `ModelBrowserMerge`,
-  `PlanningEngine`, `EngineDelayConfig`) — normalize in 27.2 (`KoogRemoteModelCatalog`
-  vs contract is the key `RemoteModelCatalog` split decision).
+- One-type-per-file (AGENTS) for the plan's scope: resolved in 26.6/26.9/27.2
+  (`ModelCuration` → 6 files; `RemoteConnection` extracted; `RemoteModelCatalog` →
+  `RemoteModelInfo`/contract/`KoogRemoteModelCatalog` impl with private DTOs local;
+  `DownloadModels` → 4 files; `OllamaPullClient` → interface/event/impl with private
+  DTOs local; `PlanningEngine`/`QuestionBatch`, `EngineDelayConfig`/`EngineInteraction`,
+  `ModelBrowserMerge`/`ModelBrowserEntry`, `EngineCatalog`/`EngineCatalogEntry` split).
+  Reconfirm during 27.3–27.5 moves.
 - `RemoteModelListState` re-homed to `ui/chrome/RemoteModelListState.kt` in 26.7.
 - Dev-tool delay types must not land beside product catalog types (27.5).
-- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1(done) → 26.6(done)/26.7(done)/26.9(done)/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.
+- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1(done) → 26.6(done)/26.7(done)/26.9(done)/27.2(done) → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.

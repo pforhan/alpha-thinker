@@ -1,34 +1,6 @@
 package alphainterplanetary.thinker.downloads
 
 /**
- * Kinds of downloads supported by [ModelDownloader].
- */
-enum class DownloadKind {
-  OllamaPull,
-}
-
-/**
- * State of a download.
- */
-enum class DownloadStatus(val finished: Boolean = false) {
-  Queued,
-  Running,
-  Paused,
-  Succeeded(true),
-  Failed(true),
-  Cancelled(true),
-}
-
-/**
- * A handle returned when starting a download. The [taskId] links to
- * [alphainterplanetary.thinker.tasks.GenerationTask].
- */
-data class DownloadHandle(
-  val id: String,
-  val taskId: String,
-)
-
-/**
  * Observable state for a download.
  */
 data class DownloadState(

@@ -3,12 +3,6 @@ package alphainterplanetary.thinker.engine
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-/** One [PlanningEngine] interaction that the artificial testing delay can target. */
-enum class EngineInteraction(val label: String) {
-  TitleRecommendation("Title recommendation"),
-  QuestionGeneration("Question generation"),
-}
-
 /**
  * Artificial slow-down applied to [PlanningEngine] interactions while
  * [enabled] (the Testing setting). Each interaction carries its own hold time,
