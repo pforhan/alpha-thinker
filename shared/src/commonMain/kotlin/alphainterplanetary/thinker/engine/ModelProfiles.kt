@@ -161,7 +161,10 @@ object ModelProfiles {
       okRate = 1.0,
       cleanRate = 0.778,
       jsonOkRate = 1.0,
-      notes = listOf("Titles over 60 chars (software-plan)", "Summaries include bullets/headings (home-project)"),
+      notes = listOf(
+        "Titles over 60 chars (software-plan)",
+        "Summaries include bullets/headings (home-project)"
+      ),
     ),
     ModelMeasurement(
       modelIdPattern = "gemma4:26b-mlx",
@@ -182,7 +185,11 @@ object ModelProfiles {
       okRate = 0.867,
       cleanRate = 0.444,
       jsonOkRate = 1.0,
-      notes = listOf("Titles wrapped in quotes (home-project)", "Titles with trailing periods (software-plan)", "Summaries include bullets/headings (home-project, simple-product, software-plan)"),
+      notes = listOf(
+        "Titles wrapped in quotes (home-project)",
+        "Titles with trailing periods (software-plan)",
+        "Summaries include bullets/headings (home-project, simple-product, software-plan)"
+      ),
     ),
     ModelMeasurement(
       modelIdPattern = "gemma4:12b",
@@ -215,7 +222,11 @@ object ModelProfiles {
       okRate = 0.921,
       cleanRate = 0.158,
       jsonOkRate = 0.667,
-      notes = listOf("Multi-line titles (home-project, simple-product, software-plan)", "Questions failed to parse as JSON arrays (home-project)", "Summaries over 150 words (home-project, simple-product, software-plan)"),
+      notes = listOf(
+        "Multi-line titles (home-project, simple-product, software-plan)",
+        "Questions failed to parse as JSON arrays (home-project)",
+        "Summaries over 150 words (home-project, simple-product, software-plan)"
+      ),
     ),
     ModelMeasurement(
       modelIdPattern = "qwen3.6:36b",
@@ -237,7 +248,11 @@ object ModelProfiles {
       okRate = 0.778,
       cleanRate = 0.222,
       jsonOkRate = 0.333,
-      notes = listOf("Titles wrapped in quotes (home-project, simple-product)", "Questions failed to parse as JSON arrays (home-project, simple-product)", "Summaries include bullets/headings (home-project, simple-product, software-plan)"),
+      notes = listOf(
+        "Titles wrapped in quotes (home-project, simple-product)",
+        "Questions failed to parse as JSON arrays (home-project, simple-product)",
+        "Summaries include bullets/headings (home-project, simple-product, software-plan)"
+      ),
     ),
     ModelMeasurement(
       modelIdPattern = "tev1:0.8b",
@@ -248,7 +263,12 @@ object ModelProfiles {
       okRate = 0.778,
       cleanRate = 0.111,
       jsonOkRate = 0.333,
-      notes = listOf("Titles with trailing periods (home-project)", "Multi-line titles (simple-product, software-plan)", "Questions failed to parse as JSON arrays (simple-product, software-plan)", "Summaries include bullets/headings (home-project, simple-product, software-plan)"),
+      notes = listOf(
+        "Titles with trailing periods (home-project)",
+        "Multi-line titles (simple-product, software-plan)",
+        "Questions failed to parse as JSON arrays (simple-product, software-plan)",
+        "Summaries include bullets/headings (home-project, simple-product, software-plan)"
+      ),
     ),
     ModelMeasurement(
       modelIdPattern = "qwen3.5:4b",
@@ -281,7 +301,13 @@ object ModelProfiles {
       okRate = 0.667,
       cleanRate = 0.222,
       jsonOkRate = 0.0,
-      notes = listOf("Titles wrapped in quotes (simple-product)", "Titles with trailing periods (software-plan)", "Titles over 60 chars (home-project)", "Questions failed to parse as JSON arrays (home-project, simple-product, software-plan)", "Summaries over 150 words (simple-product)"),
+      notes = listOf(
+        "Titles wrapped in quotes (simple-product)",
+        "Titles with trailing periods (software-plan)",
+        "Titles over 60 chars (home-project)",
+        "Questions failed to parse as JSON arrays (home-project, simple-product, software-plan)",
+        "Summaries over 150 words (simple-product)"
+      ),
     ),
     ModelMeasurement(
       modelIdPattern = "tinyllama:1b",
@@ -292,7 +318,12 @@ object ModelProfiles {
       okRate = 0.667,
       cleanRate = 0.111,
       jsonOkRate = 0.0,
-      notes = listOf("Titles over 60 chars (home-project, software-plan)", "Questions failed to parse as JSON arrays (home-project, simple-product, software-plan)", "Summaries include bullets/headings (home-project, simple-product)", "Summaries over 150 words (software-plan)"),
+      notes = listOf(
+        "Titles over 60 chars (home-project, software-plan)",
+        "Questions failed to parse as JSON arrays (home-project, simple-product, software-plan)",
+        "Summaries include bullets/headings (home-project, simple-product)",
+        "Summaries over 150 words (software-plan)"
+      ),
     ),
     ModelMeasurement(
       modelIdPattern = "qwen3.5:9.7b",

@@ -104,7 +104,12 @@ kotlin {
     wasmJsMain.dependencies {
       implementation(libs.sqlite.web)
       implementation(libs.kotlinx.browser)
-      implementation(npm("sqlite-wasm-worker", layout.projectDirectory.dir("webWorker/worker").asFile))
+      implementation(
+        npm(
+          "sqlite-wasm-worker",
+          layout.projectDirectory.dir("webWorker/worker").asFile
+        )
+      )
       implementation(npm("@sqlite.org/sqlite-wasm", "3.50.4-build1"))
     }
 

@@ -208,11 +208,12 @@ class KoogRemoteModelCatalog(
         .filter { it.digest != null && it.id.substringAfter(':', "latest") != "latest" }
         .associateBy { it.digest!! }
       val resolved = tags.map { tag ->
-        val siblingAlias = if (tag.digest != null && tag.id.substringAfter(':', "latest") == "latest") {
-          concreteByDigest[tag.digest]?.id
-        } else {
-          null
-        }
+        val siblingAlias =
+          if (tag.digest != null && tag.id.substringAfter(':', "latest") == "latest") {
+            concreteByDigest[tag.digest]?.id
+          } else {
+            null
+          }
         ollamaModel(client, tag, siblingAlias)
       }
       // When a `:latest` alias resolves to a real tag that is also listed (or
@@ -222,7 +223,11 @@ class KoogRemoteModelCatalog(
       for (model in resolved) {
         val tag = model.id.substringAfter(':', "latest")
         val existing = seen[model.displayName]
-        if (existing == null || (existing.id.substringAfter(':', "latest") == "latest" && tag != "latest")) {
+        if (existing == null || (existing.id.substringAfter(
+            ':',
+            "latest"
+          ) == "latest" && tag != "latest")
+        ) {
           seen[model.displayName] = model
         }
       }
@@ -240,7 +245,11 @@ class KoogRemoteModelCatalog(
    * in `POST /api/show`, and the listing's own details stand in for a model
    * whose details cannot be read.
    */
-  private suspend fun ollamaModel(client: KoogHttpClient, tag: OllamaTag, siblingAlias: String? = null): RemoteModelInfo {
+  private suspend fun ollamaModel(
+    client: KoogHttpClient,
+    tag: OllamaTag,
+    siblingAlias: String? = null,
+  ): RemoteModelInfo {
     val show = show(client, tag.id)
     val details = show?.details ?: tag.details
     return RemoteModelInfo(

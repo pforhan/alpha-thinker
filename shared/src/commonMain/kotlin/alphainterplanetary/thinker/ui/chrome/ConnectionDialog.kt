@@ -339,7 +339,8 @@ private fun ModelBrowser(
 
   when (state) {
     RemoteModelListState.Idle,
-    RemoteModelListState.Loading -> Unit
+    RemoteModelListState.Loading,
+      -> Unit
 
     is RemoteModelListState.Loaded -> {
       // Curated Ollama models that are not installed join the installed ones

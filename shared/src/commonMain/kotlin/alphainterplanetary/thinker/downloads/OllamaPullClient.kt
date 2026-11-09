@@ -6,7 +6,6 @@ import ai.koog.http.client.lines
 import alphainterplanetary.thinker.engine.normalizeRemoteBaseUrl
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

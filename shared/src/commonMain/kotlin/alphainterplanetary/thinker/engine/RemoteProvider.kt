@@ -215,8 +215,7 @@ private fun isLocalHost(host: String): Boolean {
 
 private fun isPrivateIpv4(host: String): Boolean {
   val octets = host.split('.').map { it.toIntOrNull() ?: return false }
-  if (octets.size != 4 || octets.any { it !in 0..255 }) return false
-  return when (octets[0]) {
+  return !(octets.size != 4 || octets.any { it !in 0..255 }) && when (octets[0]) {
     10 -> true
     172 -> octets[1] in 16..31
     192 -> octets[1] == 168

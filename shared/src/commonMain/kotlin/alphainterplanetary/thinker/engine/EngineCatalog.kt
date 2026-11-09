@@ -96,10 +96,11 @@ object EngineCatalog {
   fun groupedByTier(
     instances: List<EngineInstance>,
     lastUsedAt: Map<EngineRef, Long> = emptyMap(),
-  ): List<Pair<EnginePickerTier, List<EngineCatalogEntry>>> = EnginePickerTier.entries.mapNotNull { tier ->
-    val group = entries(instances)
-      .filter { it.tier == tier }
-      .sortedByDescending { lastUsedAt[it.ref] ?: 0L }
-    if (group.isEmpty()) null else tier to group
-  }
+  ): List<Pair<EnginePickerTier, List<EngineCatalogEntry>>> =
+    EnginePickerTier.entries.mapNotNull { tier ->
+      val group = entries(instances)
+        .filter { it.tier == tier }
+        .sortedByDescending { lastUsedAt[it.ref] ?: 0L }
+      if (group.isEmpty()) null else tier to group
+    }
 }

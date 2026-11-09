@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.ui.format
 
-import alphainterplanetary.thinker.util.formatDuration
 import alphainterplanetary.thinker.util.formatDurationSeconds
 import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.seconds

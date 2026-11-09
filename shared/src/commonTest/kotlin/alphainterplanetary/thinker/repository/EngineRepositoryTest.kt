@@ -407,7 +407,10 @@ class EngineRepositoryTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals(EngineRef.Builtin(EngineKind.Offline), repo.selected.value)
-    assertEquals(mapOf<EngineRef, Long>(EngineRef.Instance("conn-1") to 9_000L), repo.lastUsedAt.value)
+    assertEquals(
+      mapOf<EngineRef, Long>(EngineRef.Instance("conn-1") to 9_000L),
+      repo.lastUsedAt.value
+    )
     assertEquals(false, repo.firstRunPending.value)
     assertEquals(setOf("offline", "conn-1"), storage.engineSelectionStates.keys)
   }

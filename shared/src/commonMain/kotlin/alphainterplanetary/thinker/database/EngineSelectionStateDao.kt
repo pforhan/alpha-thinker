@@ -33,7 +33,13 @@ interface EngineSelectionStateDao {
   suspend fun setSelected(refKey: String) {
     clearSelected()
     val existing = getByKey(refKey)
-    upsert(EngineSelectionStateEntity(refKey = refKey, selected = true, lastUsedAt = existing?.lastUsedAt))
+    upsert(
+      EngineSelectionStateEntity(
+        refKey = refKey,
+        selected = true,
+        lastUsedAt = existing?.lastUsedAt
+      )
+    )
   }
 
   @Query("UPDATE engine_selection_state SET selected = 0")

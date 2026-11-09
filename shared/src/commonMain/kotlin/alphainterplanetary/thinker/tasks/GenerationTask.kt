@@ -44,6 +44,7 @@ enum class TaskKind {
       SynopsisRewrite,
       AutoArchive,
         -> ConcurrencyGroup.Engine
+
       OllamaModelPull -> ConcurrencyGroup.Download
     }
 }

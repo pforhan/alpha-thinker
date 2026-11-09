@@ -293,7 +293,6 @@ class KoogPlanningEngine(
     val questionJson: Json = Json {
       isLenient = false
     }
-
   }
 }
 

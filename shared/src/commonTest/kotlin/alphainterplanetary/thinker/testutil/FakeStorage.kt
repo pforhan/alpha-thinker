@@ -59,7 +59,8 @@ class FakeStorage(
     engineInstances.remove(id)
   }
 
-  override suspend fun getEngineSelectionStates(): List<EngineSelectionState> = engineSelectionStates.values.toList()
+  override suspend fun getEngineSelectionStates(): List<EngineSelectionState> =
+    engineSelectionStates.values.toList()
 
   override suspend fun upsertEngineSelectionState(state: EngineSelectionState) {
     engineSelectionStates[state.ref.storageKey] = state
@@ -72,7 +73,8 @@ class FakeStorage(
   override suspend fun setSelectedEngine(ref: EngineRef) {
     val key = ref.storageKey
     engineSelectionStates.keys.toList().forEach { storedKey ->
-      engineSelectionStates[storedKey] = engineSelectionStates.getValue(storedKey).copy(selected = storedKey == key)
+      engineSelectionStates[storedKey] =
+        engineSelectionStates.getValue(storedKey).copy(selected = storedKey == key)
     }
     if (key !in engineSelectionStates) {
       engineSelectionStates[key] = EngineSelectionState(ref = ref, selected = true)
