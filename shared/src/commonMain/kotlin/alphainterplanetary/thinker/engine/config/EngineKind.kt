@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.config
 
 /**
  * The archetype of a planning backend (ENG-DESIGN.md "Engine modes"). `Offline`

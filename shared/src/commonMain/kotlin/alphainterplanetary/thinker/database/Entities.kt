@@ -99,7 +99,7 @@ data class SettingsEntity(
 /**
  * One user-created engine (a Remote connection).
  * Code-defined built-ins have no row here; they are described by the catalog.
- * See [alphainterplanetary.thinker.engine.EngineInstance].
+ * See [alphainterplanetary.thinker.engine.config.EngineInstance].
  */
 @Entity(tableName = "engine_instances")
 data class EngineInstanceEntity(
@@ -116,7 +116,7 @@ data class EngineInstanceEntity(
 /**
  * One engine's selection/usage state, keyed by the ref's durable string. A row
  * exists only once an engine has been selected or used. See
- * [alphainterplanetary.thinker.engine.EngineSelectionState].
+ * [alphainterplanetary.thinker.engine.config.EngineSelectionState].
  */
 @Entity(tableName = "engine_selection_state")
 data class EngineSelectionStateEntity(

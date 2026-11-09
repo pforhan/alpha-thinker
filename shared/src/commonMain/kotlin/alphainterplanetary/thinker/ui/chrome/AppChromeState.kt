@@ -2,9 +2,9 @@ package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.di.AppComponent
-import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
-import alphainterplanetary.thinker.engine.EngineCatalog
-import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.config.EngineAvailability.Unavailable
+import alphainterplanetary.thinker.engine.config.EngineCatalog
+import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack

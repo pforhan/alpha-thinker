@@ -6,6 +6,8 @@ import ai.koog.http.client.ktor.KtorKoogHttpClient
 import ai.koog.http.client.post
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.clients.modelsById
+import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.config.normalizeRemoteBaseUrl
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

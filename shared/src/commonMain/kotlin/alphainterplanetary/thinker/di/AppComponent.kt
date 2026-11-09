@@ -11,12 +11,12 @@ import alphainterplanetary.thinker.downloads.KoogOllamaPullClient
 import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.downloads.OllamaPullClient
 import alphainterplanetary.thinker.downloads.TaskBackedModelDownloader
-import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.KoogRemoteModelCatalog
 import alphainterplanetary.thinker.engine.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
+import alphainterplanetary.thinker.engine.config.EngineRegistry
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites

@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.config
 
 /**
  * Connection details for a remote LLM backend.

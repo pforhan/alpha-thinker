@@ -1,7 +1,7 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.config
 
-import alphainterplanetary.thinker.engine.EngineAvailability.Available
-import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
+import alphainterplanetary.thinker.engine.config.EngineAvailability.Available
+import alphainterplanetary.thinker.engine.config.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.repository.EngineRepository
 
 /**

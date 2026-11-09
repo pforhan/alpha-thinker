@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.config.RemoteProvider
+
 /**
  * The models reachable from a [RemoteProvider]. An interface so the browser UI
  * and its tests can fake the provider's answer.

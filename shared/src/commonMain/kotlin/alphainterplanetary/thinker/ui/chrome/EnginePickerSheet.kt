@@ -1,13 +1,13 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineAvailability
-import alphainterplanetary.thinker.engine.EngineAvailability.Available
-import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
-import alphainterplanetary.thinker.engine.EngineCatalog
-import alphainterplanetary.thinker.engine.EngineCatalogEntry
-import alphainterplanetary.thinker.engine.EngineInstance
-import alphainterplanetary.thinker.engine.EnginePickerTier
-import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.config.EngineAvailability
+import alphainterplanetary.thinker.engine.config.EngineAvailability.Available
+import alphainterplanetary.thinker.engine.config.EngineAvailability.Unavailable
+import alphainterplanetary.thinker.engine.config.EngineCatalog
+import alphainterplanetary.thinker.engine.config.EngineCatalogEntry
+import alphainterplanetary.thinker.engine.config.EngineInstance
+import alphainterplanetary.thinker.engine.config.EnginePickerTier
+import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.ui.components.SelectionDot
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement

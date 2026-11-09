@@ -1,5 +1,11 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.config.EngineCatalog
+import alphainterplanetary.thinker.engine.config.EngineInstance
+import alphainterplanetary.thinker.engine.config.EngineKind
+import alphainterplanetary.thinker.engine.config.EnginePickerTier
+import alphainterplanetary.thinker.engine.config.EngineRef
+import alphainterplanetary.thinker.engine.config.RemoteProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

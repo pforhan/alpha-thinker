@@ -2,11 +2,11 @@ package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
-import alphainterplanetary.thinker.engine.EngineCatalog
-import alphainterplanetary.thinker.engine.EngineInstance
-import alphainterplanetary.thinker.engine.EngineKind
-import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineSelectionState
+import alphainterplanetary.thinker.engine.config.EngineCatalog
+import alphainterplanetary.thinker.engine.config.EngineInstance
+import alphainterplanetary.thinker.engine.config.EngineKind
+import alphainterplanetary.thinker.engine.config.EngineRef
+import alphainterplanetary.thinker.engine.config.EngineSelectionState
 import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow

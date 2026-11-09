@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineCapability
+import alphainterplanetary.thinker.engine.config.EngineCapability
 
 /**
  * The chrome's user-facing copy for an [EngineStatus]. Kept out of

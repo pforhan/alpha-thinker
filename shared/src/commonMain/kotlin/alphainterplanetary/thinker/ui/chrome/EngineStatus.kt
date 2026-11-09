@@ -1,13 +1,13 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineAvailability
-import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
-import alphainterplanetary.thinker.engine.EngineCapability
-import alphainterplanetary.thinker.engine.EngineCatalog
-import alphainterplanetary.thinker.engine.EngineInstance
-import alphainterplanetary.thinker.engine.EngineKind
-import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.RemoteProvider
+import alphainterplanetary.thinker.engine.config.EngineAvailability
+import alphainterplanetary.thinker.engine.config.EngineAvailability.Unavailable
+import alphainterplanetary.thinker.engine.config.EngineCapability
+import alphainterplanetary.thinker.engine.config.EngineCatalog
+import alphainterplanetary.thinker.engine.config.EngineInstance
+import alphainterplanetary.thinker.engine.config.EngineKind
+import alphainterplanetary.thinker.engine.config.EngineRef
+import alphainterplanetary.thinker.engine.config.RemoteProvider
 
 /** How a header slot is rendering, from the active mode's capabilities alone. */
 enum class CapabilityState {
@@ -42,7 +42,7 @@ data class CapabilityStatus(
  * The app-wide engine status: what the selected [EngineKind] *will do*, derived
  * from the ref and the remote connection settings — never from a probe of the
  * device, and never from a toggle, so it cannot disagree with
- * [alphainterplanetary.thinker.engine.EngineRegistry].
+ * [alphainterplanetary.thinker.engine.config.EngineRegistry].
  *
  * The header cluster, the flyout's rows, and the Status sheet all read this one
  * derivation instead of each re-deriving the mode with its own `when`. It also

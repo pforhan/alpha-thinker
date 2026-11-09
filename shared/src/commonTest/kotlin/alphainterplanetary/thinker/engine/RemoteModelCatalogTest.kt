@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.engine
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.clients.modelsById
+import alphainterplanetary.thinker.engine.config.RemoteProvider
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.config.RemoteProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

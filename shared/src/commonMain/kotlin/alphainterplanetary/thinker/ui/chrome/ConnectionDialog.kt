@@ -1,12 +1,12 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.downloads.DownloadState
-import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.ModelBrowserEntry
 import alphainterplanetary.thinker.engine.ModelPresentationTier
 import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.RemoteModelInfo
-import alphainterplanetary.thinker.engine.RemoteProvider
+import alphainterplanetary.thinker.engine.config.EngineInstance
+import alphainterplanetary.thinker.engine.config.RemoteProvider
 import alphainterplanetary.thinker.ui.components.TaskSpinner
 import alphainterplanetary.thinker.ui.format.formatEta
 import alphainterplanetary.thinker.ui.format.formatTransferRate

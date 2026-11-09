@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.config.EngineKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

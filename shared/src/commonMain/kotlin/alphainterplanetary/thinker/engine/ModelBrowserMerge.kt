@@ -1,5 +1,7 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.config.RemoteProvider
+
 object ModelBrowserMerge {
   /**
    * Pure merge logic for the model browser: combines the models an Ollama server

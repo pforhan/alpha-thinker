@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.config
 
 /**
  * The per-engine state that outlives the configuration itself: whether an

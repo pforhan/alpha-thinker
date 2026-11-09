@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.downloads
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.http.client.ktor.KtorKoogHttpClient
 import ai.koog.http.client.lines
-import alphainterplanetary.thinker.engine.normalizeRemoteBaseUrl
+import alphainterplanetary.thinker.engine.config.normalizeRemoteBaseUrl
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

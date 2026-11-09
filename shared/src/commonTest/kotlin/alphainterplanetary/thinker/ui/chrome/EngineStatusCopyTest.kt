@@ -1,12 +1,12 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineAvailability.Available
-import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
-import alphainterplanetary.thinker.engine.EngineCapability
-import alphainterplanetary.thinker.engine.EngineInstance
-import alphainterplanetary.thinker.engine.EngineKind
-import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.RemoteProvider
+import alphainterplanetary.thinker.engine.config.EngineAvailability.Available
+import alphainterplanetary.thinker.engine.config.EngineAvailability.Unavailable
+import alphainterplanetary.thinker.engine.config.EngineCapability
+import alphainterplanetary.thinker.engine.config.EngineInstance
+import alphainterplanetary.thinker.engine.config.EngineKind
+import alphainterplanetary.thinker.engine.config.EngineRef
+import alphainterplanetary.thinker.engine.config.RemoteProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

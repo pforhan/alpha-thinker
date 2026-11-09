@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.config
 
 /**
  * Where an engine appears in the picker. This is the engine-picker grouping

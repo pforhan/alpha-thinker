@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.config
 
 /**
  * A thing the selected planning backend does, derived from its [EngineKind]

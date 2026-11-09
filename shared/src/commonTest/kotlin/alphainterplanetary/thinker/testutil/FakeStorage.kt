@@ -2,9 +2,9 @@ package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
-import alphainterplanetary.thinker.engine.EngineInstance
-import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineSelectionState
+import alphainterplanetary.thinker.engine.config.EngineInstance
+import alphainterplanetary.thinker.engine.config.EngineRef
+import alphainterplanetary.thinker.engine.config.EngineSelectionState
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
 

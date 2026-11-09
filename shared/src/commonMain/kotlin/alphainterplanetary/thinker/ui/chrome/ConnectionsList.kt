@@ -1,8 +1,8 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineInstance
-import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.RemoteProvider
+import alphainterplanetary.thinker.engine.config.EngineInstance
+import alphainterplanetary.thinker.engine.config.EngineRef
+import alphainterplanetary.thinker.engine.config.RemoteProvider
 import alphainterplanetary.thinker.ui.components.OptionHeader
 import alphainterplanetary.thinker.ui.components.SelectionDot
 import alphainterplanetary.thinker.ui.theme.Dimens

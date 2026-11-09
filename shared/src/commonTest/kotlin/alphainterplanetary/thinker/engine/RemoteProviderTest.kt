@@ -2,6 +2,8 @@ package alphainterplanetary.thinker.engine
 
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.clients.modelsById
+import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.config.normalizeRemoteBaseUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

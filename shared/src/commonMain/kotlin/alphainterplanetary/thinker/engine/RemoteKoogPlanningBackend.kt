@@ -17,6 +17,9 @@ import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.engine.config.RemoteConnection
+import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.config.normalizeRemoteBaseUrl
 
 /**
  * The [KoogPlanningBackend] for one Remote connection: it holds the

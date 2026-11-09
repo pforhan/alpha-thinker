@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.config
 
 /**
  * Identifies one selectable engine. An [EngineKind] is only the *archetype*
