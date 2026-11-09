@@ -518,15 +518,15 @@ on-device eval items in stage 3.
 
 ### 5. Platform seams and dependencies
 
-- [ ] Remove `PlatformContext.modelDirectory`, `fileExists`, and `deleteFile`
+- [x] Remove `PlatformContext.modelDirectory`, `fileExists`, and `deleteFile`
       plus the Android/desktop/iOS/wasm overrides and
       `FakePlatformContext` fields (after `LocalModelStore` and the transfer
       client are gone).
-- [ ] Remove `libs.koog.prompt.executor.litert.client` and
+- [x] Remove `libs.koog.prompt.executor.litert.client` and
       `libs.litertlm.android` from `shared/build.gradle.kts`; remove
       `koogLitert`, `litertlm`, and their aliases from
       `gradle/libs.versions.toml`.
-- [ ] Check `androidApp`, `iosApp`, and `webApp` for leftover LiteRT or
+- [x] Check `androidApp`, `iosApp`, and `webApp` for leftover LiteRT or
       model-storage references (none expected).
 - [x] If `ConnectionDialog` still needs the HTTPS-only platform flag, add it
       here rather than keeping `LocalModelRuntime` as a proxy.
