@@ -76,12 +76,15 @@ class EngineRepository @Inject constructor(
   suspend fun load() {
     val instances = readInstances()
     _instances.value = instances
-    // A retired kind can still be sitting in `engine_state` (an old "on-device"
-    // or "downloaded" key parses as an Instance ref that no longer exists).
-    // Keep only rows that name a live builtin or a stored instance.
+    // A retired kind or deleted instance can still be sitting in `engine_state`
+    // (an old "on-device" / "downloaded" key parses as an Instance ref that no
+    // longer exists). Keep only rows that name a live builtin or a stored
+    // instance, and delete the rest so they cannot resurface.
     val liveKeys = EngineCatalog.builtins.mapTo(mutableSetOf()) { it.ref.storageKey }
     instances.mapTo(liveKeys) { EngineRef.Instance(it.id).storageKey }
-    val states = storage.getEngineStates().filter { it.ref.storageKey in liveKeys }
+    val (states, staleStates) = storage.getEngineStates()
+      .partition { it.ref.storageKey in liveKeys }
+    staleStates.forEach { storage.deleteEngineState(it.ref) }
     _firstRunPending.value = shouldOfferFirstRun(states)
     _selected.value = states.firstOrNull { it.selected }?.ref
       ?: EngineRef.Builtin(EngineKind.Default)

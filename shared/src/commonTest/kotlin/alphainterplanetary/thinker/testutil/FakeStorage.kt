@@ -65,6 +65,10 @@ class FakeStorage(
     engineStates[state.ref.storageKey] = state
   }
 
+  override suspend fun deleteEngineState(ref: EngineRef) {
+    engineStates.remove(ref.storageKey)
+  }
+
   override suspend fun setSelectedEngine(ref: EngineRef) {
     val key = ref.storageKey
     engineStates.keys.toList().forEach { storedKey ->

@@ -193,6 +193,10 @@ class ProjectListViewModelTest {
       throw IllegalStateException("boom")
     }
 
+    override suspend fun deleteEngineState(ref: EngineRef) {
+      throw IllegalStateException("boom")
+    }
+
     override suspend fun setSelectedEngine(ref: EngineRef) {
       throw IllegalStateException("boom")
     }

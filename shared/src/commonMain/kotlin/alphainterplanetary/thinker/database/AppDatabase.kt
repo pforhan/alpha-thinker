@@ -21,7 +21,7 @@ import kotlinx.coroutines.Dispatchers
     EngineInstanceEntity::class,
     EngineStateEntity::class,
   ],
-  version = 12,
+  version = 13,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -46,6 +46,8 @@ expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
  * migration body receives a per-target `SQLiteConnection` (JVM exposes a plain
  * `prepare`, web a suspending one), which this shared `commonMain` builder
  * cannot express, so an upgrade rebuilds the local database.
+ *
+ * The v13 rebuild also clears projects and settings, not just the engine tables.
  */
 fun getRoomDatabase(builder: RoomDatabase.Builder<AppDatabase>): AppDatabase {
   return builder

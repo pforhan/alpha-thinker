@@ -493,27 +493,27 @@ on-device eval items in stage 3.
 
 ### 4. Persistence and stale rows
 
-- [ ] Remove `localPath` from `EngineInstanceEntity`, `EngineInstance.toEntity`,
+- [x] Remove `localPath` from `EngineInstanceEntity`, `EngineInstance.toEntity`,
       and `EngineInstanceEntity.toModel`.
-- [ ] Bump `AppDatabase.version` (12 → 13). `getRoomDatabase` uses
+- [x] Bump `AppDatabase.version` (12 → 13). `getRoomDatabase` uses
       `fallbackToDestructiveMigration()`, so the upgrade rebuilds local
       storage; call that out in the change because it also clears projects and
       settings. If preserving data matters more, keep the column and skip the
       bump.
-- [ ] Make removed kinds harmless. `EngineInstanceEntity.toModel()` currently
+- [x] Make removed kinds harmless. `EngineInstanceEntity.toModel()` currently
       does `requireNotNull(EngineKind.fromKey(kind))`, so old `"on-device"` /
       `"downloaded"` rows throw. Either rely on the destructive rebuild or
       change the mapper to skip unknown kinds and delete those rows.
-- [ ] Prune stale `engine_state` rows. After the enum change,
+- [x] Prune stale `engine_state` rows. After the enum change,
       `EngineRef.fromStorageKey("on-device")` and `"downloaded"` resolve to
       `Instance(...)` instead of a builtin. In `EngineRepository.load`, drop
       state rows whose ref is not a known builtin or a live instance and fall
       back to `EngineRef.Builtin(EngineKind.Default)` when the selected ref is
       gone. `EngineStateDao` has no delete yet, so add
       `deleteByKey(refKey)` (plus a `Storage` method) to remove them.
-- [ ] Also delete orphaned `engine_state` rows for removed local instances, and
+- [x] Also delete orphaned `engine_state` rows for removed local instances, and
       verify `firstRunPending` and last-used ordering still behave.
-- [ ] Add a mapper/repository regression test proving a stored
+- [x] Add a mapper/repository regression test proving a stored
       `"on-device"` / `"downloaded"` row or selection cannot crash the app.
 
 ### 5. Platform seams and dependencies

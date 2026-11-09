@@ -21,6 +21,9 @@ interface EngineStateDao {
   @Upsert
   suspend fun upsert(state: EngineStateEntity)
 
+  @Query("DELETE FROM engine_state WHERE refKey = :refKey")
+  suspend fun deleteByKey(refKey: String)
+
   /**
    * Marks [refKey] as the sole selection: every other row is cleared first so
    * the app can never resolve two selected engines. The target row is inserted

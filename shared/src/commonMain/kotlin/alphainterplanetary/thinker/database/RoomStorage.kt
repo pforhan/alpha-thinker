@@ -112,8 +112,15 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
     database.settingsDao().upsertValue(SettingsEntity(key = key.storageKey, value = value))
   }
 
-  override suspend fun getEngineInstances(): List<EngineInstance> =
-    database.engineInstanceDao().getAll().mapNotNull { it.toModel() }
+  override suspend fun getEngineInstances(): List<EngineInstance> {
+    val rows = database.engineInstanceDao().getAll()
+    val instances = rows.mapNotNull { it.toModel() }
+    // Drop rows whose kind no longer exists (a retired "on-device"/"downloaded"
+    // row), so a stale schema can never surface again.
+    val liveIds = instances.mapTo(mutableSetOf()) { it.id }
+    rows.filterNot { it.id in liveIds }.forEach { database.engineInstanceDao().deleteById(it.id) }
+    return instances
+  }
 
   override suspend fun upsertEngineInstance(instance: EngineInstance) {
     database.engineInstanceDao().upsert(instance.toEntity())
@@ -128,6 +135,10 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
 
   override suspend fun upsertEngineState(state: EngineState) {
     database.engineStateDao().upsert(state.toEntity())
+  }
+
+  override suspend fun deleteEngineState(ref: EngineRef) {
+    database.engineStateDao().deleteByKey(ref.storageKey)
   }
 
   override suspend fun setSelectedEngine(ref: EngineRef) {

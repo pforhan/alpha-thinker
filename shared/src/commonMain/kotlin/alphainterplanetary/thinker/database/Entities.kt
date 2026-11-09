@@ -111,8 +111,6 @@ data class EngineInstanceEntity(
   val apiKey: String,
   val model: String,
   val contextTokens: Int,
-  /** Retired: always null now. Removed with the local-model feature in v13. */
-  val localPath: String?,
 )
 
 /**

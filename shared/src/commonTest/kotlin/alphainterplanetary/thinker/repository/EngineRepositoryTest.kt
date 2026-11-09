@@ -3,6 +3,7 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
+import alphainterplanetary.thinker.engine.EngineState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.testutil.FakeStorage
 import kotlin.test.Test
@@ -360,5 +361,54 @@ class EngineRepositoryTest {
     val reopened = repository(storage)
     testScheduler.advanceUntilIdle()
     assertEquals(false, reopened.firstRunPending.value)
+  }
+
+  @Test
+  fun `a stale on-device selection is pruned and falls back to Offline`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineState(
+      EngineState(
+        ref = EngineRef.Instance("on-device"),
+        selected = true,
+        lastUsedAt = 7_000L,
+      ),
+    )
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineRef.Builtin(EngineKind.Offline), repo.selected.value)
+    assertEquals(emptyMap(), repo.lastUsedAt.value)
+    assertTrue(repo.firstRunPending.value)
+    assertTrue("on-device" !in storage.engineStates)
+  }
+
+  @Test
+  fun `stale downloaded state rows are deleted without disturbing live state`() = runTest {
+    val storage = FakeStorage()
+    storage.upsertEngineInstance(preset)
+    storage.setSelectedEngine(EngineRef.Builtin(EngineKind.Offline))
+    storage.upsertEngineState(
+      EngineState(
+        ref = EngineRef.Instance("conn-1"),
+        selected = false,
+        lastUsedAt = 9_000L,
+      ),
+    )
+    storage.upsertEngineState(
+      EngineState(
+        ref = EngineRef.Instance("downloaded"),
+        selected = false,
+        lastUsedAt = 1_000L,
+      ),
+    )
+
+    val repo = repository(storage)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(EngineRef.Builtin(EngineKind.Offline), repo.selected.value)
+    assertEquals(mapOf<EngineRef, Long>(EngineRef.Instance("conn-1") to 9_000L), repo.lastUsedAt.value)
+    assertEquals(false, repo.firstRunPending.value)
+    assertEquals(setOf("offline", "conn-1"), storage.engineStates.keys)
   }
 }

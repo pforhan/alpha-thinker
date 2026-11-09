@@ -146,7 +146,6 @@ fun EngineInstance.toEntity() = EngineInstanceEntity(
   apiKey = apiKey,
   model = model,
   contextTokens = contextTokens,
-  localPath = null,
 )
 
 /**

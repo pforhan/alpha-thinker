@@ -56,6 +56,9 @@ interface Storage {
   /** Inserts or replaces one engine's state row, addressed by its ref. */
   suspend fun upsertEngineState(state: EngineState)
 
+  /** Deletes the state row for [ref], if it exists. */
+  suspend fun deleteEngineState(ref: EngineRef)
+
   /** Marks [ref] as the sole selected engine, clearing every other selection. */
   suspend fun setSelectedEngine(ref: EngineRef)
 }
