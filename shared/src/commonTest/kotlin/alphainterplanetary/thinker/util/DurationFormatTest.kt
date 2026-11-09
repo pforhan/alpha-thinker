@@ -10,6 +10,11 @@ import kotlin.time.Duration.Companion.seconds
 class DurationFormatTest {
 
   @Test
+  fun `formatDurationSeconds shows less than a minute as seconds`() {
+    assertEquals("45s", formatDurationSeconds(45.seconds))
+  }
+
+  @Test
   fun `formatDuration shows less than a minute as one`() {
     assertEquals("1m", formatDuration(45.seconds))
   }

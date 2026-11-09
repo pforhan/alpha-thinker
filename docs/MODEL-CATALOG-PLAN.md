@@ -278,11 +278,6 @@ browser chip shows the resolved name while the id stays canonical.
 - [x] bug: when entering engine status, the title on the main gets a back button.  Sometimes
       this remains even after closing any popups.  Requires a tap anywhere to dismiss,
       but back does nothing.
-- [ ] **Hostability flag:** Apply memory fit heuristics (see
-      [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next
-      to size/context chips for Ollama instances on localhost;
-      consider chip color changes for outliers (MLX versions may require recent
-      Macs).
 
 **Proof:** `./gradlew :shared:allTests`; a manual pull against a local Ollama.
 

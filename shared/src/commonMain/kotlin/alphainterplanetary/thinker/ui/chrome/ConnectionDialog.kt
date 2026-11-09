@@ -9,6 +9,8 @@ import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.components.TaskSpinner
+import alphainterplanetary.thinker.ui.format.formatEta
+import alphainterplanetary.thinker.ui.format.formatTransferRate
 import alphainterplanetary.thinker.ui.platform.allowsCleartextRemoteHttp
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
@@ -37,8 +39,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,7 +51,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.window.DialogProperties
-import kotlin.math.round
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.delay
 
 /**
  * The add/edit dialog for a Remote connection (ENGINE-CONFIG-PLAN.md 3b).
@@ -490,6 +496,7 @@ private fun TierChips(
       }
       val activePull =
         pulls.lastOrNull { it.modelId == info.id && !it.status.finished }
+      val pullStatus = throttledPullStatus(activePull)
       FilterChip(
         selected = info.id == current,
         onClick = {
@@ -500,9 +507,8 @@ private fun TierChips(
           }
         },
         label = {
-          val prefix = activePull?.progress?.let { it.formatAsPercentage() } ?: ""
-          val suffix = if (!note.isNullOrBlank()) " · $note" else ""
-          Text("$prefix${info.displayName}$suffix")
+          val suffix = if (!note.isNullOrBlank() && pullStatus.isBlank()) " · $note" else ""
+          Text("$pullStatus${info.displayName}$suffix")
         },
         leadingIcon = pullChipLeadingIcon(activePull = activePull, isPull = isPull),
         trailingIcon = if (activePull != null) {
@@ -529,11 +535,38 @@ private fun TierChips(
   }
 }
 
-fun Float.formatAsPercentage(): String {
-  val rounded = round(this * 1000) / 10f
-  val str = rounded.toString()
-  // Ensures an explicit .0 is appended if it turns into a whole number string
-  return if (!str.contains('.')) "$str.0% " else "$str% "
+private const val PullStatusUpdateMs = 1_000L
+
+/**
+ * The changing part of an active pull's label — percentage, rate, and ETA —
+ * refreshed at most once per second so the text stays readable while the
+ * transfer is moving.
+ */
+@Composable
+private fun throttledPullStatus(activePull: DownloadState?): String {
+  val latest by rememberUpdatedState(activePull)
+  var status by remember(activePull?.handle?.id) {
+    mutableStateOf(activePull?.let(::formatPullStatus).orEmpty())
+  }
+  LaunchedEffect(activePull?.handle?.id) {
+    if (activePull == null) {
+      status = ""
+      return@LaunchedEffect
+    }
+    while (true) {
+      status = latest?.let(::formatPullStatus).orEmpty()
+      delay(PullStatusUpdateMs.milliseconds)
+    }
+  }
+  return status
+}
+
+private fun formatPullStatus(pull: DownloadState): String {
+  val rate = pull.throughputBps?.takeIf { it > 0 }?.let { formatTransferRate(it) }
+  val eta = formatEta(pull.bytesDone, pull.bytesTotal, pull.throughputBps)
+  val transfer = listOfNotNull(rate, eta).joinToString(" · ")
+    .let { if (it.isEmpty()) "" else " · $it" }
+  return if (transfer.isNotBlank()) "$transfer · " else ""
 }
 
 /**

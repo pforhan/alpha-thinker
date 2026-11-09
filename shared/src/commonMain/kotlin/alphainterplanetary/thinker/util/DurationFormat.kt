@@ -12,14 +12,30 @@ import kotlin.time.Duration
  *  * 1d 3h would render as "1d"
  */
 fun formatDuration(duration: Duration): String {
+  if (duration.inWholeMinutes.coerceAtLeast(0) < 1) return "1m"
+  return formatDurationSeconds(duration)
+}
+
+/**
+ * Formats a duration for the phase timeline to the largest of seconds, minutes, hours, or days,
+ * truncating leftovers, with a minimum of 0s.
+ *
+ * Some examples:
+ *  * 30s would render as "30s"
+ *  * 1m 30s would render as "1m"
+ *  * 23h 59m would render as "23h"
+ *  * 1d 3h would render as "1d"
+ */
+fun formatDurationSeconds(duration: Duration): String {
+  val seconds = duration.inWholeSeconds.coerceAtLeast(0)
   val minutes = duration.inWholeMinutes.coerceAtLeast(0)
-  if (minutes < 1) return "1m"
-  val hours = minutes / 60
-  val days = hours / 24
+  val hours = duration.inWholeHours.coerceAtLeast(0)
+  val days = duration.inWholeDays.coerceAtLeast(0)
   return when {
     days > 0 -> "${days}d"
     hours > 0 -> "${hours}h"
-    else -> "${minutes}m"
+    minutes > 0 -> "${minutes}m"
+    else -> "${seconds}s"
   }
 }
 

@@ -22,7 +22,7 @@ As phases are completed they move to the end of IMPLEMENTATION-PLAN-COMPLETED.md
 - [x] **Model catalog: metadata, curation, and downloads** — model discovery & curation (Verified / Recommended / Others), the Ollama model pull, and downloaded local models (LiteRT-LM) are now tracked in [MODEL-CATALOG-PLAN.md](MODEL-CATALOG-PLAN.md) as stages 1–3. **Done in part —** metadata, curation, and the Ollama pull shipped; downloaded local models were removed, not finished (see [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md)).
 - [x] remote ollama models seems to always use localhost instead of the base url, at least by their error — fixed: a scheme-less Base URL now gets `https://` for remote hosts and `http://` for loopback/LAN hosts instead of being parsed as a localhost path.
 - [x] Add Connection dialog: trim any user text on save — the saved label, endpoint, API key, and model id are trimmed.
-- [ ] **Better ETA on downloads** on the add/edit connection dialog, use an Exponential Moving Average to smooth out speeds and estimated time left.
+- [x] **Better ETA on downloads** on the add/edit connection dialog, use an Exponential Moving Average to smooth out speeds and estimated time left. **Done —** Ollama pulls now compute a smoothed bytes/sec rate with an EMA in `TaskBackedModelDownloader`/`EmaThroughput`, and active pull chips in the connection dialog show the transfer rate and time remaining.
 - [ ] Cleanup: take a look at all the classes we made for the last two tasks and justify each one, folding useless layers and indirection where possible. Rename conflicts for simplicity and clarity.  Example: EngineState vs EngineStatus and EngineKind.available vs EngineAvailability and ModelSource and RemoteModelCatalog.  ModelRank / ModelRanker. DownloadStatus / DownloadState
 - [ ] Cleanup: see about repackaging classes. alphainterplanetary.thinker.engine is particularly large.
 - [ ] There's an unusual default provider connection to ollama supplied, we probably don't need that any longer.  its presence doesn't trigger expansion of the advanced list for some reason.  If you delete and recreate it that entry acts the same.
@@ -37,6 +37,7 @@ As phases are completed they move to the end of IMPLEMENTATION-PLAN-COMPLETED.md
 - [x] **Desktop in-process LiteRT (deferred from the Android-only Local tier):** **Removed —** the local-model track was cut before the desktop actuals landed, so its seams and dependencies are gone. See [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
 - [x] **iOS in-process local models (deferred — needs a bridge, not a new runtime):** **Removed —** the local-model track was cut before the iOS bridge was built. See [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
 - [x] **Llamatik contingency:** if the `litertlm-jvm` desktop path stalls, evaluate Llamatik (llama.cpp KMP: Android, iOS, Desktop, WASM) as the in-process engine behind a Koog `LLMClient` we write. **Removed —** the contingency is moot now that local models are gone.
+- [ ] **Hostability flag:** Apply memory fit heuristics (see [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next to size/context chips for Ollama instances on localhost; consider chip color changes for outliers (MLX versions require recent Macs).
 
 ## Phase 3.8: typed activity-log events
 

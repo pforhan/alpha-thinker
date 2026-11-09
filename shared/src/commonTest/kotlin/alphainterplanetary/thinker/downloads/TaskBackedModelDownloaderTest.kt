@@ -115,6 +115,33 @@ class TaskBackedModelDownloaderTest {
     )
   }
 
+  @Test
+  fun `a pull reports smoothed throughput for eta`() = runTest {
+    val times = ArrayDeque(listOf(0L, 1_000_000_000L, 2_000_000_000L))
+    val runner = TaskRunner(backgroundScope, RecordingActivityLogger())
+    val downloader = TaskBackedModelDownloader(
+      taskRunner = runner,
+      ollamaPullClient = FakeOllamaPullClient(
+        flowOf(
+          OllamaPullEvent(digest = "sha256:a", total = 400, completed = 0),
+          OllamaPullEvent(digest = "sha256:a", total = 400, completed = 100),
+          OllamaPullEvent(digest = "sha256:a", total = 400, completed = 400),
+        ),
+      ),
+      activityLogger = RecordingActivityLogger(),
+      scope = backgroundScope,
+      nanoClock = { times.removeFirst() },
+    )
+
+    val handle = downloader.pullOllama("qwen2.5:7b", "http://localhost:11434")
+    testScheduler.runCurrent()
+
+    val state = downloader.downloads().value.single { it.handle.id == handle.id }
+    assertEquals(400L, state.bytesDone)
+    // EMA(alpha=0.3): first usable rate 100 B/s, second instant 300 B/s -> 160 B/s.
+    assertEquals(160L, state.throughputBps)
+  }
+
   private fun TestScope.downloader(
     runner: TaskRunner,
     pullEvents: Flow<OllamaPullEvent> = emptyFlow(),

@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.util.randomUUID
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,7 @@ class TaskBackedModelDownloader(
   private val ollamaPullClient: OllamaPullClient,
   private val activityLogger: ActivityLogger,
   scope: CoroutineScope,
+  private val nanoClock: () -> Long = defaultNanoClock(),
 ) : ModelDownloader {
   private val _downloads = MutableStateFlow<List<DownloadState>>(emptyList())
   override fun downloads(): StateFlow<List<DownloadState>> = _downloads.asStateFlow()
@@ -78,6 +80,7 @@ class TaskBackedModelDownloader(
       // stuck at 100% on the small ones).
       val layers = mutableMapOf<String, Pair<Long, Long>>()
       val reportedMilestones = mutableSetOf<Int>()
+      val throughput = EmaThroughput()
       ollamaPullClient.pull(baseUrl, modelId).collect { event ->
         event.error?.let { throw Exception(it) }
         val total = event.total
@@ -89,7 +92,7 @@ class TaskBackedModelDownloader(
             taskId = taskId,
             bytesDone = bytesDone,
             bytesTotal = bytesTotal,
-            throughputBps = null,
+            throughputBps = throughput.sample(bytesDone, nanoClock()),
           )
           if (bytesTotal > 0L) {
             val percent = ((bytesDone.toDouble() / bytesTotal.toDouble()) * 100).toInt()
@@ -142,6 +145,11 @@ class TaskBackedModelDownloader(
       }
     }
   }
+}
+
+private fun defaultNanoClock(): () -> Long {
+  val mark = TimeSource.Monotonic.markNow()
+  return { mark.elapsedNow().inWholeNanoseconds }
 }
 
 private val PROGRESS_MILESTONES = listOf(25, 50, 75)
