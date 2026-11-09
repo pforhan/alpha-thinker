@@ -113,7 +113,7 @@ class EngineViewModelTest {
     settle()
 
     // A fresh repository over the same storage sees the selection, so the
-    // ViewModel's write reached the engine_state row and not just the flow.
+    // ViewModel's write reached the engine_selection_state row and not just the flow.
     val reopened = EngineRepository(fixture.storage, backgroundScope)
     settle()
     assertEquals(ref, reopened.selected.value)
@@ -591,7 +591,7 @@ class EngineViewModelTest {
     val fixture = fixture()
     settle()
 
-    // A fresh store has no engine_state row, so the chrome's first-run effect
+    // A fresh store has no engine_selection_state row, so the chrome's first-run effect
     // has something to act on (ENGINE-CONFIG-PLAN.md 3d).
     assertEquals(true, fixture.vm.firstRunPending.value)
 

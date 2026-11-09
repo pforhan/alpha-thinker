@@ -116,10 +116,10 @@ data class EngineInstanceEntity(
 /**
  * One engine's selection/usage state, keyed by the ref's durable string. A row
  * exists only once an engine has been selected or used. See
- * [alphainterplanetary.thinker.engine.EngineState].
+ * [alphainterplanetary.thinker.engine.EngineSelectionState].
  */
-@Entity(tableName = "engine_state")
-data class EngineStateEntity(
+@Entity(tableName = "engine_selection_state")
+data class EngineSelectionStateEntity(
   @PrimaryKey val refKey: String,
   val selected: Boolean,
   val lastUsedAt: Long?,

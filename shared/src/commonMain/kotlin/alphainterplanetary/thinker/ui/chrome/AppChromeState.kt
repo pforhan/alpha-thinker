@@ -238,10 +238,10 @@ internal fun engineStatusFlow(engineRepository: EngineRepository): Flow<EngineSt
  * has ever been chosen or run (ENGINE-CONFIG-PLAN.md 3d).
  *
  * The trigger is [EngineRepository.firstRunPending] — a pure function of the
- * `engine_state` rows, with no separate first-run flag — and it starts false,
+ * `engine_selection_state` rows, with no separate first-run flag — and it starts false,
  * so this waits for the store to load and can only fire on truth. The first
  * frame that sees it marks it seen, which writes the default selection's
- * `engine_state` row: from then on the trigger is false, so closing the picker
+ * `engine_selection_state` row: from then on the trigger is false, so closing the picker
  * without choosing is final.
  *
  * This is not an onboarding gate. It raises the same picker every later

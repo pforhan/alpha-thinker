@@ -6,7 +6,7 @@ import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineState
+import alphainterplanetary.thinker.engine.EngineSelectionState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
@@ -166,13 +166,13 @@ fun EngineInstanceEntity.toModel(): EngineInstance? {
   )
 }
 
-fun EngineState.toEntity() = EngineStateEntity(
+fun EngineSelectionState.toEntity() = EngineSelectionStateEntity(
   refKey = ref.storageKey,
   selected = selected,
   lastUsedAt = lastUsedAt,
 )
 
-fun EngineStateEntity.toModel() = EngineState(
+fun EngineSelectionStateEntity.toModel() = EngineSelectionState(
   ref = EngineRef.fromStorageKey(refKey),
   selected = selected,
   lastUsedAt = lastUsedAt,

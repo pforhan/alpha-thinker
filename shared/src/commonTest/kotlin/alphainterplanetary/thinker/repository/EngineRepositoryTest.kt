@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineState
+import alphainterplanetary.thinker.engine.EngineSelectionState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.testutil.FakeStorage
 import kotlin.test.Test
@@ -366,8 +366,8 @@ class EngineRepositoryTest {
   @Test
   fun `a stale on-device selection is pruned and falls back to Offline`() = runTest {
     val storage = FakeStorage()
-    storage.upsertEngineState(
-      EngineState(
+    storage.upsertEngineSelectionState(
+      EngineSelectionState(
         ref = EngineRef.Instance("on-device"),
         selected = true,
         lastUsedAt = 7_000L,
@@ -380,7 +380,7 @@ class EngineRepositoryTest {
     assertEquals(EngineRef.Builtin(EngineKind.Offline), repo.selected.value)
     assertEquals(emptyMap(), repo.lastUsedAt.value)
     assertTrue(repo.firstRunPending.value)
-    assertTrue("on-device" !in storage.engineStates)
+    assertTrue("on-device" !in storage.engineSelectionStates)
   }
 
   @Test
@@ -388,15 +388,15 @@ class EngineRepositoryTest {
     val storage = FakeStorage()
     storage.upsertEngineInstance(preset)
     storage.setSelectedEngine(EngineRef.Builtin(EngineKind.Offline))
-    storage.upsertEngineState(
-      EngineState(
+    storage.upsertEngineSelectionState(
+      EngineSelectionState(
         ref = EngineRef.Instance("conn-1"),
         selected = false,
         lastUsedAt = 9_000L,
       ),
     )
-    storage.upsertEngineState(
-      EngineState(
+    storage.upsertEngineSelectionState(
+      EngineSelectionState(
         ref = EngineRef.Instance("downloaded"),
         selected = false,
         lastUsedAt = 1_000L,
@@ -409,6 +409,6 @@ class EngineRepositoryTest {
     assertEquals(EngineRef.Builtin(EngineKind.Offline), repo.selected.value)
     assertEquals(mapOf<EngineRef, Long>(EngineRef.Instance("conn-1") to 9_000L), repo.lastUsedAt.value)
     assertEquals(false, repo.firstRunPending.value)
-    assertEquals(setOf("offline", "conn-1"), storage.engineStates.keys)
+    assertEquals(setOf("offline", "conn-1"), storage.engineSelectionStates.keys)
   }
 }

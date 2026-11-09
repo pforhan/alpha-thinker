@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.database
 import alphainterplanetary.thinker.di.PlatformContext
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineState
+import alphainterplanetary.thinker.engine.EngineSelectionState
 import alphainterplanetary.thinker.model.Project
 
 /**
@@ -51,13 +51,13 @@ interface Storage {
   suspend fun deleteEngineInstance(id: String)
 
   /** The selection/usage state of every engine that has one. */
-  suspend fun getEngineStates(): List<EngineState>
+  suspend fun getEngineSelectionStates(): List<EngineSelectionState>
 
-  /** Inserts or replaces one engine's state row, addressed by its ref. */
-  suspend fun upsertEngineState(state: EngineState)
+  /** Inserts or replaces one engine's selection state row, addressed by its ref. */
+  suspend fun upsertEngineSelectionState(state: EngineSelectionState)
 
-  /** Deletes the state row for [ref], if it exists. */
-  suspend fun deleteEngineState(ref: EngineRef)
+  /** Deletes the selection state row for [ref], if it exists. */
+  suspend fun deleteEngineSelectionState(ref: EngineRef)
 
   /** Marks [ref] as the sole selected engine, clearing every other selection. */
   suspend fun setSelectedEngine(ref: EngineRef)

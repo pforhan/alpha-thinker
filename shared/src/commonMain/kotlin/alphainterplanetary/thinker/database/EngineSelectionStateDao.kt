@@ -11,17 +11,17 @@ import androidx.room3.Upsert
  * `lastUsedAt` when it is re-selected, all in one transaction.
  */
 @Dao
-interface EngineStateDao {
-  @Query("SELECT * FROM engine_state")
-  suspend fun getAll(): List<EngineStateEntity>
+interface EngineSelectionStateDao {
+  @Query("SELECT * FROM engine_selection_state")
+  suspend fun getAll(): List<EngineSelectionStateEntity>
 
-  @Query("SELECT * FROM engine_state WHERE refKey = :refKey")
-  suspend fun getByKey(refKey: String): EngineStateEntity?
+  @Query("SELECT * FROM engine_selection_state WHERE refKey = :refKey")
+  suspend fun getByKey(refKey: String): EngineSelectionStateEntity?
 
   @Upsert
-  suspend fun upsert(state: EngineStateEntity)
+  suspend fun upsert(state: EngineSelectionStateEntity)
 
-  @Query("DELETE FROM engine_state WHERE refKey = :refKey")
+  @Query("DELETE FROM engine_selection_state WHERE refKey = :refKey")
   suspend fun deleteByKey(refKey: String)
 
   /**
@@ -33,9 +33,9 @@ interface EngineStateDao {
   suspend fun setSelected(refKey: String) {
     clearSelected()
     val existing = getByKey(refKey)
-    upsert(EngineStateEntity(refKey = refKey, selected = true, lastUsedAt = existing?.lastUsedAt))
+    upsert(EngineSelectionStateEntity(refKey = refKey, selected = true, lastUsedAt = existing?.lastUsedAt))
   }
 
-  @Query("UPDATE engine_state SET selected = 0")
+  @Query("UPDATE engine_selection_state SET selected = 0")
   suspend fun clearSelected()
 }

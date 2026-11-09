@@ -4,7 +4,7 @@ import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineState
+import alphainterplanetary.thinker.engine.EngineSelectionState
 import alphainterplanetary.thinker.engine.PlanningEngineSelector
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
@@ -186,14 +186,14 @@ class ProjectListViewModelTest {
       throw IllegalStateException("boom")
     }
 
-    override suspend fun getEngineStates(): List<EngineState> =
+    override suspend fun getEngineSelectionStates(): List<EngineSelectionState> =
       throw IllegalStateException("boom")
 
-    override suspend fun upsertEngineState(state: EngineState) {
+    override suspend fun upsertEngineSelectionState(state: EngineSelectionState) {
       throw IllegalStateException("boom")
     }
 
-    override suspend fun deleteEngineState(ref: EngineRef) {
+    override suspend fun deleteEngineSelectionState(ref: EngineRef) {
       throw IllegalStateException("boom")
     }
 

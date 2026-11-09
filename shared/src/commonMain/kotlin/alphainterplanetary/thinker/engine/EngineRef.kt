@@ -13,7 +13,7 @@ package alphainterplanetary.thinker.engine
  *   Interplanetary backend.
  * - [Instance] is a row in `engine_instances`, a user-created connection.
  *
- * The durable [storageKey] is what `engine_state` is keyed by, so selection and
+ * The durable [storageKey] is what `engine_selection_state` is keyed by, so selection and
  * last-use survive as long as the underlying kind key or instance id does.
  */
 sealed interface EngineRef {

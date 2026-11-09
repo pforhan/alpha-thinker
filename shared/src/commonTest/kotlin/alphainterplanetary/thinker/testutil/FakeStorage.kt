@@ -4,7 +4,7 @@ import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineState
+import alphainterplanetary.thinker.engine.EngineSelectionState
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
 
@@ -15,7 +15,7 @@ class FakeStorage(
   val projects: MutableMap<String, Project> = mutableMapOf(),
   val settings: MutableMap<String, String> = mutableMapOf(),
   val engineInstances: MutableMap<String, EngineInstance> = mutableMapOf(),
-  val engineStates: MutableMap<String, EngineState> = mutableMapOf(),
+  val engineSelectionStates: MutableMap<String, EngineSelectionState> = mutableMapOf(),
 ) : Storage {
   override suspend fun saveProject(project: Project) {
     projects[project.id] = project
@@ -59,23 +59,23 @@ class FakeStorage(
     engineInstances.remove(id)
   }
 
-  override suspend fun getEngineStates(): List<EngineState> = engineStates.values.toList()
+  override suspend fun getEngineSelectionStates(): List<EngineSelectionState> = engineSelectionStates.values.toList()
 
-  override suspend fun upsertEngineState(state: EngineState) {
-    engineStates[state.ref.storageKey] = state
+  override suspend fun upsertEngineSelectionState(state: EngineSelectionState) {
+    engineSelectionStates[state.ref.storageKey] = state
   }
 
-  override suspend fun deleteEngineState(ref: EngineRef) {
-    engineStates.remove(ref.storageKey)
+  override suspend fun deleteEngineSelectionState(ref: EngineRef) {
+    engineSelectionStates.remove(ref.storageKey)
   }
 
   override suspend fun setSelectedEngine(ref: EngineRef) {
     val key = ref.storageKey
-    engineStates.keys.toList().forEach { storedKey ->
-      engineStates[storedKey] = engineStates.getValue(storedKey).copy(selected = storedKey == key)
+    engineSelectionStates.keys.toList().forEach { storedKey ->
+      engineSelectionStates[storedKey] = engineSelectionStates.getValue(storedKey).copy(selected = storedKey == key)
     }
-    if (key !in engineStates) {
-      engineStates[key] = EngineState(ref = ref, selected = true)
+    if (key !in engineSelectionStates) {
+      engineSelectionStates[key] = EngineSelectionState(ref = ref, selected = true)
     }
   }
 }

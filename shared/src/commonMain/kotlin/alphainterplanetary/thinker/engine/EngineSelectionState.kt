@@ -9,8 +9,12 @@ package alphainterplanetary.thinker.engine
  *
  * Lives beside the engine model rather than in the database layer so the
  * repository, the catalog, and the persistence layer can share one shape.
+ *
+ * Named [EngineSelectionState] (not "EngineState") to keep it unambiguous next
+ * to [alphainterplanetary.thinker.ui.chrome.EngineStatus], which is the derived
+ * display status of the selected engine.
  */
-data class EngineState(
+data class EngineSelectionState(
   val ref: EngineRef,
   /** True for the one engine the app will run. At most one row is selected. */
   val selected: Boolean = false,

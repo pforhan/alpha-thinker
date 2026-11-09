@@ -6,7 +6,7 @@ import alphainterplanetary.thinker.engine.EngineCatalog
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineState
+import alphainterplanetary.thinker.engine.EngineSelectionState
 import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +21,7 @@ import me.tatarka.inject.annotations.Inject
 /**
  * Owns the user-created engines and which one is selected. It replaces the flat
  * single-instance remote settings with a list of [EngineInstance]s plus an
- * [EngineState] per [EngineRef], so several connections can coexist and each
+ * [EngineSelectionState] per [EngineRef], so several connections can coexist and each
  * keeps its own endpoint, key, model, and window (ENGINE-CONFIG-PLAN.md).
  *
  * A fresh install is seeded with one Remote instance ([EngineInstance.defaultRemote]),
@@ -76,15 +76,15 @@ class EngineRepository @Inject constructor(
   suspend fun load() {
     val instances = readInstances()
     _instances.value = instances
-    // A retired kind or deleted instance can still be sitting in `engine_state`
-    // (an old "on-device" / "downloaded" key parses as an Instance ref that no
-    // longer exists). Keep only rows that name a live builtin or a stored
-    // instance, and delete the rest so they cannot resurface.
+    // A retired kind or deleted instance can still be sitting in
+    // `engine_selection_state` (an old "on-device" / "downloaded" key parses as an
+    // Instance ref that no longer exists). Keep only rows that name a live builtin
+    // or a stored instance, and delete the rest so they cannot resurface.
     val liveKeys = EngineCatalog.builtins.mapTo(mutableSetOf()) { it.ref.storageKey }
     instances.mapTo(liveKeys) { EngineRef.Instance(it.id).storageKey }
-    val (states, staleStates) = storage.getEngineStates()
+    val (states, staleStates) = storage.getEngineSelectionStates()
       .partition { it.ref.storageKey in liveKeys }
-    staleStates.forEach { storage.deleteEngineState(it.ref) }
+    staleStates.forEach { storage.deleteEngineSelectionState(it.ref) }
     _firstRunPending.value = shouldOfferFirstRun(states)
     _selected.value = states.firstOrNull { it.selected }?.ref
       ?: EngineRef.Builtin(EngineKind.Default)
@@ -95,8 +95,8 @@ class EngineRepository @Inject constructor(
 
   /**
    * Records that the first-run picker was shown, so it does not reopen on
-   * every launch: the current selection gets its `engine_state` row now, and
-   * an explicit choice later simply moves the `selected` flag onto its own
+   * every launch: the current selection gets its `engine_selection_state` row now,
+   * and an explicit choice later simply moves the `selected` flag onto its own
    * row. Dismissing the picker without choosing is therefore final — the
    * default stands and the user is not nagged (Decision 3: the picker is a
    * picker, not an onboarding gate).
@@ -121,8 +121,8 @@ class EngineRepository @Inject constructor(
   fun markUsed(ref: EngineRef, at: Long = now().toEpochMilliseconds()) {
     _lastUsedAt.update { it + (ref to at) }
     scope.launch {
-      storage.upsertEngineState(
-        EngineState(ref = ref, selected = _selected.value == ref, lastUsedAt = at),
+      storage.upsertEngineSelectionState(
+        EngineSelectionState(ref = ref, selected = _selected.value == ref, lastUsedAt = at),
       )
     }
   }
@@ -170,10 +170,10 @@ class EngineRepository @Inject constructor(
 }
 
 /**
- * The whole first-run rule: no [EngineState] row has ever been written, so no
+ * The whole first-run rule: no [EngineSelectionState] row has ever been written, so no
  * engine has been chosen or run. Kept pure so the trigger behind
  * [EngineRepository.firstRunPending] is testable without a repository and
  * cannot drift from the storage it describes (ENGINE-CONFIG-PLAN.md 3d — the
  * trigger is a pure function, with no separate first-run flag).
  */
-internal fun shouldOfferFirstRun(states: List<EngineState>): Boolean = states.isEmpty()
+internal fun shouldOfferFirstRun(states: List<EngineSelectionState>): Boolean = states.isEmpty()

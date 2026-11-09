@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.database
 
 import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineState
+import alphainterplanetary.thinker.engine.EngineSelectionState
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
 import androidx.room3.withWriteTransaction
@@ -130,18 +130,18 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
     database.engineInstanceDao().deleteById(id)
   }
 
-  override suspend fun getEngineStates(): List<EngineState> =
-    database.engineStateDao().getAll().map { it.toModel() }
+  override suspend fun getEngineSelectionStates(): List<EngineSelectionState> =
+    database.engineSelectionStateDao().getAll().map { it.toModel() }
 
-  override suspend fun upsertEngineState(state: EngineState) {
-    database.engineStateDao().upsert(state.toEntity())
+  override suspend fun upsertEngineSelectionState(state: EngineSelectionState) {
+    database.engineSelectionStateDao().upsert(state.toEntity())
   }
 
-  override suspend fun deleteEngineState(ref: EngineRef) {
-    database.engineStateDao().deleteByKey(ref.storageKey)
+  override suspend fun deleteEngineSelectionState(ref: EngineRef) {
+    database.engineSelectionStateDao().deleteByKey(ref.storageKey)
   }
 
   override suspend fun setSelectedEngine(ref: EngineRef) {
-    database.engineStateDao().setSelected(ref.storageKey)
+    database.engineSelectionStateDao().setSelected(ref.storageKey)
   }
 }
