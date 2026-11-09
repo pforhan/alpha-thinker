@@ -26,7 +26,9 @@ import androidx.compose.ui.Modifier
  * screen has no navigation icon), any [actions] of its own, a
  * [floatingActionButton] if it has one, and its content. The back action itself
  * is never supplied: it is always `chrome.goBack()`, the same stack the
- * platform's back gesture pops.
+ * platform's back gesture pops. The icon is hidden while a settings sheet is
+ * open: the sheet overlays the bar and provides its own close/back control, so a
+ * scaffold arrow behind it would be visible but confusing.
  * The bar's order is fixed — navigation icon, title, the screen's actions, the
  * status cluster, the flyout button — so the chrome's controls are the trailing
  * edge on every screen.
@@ -47,6 +49,7 @@ fun AppScaffold(
   content: @Composable (PaddingValues) -> Unit,
 ) {
   val status by chrome.engineStatus.collectAsState()
+  val showBack = backEnabled && !chrome.isSheetOpen
 
   Scaffold(
     modifier = modifier,
@@ -54,7 +57,7 @@ fun AppScaffold(
       TopAppBar(
         title = title,
         navigationIcon = {
-          if (backEnabled) {
+          if (showBack) {
             IconButton(onClick = { chrome.goBack() }) {
               Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }

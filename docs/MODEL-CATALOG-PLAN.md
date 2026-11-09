@@ -275,7 +275,7 @@ browser chip shows the resolved name while the id stays canonical.
       task cancellation, background via app scope. Add tests for the pull framework.
       Pulls use TaskRunner lifecycle logging plus 25/50/75% milestones (not per-phase
       spam); progress/cancel/background are wired and covered by pull/task runner tests.
-- [ ] bug: when entering engine status, the title on the main gets a back button.  Sometimes
+- [x] bug: when entering engine status, the title on the main gets a back button.  Sometimes
       this remains even after closing any popups.  Requires a tap anywhere to dismiss,
       but back does nothing.
 - [ ] **Hostability flag:** Apply memory fit heuristics (see
