@@ -12,10 +12,10 @@ import alphainterplanetary.thinker.engine.EngineRegistry
 import alphainterplanetary.thinker.engine.ModelMetadataSource
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.RemoteModelInfo
-import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.testutil.FakeStorage
+import alphainterplanetary.thinker.ui.chrome.RemoteModelListState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

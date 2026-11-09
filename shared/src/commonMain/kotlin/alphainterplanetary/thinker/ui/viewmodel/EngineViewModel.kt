@@ -13,10 +13,10 @@ import alphainterplanetary.thinker.engine.ModelPresentationTier
 import alphainterplanetary.thinker.engine.ModelRank
 import alphainterplanetary.thinker.engine.ModelRanker
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
-import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.engine.normalizeRemoteBaseUrl
 import alphainterplanetary.thinker.repository.EngineRepository
+import alphainterplanetary.thinker.ui.chrome.RemoteModelListState
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow

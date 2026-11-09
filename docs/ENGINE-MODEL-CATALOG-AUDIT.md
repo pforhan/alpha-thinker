@@ -50,7 +50,7 @@ this audit except 26.2, which landed first.
 | `RemoteModelInfo` | `engine/RemoteModelCatalog.kt` | Canonical model record (id + `displayName` alias + context/size/capability metadata). | Catalog, `ModelRanker`/`ModelBrowserMerge`, `EngineViewModel` auto-select, connection UI. | **Keep, relocate/split**. | Core data; currently co-located with catalog contract/impl/UI state (4 public types). |
 | `RemoteModelCatalog` (interface) | `engine/RemoteModelCatalog.kt` | Contract to list models / resolve context length for a provider. | `KoogRemoteModelCatalog`, `EngineViewModel`, fakes/tests. | **Keep, relocate/split**. | Enables fakes; separate from impl. |
 | `KoogRemoteModelCatalog` | `engine/RemoteModelCatalog.kt` | HTTP/catalog impl (Anthropic bundled, OpenAI-compatible `/v1`, Ollama tags+show). | DI/provisioning, `EngineViewModel` (via interface). | **Keep, relocate/split**. | Substantial impl; decide file placement vs. contract in 27.2/27.4. |
-| `RemoteModelListState` | `engine/RemoteModelCatalog.kt` | Browse UI state (`Idle`/`Loading`/`Loaded`/`Failed`); `Loaded.browserEntriesWithPulls()`. | `EngineViewModel` (`grep` confirms VM + `ConnectionDialog` + VM tests only; defined here). | **Keep, re-home**. | UI browse state living in the engine catalog file couples data layer to UI — move toward chrome/VM or its own file (26.7). |
+| `RemoteModelListState` | `ui/chrome/RemoteModelListState.kt` | Browse UI state (`Idle`/`Loading`/`Loaded`/`Failed`); `Loaded.browserEntriesWithPulls()`. | `EngineViewModel`, `ConnectionDialog`, `EngineViewModelTest`. | **Keep** (26.7). | Re-homed out of `engine/RemoteModelCatalog.kt` (catalog contract + model info only) to chrome view state shared by VM and connection UI. |
 | `ModelQuality` | `engine/ModelQuality.kt` | Quality axis for curation/ranking. | `ModelMeasurement`/`ModelProfiles`, `ModelRanker`, UI chips. | **Keep** (26.6). | Split out of `ModelCuration.kt`. |
 | `ModelSpeed` | `engine/ModelSpeed.kt` | Speed axis for curation/ranking. | Curation/ranking/UI. | **Keep** (26.6). | Split out of `ModelCuration.kt`. |
 | `ModelPresentationTier` | `engine/ModelPresentationTier.kt` | Derived presentation grouping (`Recommended`/slower/adequate/unknown/discouraged). | `ModelRank`, `ModelRanker`, browser merge/UI. | **Keep** (26.6). | Model-curation grouping; split out of `ModelCuration.kt` (bare-noun collision with engine grouping resolved in 26.5). |
@@ -92,8 +92,8 @@ this audit except 26.2, which landed first.
   `RemoteModelCatalog` (4), `DownloadModels` (4), `OllamaPullClient` (3), and several
   2-type files (`EngineCatalog`, `ModelBrowserMerge`, `RemoteKoogPlanningBackend`,
   `PlanningEngine`, `EngineDelayConfig`) — normalize in 27.2.
-- `RemoteModelListState` is a UI concern defined in the engine catalog
-  (confirmed by call sites) — re-home in 26.7.
+- `RemoteModelListState` was a UI concern defined in the engine catalog — re-homed to
+  `ui/chrome/RemoteModelListState.kt` in 26.7.
 - Dev-tool delay types (`SlowDownPlanningEngine`, `EngineInteraction`,
   `EngineDelayConfig`) must not land beside product catalog types (27.5).
-- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1 → 26.6(done)/26.7/26.9/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.
+- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1 → 26.6(done)/26.7(done)/26.9/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.

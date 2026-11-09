@@ -6,7 +6,6 @@ import alphainterplanetary.thinker.engine.ModelBrowserEntry
 import alphainterplanetary.thinker.engine.ModelPresentationTier
 import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.RemoteModelInfo
-import alphainterplanetary.thinker.engine.RemoteModelListState
 import alphainterplanetary.thinker.engine.RemoteProvider
 import alphainterplanetary.thinker.ui.components.TaskSpinner
 import alphainterplanetary.thinker.ui.format.formatEta
