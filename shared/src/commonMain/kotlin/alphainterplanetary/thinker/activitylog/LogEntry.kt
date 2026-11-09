@@ -25,6 +25,9 @@ enum class LogCategory(val label: String) {
   /** Long-running task lifecycle rows (start/finish). */
   TaskRun("Task"),
 
+  /** Moving a model onto a remote inference server (e.g. the Ollama pull). */
+  ModelDownload("Model download"),
+
   /** Generic app-wide noise that needs no specific topic. */
   Info("Info"),
 }
@@ -45,6 +48,9 @@ enum class LogSource(val label: String) {
 
   /** The app's task-runner framework. */
   TaskRunner("Task runner"),
+
+  /** A native Ollama instance (model catalogue lookups and pulls). */
+  Ollama("Ollama"),
 
   /** The app itself (settings, errors, misc). */
   App("App"),

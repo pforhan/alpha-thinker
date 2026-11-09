@@ -1,12 +1,13 @@
 package alphainterplanetary.thinker.downloads
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
+import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.tasks.ConcurrencyGroup
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.util.randomUUID
-import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,39 +64,45 @@ class TaskBackedModelDownloader(
       kind = TaskKind.OllamaModelPull,
       group = ConcurrencyGroup.Download,
     ) { taskId ->
-      val logContext = activityLogger.taskContext(activityId = taskId, projectId = "")
-      logContext.started("Pulling $modelId")
-      try {
-        // A pull reports byte counts per layer, not for the model as a whole.
-        // Summing the layers lets the chip's ring track the whole pull instead
-        // of restarting from zero with every layer (which would make it look
-        // stuck at 100% on the small ones).
-        val layers = mutableMapOf<String, Pair<Long, Long>>()
-        ollamaPullClient.pull(baseUrl, modelId).collect { event ->
-          if (event.error != null) {
-            throw Exception(event.error)
-          }
-          val total = event.total
-          if (total != null && total > 0L) {
-            layers[event.digest ?: ""] = total to (event.completed ?: 0L).coerceIn(0L, total)
-            taskRunner.setDownloadProgress(
-              taskId = taskId,
-              bytesDone = layers.values.sumOf { it.second },
-              bytesTotal = layers.values.sumOf { it.first },
-              throughputBps = null,
-            )
-          }
-          if (event.status != null) {
-            logContext.append("status: ${event.status}")
+      // Milestone notes join the task's activity under a download/Ollama category so the
+      // Activity Log can label the work meaningfully; TaskRunner owns the lifecycle rows.
+      val logContext = activityLogger.context(
+        activityId = taskId,
+        category = LogCategory.ModelDownload,
+        source = LogSource.Ollama,
+        projectId = "",
+      )
+      // A pull reports byte counts per layer, not for the model as a whole.
+      // Summing the layers lets the chip's ring track the whole pull instead
+      // of restarting from zero with every layer (which would make it look
+      // stuck at 100% on the small ones).
+      val layers = mutableMapOf<String, Pair<Long, Long>>()
+      val reportedMilestones = mutableSetOf<Int>()
+      ollamaPullClient.pull(baseUrl, modelId).collect { event ->
+        event.error?.let { throw Exception(it) }
+        val total = event.total
+        if (total != null && total > 0L) {
+          layers[event.digest ?: ""] = total to (event.completed ?: 0L).coerceIn(0L, total)
+          val bytesDone = layers.values.sumOf { it.second }
+          val bytesTotal = layers.values.sumOf { it.first }
+          taskRunner.setDownloadProgress(
+            taskId = taskId,
+            bytesDone = bytesDone,
+            bytesTotal = bytesTotal,
+            throughputBps = null,
+          )
+          if (bytesTotal > 0L) {
+            val percent = ((bytesDone.toDouble() / bytesTotal.toDouble()) * 100).toInt()
+            // Log the first time overall progress passes each threshold (a jump can
+            // cross more than one). State is per pull; if that ever becomes awkward
+            // to maintain, drop progress log entries rather than add complexity.
+            for (milestone in PROGRESS_MILESTONES) {
+              if (percent >= milestone && reportedMilestones.add(milestone)) {
+                logContext.append("progress: $milestone%")
+              }
+            }
           }
         }
-        logContext.closeSucceeded()
-      } catch (e: CancellationException) {
-        logContext.closeCancelled()
-        throw e
-      } catch (e: Exception) {
-        logContext.closeFailed(e.message ?: e.toString())
-        throw e
       }
     }
     taskRunner.setDownloadMetadata(
@@ -136,3 +143,5 @@ class TaskBackedModelDownloader(
     }
   }
 }
+
+private val PROGRESS_MILESTONES = listOf(25, 50, 75)

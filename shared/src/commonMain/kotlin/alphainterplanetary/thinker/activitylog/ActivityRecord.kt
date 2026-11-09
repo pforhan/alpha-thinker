@@ -30,15 +30,21 @@ class ActivityRecord private constructor(
    * [LogCategory.TaskRun] lifecycle wrapper is omitted (every task has one), so
    * a generation activity reads "Question generation" or, for a fan-out,
    * "Prior-phase summary • Question generation"; a pure lifecycle activity
-   * falls back to "Task".
+   * falls back to "Task" unless the task kind implies a more specific label.
    */
   val category: String
     get() = workCategories().joinToString(CATEGORY_SEPARATOR) { it.label }
-      .ifEmpty { entries.first().category.label }
+      .ifEmpty { taskKind()?.displayCategory ?: entries.first().category.label }
 
   /** The distinct, non-lifecycle categories the activity's rows carry, in order. */
   private fun workCategories(): List<LogCategory> =
     entries.map { it.category }.filter { it != LogCategory.TaskRun }.distinct()
+
+  private val TaskKind.displayCategory: String?
+    get() = when (this) {
+      TaskKind.OllamaModelPull -> LogCategory.ModelDownload.label
+      else -> null
+    }
 
   /** The activity's project — the first populated project id across its rows, if any. */
   val projectId: String?
@@ -49,12 +55,20 @@ class ActivityRecord private constructor(
    * task (the `started:`/terminal rows, and the repository's compaction notes),
    * so the first populated source would always read "Task runner"; prefer the
    * first non-[LogSource.TaskRunner] source — the engine that did the work —
-   * falling back to the wrapper when the activity has no engine rows.
+   * falling back to the task kind's implied source (e.g. an Ollama pull is
+   * attributed to Ollama even before any milestone row lands) and finally the
+   * wrapper when the activity has no engine rows.
    */
   val source: LogSource?
     get() = entries.firstNotNullOfOrNull { row ->
       row.source?.takeIf { it != LogSource.TaskRunner }
-    } ?: entries.firstNotNullOfOrNull { it.source }
+    } ?: taskKind()?.impliedSource ?: entries.firstNotNullOfOrNull { it.source }
+
+  private val TaskKind.impliedSource: LogSource?
+    get() = when (this) {
+      TaskKind.OllamaModelPull -> LogSource.Ollama
+      else -> null
+    }
 
   /**
    * Elapsed time across the activity, derived solely from the clumped rows'
@@ -96,6 +110,12 @@ class ActivityRecord private constructor(
 
       titleSummary()?.let { return it }
 
+      if (kind == TaskKind.OllamaModelPull) {
+        val model = startedModelName()
+        if (succeededRow() != null) return if (model != null) "Pulled $model" else "Model pull succeeded"
+        if (model != null) return "Pulling $model"
+      }
+
       if (kind != null && succeededRow() != null) {
         return "${kind.title} succeeded"
       }
@@ -136,7 +156,9 @@ class ActivityRecord private constructor(
    */
   private fun failureHeadline(): String? {
     val line = entries.lastOrNull { it.isFailureLine() } ?: return null
-    val subject = taskKind()?.title
+    val kind = taskKind()
+    val model = if (kind == TaskKind.OllamaModelPull) startedModelName() else null
+    val subject = model?.let { "Pull $it" } ?: kind?.title
     return when {
       line.log == LogMarkers.Cancelled -> if (subject != null) "$subject cancelled" else line.log
       else -> {
@@ -155,13 +177,28 @@ class ActivityRecord private constructor(
   /**
    * The kind of task this activity carries, parsed from its `started:` lifecycle
    * row; null when the activity has no lifecycle rows (a standalone detail).
+   * The started row may carry a human detail after the enum name (e.g.
+   * `started: OllamaModelPull qwen2.5:7b`), so the name is matched by prefix.
    */
   private fun taskKind(): TaskKind? {
-    val label = entries.firstNotNullOfOrNull { row ->
-      if (row.log.startsWith(LogMarkers.Started))
-        row.log.substringAfter(LogMarkers.Started).trim() else null
+    val label = startedLabel() ?: return null
+    return TaskKind.entries.firstOrNull { kind ->
+      label == kind.name || label.startsWith("${kind.name} ")
+    }
+  }
+
+  /** The detail after the task kind in the `started:` row (e.g. a model name), if any. */
+  private fun startedModelName(): String? {
+    val label = startedLabel() ?: return null
+    val kind = TaskKind.entries.firstOrNull { candidate ->
+      label == candidate.name || label.startsWith("${candidate.name} ")
     } ?: return null
-    return TaskKind.entries.firstOrNull { it.name == label }
+    return label.removePrefix(kind.name).trim().ifEmpty { null }
+  }
+
+  private fun startedLabel(): String? = entries.firstNotNullOfOrNull { row ->
+    if (row.log.startsWith(LogMarkers.Started))
+      row.log.substringAfter(LogMarkers.Started).trim() else null
   }
 
   /** A title recommendation headline from the activity's `response:` row, if any. */

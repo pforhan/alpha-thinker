@@ -155,7 +155,6 @@ class TaskRunner(
       projectId = task.projectId,
     )
     val job = scope.launch {
-      logContext?.started(task.kind.name)
       try {
         val guard = projectGuard(task.projectId)
         val groupGate = groupGates.getValue(task.group)
@@ -165,8 +164,15 @@ class TaskRunner(
             // Start from the current row, not the enqueue-time snapshot: metadata
             // (e.g. a download's model) may have been set while the task queued.
             _tasks.update { list ->
-              list.replace(list.first { it.id == task.id }.asStarted(startedAt))
+              list.replace(
+                list.first { it.id == task.id }.copy(
+                  status = TaskStatus.Running,
+                  startedAt = startedAt,
+                ),
+              )
             }
+            val currentTask = _tasks.value.first { it.id == task.id }
+            logContext?.started(taskStartLabel(currentTask.kind, currentTask.modelId))
             var cancelled = false
             var failure: String? = null
             try {
@@ -398,6 +404,15 @@ private class Gate(concurrency: Int) {
     }
   }
 }
+
+/**
+ * The lifecycle start label. The TaskKind enum name must remain the leading token so
+ * [ActivityRecord.taskKind] can parse it from persisted `started:` rows; a model ID
+ * or other detail may follow for tasks (e.g. Ollama pulls) where the kind alone is
+ * not useful in the activity log.
+ */
+private fun taskStartLabel(kind: TaskKind, modelId: String?): String =
+  if (modelId.isNullOrBlank()) kind.name else "${kind.name} $modelId"
 
 private fun List<GenerationTask>.replace(task: GenerationTask): List<GenerationTask> =
   map { if (it.id == task.id) task else it }

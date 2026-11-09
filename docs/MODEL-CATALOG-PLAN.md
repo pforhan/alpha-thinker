@@ -257,27 +257,26 @@ browser chip shows the resolved name while the id stays canonical.
 - [x] See if we can use material icons for llm tier display instead of unicode text.
       `ModelPresentationTier` lost its glyph string; the UI now maps each tier to a
       Material icon (`ModelTierVisuals.kt`), and the pull chip's `↓` is a Download icon.
-- [ ] **Improve logging** the activity log entries aren't very useful; the main entry
+- [x] **Improve logging** the activity log entries aren't very useful; the main entry
       is called Task, from Task Runner, and there are way too many entries that just
       say phase: Downloading which is itself unuseful.  I'd recommend not logging any
       intermediate download reports, or at most at 25% 50% 75%.
-- [ ] when entering engine status, the title on the main gets a back button.  Sometimes
+      Ollama pulls now log the model in the task start label and only 25/50/75%
+      progress milestones under `ModelDownload`/`Ollama`; `ActivityRecord` shows
+      `Pulled <model>` / pull failures with the model name.
+- [ ] **Logging, progress/cancel/background, and tests:** Log pull events
+      (start/phases/errors/cancel/success) via `ActivityLogger` (use
+      `ActivityLogger.taskContext(taskId, projectId = null)` for pulls).
+      Ensure progress via metadata/`setProgress`, cancel via stream closure +
+      task cancellation, background via app scope. Add tests for the pull framework.
+- [ ] bug: when entering engine status, the title on the main gets a back button.  Sometimes
       this remains even after closing any popups.  Requires a tap anywhere to dismiss,
       but back does nothing.
-- [ ] **Track context length** as models are selected and pulled.
-- [ ] Even if we can't display anything while waiting for a full response consider
-      showing some kind of display indicating characters / words received etc
 - [ ] **Hostability flag:** Apply memory fit heuristics (see
       [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next
       to size/context chips for Ollama instances on localhost;
       consider chip color changes for outliers (MLX versions may require recent
       Macs).
-- [ ] **Logging, progress/cancel/background, and tests:** Log pull events
-      (start/phases/errors/cancel/success) via `ActivityLogger` (use
-      `ActivityLogger.taskContext(taskId, projectId = null)` for pulls).
-      Ensure progress via metadata/`setProgress`, cancel via stream closure +
-      task cancellation, background via app scope. Add tests for the pull
-      framework.
 
 **Proof:** `./gradlew :shared:allTests`; a manual pull against a local Ollama.
 
@@ -504,7 +503,7 @@ local-model and on-device eval items in stage 3, whose design is preserved in
       `ModelFileTransfer`, `ModelEvaluator`, `EvalRemote`, and
       `MODEL-EVAL-HARNESS`. Only intentional history/docs references should
       remain.
-- [ ] Smoke-test `Offline` and `Remote` selection plus one Ollama pull in the
+- [x] Smoke-test `Offline` and `Remote` selection plus one Ollama pull in the
       connection editor.
 
 ---

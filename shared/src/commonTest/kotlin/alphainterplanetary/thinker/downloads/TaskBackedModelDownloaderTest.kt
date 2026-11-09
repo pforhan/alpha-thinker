@@ -90,13 +90,39 @@ class TaskBackedModelDownloaderTest {
     assertEquals(null, state.progress)
   }
 
+  @Test
+  fun `logs progress only the first time overall progress passes each milestone`() = runTest {
+    val runner = TaskRunner(backgroundScope, RecordingActivityLogger())
+    val log = RecordingActivityLogger()
+    val downloader = downloader(
+      runner = runner,
+      pullEvents = flowOf(
+        OllamaPullEvent(digest = "sha256:a", total = 100, completed = 10),
+        OllamaPullEvent(digest = "sha256:a", total = 100, completed = 30),
+        OllamaPullEvent(digest = "sha256:a", total = 100, completed = 30),
+        OllamaPullEvent(digest = "sha256:a", total = 100, completed = 80), // jumps past 50% and 75%
+        OllamaPullEvent(digest = "sha256:a", total = 100, completed = 100),
+      ),
+      activityLogger = log,
+    )
+
+    downloader.pullOllama("qwen2.5:7b", "http://localhost:11434")
+    testScheduler.runCurrent()
+
+    assertEquals(
+      listOf("progress: 25%", "progress: 50%", "progress: 75%"),
+      log.entries.map { it.log },
+    )
+  }
+
   private fun TestScope.downloader(
     runner: TaskRunner,
     pullEvents: Flow<OllamaPullEvent> = emptyFlow(),
+    activityLogger: RecordingActivityLogger = RecordingActivityLogger(),
   ): TaskBackedModelDownloader = TaskBackedModelDownloader(
     taskRunner = runner,
     ollamaPullClient = FakeOllamaPullClient(pullEvents),
-    activityLogger = RecordingActivityLogger(),
+    activityLogger = activityLogger,
     scope = backgroundScope,
   )
 
