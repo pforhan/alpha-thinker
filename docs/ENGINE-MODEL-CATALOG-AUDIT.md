@@ -51,12 +51,12 @@ this audit except 26.2, which landed first.
 | `RemoteModelCatalog` (interface) | `engine/RemoteModelCatalog.kt` | Contract to list models / resolve context length for a provider. | `KoogRemoteModelCatalog`, `EngineViewModel`, fakes/tests. | **Keep, relocate/split**. | Enables fakes; separate from impl. |
 | `KoogRemoteModelCatalog` | `engine/RemoteModelCatalog.kt` | HTTP/catalog impl (Anthropic bundled, OpenAI-compatible `/v1`, Ollama tags+show). | DI/provisioning, `EngineViewModel` (via interface). | **Keep, relocate/split**. | Substantial impl; decide file placement vs. contract in 27.2/27.4. |
 | `RemoteModelListState` | `engine/RemoteModelCatalog.kt` | Browse UI state (`Idle`/`Loading`/`Loaded`/`Failed`); `Loaded.browserEntriesWithPulls()`. | `EngineViewModel` (`grep` confirms VM + `ConnectionDialog` + VM tests only; defined here). | **Keep, re-home**. | UI browse state living in the engine catalog file couples data layer to UI — move toward chrome/VM or its own file (26.7). |
-| `ModelQuality` | `engine/ModelCuration.kt` | Quality axis for curation/ranking. | `ModelMeasurement`/`ModelProfiles`, `ModelRanker`, UI chips. | **Keep, split file**. | One of 6 public types in `ModelCuration.kt` (AGENTS). |
-| `ModelSpeed` | `engine/ModelCuration.kt` | Speed axis for curation/ranking. | Curation/ranking/UI. | **Keep, split file**. | Same. |
-| `ModelPresentationTier` | `engine/ModelCuration.kt` | Derived presentation grouping (`Recommended`/slower/adequate/unknown/discouraged). | `ModelRank`, `ModelRanker`, browser merge/UI. | **Keep, split file**. | Model-curation grouping (kept; the bare-noun collision was resolved by renaming `EngineTier` → `EnginePickerTier` in 26.5). |
-| `ModelRank` | `engine/ModelCuration.kt` | Ranked result: model + tier/quality/speed/reason/estimated. | `ModelRanker`, `ModelBrowserMerge`/`ModelBrowserEntry`, VM/UI. | **Keep, split file**. | Data side of the rank/ranker pair. |
-| `ModelMeasurement` | `engine/ModelCuration.kt` | Measured seed record from eval rows. | `ModelProfiles.measuredSeeds`, `ModelRanker`. | **Keep, split file**. | Evidence backing curation. |
-| `ModelProfiles` (object) | `engine/ModelCuration.kt` | Measured seeds, family heuristics, lookup/strong-id helpers. | `ModelRanker`, `ModelBrowserMerge` (`strongModelIds`), tests, `tools/eval_ollama_models.py` snippet expectations. | **Keep, split/rename file**. | Plan named `ModelProfiles.kt`; landed inside `ModelCuration.kt` with 5 siblings (26.6). |
+| `ModelQuality` | `engine/ModelQuality.kt` | Quality axis for curation/ranking. | `ModelMeasurement`/`ModelProfiles`, `ModelRanker`, UI chips. | **Keep** (26.6). | Split out of `ModelCuration.kt`. |
+| `ModelSpeed` | `engine/ModelSpeed.kt` | Speed axis for curation/ranking. | Curation/ranking/UI. | **Keep** (26.6). | Split out of `ModelCuration.kt`. |
+| `ModelPresentationTier` | `engine/ModelPresentationTier.kt` | Derived presentation grouping (`Recommended`/slower/adequate/unknown/discouraged). | `ModelRank`, `ModelRanker`, browser merge/UI. | **Keep** (26.6). | Model-curation grouping; split out of `ModelCuration.kt` (bare-noun collision with engine grouping resolved in 26.5). |
+| `ModelRank` | `engine/ModelRank.kt` | Ranked result: model + tier/quality/speed/reason/estimated. | `ModelRanker`, `ModelBrowserMerge`/`ModelBrowserEntry`, VM/UI. | **Keep** (26.6). | Data side of the rank/ranker pair. |
+| `ModelMeasurement` | `engine/ModelMeasurement.kt` | Measured seed record from eval rows. | `ModelProfiles.measuredSeeds`, `ModelRanker`. | **Keep** (26.6). | Evidence backing curation; eval snippet shape (`ModelMeasurement`, `measuredSeeds`) preserved. |
+| `ModelProfiles` (object) | `engine/ModelProfiles.kt` | Measured seeds, family heuristics, lookup/strong-id helpers. | `ModelRanker`, `ModelBrowserMerge` (`strongModelIds`), tests, `tools/eval_ollama_models.py` snippet expectations. | **Keep** (26.6). | Reconciled to `ModelProfiles.kt` (as the plan expected), split from `ModelCuration.kt`. |
 | `ModelRanker` (object) | `engine/ModelRanker.kt` | Deterministic ranking over measurements/heuristics into `ModelRank`. | `ModelBrowserMerge`, `EngineViewModel` auto-select. | **Keep**. | Clean data-vs-logic split; already separate. |
 | `ModelBrowserMerge` + `ModelBrowserEntry` | `engine/ModelBrowserMerge.kt` | Pure merge of installed + pullable curated models into ranked, `isPull`-marked entries. | `RemoteModelListState.Loaded.browserEntriesWithPulls()`, connection UI. | **Keep, split file**. | Small/testable; 2 public types. |
 
@@ -88,12 +88,12 @@ this audit except 26.2, which landed first.
   27.1 should lock a package map + dependency direction before moves
   (suggested: `engine.core` / `engine.runtime|koog` / `engine.config` /
   `engine.model`), keeping `ui/chrome` and `downloads` dependencies one-way.
-- One-type-per-file (AGENTS) is violated in `ModelCuration` (6), `RemoteModelCatalog`
-  (4), `DownloadModels` (4), `OllamaPullClient` (3), and several 2-type files
-  (`EngineCatalog`, `ModelBrowserMerge`, `RemoteKoogPlanningBackend`,
+- One-type-per-file (AGENTS): `ModelCuration` (6) split in 26.6; still violated in
+  `RemoteModelCatalog` (4), `DownloadModels` (4), `OllamaPullClient` (3), and several
+  2-type files (`EngineCatalog`, `ModelBrowserMerge`, `RemoteKoogPlanningBackend`,
   `PlanningEngine`, `EngineDelayConfig`) — normalize in 27.2.
 - `RemoteModelListState` is a UI concern defined in the engine catalog
   (confirmed by call sites) — re-home in 26.7.
 - Dev-tool delay types (`SlowDownPlanningEngine`, `EngineInteraction`,
   `EngineDelayConfig`) must not land beside product catalog types (27.5).
-- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1 → 26.6/26.7/26.9/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.
+- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1 → 26.6(done)/26.7/26.9/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.
