@@ -118,7 +118,6 @@ class TaskBackedModelDownloader(
     _downloads.update {
       it + DownloadState(
         handle = handle,
-        kind = DownloadKind.OllamaPull,
         status = DownloadStatus.Running,
         modelId = modelId,
         source = "ollama",

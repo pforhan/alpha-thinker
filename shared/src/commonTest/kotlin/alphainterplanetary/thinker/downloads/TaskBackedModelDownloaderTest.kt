@@ -30,7 +30,6 @@ class TaskBackedModelDownloaderTest {
 
     val state = downloader.downloads().value.single { it.handle.id == handle.id }
     assertEquals(DownloadStatus.Succeeded, state.status)
-    assertEquals(DownloadKind.OllamaPull, state.kind)
     assertEquals(100L, state.bytesDone)
     assertEquals(100L, state.bytesTotal)
     assertEquals(1f, state.progress)

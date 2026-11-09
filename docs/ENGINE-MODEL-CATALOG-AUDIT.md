@@ -68,7 +68,7 @@ this audit except 26.2, which landed first.
 
 | Type | File | Responsibility | Key call sites | Verdict | Rationale |
 |---|---|---|---|---|---|
-| `DownloadKind` | `downloads/DownloadKind.kt` | Download kind (`OllamaPull`). | `DownloadState`, downloader/VM/UI. | **Keep** (27.2). | Split from `DownloadModels.kt`. |
+| `DownloadKind` | *(removed)* | Former download kind enum (`OllamaPull` only). | — | **Eliminated**. | Redundant after local-model removal/27.2: only Ollama pulls exist, so `DownloadState.kind` and kind-based filters were removed. |
 | `DownloadStatus` | `downloads/DownloadStatus.kt` | Lifecycle phase enum (`Queued`…`Cancelled`, `finished`). | `DownloadState`, `TaskBackedModelDownloader` status mapping, pull UI/tests. | **Keep, naming review** (27.2 split). | Phase enum vs. aggregate `DownloadState`; parallels `TaskStatus`. Decide rename to `DownloadPhase` only if low churn (26.8). |
 | `DownloadHandle` | `downloads/DownloadHandle.kt` | Download handle linking `id` to task id. | `ModelDownloader`/`TaskBackedModelDownloader`, VM/UI cancel. | **Keep** (27.2). | Split from `DownloadModels.kt`. |
 | `DownloadState` | `downloads/DownloadState.kt` | Observable aggregate snapshot of a download. | `ModelDownloader.downloads()`, pull chips/progress/cancel UI, tests. | **Keep** (27.2). | The observed shape; distinct from `DownloadStatus` phase. |
@@ -138,8 +138,9 @@ Known coupling to resolve deliberately during moves (not pure-domain):
 - One-type-per-file (AGENTS) for the plan's scope: resolved in 26.6/26.9/27.2
   (`ModelCuration` → 6 files; `RemoteConnection` extracted; `RemoteModelCatalog` →
   `RemoteModelInfo`/contract/`KoogRemoteModelCatalog` impl with private DTOs local;
-  `DownloadModels` → 4 files; `OllamaPullClient` → interface/event/impl with private
-  DTOs local; `PlanningEngine`/`QuestionBatch`, `EngineDelayConfig`/`EngineInteraction`,
+  `DownloadModels` → `DownloadStatus`/`Handle`/`State` (`DownloadKind` later eliminated);
+  `OllamaPullClient` → interface/event/impl with private DTOs local;
+  `PlanningEngine`/`QuestionBatch`, `EngineDelayConfig`/`EngineInteraction`,
   `ModelBrowserMerge`/`ModelBrowserEntry`, `EngineCatalog`/`EngineCatalogEntry` split).
   Reconfirm during 27.3–27.5 moves.
 - `RemoteModelListState` re-homed to `ui/chrome/RemoteModelListState.kt` in 26.7.

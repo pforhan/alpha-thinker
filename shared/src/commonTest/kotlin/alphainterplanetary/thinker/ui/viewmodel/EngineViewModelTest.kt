@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.downloads.DownloadHandle
-import alphainterplanetary.thinker.downloads.DownloadKind
 import alphainterplanetary.thinker.downloads.DownloadState
 import alphainterplanetary.thinker.downloads.DownloadStatus
 import alphainterplanetary.thinker.downloads.ModelDownloader
@@ -655,7 +654,6 @@ class EngineViewModelTest {
       states.update {
         it + DownloadState(
           handle = handle,
-          kind = DownloadKind.OllamaPull,
           status = DownloadStatus.Running,
           modelId = modelId,
           source = "ollama",

@@ -1,6 +1,5 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.downloads.DownloadKind
 import alphainterplanetary.thinker.downloads.DownloadState
 import alphainterplanetary.thinker.downloads.DownloadStatus
 import alphainterplanetary.thinker.downloads.ModelDownloader
@@ -236,7 +235,7 @@ class EngineViewModel(
       var completedPulls = emptySet<String>()
       downloads.collect { states ->
         val succeeded = states
-          .filter { it.kind == DownloadKind.OllamaPull && it.status == DownloadStatus.Succeeded }
+          .filter { it.status == DownloadStatus.Succeeded }
           .map { it.handle.id }
           .toSet()
         if ((succeeded - completedPulls).isNotEmpty() && _draft.value != null) {
@@ -330,8 +329,7 @@ class EngineViewModel(
   fun pullOllamaModel(modelId: String, baseUrl: String? = null) {
     val resolvedBase = baseUrl ?: _draft.value?.baseUrl ?: return
     val alreadyPulling = downloads.value.any {
-      it.kind == DownloadKind.OllamaPull &&
-        it.modelId == modelId &&
+      it.modelId == modelId &&
         !it.status.finished
     }
     if (!alreadyPulling) {

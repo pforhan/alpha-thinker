@@ -334,7 +334,7 @@ class LoggingPlanningEngineTest {
       )
       fail("expected the engine to refuse")
     } catch (e: PlanningEngine.AnalysisFailure) {
-      assertTrue(e.message.orEmpty().contains("summarize"))
+      assertTrue(e.message.contains("summarize"))
     }
 
     val terminal = log.entries.single()

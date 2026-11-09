@@ -5,7 +5,6 @@ package alphainterplanetary.thinker.downloads
  */
 data class DownloadState(
   val handle: DownloadHandle,
-  val kind: DownloadKind,
   val status: DownloadStatus,
   val modelId: String? = null,
   val source: String? = null,
