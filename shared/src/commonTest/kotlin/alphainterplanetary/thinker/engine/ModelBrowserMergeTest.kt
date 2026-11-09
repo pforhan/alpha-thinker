@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 class ModelBrowserMergeTest {
 
   private fun installed(vararg ids: String): List<RemoteModelInfo> =
-    ids.map { RemoteModelInfo(id = it, source = ModelSource.Ollama) }
+    ids.map { RemoteModelInfo(id = it, source = ModelMetadataSource.Ollama) }
 
   @Test
   fun `curated strong models that are missing become pull entries`() {
@@ -32,7 +32,7 @@ class ModelBrowserMergeTest {
     // Simulate an installed `:latest` alias that resolves to the curated tag.
     val alias = RemoteModelInfo(
       id = first.substringBefore(':') + ":latest",
-      source = ModelSource.Ollama,
+      source = ModelMetadataSource.Ollama,
       displayName = first,
     )
     val merged = ModelBrowserMerge.merge(listOf(alias))

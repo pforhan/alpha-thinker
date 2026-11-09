@@ -9,7 +9,7 @@ import alphainterplanetary.thinker.engine.EngineInstance
 import alphainterplanetary.thinker.engine.EngineKind
 import alphainterplanetary.thinker.engine.EngineRef
 import alphainterplanetary.thinker.engine.EngineRegistry
-import alphainterplanetary.thinker.engine.ModelSource
+import alphainterplanetary.thinker.engine.ModelMetadataSource
 import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.RemoteModelListState
@@ -620,12 +620,12 @@ class EngineViewModelTest {
       return listOf(
         RemoteModelInfo(
           id = "model-a",
-          source = ModelSource.OpenAiCompatible,
+          source = ModelMetadataSource.OpenAiCompatible,
           contextLength = 32_768
         ),
         RemoteModelInfo(
           id = "model-b",
-          source = ModelSource.OpenAiCompatible,
+          source = ModelMetadataSource.OpenAiCompatible,
           contextLength = null
         ),
       )

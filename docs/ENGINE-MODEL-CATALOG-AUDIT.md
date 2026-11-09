@@ -24,7 +24,7 @@ this audit except 26.2, which landed first.
 | `EngineCapability` | `engine/EngineCapabilities.kt` | Capability vocabulary (`Network`/`Llm`/`Tools`) implied by a kind/mode. | `EngineKind.capabilities`, `ui/chrome` capability slots/copy/status. | **Keep**. | Stable shared vocabulary across engine and chrome. |
 | `PlanningEngineSelector` | `engine/PlanningEngineSelector.kt` | Fun-interface seam freezing the resolved engine per task (lock-in). | `ProjectRepository`/task execution, tests. | **Keep**. | Tiny, justified indirection. |
 | `RemoteConnection` | `engine/RemoteKoogPlanningBackend.kt` | Config DTO (provider/baseUrl/apiKey/model/contextLength) for the remote backend. | `EngineRegistry` construction, `RemoteKoogPlanningBackend`. | **Keep, relocate/split**. | Config DTO buried in the backend impl file (2 public types). Extract to its own file/subpackage (26.9). |
-| `RemoteProvider` | `engine/RemoteProvider.kt` | Vendor catalogue: defaults, key requirements, base-URL configurability, wire/client mapping metadata. | `EngineInstance`, `RemoteConnection`/backends, `RemoteModelCatalog`, `ModelBrowserMerge`, connection UI. | **Keep, clarify boundary**. | Connection/protocol+defaults concept — *not* the same as `ModelSource`, but values overlap (Ollama/OpenAI-compatible/Anthropic). Make the mapping/distinction explicit (26.4). |
+| `RemoteProvider` | `engine/RemoteProvider.kt` | Vendor catalogue (connection/protocol + defaults): endpoint defaults, key requirements, base-URL configurability, wire/client mapping metadata. | `EngineInstance`, `RemoteConnection`/backends, `RemoteModelCatalog`, `ModelBrowserMerge`, connection UI. | **Keep** (26.4 done). | Boundary clarified: provider = how to connect; provenance = `ModelMetadataSource`. Exposes the single explicit mapping `RemoteProvider.metadataSource` so the enums are not assumed equivalent. |
 
 ## Engine runtime / plumbing (in package; repackaging targets, not config/catalog domain)
 
@@ -46,7 +46,7 @@ this audit except 26.2, which landed first.
 
 | Type | File | Responsibility | Key call sites | Verdict | Rationale |
 |---|---|---|---|---|---|
-| `ModelSource` | `engine/ModelSource.kt` | Metadata provenance (`Ollama`/`OpenAiCompatible`/`Anthropic`) — explains which fields can be known. | `RemoteModelInfo.source`, `RemoteModelCatalog` impl, curation/browser context. | **Keep, clarify boundary**. | Provenance, not connection protocol; value overlap with `RemoteProvider` is confusing (26.4). |
+| `ModelMetadataSource` *(renamed from `ModelSource`, 26.4)* | `engine/ModelMetadataSource.kt` | Metadata provenance (`Ollama`/`OpenAiCompatible`/`Anthropic`) — explains which fields can be known. | `RemoteModelInfo.source`, `RemoteModelCatalog` impl, `ModelBrowserMerge`, tests. | **Keep** (done). | Renamed for clarity and KDoc'd as provenance (not `RemoteProvider`); mapped explicitly via `RemoteProvider.metadataSource`. |
 | `RemoteModelInfo` | `engine/RemoteModelCatalog.kt` | Canonical model record (id + `displayName` alias + context/size/capability metadata). | Catalog, `ModelRanker`/`ModelBrowserMerge`, `EngineViewModel` auto-select, connection UI. | **Keep, relocate/split**. | Core data; currently co-located with catalog contract/impl/UI state (4 public types). |
 | `RemoteModelCatalog` (interface) | `engine/RemoteModelCatalog.kt` | Contract to list models / resolve context length for a provider. | `KoogRemoteModelCatalog`, `EngineViewModel`, fakes/tests. | **Keep, relocate/split**. | Enables fakes; separate from impl. |
 | `KoogRemoteModelCatalog` | `engine/RemoteModelCatalog.kt` | HTTP/catalog impl (Anthropic bundled, OpenAI-compatible `/v1`, Ollama tags+show). | DI/provisioning, `EngineViewModel` (via interface). | **Keep, relocate/split**. | Substantial impl; decide file placement vs. contract in 27.2/27.4. |
@@ -96,4 +96,4 @@ this audit except 26.2, which landed first.
   (confirmed by call sites) — re-home in 26.7.
 - Dev-tool delay types (`SlowDownPlanningEngine`, `EngineInteraction`,
   `EngineDelayConfig`) must not land beside product catalog types (27.5).
-- Suggested execution order remains: `26.1 → 26.2(done)/26.3/26.4/26.5 → 27.1 → 26.6/26.7/26.9/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.
+- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5 → 27.1 → 26.6/26.7/26.9/27.2 → 27.3/27.4/27.5 → 26.8 (optional) → 27.6`.

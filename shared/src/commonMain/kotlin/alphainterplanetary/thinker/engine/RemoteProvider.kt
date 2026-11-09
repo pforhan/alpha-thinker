@@ -3,18 +3,20 @@ package alphainterplanetary.thinker.engine
 import alphainterplanetary.thinker.engine.RemoteProvider.Companion.Default
 
 /**
- * Which flavor of remote endpoint a [RemoteKoogPlanningBackend] talks to. The
- * mode is one ([EngineKind.Remote]) but the client that reaches it is not: a
- * native Ollama server and Anthropic's API each speak a different protocol,
- * with different defaults and different ways to learn a model's name and
- * window, so the provider decides which Koog client the backend builds.
- *
- * This is deliberately a small, flat catalogue rather than a configurable
- * instance list: every entry here needs at most an endpoint, a key, and a model.
- * [EngineKind.Remote]'s `OpenAiCompatible` remains the escape hatch for the
+ * A supported remote LLM provider (connection/protocol + defaults). A
+ * [RemoteProvider] decides which client [RemoteKoogPlanningBackend] builds and
+ * captures the vendor catalogue — endpoint defaults, key requirements, model
+ * listing — so the client and the settings UI can branch on one value instead
+ * of re-deriving vendor rules. [OpenAiCompatible] is the escape hatch for the
  * long tail of `/v1` endpoints (OpenAI itself, OpenRouter, Groq, LM Studio,
- * vLLM, …) because they all speak the same wire format and so need no entry of
- * their own.
+ * vLLM, …) because they all speak the same wire format.
+ *
+ * This is the *provider* catalogue, not metadata provenance and not the
+ * connection: what a model's metadata can truthfully report is
+ * [ModelMetadataSource] (see [metadataSource], the single explicit mapping, so
+ * the enums are not assumed equivalent); a [RemoteProvider] is a field inside an
+ * [EngineInstance], so a user can configure several connections and each carries
+ * its own provider, endpoint, and model (ENGINE-CONFIG-PLAN.md).
  *
  * The persisted [key] is the durable string stored by the settings table, so
  * label or ordering changes never break a saved choice.
@@ -121,6 +123,18 @@ enum class RemoteProvider(
     apiKeyUrl = "https://console.anthropic.com/settings/keys",
   ),
   ;
+
+  /**
+   * The metadata-provenance source for models served through this provider —
+   * the single explicit mapping between connection provider and
+   * [ModelMetadataSource], so code does not assume the enums are equivalent.
+   */
+  val metadataSource: ModelMetadataSource
+    get() = when (this) {
+      Ollama -> ModelMetadataSource.Ollama
+      OpenAiCompatible -> ModelMetadataSource.OpenAiCompatible
+      Anthropic -> ModelMetadataSource.Anthropic
+    }
 
   companion object {
     /**

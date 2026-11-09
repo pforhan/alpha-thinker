@@ -32,7 +32,7 @@ object ModelBrowserMerge {
           val key = id.lowercase()
           key !in installedKeys && id.lowercase() !in installedKeys
         }
-        .map { id -> RemoteModelInfo(id = id, source = ModelSource.Ollama) }
+        .map { id -> RemoteModelInfo(id = id, source = provider.metadataSource) }
     } else {
       emptyList()
     }

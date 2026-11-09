@@ -32,7 +32,7 @@ import kotlinx.serialization.json.longOrNull
  */
 data class RemoteModelInfo(
   val id: String,
-  val source: ModelSource,
+  val source: ModelMetadataSource,
   val displayName: String = id,
   val contextLength: Int? = null,
   val maxOutputTokens: Int? = null,
@@ -123,7 +123,7 @@ class KoogRemoteModelCatalog(
     RemoteProvider.Anthropic -> AnthropicModels.models.map { model ->
       RemoteModelInfo(
         id = model.id,
-        source = ModelSource.Anthropic,
+        source = ModelMetadataSource.Anthropic,
         contextLength = model.contextLength?.toInt(),
         maxOutputTokens = model.maxOutputTokens?.toInt(),
         // Koog names a capability by its id, so the app reads the catalogue's
@@ -183,7 +183,7 @@ class KoogRemoteModelCatalog(
         .map {
           RemoteModelInfo(
             id = it.id,
-            source = ModelSource.OpenAiCompatible,
+            source = ModelMetadataSource.OpenAiCompatible,
             contextLength = it.contextLength,
           )
         }
@@ -245,7 +245,7 @@ class KoogRemoteModelCatalog(
     val details = show?.details ?: tag.details
     return RemoteModelInfo(
       id = tag.id,
-      source = ModelSource.Ollama,
+      source = ModelMetadataSource.Ollama,
       // The alias is resolved for the eye only; the id stays the reference the
       // provider is asked for.
       // Prefer the tag-shaped size when the source actually declares one

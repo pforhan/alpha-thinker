@@ -9,7 +9,7 @@ class ModelRankerTest {
   private fun info(
     id: String,
     displayName: String = id,
-    source: ModelSource = ModelSource.Ollama,
+    source: ModelMetadataSource = ModelMetadataSource.Ollama,
   ) = RemoteModelInfo(
     id = id,
     source = source,

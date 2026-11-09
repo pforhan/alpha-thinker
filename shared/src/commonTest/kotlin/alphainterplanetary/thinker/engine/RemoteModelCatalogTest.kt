@@ -27,7 +27,7 @@ class RemoteModelCatalogTest {
     // The bundled catalogue is where Anthropic's models are described, so the
     // app reads their capabilities and output limits from it rather than
     // declaring them itself.
-    assertTrue(models.all { it.source == ModelSource.Anthropic })
+    assertTrue(models.all { it.source == ModelMetadataSource.Anthropic })
     val starter = models.first { it.id == RemoteProvider.Anthropic.defaultModel }
     assertEquals(
       AnthropicModels.modelsById()
@@ -57,10 +57,10 @@ class RemoteModelCatalogTest {
 
     assertEquals(
       listOf(
-        RemoteModelInfo(id = "gpt-4o-mini", source = ModelSource.OpenAiCompatible),
+        RemoteModelInfo(id = "gpt-4o-mini", source = ModelMetadataSource.OpenAiCompatible),
         RemoteModelInfo(
           id = "llama-3.1-8b",
-          source = ModelSource.OpenAiCompatible,
+          source = ModelMetadataSource.OpenAiCompatible,
           contextLength = 131072,
         ),
       ),
@@ -100,7 +100,7 @@ class RemoteModelCatalogTest {
       .list(RemoteProvider.OpenAiCompatible, "http://localhost:8000", "")
 
     assertEquals(
-      listOf(RemoteModelInfo(id = "local-model", source = ModelSource.OpenAiCompatible)),
+      listOf(RemoteModelInfo(id = "local-model", source = ModelMetadataSource.OpenAiCompatible)),
       models,
     )
     assertTrue(client.lastGetHeaders.isEmpty())
@@ -147,7 +147,7 @@ class RemoteModelCatalogTest {
       listOf(
         RemoteModelInfo(
           id = "llama3.2:latest",
-          source = ModelSource.Ollama,
+          source = ModelMetadataSource.Ollama,
           // The alias is resolved for the eye; the id stays the reference the
           // provider is asked for.
           displayName = "llama3.2:3b",
@@ -162,7 +162,7 @@ class RemoteModelCatalogTest {
         ),
         RemoteModelInfo(
           id = "qwen2.5:7b",
-          source = ModelSource.Ollama,
+          source = ModelMetadataSource.Ollama,
           displayName = "qwen2.5:7b",
           contextLength = 32768,
           parameterSizeB = 8,
@@ -280,7 +280,7 @@ class RemoteModelCatalogTest {
       listOf(
         RemoteModelInfo(
           id = "c:3b",
-          source = ModelSource.Ollama,
+          source = ModelMetadataSource.Ollama,
           contextLength = 65536,
           parameterSizeB = 3,
           sizeLabel = "3B",
@@ -308,10 +308,10 @@ class RemoteModelCatalogTest {
 
     assertEquals(
       listOf(
-        RemoteModelInfo(id = "a:1b", source = ModelSource.Ollama),
+        RemoteModelInfo(id = "a:1b", source = ModelMetadataSource.Ollama),
         RemoteModelInfo(
           id = "b:2b",
-          source = ModelSource.Ollama,
+          source = ModelMetadataSource.Ollama,
           contextLength = 8192,
           format = "gguf",
           capabilities = setOf("completion"),
