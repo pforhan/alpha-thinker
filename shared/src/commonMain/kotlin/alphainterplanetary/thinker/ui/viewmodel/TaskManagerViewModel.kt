@@ -52,6 +52,10 @@ class TaskManagerViewModel(
     return title
   }
 
+  fun cancelTask(taskId: String) {
+    taskRunner.cancel(taskId)
+  }
+
   fun close() {
     vmJob.cancel()
   }

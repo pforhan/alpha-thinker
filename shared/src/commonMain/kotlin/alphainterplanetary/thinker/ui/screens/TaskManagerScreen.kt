@@ -22,7 +22,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -77,7 +81,7 @@ fun TaskManagerScreen(
         verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
       ) {
         items(rows, key = { it.task.id }) { row ->
-          TaskManagerRowItem(row = row, at = at)
+          TaskManagerRowItem(row = row, at = at, onCancel = viewModel::cancelTask)
         }
       }
     }
@@ -98,7 +102,7 @@ private fun rememberTickerNow(active: Boolean): Instant {
 }
 
 @Composable
-private fun TaskManagerRowItem(row: TaskManagerRow, at: Instant) {
+private fun TaskManagerRowItem(row: TaskManagerRow, at: Instant, onCancel: (String) -> Unit) {
   val task = row.task
   Card(
     modifier = Modifier
@@ -118,7 +122,17 @@ private fun TaskManagerRowItem(row: TaskManagerRow, at: Instant) {
           Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
           TaskSpinner()
         }
-        Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
+        if (task.isActive) {
+          IconButton(onClick = { onCancel(task.id) }) {
+            Icon(
+              imageVector = Icons.Filled.Close,
+              contentDescription = "Cancel task",
+              tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+        } else {
+          Spacer(modifier = Modifier.width(Dimens.LabelChipGap))
+        }
         Text(
           text = task.status.name,
           style = MaterialTheme.typography.labelSmall,

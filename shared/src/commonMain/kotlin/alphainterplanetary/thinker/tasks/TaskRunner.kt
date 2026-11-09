@@ -11,6 +11,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -92,16 +93,34 @@ class TaskRunner(
    * Cancels [taskId]'s coroutine; a no-op when it already finished.
    *
    * A task that never started has no body to observe the cancellation, so its
-   * row is marked here. A task already running reports itself from the body's
-   * cancellation handler, which also closes its activity log.
+   * row is marked here and its activity is closed. A running task reports
+   * itself from the body's cancellation handler, which also closes its activity
+   * log; logging here for running tasks would duplicate that terminal row.
    */
   fun cancel(taskId: String) {
     jobs.value[taskId]?.cancel()
     val current = _tasks.value.firstOrNull { it.id == taskId } ?: return
-    if (current.status != TaskStatus.Queued) return
-    val finishedAt = now()
-    _tasks.update { list ->
-      list.replace(list.first { it.id == taskId }.asFailed(finishedAt, "Task cancelled"))
+    if (current.isFinished) return
+    // A queued task has no running body to close its activity; log here so the
+    // Activity Log records the cancellation even if the job never reaches its
+    // terminal handler. Running tasks are closed by the body/job handlers.
+    if (current.status == TaskStatus.Queued) {
+      val finishedAt = now()
+      _tasks.update { list ->
+        list.replace(list.first { it.id == taskId }.asFailed(finishedAt, "Task cancelled"))
+      }
+      scope.launch {
+        activityLogger?.append(
+          alphainterplanetary.thinker.activitylog.LogEntry(
+            projectId = current.projectId,
+            activityId = taskId,
+            category = LogCategory.TaskRun,
+            source = LogSource.TaskRunner,
+            log = alphainterplanetary.thinker.activitylog.LogMarkers.Cancelled,
+            timestamp = finishedAt,
+          ),
+        )
+      }
     }
   }
 
@@ -194,26 +213,36 @@ class TaskRunner(
             }
             // The body may have streamed progress via [setProgress]; the durable
             // log keeps just the terminal row (transient ticks are UI-only).
-            when {
-              cancelled -> logContext?.closeCancelled()
-              failure != null -> logContext?.closeFailed(failure)
-              else -> logContext?.closeSucceeded()
+            // Terminal logging must outlive cancellation: the Room DAO is a cancellable
+            // suspend point and would drop the row if the coroutine is already cancelled.
+            withContext(NonCancellable) {
+              when {
+                cancelled -> logContext?.closeCancelled()
+                failure != null -> logContext?.closeFailed(failure)
+                else -> logContext?.closeSucceeded()
+              }
+              // Fold any progress/error published via [setProgress] into the terminal
+              // state instead of clobbering it with a stale local read.
+              _tasks.update { list -> list.replace(terminal(list.first { it.id == task.id })) }
             }
-            // Fold any progress/error published via [setProgress] into the terminal
-            // state instead of clobbering it with a stale local read.
-            _tasks.update { list -> list.replace(terminal(list.first { it.id == task.id })) }
           }
         }
       } catch (e: CancellationException) {
-        // Cancelled while still queued, before a body could mark the row itself.
-        // Without this the task would stay [TaskStatus.Queued] forever, because
-        // the cancellation never reaches the body's own handler.
-        val finishedAt = now()
-        logContext?.closeCancelled()
-        _tasks.update { list ->
-          list.replace(
-            list.first { it.id == task.id }.asFailed(finishedAt, "Task cancelled"),
-          )
+        // Cancelled before the body could mark the row itself (e.g. while waiting
+        // for a lock/gate, or by an external cancel racing the inner handler).
+        val current = _tasks.value.firstOrNull { it.id == task.id }
+        val alreadyCancelled =
+          current?.status == TaskStatus.Failed && current.error == "Task cancelled"
+        if (!alreadyCancelled) {
+          withContext(NonCancellable) {
+            val finishedAt = now()
+            logContext?.closeCancelled()
+            _tasks.update { list ->
+              list.replace(
+                list.first { it.id == task.id }.asFailed(finishedAt, "Task cancelled"),
+              )
+            }
+          }
         }
       }
     }

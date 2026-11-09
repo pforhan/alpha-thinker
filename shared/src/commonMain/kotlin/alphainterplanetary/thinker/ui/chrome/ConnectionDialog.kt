@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -70,6 +71,7 @@ internal fun ConnectionDialog(
   onBrowseModels: () -> Unit,
   onModelSelected: (RemoteModelInfo) -> Unit,
   onPullModel: (String) -> Unit,
+  onCancelPull: (String) -> Unit = {},
   pulls: List<DownloadState> = emptyList(),
   onSave: () -> Unit,
   onDismiss: () -> Unit,
@@ -113,6 +115,7 @@ internal fun ConnectionDialog(
           onBrowseModels = onBrowseModels,
           onModelSelected = onModelSelected,
           onPullModel = onPullModel,
+          onCancelPull = onCancelPull,
           pulls = pulls,
         )
       }
@@ -159,6 +162,7 @@ internal fun RemoteConnectionFields(
   onBrowseModels: () -> Unit,
   onModelSelected: (RemoteModelInfo) -> Unit,
   onPullModel: (String) -> Unit = {},
+  onCancelPull: (String) -> Unit = {},
   pulls: List<DownloadState> = emptyList(),
 ) {
   RemoteProviderPicker(provider = provider, onProviderChange = onProviderChange)
@@ -239,6 +243,7 @@ internal fun RemoteConnectionFields(
     onSelect = onModelSelected,
     provider = provider,
     onPullModel = onPullModel,
+    onCancelPull = onCancelPull,
     pulls = pulls,
   )
   Spacer(modifier = Modifier.height(Dimens.ContentGap))
@@ -310,6 +315,7 @@ private fun ModelBrowser(
   onSelect: (RemoteModelInfo) -> Unit,
   provider: RemoteProvider = RemoteProvider.Default,
   onPullModel: (String) -> Unit = {},
+  onCancelPull: (String) -> Unit = {},
   pulls: List<DownloadState> = emptyList(),
 ) {
   Row(verticalAlignment = Alignment.CenterVertically) {
@@ -343,7 +349,7 @@ private fun ModelBrowser(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       } else {
-        AllTiers(entries, current, onSelect, onPullModel, pulls)
+        AllTiers(entries, current, onSelect, onPullModel, onCancelPull, pulls)
       }
     }
 
@@ -364,6 +370,7 @@ private fun AllTiers(
   current: String,
   onSelect: (RemoteModelInfo) -> Unit,
   onPullModel: (String) -> Unit,
+  onCancelPull: (String) -> Unit,
   pulls: List<DownloadState>,
 ) {
   Spacer(modifier = Modifier.height(Dimens.TightGap))
@@ -373,9 +380,9 @@ private fun AllTiers(
     ModelPresentationTier.LowerQualityButFast,
     ModelPresentationTier.Unknown,
   ).forEach { tier ->
-    RenderTier(tier, entries, current, onSelect, onPullModel, pulls)
+    RenderTier(tier, entries, current, onSelect, onPullModel, onCancelPull, pulls)
   }
-  DiscouragedTier(entries, current, onSelect, onPullModel, pulls)
+  DiscouragedTier(entries, current, onSelect, onPullModel, onCancelPull, pulls)
 }
 
 /**
@@ -390,6 +397,7 @@ private fun DiscouragedTier(
   current: String,
   onSelect: (RemoteModelInfo) -> Unit,
   onPullModel: (String) -> Unit,
+  onCancelPull: (String) -> Unit,
   pulls: List<DownloadState>,
 ) {
   val tier = ModelPresentationTier.Discouraged
@@ -415,7 +423,7 @@ private fun DiscouragedTier(
   }
   if (expanded) {
     Spacer(modifier = Modifier.height(Dimens.TightGap))
-    TierChips(group, current, onSelect, onPullModel, pulls)
+    TierChips(group, current, onSelect, onPullModel, onCancelPull, pulls)
   }
 }
 
@@ -426,13 +434,14 @@ private fun RenderTier(
   current: String,
   onSelect: (RemoteModelInfo) -> Unit,
   onPullModel: (String) -> Unit,
+  onCancelPull: (String) -> Unit,
   pulls: List<DownloadState>,
 ) {
   val group = entries.filter { it.rank.presentationTier == tier }
   if (group.isEmpty()) return
   TierHeader(tier)
   Spacer(modifier = Modifier.height(Dimens.TightGap))
-  TierChips(group, current, onSelect, onPullModel, pulls)
+  TierChips(group, current, onSelect, onPullModel, onCancelPull, pulls)
 }
 
 @Composable
@@ -462,6 +471,7 @@ private fun TierChips(
   current: String,
   onSelect: (RemoteModelInfo) -> Unit,
   onPullModel: (String) -> Unit,
+  onCancelPull: (String) -> Unit,
   pulls: List<DownloadState>,
 ) {
   FlowRow(
@@ -483,10 +493,10 @@ private fun TierChips(
       FilterChip(
         selected = info.id == current,
         onClick = {
-          if (isPull) {
-            onPullModel(info.id)
-          } else {
-            onSelect(info)
+          when {
+            activePull != null -> onCancelPull(activePull.handle.id)
+            isPull -> onPullModel(info.id)
+            else -> onSelect(info)
           }
         },
         label = {
@@ -495,7 +505,18 @@ private fun TierChips(
           Text("$prefix${info.displayName}$suffix")
         },
         leadingIcon = pullChipLeadingIcon(activePull = activePull, isPull = isPull),
-        colors = if (isPull) {
+        trailingIcon = if (activePull != null) {
+          {
+            Icon(
+              imageVector = Icons.Filled.Close,
+              contentDescription = "Cancel pull",
+              modifier = Modifier.size(Dimens.IconSizeSmall),
+            )
+          }
+        } else {
+          null
+        },
+        colors = if (isPull || activePull != null) {
           FilterChipDefaults.filterChipColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
           )

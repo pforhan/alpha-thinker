@@ -264,11 +264,17 @@ browser chip shows the resolved name while the id stays canonical.
       Ollama pulls now log the model in the task start label and only 25/50/75%
       progress milestones under `ModelDownload`/`Ollama`; `ActivityRecord` shows
       `Pulled <model>` / pull failures with the model name.
-- [ ] **Logging, progress/cancel/background, and tests:** Log pull events
+- [x] **Cancel model pull** Add cancel button to model pull tasks.  If it's convenient 
+      allow any task to be cancelled.  Log a cancel to the activity log for that task.
+      Active pull chips cancel via `ModelDownloader`; the Task Manager cancels any
+      active task via `TaskRunner` (lifecycle cancel rows are logged by `TaskRunner`).
+- [x] **Logging, progress/cancel/background, and tests:** Log pull events
       (start/phases/errors/cancel/success) via `ActivityLogger` (use
       `ActivityLogger.taskContext(taskId, projectId = null)` for pulls).
       Ensure progress via metadata/`setProgress`, cancel via stream closure +
       task cancellation, background via app scope. Add tests for the pull framework.
+      Pulls use TaskRunner lifecycle logging plus 25/50/75% milestones (not per-phase
+      spam); progress/cancel/background are wired and covered by pull/task runner tests.
 - [ ] bug: when entering engine status, the title on the main gets a back button.  Sometimes
       this remains even after closing any popups.  Requires a tap anywhere to dismiss,
       but back does nothing.

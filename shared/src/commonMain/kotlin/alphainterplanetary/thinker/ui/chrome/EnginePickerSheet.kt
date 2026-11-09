@@ -119,6 +119,7 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
       onPullModel = { modelId ->
         engines.pullOllamaModel(modelId, draft?.baseUrl)
       },
+      onCancelPull = engines::cancelDownload,
       pulls = pulls,
       onSave = engines::saveDraft,
       onDismiss = engines::cancelDraft,

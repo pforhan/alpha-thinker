@@ -89,6 +89,38 @@ class TaskRunnerLoggingTest {
   }
 
   @Test
+  fun `externally cancelling a running task logs cancelled`() = runTest {
+    val log = RecordingActivityLogger()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
+
+    val task = runner.enqueue("p1", TaskKind.QuestionGeneration) {
+      kotlinx.coroutines.delay(1_000)
+    }
+    testScheduler.runCurrent()
+
+    runner.cancel(task.id)
+    testScheduler.advanceUntilIdle()
+
+    assertEquals(listOf("started: QuestionGeneration", "cancelled"), log.entries.map { it.log })
+  }
+
+  @Test
+  fun `cancelling a queued task logs cancelled`() = runTest {
+    val log = RecordingActivityLogger()
+    val runner = TaskRunner(CoroutineScope(coroutineContext), activityLogger = log)
+
+    runner.enqueue("p1", TaskKind.QuestionGeneration) { kotlinx.coroutines.delay(1_000) }
+    val queued = runner.enqueue("p1", TaskKind.QuestionGeneration) {}
+    testScheduler.runCurrent()
+
+    runner.cancel(queued.id)
+    testScheduler.advanceUntilIdle()
+
+    val queuedLogs = log.entries.filter { it.activityId == queued.id }
+    assertEquals(listOf("cancelled"), queuedLogs.map { it.log })
+  }
+
+  @Test
   fun `no log injected means no log rows and tasks still complete`() = runTest {
     val runner = TaskRunner(CoroutineScope(coroutineContext))
 
