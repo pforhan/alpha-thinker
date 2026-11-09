@@ -1,16 +1,17 @@
 package alphainterplanetary.thinker.engine
 
 /**
- * Where an engine appears in the picker. Tiers are a presentation grouping
- * (ENGINE-CONFIG-PLAN.md stage 3): `Offline` and `Free` are the preferred cards
- * up top, and every user-configured connection lives under the `Advanced`
+ * Where an engine appears in the picker. This is the engine-picker grouping
+ * (ENGINE-CONFIG-PLAN.md stage 3), not a model-curation tier (see
+ * [ModelPresentationTier]): `Offline` and `Free` are the preferred cards up
+ * top, and every user-configured connection lives under the `Advanced`
  * disclosure so the ever-growing list of endpoints never crowds the common
  * choice.
  *
  * The [label] and [tagline] are the tier's user-facing copy on those cards, so
  * the picker renders a preferred engine from the tier alone.
  */
-enum class EngineTier(
+enum class EnginePickerTier(
   /** The user-facing name: the preferred card's title, the Advanced section's header. */
   val label: String,
   /** One line under the name on a preferred card; null for tiers shown as a disclosure. */

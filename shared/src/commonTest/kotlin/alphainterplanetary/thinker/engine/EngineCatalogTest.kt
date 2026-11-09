@@ -6,7 +6,7 @@ import kotlin.test.assertTrue
 
 /**
  * The picker's merge and ordering (ENGINE-CONFIG-PLAN.md stage 3c): built-ins
- * and user instances land in the right [EngineTier], tiers come out in display
+ * and user instances land in the right [EnginePickerTier], tiers come out in display
  * order, and each tier is ordered by recency with never-used engines last.
  */
 class EngineCatalogTest {
@@ -39,7 +39,7 @@ class EngineCatalogTest {
     val groups = EngineCatalog.groupedByTier(listOf(ollama))
 
     assertEquals(
-      listOf(EngineTier.Offline, EngineTier.Free, EngineTier.Advanced),
+      listOf(EnginePickerTier.Offline, EnginePickerTier.Free, EnginePickerTier.Advanced),
       groups.map { it.first },
     )
   }
@@ -47,7 +47,7 @@ class EngineCatalogTest {
   @Test
   fun `built-ins land in their own tiers`() {
     val groups = EngineCatalog.groupedByTier(emptyList()).toMap()
-    val preferred = listOf(EngineTier.Offline, EngineTier.Free)
+    val preferred = listOf(EnginePickerTier.Offline, EnginePickerTier.Free)
 
     assertEquals(
       preferred,
@@ -55,18 +55,18 @@ class EngineCatalogTest {
     )
     assertEquals(
       EngineRef.Builtin(EngineKind.Offline),
-      groups.getValue(EngineTier.Offline).single().ref,
+      groups.getValue(EnginePickerTier.Offline).single().ref,
     )
     assertEquals(
       EngineRef.Builtin(EngineKind.Remote),
-      groups.getValue(EngineTier.Free).single().ref,
+      groups.getValue(EnginePickerTier.Free).single().ref,
     )
   }
 
   @Test
   fun `connections land under Advanced`() {
     val advanced = EngineCatalog.groupedByTier(listOf(ollama, claude))
-      .first { it.first == EngineTier.Advanced }
+      .first { it.first == EnginePickerTier.Advanced }
       .second
 
     assertEquals(
@@ -86,7 +86,7 @@ class EngineCatalogTest {
         EngineRef.Instance("conn-1") to 1_000L,
         EngineRef.Instance("conn-2") to 2_000L,
       ),
-    ).first { it.first == EngineTier.Advanced }.second
+    ).first { it.first == EnginePickerTier.Advanced }.second
 
     assertEquals(
       listOf(EngineRef.Instance("conn-2"), EngineRef.Instance("conn-1")),
@@ -101,7 +101,7 @@ class EngineCatalogTest {
       // Only the second connection has ever run. The never-used connection
       // keeps the catalog's own order behind it.
       lastUsedAt = mapOf(EngineRef.Instance("conn-2") to 2_000L),
-    ).first { it.first == EngineTier.Advanced }.second
+    ).first { it.first == EnginePickerTier.Advanced }.second
 
     assertEquals(
       listOf(

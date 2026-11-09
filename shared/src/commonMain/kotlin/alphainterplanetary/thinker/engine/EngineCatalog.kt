@@ -11,7 +11,7 @@ data class EngineCatalogEntry(
   val ref: EngineRef,
   val kind: EngineKind,
   val provider: RemoteProvider?,
-  val tier: EngineTier,
+  val tier: EnginePickerTier,
   val label: String,
   val description: String,
   val availability: (EngineRepository) -> EngineAvailability,
@@ -23,7 +23,7 @@ object EngineCatalog {
       ref = EngineRef.Builtin(EngineKind.Offline),
       kind = EngineKind.Offline,
       provider = null,
-      tier = EngineTier.Offline,
+      tier = EnginePickerTier.Offline,
       label = "Offline",
       description = "Built-in question library. Runs entirely on this device — no network, no language model.",
       availability = { Available },
@@ -34,7 +34,7 @@ object EngineCatalog {
       ref = EngineRef.Builtin(EngineKind.Remote),
       kind = EngineKind.Remote,
       provider = RemoteProvider.Default,
-      tier = EngineTier.Free,
+      tier = EnginePickerTier.Free,
       label = "Alpha Interplanetary",
       description = "The official Alpha Interplanetary cloud engine.",
       availability = { Unavailable("placeholder") },
@@ -53,7 +53,7 @@ object EngineCatalog {
         ref = EngineRef.Instance(instance.id),
         kind = instance.kind,
         provider = instance.provider,
-        tier = EngineTier.Advanced,
+        tier = EnginePickerTier.Advanced,
         label = instance.label,
         description = instance.kind.description,
         availability = { repo ->
@@ -84,7 +84,7 @@ object EngineCatalog {
   }
 
   /**
-   * The picker's view of [entries]: one group per [EngineTier] in display
+   * The picker's view of [entries]: one group per [EnginePickerTier] in display
    * order — `Offline` and `Free` (the preferred cards) then `Advanced` (the
    * disclosure) — each group ordered by recency, most recently used first,
    * with never-used engines keeping the list's creation order behind them.
@@ -96,7 +96,7 @@ object EngineCatalog {
   fun groupedByTier(
     instances: List<EngineInstance>,
     lastUsedAt: Map<EngineRef, Long> = emptyMap(),
-  ): List<Pair<EngineTier, List<EngineCatalogEntry>>> = EngineTier.entries.mapNotNull { tier ->
+  ): List<Pair<EnginePickerTier, List<EngineCatalogEntry>>> = EnginePickerTier.entries.mapNotNull { tier ->
     val group = entries(instances)
       .filter { it.tier == tier }
       .sortedByDescending { lastUsedAt[it.ref] ?: 0L }

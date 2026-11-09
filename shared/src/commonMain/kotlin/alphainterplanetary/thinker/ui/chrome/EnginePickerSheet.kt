@@ -6,8 +6,8 @@ import alphainterplanetary.thinker.engine.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.EngineCatalog
 import alphainterplanetary.thinker.engine.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.EngineInstance
+import alphainterplanetary.thinker.engine.EnginePickerTier
 import alphainterplanetary.thinker.engine.EngineRef
-import alphainterplanetary.thinker.engine.EngineTier
 import alphainterplanetary.thinker.ui.components.SelectionDot
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
@@ -37,10 +37,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 /** One tier's entries, as [EngineCatalog.groupedByTier] returns them. */
-private typealias EngineGroup = Pair<EngineTier, List<EngineCatalogEntry>>
+private typealias EngineGroup = Pair<EnginePickerTier, List<EngineCatalogEntry>>
 
 /** The tiers shown as preferred cards, in the order the row renders them. */
-private val PreferredTiers = listOf(EngineTier.Offline, EngineTier.Free)
+private val PreferredTiers = listOf(EnginePickerTier.Offline, EnginePickerTier.Free)
 
 /**
  * The planning-backend picker: the one place the engine can change, whether it
@@ -91,7 +91,7 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
       instances = instances,
       selectedRef = selectedRef,
       advancedSelected = groups
-        .firstOrNull { it.first == EngineTier.Advanced }
+        .firstOrNull { it.first == EnginePickerTier.Advanced }
         ?.second
         ?.any { it.ref == selectedRef } == true,
       onSelect = engines::selectEngine,
@@ -175,7 +175,7 @@ private fun PreferredEngines(
  */
 @Composable
 private fun PreferredEngineCard(
-  tier: EngineTier,
+  tier: EnginePickerTier,
   entry: EngineCatalogEntry?,
   selected: Boolean,
   availability: EngineAvailability?,
@@ -267,7 +267,7 @@ private fun AdvancedEngines(
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Text(
-        text = EngineTier.Advanced.label,
+        text = EnginePickerTier.Advanced.label,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.weight(1f),
@@ -314,4 +314,3 @@ internal fun selectedEngineColors(selected: Boolean): CardColors = if (selected)
 } else {
   CardDefaults.cardColors()
 }
-
