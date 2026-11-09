@@ -42,16 +42,6 @@ enum class EngineKind(
   ),
   ;
 
-  /**
-   * Whether this backend can be selected right now. [Offline] is always
-   * available and [Remote] is selectable once configured.
-   */
-  fun available(): Boolean =
-    when (this) {
-      Offline -> true
-      Remote -> true
-    }
-
   companion object {
     /** A fresh install runs the built-in engine. */
     val Default: EngineKind = Offline

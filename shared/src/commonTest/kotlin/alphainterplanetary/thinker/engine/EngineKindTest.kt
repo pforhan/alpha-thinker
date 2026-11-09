@@ -3,7 +3,6 @@ package alphainterplanetary.thinker.engine
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class EngineKindTest {
 
@@ -19,11 +18,5 @@ class EngineKindTest {
     assertNull(EngineKind.fromKey("telepathy"))
     assertNull(EngineKind.fromKey("on-device"))
     assertNull(EngineKind.fromKey("downloaded"))
-  }
-
-  @Test
-  fun `offline and Remote are both selectable`() {
-    assertTrue(EngineKind.Offline.available())
-    assertTrue(EngineKind.Remote.available())
   }
 }
