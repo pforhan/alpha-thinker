@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.engine.config
 
-import alphainterplanetary.thinker.engine.ModelMetadataSource
+import alphainterplanetary.thinker.engine.model.ModelMetadataSource
 
 /**
  * A supported remote LLM provider (connection/protocol + defaults). A

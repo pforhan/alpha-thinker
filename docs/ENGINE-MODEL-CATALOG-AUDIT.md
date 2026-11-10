@@ -43,26 +43,26 @@ this audit except 26.2, which landed first.
 | `EngineInteraction` | `engine/EngineInteraction.kt` | Dev-tool delay interaction enum. | Slowdown/developer settings. | **Keep, repackage carefully** (27.2 split). | Dev-tool concern (27.5). |
 | `EngineDelayConfig` | `engine/EngineDelayConfig.kt` | Dev-tool delay config. | Slowdown/developer settings. | **Keep, repackage carefully** (27.2 split). | Dev-tool concern (27.5). |
 | `PlanningContext` | `engine/PlanningContext.kt` | Prompt/transcript context rendering. | `KoogPlanningEngine`/prompt building, export (future). | **Keep**. | Prompt plumbing, not catalog. |
-| `ModelIdentity` helpers | `engine/ModelIdentity.kt` | Alias/size/count parsing helpers (top-level, no class). | `RemoteModelCatalog` parsing, display/ranking inputs. | **Keep, relocate**. | Model metadata helpers; fits the model subpackage (27.4), not engine config. |
+| `ModelIdentity` helpers | `engine/model/ModelIdentity.kt` | Alias/size/count parsing helpers (top-level, no class). | `RemoteModelCatalog` parsing, display/ranking inputs. | **Keep** (27.4). | Model metadata helpers in `engine.model`. |
 
 ## Model catalog / curation
 
 | Type | File | Responsibility | Key call sites | Verdict | Rationale |
 |---|---|---|---|---|---|
-| `ModelMetadataSource` *(renamed from `ModelSource`, 26.4)* | `engine/ModelMetadataSource.kt` | Metadata provenance (`Ollama`/`OpenAiCompatible`/`Anthropic`) — explains which fields can be known. | `RemoteModelInfo.source`, `RemoteModelCatalog` impl, `ModelBrowserMerge`, tests. | **Keep** (done). | Renamed for clarity and KDoc'd as provenance (not `RemoteProvider`); mapped explicitly via `RemoteProvider.metadataSource`. |
-| `RemoteModelInfo` | `engine/RemoteModelInfo.kt` | Canonical model record (id + `displayName` alias + context/size/capability metadata). | Catalog, `ModelRanker`/`ModelBrowserMerge`, `EngineViewModel` auto-select, connection UI. | **Keep** (27.2). | Split out of `RemoteModelCatalog.kt`. |
-| `RemoteModelCatalog` (interface) | `engine/RemoteModelCatalog.kt` | Contract to list models / resolve context length for a provider. | `KoogRemoteModelCatalog`, `EngineViewModel`, fakes/tests. | **Keep** (27.2). | Contract separated from impl; enables fakes. |
-| `KoogRemoteModelCatalog` | `engine/KoogRemoteModelCatalog.kt` | HTTP/catalog impl (Anthropic bundled, OpenAI-compatible `/v1`, Ollama tags+show). | DI/provisioning, `EngineViewModel` (via interface). | **Keep** (27.2). | Impl split out; private serialization DTOs/helpers kept local to the impl file. |
-| `RemoteModelListState` | `ui/chrome/RemoteModelListState.kt` | Browse UI state (`Idle`/`Loading`/`Loaded`/`Failed`); `Loaded.browserEntriesWithPulls()`. | `EngineViewModel`, `ConnectionDialog`, `EngineViewModelTest`. | **Keep** (26.7). | Re-homed out of `engine/RemoteModelCatalog.kt` (catalog contract + model info only) to chrome view state shared by VM and connection UI. |
-| `ModelQuality` | `engine/ModelQuality.kt` | Quality axis for curation/ranking. | `ModelMeasurement`/`ModelProfiles`, `ModelRanker`, UI chips. | **Keep** (26.6). | Split out of `ModelCuration.kt`. |
-| `ModelSpeed` | `engine/ModelSpeed.kt` | Speed axis for curation/ranking. | Curation/ranking/UI. | **Keep** (26.6). | Split out of `ModelCuration.kt`. |
-| `ModelPresentationTier` | `engine/ModelPresentationTier.kt` | Derived presentation grouping (`Recommended`/slower/adequate/unknown/discouraged). | `ModelRank`, `ModelRanker`, browser merge/UI. | **Keep** (26.6). | Model-curation grouping; split out of `ModelCuration.kt` (bare-noun collision with engine grouping resolved in 26.5). |
-| `ModelRank` | `engine/ModelRank.kt` | Ranked result: model + tier/quality/speed/reason/estimated. | `ModelRanker`, `ModelBrowserMerge`/`ModelBrowserEntry`, VM/UI. | **Keep** (26.6). | Data side of the rank/ranker pair. |
-| `ModelMeasurement` | `engine/ModelMeasurement.kt` | Measured seed record from eval rows. | `ModelProfiles.measuredSeeds`, `ModelRanker`. | **Keep** (26.6). | Evidence backing curation; eval snippet shape (`ModelMeasurement`, `measuredSeeds`) preserved. |
-| `ModelProfiles` (object) | `engine/ModelProfiles.kt` | Measured seeds, family heuristics, lookup/strong-id helpers. | `ModelRanker`, `ModelBrowserMerge` (`strongModelIds`), tests, `tools/eval_ollama_models.py` snippet expectations. | **Keep** (26.6). | Reconciled to `ModelProfiles.kt` (as the plan expected), split from `ModelCuration.kt`. |
-| `ModelRanker` (object) | `engine/ModelRanker.kt` | Deterministic ranking over measurements/heuristics into `ModelRank`. | `ModelBrowserMerge`, `EngineViewModel` auto-select. | **Keep**. | Clean data-vs-logic split; already separate. |
-| `ModelBrowserEntry` | `engine/ModelBrowserEntry.kt` | One ranked browser entry, marked `isPull` when not yet installed. | `ModelBrowserMerge`, `RemoteModelListState`/connection UI. | **Keep** (27.2). | Split from `ModelBrowserMerge.kt`. |
-| `ModelBrowserMerge` | `engine/ModelBrowserMerge.kt` | Pure merge of installed + pullable curated models into ranked, `isPull`-marked entries. | `RemoteModelListState.Loaded.browserEntriesWithPulls()`, connection UI. | **Keep** (27.2). | Small/testable merge logic. |
+| `ModelMetadataSource` *(renamed from `ModelSource`, 26.4)* | `engine/model/ModelMetadataSource.kt` | Metadata provenance (`Ollama`/`OpenAiCompatible`/`Anthropic`) — explains which fields can be known. | `RemoteModelInfo.source`, `RemoteModelCatalog` impl, `ModelBrowserMerge`, config `RemoteProvider`, tests. | **Keep** (26.4, 27.4). | Provenance (not `RemoteProvider`); mapped explicitly via `RemoteProvider.metadataSource`. |
+| `RemoteModelInfo` | `engine/model/RemoteModelInfo.kt` | Canonical model record (id + `displayName` alias + context/size/capability metadata). | Catalog, `ModelRanker`/`ModelBrowserMerge`, `EngineViewModel` auto-select, connection UI. | **Keep** (27.2, 27.4). | Split out of `RemoteModelCatalog.kt`. |
+| `RemoteModelCatalog` (interface) | `engine/model/RemoteModelCatalog.kt` | Contract to list models / resolve context length for a provider. | `KoogRemoteModelCatalog`, `EngineViewModel`, fakes/tests. | **Keep** (27.2, 27.4). | Contract separated from impl; enables fakes. |
+| `KoogRemoteModelCatalog` | `engine/model/KoogRemoteModelCatalog.kt` | HTTP/catalog impl (Anthropic bundled, OpenAI-compatible `/v1`, Ollama tags+show). | DI/provisioning, `EngineViewModel` (via interface). | **Keep** (27.2, 27.4). | Impl split out; private serialization DTOs/helpers kept local to the impl file. |
+| `RemoteModelListState` | `ui/chrome/RemoteModelListState.kt` | Browse UI state (`Idle`/`Loading`/`Loaded`/`Failed`); `Loaded.browserEntriesWithPulls()`. | `EngineViewModel`, `ConnectionDialog`, `EngineViewModelTest`. | **Keep** (26.7, 27.4). | Stays in `ui/chrome` per 27.1 (one-way deps inward); imports updated to `engine.model`. |
+| `ModelQuality` | `engine/model/ModelQuality.kt` | Quality axis for curation/ranking. | `ModelMeasurement`/`ModelProfiles`, `ModelRanker`, UI chips. | **Keep** (26.6, 27.4). | Split out of `ModelCuration.kt`. |
+| `ModelSpeed` | `engine/model/ModelSpeed.kt` | Speed axis for curation/ranking. | Curation/ranking/UI. | **Keep** (26.6, 27.4). | Split out of `ModelCuration.kt`. |
+| `ModelPresentationTier` | `engine/model/ModelPresentationTier.kt` | Derived presentation grouping (`Recommended`/slower/adequate/unknown/discouraged). | `ModelRank`, `ModelRanker`, browser merge/UI. | **Keep** (26.6, 27.4). | Model-curation grouping; bare-noun collision with engine grouping resolved in 26.5. |
+| `ModelRank` | `engine/model/ModelRank.kt` | Ranked result: model + tier/quality/speed/reason/estimated. | `ModelRanker`, `ModelBrowserMerge`/`ModelBrowserEntry`, VM/UI. | **Keep** (26.6, 27.4). | Data side of the rank/ranker pair. |
+| `ModelMeasurement` | `engine/model/ModelMeasurement.kt` | Measured seed record from eval rows. | `ModelProfiles.measuredSeeds`, `ModelRanker`. | **Keep** (26.6, 27.4). | Evidence backing curation; eval snippet shape preserved. |
+| `ModelProfiles` (object) | `engine/model/ModelProfiles.kt` | Measured seeds, family heuristics, lookup/strong-id helpers. | `ModelRanker`, `ModelBrowserMerge` (`strongModelIds`), tests, `tools/eval_ollama_models.py` snippet expectations. | **Keep** (26.6, 27.4). | Reconciled to `ModelProfiles.kt`; eval snippet expectations preserved. |
+| `ModelRanker` (object) | `engine/model/ModelRanker.kt` | Deterministic ranking over measurements/heuristics into `ModelRank`. | `ModelBrowserMerge`, `EngineViewModel` auto-select. | **Keep** (27.4). | Clean data-vs-logic split; already separate. |
+| `ModelBrowserEntry` | `engine/model/ModelBrowserEntry.kt` | One ranked browser entry, marked `isPull` when not yet installed. | `ModelBrowserMerge`, `RemoteModelListState`/connection UI. | **Keep** (27.2, 27.4). | Split from `ModelBrowserMerge.kt`. |
+| `ModelBrowserMerge` | `engine/model/ModelBrowserMerge.kt` | Pure merge of installed + pullable curated models into ranked, `isPull`-marked entries. | `RemoteModelListState.Loaded.browserEntriesWithPulls()`, connection UI. | **Keep** (27.2, 27.4). | Small/testable merge logic; uses `engine.config.RemoteProvider.metadataSource`. |
 
 ## Downloads / Ollama pull (kept after local-model removal)
 
@@ -142,7 +142,7 @@ Known coupling to resolve deliberately during moves (not pure-domain):
   `OllamaPullClient` → interface/event/impl with private DTOs local;
   `PlanningEngine`/`QuestionBatch`, `EngineDelayConfig`/`EngineInteraction`,
   `ModelBrowserMerge`/`ModelBrowserEntry`, `EngineCatalog`/`EngineCatalogEntry` split).
-  27.3 applied for the config identity set; reconfirm during 27.4–27.5 moves.
+  27.3–27.4 applied for config identity and model catalog/curation/ranking; reconfirm during 27.5 moves.
 - `RemoteModelListState` re-homed to `ui/chrome/RemoteModelListState.kt` in 26.7.
 - Dev-tool delay types must not land beside product catalog types (27.5).
-- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1(done) → 26.6(done)/26.7(done)/26.9(done)/27.2(done) → 27.3(done)/27.4/27.5 → 26.8 (optional) → 27.6`.
+- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1(done) → 26.6(done)/26.7(done)/26.9(done)/27.2(done) → 27.3(done)/27.4(done)/27.5 → 26.8 (optional) → 27.6`.

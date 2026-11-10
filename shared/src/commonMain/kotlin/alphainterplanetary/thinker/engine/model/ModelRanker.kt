@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.model
 
 /**
  * Ranks models using measured eval data when available, falling back to

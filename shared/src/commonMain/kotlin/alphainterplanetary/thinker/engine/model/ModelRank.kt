@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.model
 
 /**
  * A model ranked by curation rules, with derived axes and reasoning.

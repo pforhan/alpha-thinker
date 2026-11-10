@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.model
 
 /**
  * Presentation grouping only — no model is left out of the browser, though

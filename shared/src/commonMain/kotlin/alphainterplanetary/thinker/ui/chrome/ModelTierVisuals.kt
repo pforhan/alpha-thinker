@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.ModelPresentationTier
+import alphainterplanetary.thinker.engine.model.ModelPresentationTier
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Bolt

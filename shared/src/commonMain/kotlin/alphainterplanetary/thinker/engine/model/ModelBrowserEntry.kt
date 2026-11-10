@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.model
 
 /**
  * One entry in the model browser after merging the models a server already

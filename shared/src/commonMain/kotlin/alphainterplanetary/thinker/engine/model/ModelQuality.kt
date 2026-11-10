@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.model
 
 /**
  * Quality bands derived from the composite score (MODEL-CATALOG-PLAN.md).

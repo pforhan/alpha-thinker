@@ -3,10 +3,6 @@ package alphainterplanetary.thinker.ui.viewmodel
 import alphainterplanetary.thinker.downloads.DownloadState
 import alphainterplanetary.thinker.downloads.DownloadStatus
 import alphainterplanetary.thinker.downloads.ModelDownloader
-import alphainterplanetary.thinker.engine.ModelPresentationTier
-import alphainterplanetary.thinker.engine.ModelRank
-import alphainterplanetary.thinker.engine.ModelRanker
-import alphainterplanetary.thinker.engine.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.config.EngineAvailability
 import alphainterplanetary.thinker.engine.config.EngineCatalogEntry
 import alphainterplanetary.thinker.engine.config.EngineInstance
@@ -14,6 +10,10 @@ import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineRegistry
 import alphainterplanetary.thinker.engine.config.RemoteProvider
 import alphainterplanetary.thinker.engine.config.normalizeRemoteBaseUrl
+import alphainterplanetary.thinker.engine.model.ModelPresentationTier
+import alphainterplanetary.thinker.engine.model.ModelRank
+import alphainterplanetary.thinker.engine.model.ModelRanker
+import alphainterplanetary.thinker.engine.model.RemoteModelCatalog
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.ui.chrome.RemoteModelListState
 import kotlin.coroutines.cancellation.CancellationException

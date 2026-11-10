@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.model
 
 import alphainterplanetary.thinker.engine.config.RemoteProvider
 

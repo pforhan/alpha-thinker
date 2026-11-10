@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.model.ModelProfiles
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull

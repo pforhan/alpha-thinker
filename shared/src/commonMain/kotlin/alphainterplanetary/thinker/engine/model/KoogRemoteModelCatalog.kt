@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.model
 
 import ai.koog.http.client.KoogHttpClient
 import ai.koog.http.client.get

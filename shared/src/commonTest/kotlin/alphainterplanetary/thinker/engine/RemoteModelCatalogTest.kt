@@ -4,6 +4,9 @@ import ai.koog.http.client.KoogHttpClient
 import ai.koog.prompt.executor.clients.anthropic.AnthropicModels
 import ai.koog.prompt.executor.clients.modelsById
 import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.model.KoogRemoteModelCatalog
+import alphainterplanetary.thinker.engine.model.ModelMetadataSource
+import alphainterplanetary.thinker.engine.model.RemoteModelInfo
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals

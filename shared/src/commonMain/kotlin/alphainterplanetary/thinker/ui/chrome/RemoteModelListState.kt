@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.ModelBrowserEntry
-import alphainterplanetary.thinker.engine.ModelBrowserMerge
-import alphainterplanetary.thinker.engine.RemoteModelInfo
 import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.model.ModelBrowserEntry
+import alphainterplanetary.thinker.engine.model.ModelBrowserMerge
+import alphainterplanetary.thinker.engine.model.RemoteModelInfo
 
 /**
  * What the model browse affordance in the connection editor is showing. A sealed

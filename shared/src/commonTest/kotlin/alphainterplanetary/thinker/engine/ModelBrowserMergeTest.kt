@@ -1,6 +1,11 @@
 package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.model.ModelBrowserMerge
+import alphainterplanetary.thinker.engine.model.ModelMetadataSource
+import alphainterplanetary.thinker.engine.model.ModelPresentationTier
+import alphainterplanetary.thinker.engine.model.ModelProfiles
+import alphainterplanetary.thinker.engine.model.RemoteModelInfo
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

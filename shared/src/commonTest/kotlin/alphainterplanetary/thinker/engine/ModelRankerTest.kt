@@ -1,5 +1,11 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.model.ModelMetadataSource
+import alphainterplanetary.thinker.engine.model.ModelPresentationTier
+import alphainterplanetary.thinker.engine.model.ModelQuality
+import alphainterplanetary.thinker.engine.model.ModelRanker
+import alphainterplanetary.thinker.engine.model.ModelSpeed
+import alphainterplanetary.thinker.engine.model.RemoteModelInfo
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
