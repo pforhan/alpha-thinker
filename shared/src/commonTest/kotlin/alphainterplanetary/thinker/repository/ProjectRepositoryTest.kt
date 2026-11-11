@@ -4,8 +4,8 @@ import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.engine.PlanningContext
-import alphainterplanetary.thinker.engine.PlanningEngine
+import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin

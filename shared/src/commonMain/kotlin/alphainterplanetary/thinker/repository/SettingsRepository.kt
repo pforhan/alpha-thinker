@@ -3,8 +3,8 @@ package alphainterplanetary.thinker.repository
 import alphainterplanetary.thinker.database.SettingsKey
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
-import alphainterplanetary.thinker.engine.EngineDelayConfig
-import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.runtime.dev.EngineDelayConfig
+import alphainterplanetary.thinker.engine.runtime.dev.EngineInteraction
 import alphainterplanetary.thinker.ui.theme.PhaseTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow

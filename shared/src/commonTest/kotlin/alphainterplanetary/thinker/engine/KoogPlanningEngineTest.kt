@@ -9,6 +9,10 @@ import ai.koog.prompt.message.Message
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogScope
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.runtime.KoogPlanningBackend
+import alphainterplanetary.thinker.engine.runtime.KoogPlanningEngine
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase

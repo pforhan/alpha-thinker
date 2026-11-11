@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.runtime.dev
 
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

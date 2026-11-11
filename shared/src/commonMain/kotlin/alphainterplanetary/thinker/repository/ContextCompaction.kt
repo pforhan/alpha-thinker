@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.repository
 
-import alphainterplanetary.thinker.engine.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.phases.Phase
 
 /**
@@ -16,7 +16,7 @@ import alphainterplanetary.thinker.phases.Phase
  *
  * None of it applies to an engine that composes no prompt (the built-in Offline
  * engine, which has no
- * [alphainterplanetary.thinker.engine.PlanningEngine.contextWindowTokens]):
+ * [alphainterplanetary.thinker.engine.core.PlanningEngine.contextWindowTokens]):
  * there is no window to fill, so no choice is ever put to the user and none of
  * these are applied on its behalf.
  */
@@ -33,11 +33,11 @@ enum class ContextCompaction {
 
   /**
    * Ask the engine to condense each past phase, oldest first, until the
-   * transcript fits — one [alphainterplanetary.thinker.engine.PlanningEngine.summarizePriorAnswers]
+   * transcript fits — one [alphainterplanetary.thinker.engine.core.PlanningEngine.summarizePriorAnswers]
    * request per phase, and each phase's Q&A replaced by the model's own summary.
    * Keeps the substance of the earliest phases at the cost of one model call
    * each, and needs an engine that can write summaries
-   * ([alphainterplanetary.thinker.engine.PlanningEngine.canSummarize]); without
+   * ([alphainterplanetary.thinker.engine.core.PlanningEngine.canSummarize]); without
    * one the choice is never offered.
    */
   SummarizeEarlierPhases,

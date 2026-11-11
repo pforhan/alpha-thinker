@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.core
 
 /**
  * Produces the [PlanningEngine] for one generation task, resolving the app's

@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.engine.PlanningContext
-import alphainterplanetary.thinker.engine.PlanningEngine
-import alphainterplanetary.thinker.engine.QuestionBatch
+import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 

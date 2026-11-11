@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.tools
 
-import alphainterplanetary.thinker.engine.ForwardingPlanningEngine
-import alphainterplanetary.thinker.engine.PlanningContext
-import alphainterplanetary.thinker.engine.PlanningEngine
-import alphainterplanetary.thinker.engine.QuestionBatch
+import alphainterplanetary.thinker.engine.core.ForwardingPlanningEngine
+import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOutcome

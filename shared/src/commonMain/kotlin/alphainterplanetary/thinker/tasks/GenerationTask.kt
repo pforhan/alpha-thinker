@@ -12,7 +12,7 @@ enum class TaskKind {
    * A batch of questions for one round — a project's opening round, a
    * "Get more questions" round, or the opening round of a later phase. The
    * engine takes the same call for all three (see
-   * [alphainterplanetary.thinker.engine.PlanningEngine.generateQuestions]); what
+   * [alphainterplanetary.thinker.engine.core.PlanningEngine.generateQuestions]); what
    * distinguishes them is the round's [alphainterplanetary.thinker.model.RoundOrigin].
    */
   QuestionGeneration,

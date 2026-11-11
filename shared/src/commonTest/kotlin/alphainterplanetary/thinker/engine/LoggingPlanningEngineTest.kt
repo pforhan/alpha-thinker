@@ -4,6 +4,11 @@ import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.activitylog.logRequest
+import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.core.QuestionBatch
+import alphainterplanetary.thinker.engine.runtime.LoggingPlanningEngine
+import alphainterplanetary.thinker.engine.runtime.OfflinePlanningEngine
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase

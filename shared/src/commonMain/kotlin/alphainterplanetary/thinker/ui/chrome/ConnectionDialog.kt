@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.downloads.DownloadState
-import alphainterplanetary.thinker.engine.PlanningContext
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.model.ModelBrowserEntry
 import alphainterplanetary.thinker.engine.model.ModelPresentationTier
 import alphainterplanetary.thinker.engine.model.RemoteModelInfo

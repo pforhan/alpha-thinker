@@ -6,10 +6,10 @@ import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
-import alphainterplanetary.thinker.engine.PlanningContext
-import alphainterplanetary.thinker.engine.PlanningEngine
-import alphainterplanetary.thinker.engine.PlanningEngineSelector
-import alphainterplanetary.thinker.engine.QuestionBatch
+import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
+import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round

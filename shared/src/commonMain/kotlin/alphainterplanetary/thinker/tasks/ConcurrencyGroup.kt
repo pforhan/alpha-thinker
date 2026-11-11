@@ -18,7 +18,7 @@ package alphainterplanetary.thinker.tasks
  * that reflects the actual resource — a remote endpoint admits several at a
  * time — is not derivable from a [TaskKind], since the engine is resolved per
  * task at enqueue time (see
- * [alphainterplanetary.thinker.engine.PlanningEngineSelector]). Until the call
+ * [alphainterplanetary.thinker.engine.core.PlanningEngineSelector]). Until the call
  * site derives the group from the engine it resolved, [Engine] serializes across
  * every project.
  */

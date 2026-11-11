@@ -1,10 +1,10 @@
 package alphainterplanetary.thinker.engine.config
 
 import alphainterplanetary.thinker.di.AppScope
-import alphainterplanetary.thinker.engine.KoogPlanningEngine
-import alphainterplanetary.thinker.engine.OfflinePlanningEngine
-import alphainterplanetary.thinker.engine.PlanningEngine
-import alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.runtime.KoogPlanningEngine
+import alphainterplanetary.thinker.engine.runtime.OfflinePlanningEngine
+import alphainterplanetary.thinker.engine.runtime.RemoteKoogPlanningBackend
 import alphainterplanetary.thinker.repository.EngineRepository
 import me.tatarka.inject.annotations.Inject
 

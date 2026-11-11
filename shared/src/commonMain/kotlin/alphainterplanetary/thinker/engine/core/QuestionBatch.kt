@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.core
 
 import alphainterplanetary.thinker.model.Question
 

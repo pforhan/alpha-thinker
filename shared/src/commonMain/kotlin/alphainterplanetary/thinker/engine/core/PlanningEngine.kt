@@ -1,7 +1,7 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.core
 
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.engine.PlanningContext.PhaseSummary
+import alphainterplanetary.thinker.engine.core.PlanningContext.PhaseSummary
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.coroutines.cancellation.CancellationException

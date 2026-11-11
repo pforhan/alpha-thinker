@@ -1,6 +1,9 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.runtime
 
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase.DefinitionOfDone
 import alphainterplanetary.thinker.phases.BuiltInPhase.Design

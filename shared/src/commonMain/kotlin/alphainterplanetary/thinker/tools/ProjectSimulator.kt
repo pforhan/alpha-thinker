@@ -29,7 +29,7 @@ import me.tatarka.inject.annotations.Inject
  * to put content in front of the UI. This one takes a synopsis the way the
  * new-project dialog does and then goes *through* [ProjectRepository] —
  * `createProject`, the task runner, per-round dedupe, `RoundOutcome` latching,
- * [alphainterplanetary.thinker.engine.PlanningContext] compaction, and the
+ * [alphainterplanetary.thinker.engine.core.PlanningContext] compaction, and the
  * activity log — so each of those seams runs for real, in order, against whatever
  * engine is selected. A tool that called the engine directly would exercise none
  * of them.

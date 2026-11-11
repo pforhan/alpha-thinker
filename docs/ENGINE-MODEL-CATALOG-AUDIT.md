@@ -31,18 +31,18 @@ this audit except 26.2, which landed first.
 
 | Type | File | Responsibility | Key call sites | Verdict | Rationale |
 |---|---|---|---|---|---|
-| `QuestionBatch` | `engine/QuestionBatch.kt` | Question-generation batch result + `summary()` contract. | `PlanningEngine`, engines, logging, tasks/repository. | **Keep** (27.2). | Split from `PlanningEngine.kt`. |
-| `PlanningEngine` | `engine/PlanningEngine.kt` | Core engine contract. | All engines, registry, selector, repository/tasks, logging/decorators. | **Keep** (27.2). | Core seam. |
-| `KoogPlanningEngine` | `engine/KoogPlanningEngine.kt` | `PlanningEngine` over a `KoogPlanningBackend`. | `EngineRegistry` (Remote). | **Keep**. | Runtime impl. |
-| `KoogPlanningBackend` | `engine/KoogPlanningBackend.kt` | Backend seam (model/JSON/streaming) for Koog engine. | `KoogPlanningEngine`, `RemoteKoogPlanningBackend`. | **Keep**. | Abstraction enabling the remote backend. |
-| `RemoteKoogPlanningBackend` | `engine/RemoteKoogPlanningBackend.kt` | Koog client/backend over a `RemoteConnection`. | `EngineRegistry`. | **Keep** (27.3). | Uses `engine.config.RemoteConnection`/`RemoteProvider`/`normalizeRemoteBaseUrl`. |
-| `OfflinePlanningEngine` | `engine/OfflinePlanningEngine.kt` | Built-in offline question library. | `EngineRegistry` (Builtin Offline). | **Keep**. | Default/fallback engine. |
-| `LoggingPlanningEngine` | `engine/LoggingPlanningEngine.kt` | Decorator logging prompts/responses/raw capture. | Engine composition/DI. | **Keep**. | Cross-cutting runtime decorator. |
-| `ForwardingPlanningEngine` | `engine/ForwardingPlanningEngine.kt` | Delegating base for decorators. | Decorator implementations (e.g. slowdown/logging patterns). | **Keep**. | Small reuse seam; verify live subclasses during moves. |
-| `SlowDownPlanningEngine` | `engine/SlowDownPlanningEngine.kt` | Dev-tool delay decorator. | Dev tooling/DI composition (Phase 8-adjacent). | **Keep, repackage carefully**. | Dev-tool concern — keep out of "product catalog" neighbors (27.5). |
-| `EngineInteraction` | `engine/EngineInteraction.kt` | Dev-tool delay interaction enum. | Slowdown/developer settings. | **Keep, repackage carefully** (27.2 split). | Dev-tool concern (27.5). |
-| `EngineDelayConfig` | `engine/EngineDelayConfig.kt` | Dev-tool delay config. | Slowdown/developer settings. | **Keep, repackage carefully** (27.2 split). | Dev-tool concern (27.5). |
-| `PlanningContext` | `engine/PlanningContext.kt` | Prompt/transcript context rendering. | `KoogPlanningEngine`/prompt building, export (future). | **Keep**. | Prompt plumbing, not catalog. |
+| `QuestionBatch` | `engine/core/QuestionBatch.kt` | Question-generation batch result + `summary()` contract. | `PlanningEngine`, engines, logging, tasks/repository. | **Keep** (27.2, 27.5). | Split from `PlanningEngine.kt`. |
+| `PlanningEngine` | `engine/core/PlanningEngine.kt` | Core engine contract. | All engines, registry, selector, repository/tasks, logging/decorators. | **Keep** (27.2, 27.5). | Core seam. |
+| `KoogPlanningEngine` | `engine/runtime/KoogPlanningEngine.kt` | `PlanningEngine` over a `KoogPlanningBackend`. | `EngineRegistry` (Remote). | **Keep** (27.5). | Runtime impl. |
+| `KoogPlanningBackend` | `engine/runtime/KoogPlanningBackend.kt` | Backend seam (model/JSON/streaming) for Koog engine. | `KoogPlanningEngine`, `RemoteKoogPlanningBackend`. | **Keep** (27.5). | Abstraction enabling the remote backend. |
+| `RemoteKoogPlanningBackend` | `engine/runtime/RemoteKoogPlanningBackend.kt` | Koog client/backend over a `RemoteConnection`. | `EngineRegistry`. | **Keep** (27.3, 27.5). | Uses `engine.config.RemoteConnection`/`RemoteProvider`/`normalizeRemoteBaseUrl`. |
+| `OfflinePlanningEngine` | `engine/runtime/OfflinePlanningEngine.kt` | Built-in offline question library. | `EngineRegistry` (Builtin Offline). | **Keep** (27.5). | Default/fallback engine. |
+| `LoggingPlanningEngine` | `engine/runtime/LoggingPlanningEngine.kt` | Decorator logging prompts/responses/raw capture. | Engine composition/DI. | **Keep** (27.5). | Cross-cutting runtime decorator. |
+| `ForwardingPlanningEngine` | `engine/core/ForwardingPlanningEngine.kt` | Delegating base for decorators. | Decorator implementations (e.g. slowdown/logging patterns). | **Keep** (27.5). | Core reuse seam for decorators. |
+| `SlowDownPlanningEngine` | `engine/runtime/dev/SlowDownPlanningEngine.kt` | Dev-tool delay decorator. | Dev tooling/DI composition (Phase 8-adjacent). | **Keep** (27.5). | Isolated in `engine.runtime.dev`, separate from product catalog types. |
+| `EngineInteraction` | `engine/runtime/dev/EngineInteraction.kt` | Dev-tool delay interaction enum. | Slowdown/developer settings. | **Keep** (27.2, 27.5). | Isolated in `engine.runtime.dev`. |
+| `EngineDelayConfig` | `engine/runtime/dev/EngineDelayConfig.kt` | Dev-tool delay config. | Slowdown/developer settings. | **Keep** (27.2, 27.5). | Isolated in `engine.runtime.dev`. |
+| `PlanningContext` | `engine/core/PlanningContext.kt` | Prompt/transcript context rendering. | `KoogPlanningEngine`/prompt building, export (future). | **Keep** (27.5). | Prompt/transcript plumbing in core. |
 | `ModelIdentity` helpers | `engine/model/ModelIdentity.kt` | Alias/size/count parsing helpers (top-level, no class). | `RemoteModelCatalog` parsing, display/ranking inputs. | **Keep** (27.4). | Model metadata helpers in `engine.model`. |
 
 ## Model catalog / curation
@@ -99,7 +99,7 @@ and moves, and 27.6 verifies.
 | Target package | Contents (current names/types) | Concern |
 |---|---|---|
 | `engine.core` | `PlanningEngine`, `QuestionBatch`, `PlanningEngineSelector`, `ForwardingPlanningEngine`, `PlanningContext` | Core engine contract, task lock-in seam, prompt/transcript plumbing. No Koog/client, config persistence, or model-catalog impl deps. |
-| `engine.runtime` | `KoogPlanningEngine`, `KoogPlanningBackend`, `RemoteKoogPlanningBackend`, `OfflinePlanningEngine`, `LoggingPlanningEngine`; dev-tool `SlowDownPlanningEngine`, `EngineInteraction`, `EngineDelayConfig` kept isolated (see 27.5 — e.g. `engine.runtime.dev` or a clearly separated file group, not beside product catalog config) | Runtime engine implementations, decorators, and backend wiring. Depends on `engine.core` and config/model types it consumes. |
+| `engine.runtime` / `engine.runtime.dev` | `KoogPlanningEngine`, `KoogPlanningBackend`, `RemoteKoogPlanningBackend`, `OfflinePlanningEngine`, `LoggingPlanningEngine`; dev-tool `SlowDownPlanningEngine`, `EngineInteraction`, `EngineDelayConfig` isolated in `engine.runtime.dev` | Runtime engine implementations, decorators, and backend wiring. Depends on `engine.core` and config/model types it consumes. |
 | `engine.config` | `EngineKind`, `EngineRef`, `EngineInstance`, `EnginePickerTier`, `EngineSelectionState`, `EngineAvailability`, `EngineCapability`, `RemoteProvider`, `RemoteConnection`, `EngineCatalogEntry`, `EngineCatalog`, `EngineRegistry` | Engine identity, picker/catalog grouping, persisted selection state, availability/capability vocabulary, provider/connection config, and the catalog/registry that resolve a ref to an engine. |
 | `engine.model` | `RemoteModelInfo`, `ModelMetadataSource`, `ModelIdentity` helpers, `RemoteModelCatalog` (contract), `KoogRemoteModelCatalog` (impl) *(split in 27.2)*, `ModelBrowserMerge`/`ModelBrowserEntry`, `ModelQuality`, `ModelSpeed`, `ModelPresentationTier`, `ModelRank`, `ModelMeasurement`, `ModelProfiles`, `ModelRanker` | Model metadata/provenance, remote model discovery/catalog, browser merge, and curation/ranking. |
 
@@ -142,7 +142,7 @@ Known coupling to resolve deliberately during moves (not pure-domain):
   `OllamaPullClient` → interface/event/impl with private DTOs local;
   `PlanningEngine`/`QuestionBatch`, `EngineDelayConfig`/`EngineInteraction`,
   `ModelBrowserMerge`/`ModelBrowserEntry`, `EngineCatalog`/`EngineCatalogEntry` split).
-  27.3–27.4 applied for config identity and model catalog/curation/ranking; reconfirm during 27.5 moves.
+  27.3–27.5 applied for config identity, model catalog/curation/ranking, and runtime/plumbing placement (dev delay types isolated in `engine.runtime.dev`).
 - `RemoteModelListState` re-homed to `ui/chrome/RemoteModelListState.kt` in 26.7.
-- Dev-tool delay types must not land beside product catalog types (27.5).
-- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1(done) → 26.6(done)/26.7(done)/26.9(done)/27.2(done) → 27.3(done)/27.4(done)/27.5 → 26.8 (optional) → 27.6`.
+- Dev-tool delay types isolated in `engine.runtime.dev` (27.5).
+- Suggested execution order (status): `26.1(done) → 26.2(done)/26.3(done)/26.4(done)/26.5(done) → 27.1(done) → 26.6(done)/26.7(done)/26.9(done)/27.2(done) → 27.3(done)/27.4(done)/27.5(done) → 26.8 (optional) → 27.6`.

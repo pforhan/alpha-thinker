@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.ui.tools
 
-import alphainterplanetary.thinker.engine.EngineDelayConfig
-import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.runtime.dev.EngineDelayConfig
+import alphainterplanetary.thinker.engine.runtime.dev.EngineInteraction
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tools.ProjectSimulator
 import alphainterplanetary.thinker.tools.SampleProjectGenerator

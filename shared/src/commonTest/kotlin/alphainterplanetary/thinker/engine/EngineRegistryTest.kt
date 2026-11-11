@@ -6,6 +6,8 @@ import alphainterplanetary.thinker.engine.config.EngineKind
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineRegistry
 import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.runtime.KoogPlanningEngine
+import alphainterplanetary.thinker.engine.runtime.OfflinePlanningEngine
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.testutil.FakeStorage
 import kotlin.test.Test

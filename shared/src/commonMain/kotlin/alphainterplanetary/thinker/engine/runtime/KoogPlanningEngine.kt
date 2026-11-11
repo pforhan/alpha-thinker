@@ -1,4 +1,4 @@
-package alphainterplanetary.thinker.engine
+package alphainterplanetary.thinker.engine.runtime
 
 import ai.koog.prompt.Prompt
 import ai.koog.prompt.dsl.prompt
@@ -7,7 +7,10 @@ import ai.koog.prompt.message.Message
 import alphainterplanetary.thinker.activitylog.LogRequest
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.activitylog.logRequest
-import alphainterplanetary.thinker.engine.PlanningContext.PhaseSummary
+import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.PlanningContext.PhaseSummary
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.Phase

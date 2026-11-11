@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.ui.chrome
 
-import alphainterplanetary.thinker.engine.EngineDelayConfig
-import alphainterplanetary.thinker.engine.EngineInteraction
+import alphainterplanetary.thinker.engine.runtime.dev.EngineDelayConfig
+import alphainterplanetary.thinker.engine.runtime.dev.EngineInteraction
 import alphainterplanetary.thinker.ui.components.OptionHeader
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement

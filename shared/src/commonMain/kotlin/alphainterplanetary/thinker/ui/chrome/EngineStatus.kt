@@ -85,7 +85,7 @@ data class EngineStatus(
  *
  * [instance] is the configuration for [EngineRef.Instance] refs. The base URL is
  * shown as configured rather than re-normalized here: the `/v1` strip in
- * [alphainterplanetary.thinker.engine.RemoteKoogPlanningBackend] is the one rule for
+ * [alphainterplanetary.thinker.engine.runtime.RemoteKoogPlanningBackend] is the one rule for
  * that, and a second copy here would be free to drift from it. A provider whose
  * endpoint is not user-configurable ([RemoteProvider.configurableBaseUrl] =
  * false) is always "configured" at its fixed origin, so it is shown as active

@@ -6,6 +6,7 @@ import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import alphainterplanetary.thinker.engine.config.RemoteConnection
 import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.runtime.RemoteKoogPlanningBackend
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals

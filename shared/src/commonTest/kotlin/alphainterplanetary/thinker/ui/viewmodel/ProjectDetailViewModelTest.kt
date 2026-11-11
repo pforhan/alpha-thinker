@@ -1,10 +1,10 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
-import alphainterplanetary.thinker.engine.EngineDelayConfig
-import alphainterplanetary.thinker.engine.EngineInteraction
-import alphainterplanetary.thinker.engine.PlanningEngine
-import alphainterplanetary.thinker.engine.PlanningEngineSelector
-import alphainterplanetary.thinker.engine.SlowDownPlanningEngine
+import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
+import alphainterplanetary.thinker.engine.runtime.dev.EngineDelayConfig
+import alphainterplanetary.thinker.engine.runtime.dev.EngineInteraction
+import alphainterplanetary.thinker.engine.runtime.dev.SlowDownPlanningEngine
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
