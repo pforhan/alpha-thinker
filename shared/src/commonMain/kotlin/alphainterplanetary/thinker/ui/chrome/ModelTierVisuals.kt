@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
  *
  * The mapping lives here rather than on the engine enum so the engine layer
  * stays free of Compose types; it is the tier counterpart of
- * [CapabilityState.glyph].
+ * [CapabilityReadiness.glyph].
  */
 internal fun ModelPresentationTier.glyph(): ImageVector =
   when (this) {

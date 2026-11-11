@@ -197,8 +197,8 @@ already applied to the DAOs.
 - [x] 2a5. Retire the flat RemoteLlm* settings. SettingsViewModel no longer reads them, but SettingsRepository still declares/loads/persists remoteLlmProvider/BaseUrl/ApiKey/Model/ContextTokens, Storage.SettingsKey still holds the five RemoteLlm* keys, and SettingsRepositoryTest still exercises them. Delete all of it (and the now-unused defaults/imports). 
 - [x] 2a6. Engine-layer cleanup. RemoteKoogPlanningBackend no longer needs its SettingsRepository import/doc (it takes a RemoteConnection); resolveSelectedEngine + PlanningEngineSelectionTest are dead after the EngineRegistry swap, and PlanningEngineSelector's doc and AppComponent's import still name SettingsRepository.
 - [x] **2c. Per-ref self-validation.** Each ref's availability feeds
-      `CapabilityState`: a Remote missing its model or key reads "needs setup".
-      The local/on-device kinds this originally covered were removed.
+      `CapabilityReadiness`: a Remote missing its model or key reads "needs setup".
+  The local/on-device kinds this originally covered were removed.
 - [x] **2d. Tests.** EngineStatusTest, EngineRegistryTest, RemoteKoog... etc per checklist.
   **Test checklist (Stage 2 deliverables):**
 - [x] **EngineRepositoryTest** — create / update / delete; `addOrUpdate`

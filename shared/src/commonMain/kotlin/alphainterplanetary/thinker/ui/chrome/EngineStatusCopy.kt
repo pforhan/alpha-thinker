@@ -22,15 +22,15 @@ internal fun EngineCapability.displayName(): String =
  * shows when there is nothing else to show are drawn from it, so a state is never
  * called one thing in the accessibility text and another in the row beside it.
  */
-internal fun CapabilityState.readout(): String =
+internal fun CapabilityReadiness.readout(): String =
   when (this) {
-    CapabilityState.Active -> "in use"
-    CapabilityState.Incomplete -> "needs setup"
-    CapabilityState.Unused -> "not used"
+    CapabilityReadiness.Active -> "in use"
+    CapabilityReadiness.Incomplete -> "needs setup"
+    CapabilityReadiness.Unused -> "not used"
   }
 
 /** [readout] as a value-column entry, where it opens the string. */
-private fun CapabilityState.valueReadout(): String =
+private fun CapabilityReadiness.valueReadout(): String =
   readout().replaceFirstChar { it.uppercase() }
 
 /**
@@ -41,12 +41,12 @@ internal fun CapabilityStatus.displayDetail(): String {
   if (detail.isNotBlank()) return detail
   // An active slot with no value is fully described by its pill, which shows the
   // "in use" fill and check; a word here would only repeat it.
-  return if (state == CapabilityState.Active) "" else state.valueReadout()
+  return if (readiness == CapabilityReadiness.Active) "" else readiness.valueReadout()
 }
 
 /** One slot as a sentence, for a screen reader and for the compact form. */
 internal fun CapabilityStatus.sentence(): String =
-  "${capability.displayName()}: ${state.readout()}" +
+  "${capability.displayName()}: ${readiness.readout()}" +
     if (detail.isBlank()) "" else " — $detail"
 
 /** The whole status as one sentence, describing what the app will do. */

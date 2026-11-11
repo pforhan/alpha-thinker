@@ -56,18 +56,18 @@ internal fun StatusPill(
   slot: CapabilityStatus,
   modifier: Modifier = Modifier,
 ) {
-  val content = slot.state.onContainerColor()
+  val content = slot.readiness.onContainerColor()
   Pill(
     text = slot.capability.displayName(),
-    containerColor = slot.state.containerColor(),
+    containerColor = slot.readiness.containerColor(),
     contentColor = content,
     // Transparent for a filled state, so the outline is a single call site
     // rather than a branch in every state that draws a pill.
-    borderColor = slot.state.borderColor(),
+    borderColor = slot.readiness.borderColor(),
     modifier = modifier,
   ) {
     Icon(
-      imageVector = slot.state.glyph(),
+      imageVector = slot.readiness.glyph(),
       contentDescription = null,
       tint = content,
       modifier = Modifier.size(Dimens.IconSizeSmall),

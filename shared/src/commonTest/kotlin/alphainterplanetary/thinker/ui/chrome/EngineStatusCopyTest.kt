@@ -87,7 +87,7 @@ class EngineStatusCopyTest {
     // them — and the next mode that produces the pair must not change that.
     val slot = CapabilityStatus(
       capability = EngineCapability.Tools,
-      state = CapabilityState.Active,
+      readiness = CapabilityReadiness.Active,
       detail = "",
     )
 

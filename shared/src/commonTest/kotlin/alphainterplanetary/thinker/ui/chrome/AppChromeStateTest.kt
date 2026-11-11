@@ -49,8 +49,8 @@ class AppChromeStateTest {
       val status = awaitItem()
       assertEquals(EngineKind.Offline, status.kind)
       assertEquals(
-        listOf(CapabilityState.Unused, CapabilityState.Unused, CapabilityState.Unused),
-        status.slots.map { it.state },
+        listOf(CapabilityReadiness.Unused, CapabilityReadiness.Unused, CapabilityReadiness.Unused),
+        status.slots.map { it.readiness },
       )
       cancelAndIgnoreRemainingEvents()
     }
@@ -69,7 +69,7 @@ class AppChromeStateTest {
 
       val status = awaitItem()
       assertEquals(EngineKind.Remote, status.kind)
-      assertEquals(CapabilityState.Active, status.slot(EngineCapability.Network).state)
+      assertEquals(CapabilityReadiness.Active, status.slot(EngineCapability.Network).readiness)
       assertEquals("http://localhost:11434", status.slot(EngineCapability.Network).detail)
       assertEquals("llama3.2:latest", status.slot(EngineCapability.Llm).detail)
       cancelAndIgnoreRemainingEvents()
@@ -85,14 +85,14 @@ class AppChromeStateTest {
 
     engineStatusFlow(repository).test {
       val before = awaitItem()
-      assertEquals(CapabilityState.Active, before.slot(EngineCapability.Llm).state)
+      assertEquals(CapabilityReadiness.Active, before.slot(EngineCapability.Llm).readiness)
 
       // Blank the model: the LLM slot must go Incomplete on the very next
       // emission rather than reusing the status built before the edit.
       repository.addOrUpdate(remoteInstance(model = ""))
 
       val after = awaitItem()
-      assertEquals(CapabilityState.Incomplete, after.slot(EngineCapability.Llm).state)
+      assertEquals(CapabilityReadiness.Incomplete, after.slot(EngineCapability.Llm).readiness)
       assertEquals(true, after.needsAttention)
       cancelAndIgnoreRemainingEvents()
     }
@@ -153,8 +153,8 @@ class AppChromeStateTest {
 
       val status = awaitItem()
       assertEquals(EngineKind.Remote, status.kind)
-      assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
-      assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
+      assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Llm).readiness)
+      assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Network).readiness)
       cancelAndIgnoreRemainingEvents()
     }
   }
@@ -174,8 +174,8 @@ class AppChromeStateTest {
 
       val status = awaitItem()
       assertEquals(EngineKind.Remote, status.kind)
-      assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
-      assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
+      assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Network).readiness)
+      assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Llm).readiness)
       cancelAndIgnoreRemainingEvents()
     }
   }

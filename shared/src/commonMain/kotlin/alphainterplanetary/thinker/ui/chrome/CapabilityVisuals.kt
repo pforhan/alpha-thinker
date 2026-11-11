@@ -11,12 +11,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * One [CapabilityState]'s entire visual treatment, resolved in one place so the
+ * One [CapabilityReadiness]'s entire visual treatment, resolved in one place so the
  * header's pills, the flyout's pills, and the Status sheet's rows cannot
  * disagree about what "in use", "needs setup", and "not used" look like.
  *
  * **Fill carries the state, glyph repeats it.** Exactly one state is filled —
- * [CapabilityState.Active] — and the other two are outlined, so a capability
+ * [CapabilityReadiness.Active] — and the other two are outlined, so a capability
  * reads as "on" or "off" before any text is parsed. The glyph is not decoration:
  * the fills are all light tints of similar lightness, so hue alone would leave
  * the state unreadable in grayscale and to a colorblind user, and [glyph] gives
@@ -31,26 +31,26 @@ private val Unfilled = Color.Transparent
 
 /** The fill behind a capability's name, or [Unfilled] for a state that is outlined. */
 @Composable
-internal fun CapabilityState.containerColor(): Color =
+internal fun CapabilityReadiness.containerColor(): Color =
   when (this) {
     // The app's color identity, so the one live capability is also the one place
     // the selected theme shows through in the chrome. Validated with the palette
     // (see `PhaseStyles.accent`).
-    CapabilityState.Active -> PhaseStyles.accent().container
-    CapabilityState.Incomplete -> MaterialTheme.colorScheme.errorContainer
-    CapabilityState.Unused -> Unfilled
+    CapabilityReadiness.Active -> PhaseStyles.accent().container
+    CapabilityReadiness.Incomplete -> MaterialTheme.colorScheme.errorContainer
+    CapabilityReadiness.Unused -> Unfilled
   }
 
 /**
  * The outline around a capability's name, or [Unfilled] for a state that is
- * filled. Only [CapabilityState.Unused] is outlined, in a neutral role: an
+ * filled. Only [CapabilityReadiness.Unused] is outlined, in a neutral role: an
  * unused capability is a normal state, not a problem to flag.
  */
 @Composable
-internal fun CapabilityState.borderColor(): Color =
+internal fun CapabilityReadiness.borderColor(): Color =
   when (this) {
-    CapabilityState.Active, CapabilityState.Incomplete -> Unfilled
-    CapabilityState.Unused -> MaterialTheme.colorScheme.outlineVariant
+    CapabilityReadiness.Active, CapabilityReadiness.Incomplete -> Unfilled
+    CapabilityReadiness.Unused -> MaterialTheme.colorScheme.outlineVariant
   }
 
 /**
@@ -63,11 +63,11 @@ internal fun CapabilityState.borderColor(): Color =
  * is not contrast-checked against the accent's container.
  */
 @Composable
-internal fun CapabilityState.onContainerColor(): Color =
+internal fun CapabilityReadiness.onContainerColor(): Color =
   when (this) {
-    CapabilityState.Active -> PhaseStyles.accent().content
-    CapabilityState.Incomplete -> MaterialTheme.colorScheme.onErrorContainer
-    CapabilityState.Unused -> MaterialTheme.colorScheme.onSurfaceVariant
+    CapabilityReadiness.Active -> PhaseStyles.accent().content
+    CapabilityReadiness.Incomplete -> MaterialTheme.colorScheme.onErrorContainer
+    CapabilityReadiness.Unused -> MaterialTheme.colorScheme.onSurfaceVariant
   }
 
 /**
@@ -75,11 +75,11 @@ internal fun CapabilityState.onContainerColor(): Color =
  * use, an X for a selected capability that is not set up, a dash for one the
  * engine does not have.
  */
-internal fun CapabilityState.glyph(): ImageVector =
+internal fun CapabilityReadiness.glyph(): ImageVector =
   when (this) {
-    CapabilityState.Active -> Icons.Filled.Check
-    CapabilityState.Incomplete -> Icons.Filled.Close
-    CapabilityState.Unused -> Icons.Filled.Remove
+    CapabilityReadiness.Active -> Icons.Filled.Check
+    CapabilityReadiness.Incomplete -> Icons.Filled.Close
+    CapabilityReadiness.Unused -> Icons.Filled.Remove
   }
 
 /**
@@ -97,6 +97,6 @@ internal fun CapabilityState.glyph(): ImageVector =
 internal fun EngineStatus.dotColor(): Color =
   when {
     needsAttention -> MaterialTheme.colorScheme.error
-    slots.any { it.state == CapabilityState.Active } -> PhaseStyles.accent().container
+    slots.any { it.readiness == CapabilityReadiness.Active } -> PhaseStyles.accent().container
     else -> MaterialTheme.colorScheme.onSurfaceVariant
   }

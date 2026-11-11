@@ -34,7 +34,7 @@ class EngineStatusTest {
     val status = engineStatus(EngineRef.Builtin(EngineKind.Offline), availability = Available)
 
     assertEquals(EngineCapability.entries, status.slots.map { it.capability })
-    assertTrue(status.slots.all { it.state == CapabilityState.Unused })
+    assertTrue(status.slots.all { it.readiness == CapabilityReadiness.Unused })
     assertFalse(status.needsAttention)
   }
 
@@ -48,7 +48,7 @@ class EngineStatusTest {
       availability = Available,
     )
 
-    assertTrue(status.slots.all { it.state == CapabilityState.Unused })
+    assertTrue(status.slots.all { it.readiness == CapabilityReadiness.Unused })
     assertFalse(status.needsAttention)
   }
 
@@ -60,9 +60,9 @@ class EngineStatusTest {
       availability = Available,
     )
 
-    assertEquals(CapabilityState.Active, status.slot(EngineCapability.Network).state)
+    assertEquals(CapabilityReadiness.Active, status.slot(EngineCapability.Network).readiness)
     assertEquals("http://localhost:11434", status.slot(EngineCapability.Network).detail)
-    assertEquals(CapabilityState.Active, status.slot(EngineCapability.Llm).state)
+    assertEquals(CapabilityReadiness.Active, status.slot(EngineCapability.Llm).readiness)
     assertEquals("llama3", status.slot(EngineCapability.Llm).detail)
     assertFalse(status.needsAttention)
   }
@@ -75,8 +75,8 @@ class EngineStatusTest {
       availability = Available,
     )
 
-    assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
-    assertEquals(CapabilityState.Active, status.slot(EngineCapability.Llm).state)
+    assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Network).readiness)
+    assertEquals(CapabilityReadiness.Active, status.slot(EngineCapability.Llm).readiness)
     assertTrue(status.needsAttention)
   }
 
@@ -88,8 +88,8 @@ class EngineStatusTest {
       availability = Available,
     )
 
-    assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
-    assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
+    assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Network).readiness)
+    assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Llm).readiness)
     assertTrue(status.needsAttention)
   }
 
@@ -106,7 +106,7 @@ class EngineStatusTest {
       availability = Available,
     )
 
-    assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
+    assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Network).readiness)
     assertTrue(status.needsAttention)
   }
 
@@ -124,7 +124,7 @@ class EngineStatusTest {
       availability = Available,
     )
 
-    assertEquals(CapabilityState.Active, status.slot(EngineCapability.Network).state)
+    assertEquals(CapabilityReadiness.Active, status.slot(EngineCapability.Network).readiness)
     assertEquals("https://api.anthropic.com", status.slot(EngineCapability.Network).detail)
     assertFalse(status.needsAttention)
   }
@@ -141,7 +141,7 @@ class EngineStatusTest {
       availability = Available,
     )
 
-    assertEquals(CapabilityState.Active, status.slot(EngineCapability.Network).state)
+    assertEquals(CapabilityReadiness.Active, status.slot(EngineCapability.Network).readiness)
     assertFalse(status.needsAttention)
   }
 
@@ -154,12 +154,12 @@ class EngineStatusTest {
     )
 
     assertEquals(
-      CapabilityState.Incomplete,
-      status.slot(EngineCapability.Network).state,
+      CapabilityReadiness.Incomplete,
+      status.slot(EngineCapability.Network).readiness,
     )
     assertEquals(
-      CapabilityState.Incomplete,
-      status.slot(EngineCapability.Llm).state,
+      CapabilityReadiness.Incomplete,
+      status.slot(EngineCapability.Llm).readiness,
     )
     assertTrue(status.needsAttention)
   }
@@ -171,8 +171,8 @@ class EngineStatusTest {
     val status = engineStatus(EngineRef.Instance("gone"), instance = null, availability = Available)
 
     assertEquals(EngineKind.Remote, status.kind)
-    assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Network).state)
-    assertEquals(CapabilityState.Incomplete, status.slot(EngineCapability.Llm).state)
+    assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Network).readiness)
+    assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Llm).readiness)
     assertTrue(status.needsAttention)
   }
 
@@ -191,13 +191,13 @@ class EngineStatusTest {
       )
 
       assertEquals(
-        CapabilityState.Unused,
-        builtin.slot(EngineCapability.Tools).state,
+        CapabilityReadiness.Unused,
+        builtin.slot(EngineCapability.Tools).readiness,
         "builtin $kind"
       )
       assertEquals(
-        CapabilityState.Unused,
-        instance.slot(EngineCapability.Tools).state,
+        CapabilityReadiness.Unused,
+        instance.slot(EngineCapability.Tools).readiness,
         "instance $kind"
       )
     }

@@ -10,7 +10,7 @@ import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.RemoteProvider
 
 /** How a header slot is rendering, from the active mode's capabilities alone. */
-enum class CapabilityState {
+enum class CapabilityReadiness {
   /** The mode has this capability and the app has what it needs to use it. */
   Active,
 
@@ -34,7 +34,7 @@ enum class CapabilityState {
  */
 data class CapabilityStatus(
   val capability: EngineCapability,
-  val state: CapabilityState,
+  val readiness: CapabilityReadiness,
   val detail: String,
 )
 
@@ -77,7 +77,7 @@ data class EngineStatus(
    * user has not finished setup, so the dot has to be able to ask.
    */
   val needsAttention: Boolean
-    get() = slots.any { it.state == CapabilityState.Incomplete }
+    get() = slots.any { it.readiness == CapabilityReadiness.Incomplete }
 }
 
 /**
@@ -145,13 +145,13 @@ fun engineStatus(
 
     return CapabilityStatus(
       capability = capability,
-      state = when {
-        !supported -> CapabilityState.Unused
+      readiness = when {
+        !supported -> CapabilityReadiness.Unused
         // Even if detail is present, the engine might be unavailable (e.g. a
         // missing endpoint or API key).
-        availability is Unavailable -> CapabilityState.Incomplete
-        detail == null -> CapabilityState.Incomplete
-        else -> CapabilityState.Active
+        availability is Unavailable -> CapabilityReadiness.Incomplete
+        detail == null -> CapabilityReadiness.Incomplete
+        else -> CapabilityReadiness.Active
       },
       detail = detail.orEmpty(),
     )
