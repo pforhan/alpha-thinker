@@ -141,9 +141,9 @@ class AppChromeStateTest {
   }
 
   @Test
-  fun `an unavailable builtin derives its supported slots as incomplete`() = runTest {
-    // The Free tier's builtin is catalogued Unavailable (a placeholder), so its
-    // LLM slot reads Incomplete rather than Active even though the kind supports it.
+  fun `the free builtin derives its supported slots as active`() = runTest {
+    // The Free tier's built-in is the fixed Alpha Interplanetary backend, so it
+    // is catalogued Available and reports its endpoint and model.
     val repository = engineRepository()
 
     engineStatusFlow(repository).test {
@@ -153,8 +153,13 @@ class AppChromeStateTest {
 
       val status = awaitItem()
       assertEquals(EngineKind.Remote, status.kind)
-      assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Llm).readiness)
-      assertEquals(CapabilityReadiness.Incomplete, status.slot(EngineCapability.Network).readiness)
+      assertEquals(CapabilityReadiness.Active, status.slot(EngineCapability.Llm).readiness)
+      assertEquals(CapabilityReadiness.Active, status.slot(EngineCapability.Network).readiness)
+      assertEquals("llama3.2:latest", status.slot(EngineCapability.Llm).detail)
+      assertEquals(
+        "https://alpha.tail2dd774.ts.net/",
+        status.slot(EngineCapability.Network).detail,
+      )
       cancelAndIgnoreRemainingEvents()
     }
   }

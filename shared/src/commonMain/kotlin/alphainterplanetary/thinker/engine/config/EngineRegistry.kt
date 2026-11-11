@@ -31,7 +31,9 @@ class EngineRegistry @Inject constructor(
   private fun createEngine(ref: EngineRef): PlanningEngine = when (ref) {
     is EngineRef.Builtin -> when (ref.kind) {
       EngineKind.Offline -> OfflinePlanningEngine()
-      else -> throw IllegalStateException("Built-in engine ${ref.kind} not yet implemented")
+      EngineKind.Remote -> KoogPlanningEngine(
+        RemoteKoogPlanningBackend(EngineCatalog.alphaInterplanetaryConnection),
+      )
     }
 
     is EngineRef.Instance -> {

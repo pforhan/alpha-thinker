@@ -20,8 +20,9 @@ class EngineStatusCopyTest {
   @Test
   fun aValuelessSlotIsDescribedInTheSameWordsAsItsSentence() {
     val status = engineStatus(
-      ref = EngineRef.Builtin(EngineKind.Remote),
-      availability = Available
+      ref = EngineRef.Instance("gone"),
+      instance = null,
+      availability = Available,
     )
 
     val slot = status.slot(EngineCapability.Network)
@@ -32,7 +33,8 @@ class EngineStatusCopyTest {
   @Test
   fun anUnavailableEngineIsDescribedAsNeedingSetup() {
     val status = engineStatus(
-      ref = EngineRef.Builtin(EngineKind.Remote),
+      ref = EngineRef.Instance("gone"),
+      instance = null,
       availability = Unavailable("some fancy reason why not avail"),
     )
 
@@ -64,7 +66,7 @@ class EngineStatusCopyTest {
   @Test
   fun aConfiguredSlotShowsItsValueNotItsState() {
     val status = engineStatus(
-      ref = EngineRef.Builtin(EngineKind.Remote),
+      ref = EngineRef.Instance("test"),
       instance = EngineInstance(
         id = "test",
         kind = EngineKind.Remote,
@@ -145,10 +147,13 @@ class EngineStatusCopyTest {
       availability = Available,
     )
 
+    val summary = status.summary()
     assertTrue(
-      status.summary().startsWith("Engine status: Alpha Interplanetary."),
-      "summary was '${status.summary()}'",
+      summary.startsWith("Engine status: Alpha Interplanetary."),
+      "summary was '$summary'",
     )
+    assertTrue(summary.contains("https://alpha.tail2dd774.ts.net/"), "summary was '$summary'")
+    assertTrue(summary.contains("llama3.2:latest"), "summary was '$summary'")
   }
 
   @Test

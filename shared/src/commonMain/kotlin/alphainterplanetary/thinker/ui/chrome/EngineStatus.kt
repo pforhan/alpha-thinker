@@ -116,10 +116,13 @@ fun engineStatus(
   val provider = instance?.provider ?: RemoteProvider.Default
   val apiKey = instance?.apiKey ?: ""
 
+  val builtinRemote = ref as? EngineRef.Builtin == EngineRef.Builtin(EngineKind.Remote)
+
   // null means "the mode needs this and the app does not have it".
-  val networkDetail: String? = when (kind) {
-    EngineKind.Offline -> null
-    EngineKind.Remote -> when {
+  val networkDetail: String? = when {
+    builtinRemote -> EngineCatalog.alphaInterplanetaryConnection.baseUrl
+    kind == EngineKind.Offline -> null
+    kind == EngineKind.Remote -> when {
       // A provider that requires a key has nothing to send until one is set.
       provider.requiresApiKey && apiKey.isBlank() -> null
       // A fixed origin is always reachable-looking; the model and key carry the
@@ -127,10 +130,13 @@ fun engineStatus(
       !provider.configurableBaseUrl -> provider.defaultBaseUrl
       else -> url.ifBlank { null }
     }
+    else -> null
   }
-  val llmDetail: String? = when (kind) {
-    EngineKind.Offline -> null
-    EngineKind.Remote -> model.ifBlank { null }
+  val llmDetail: String? = when {
+    builtinRemote -> EngineCatalog.alphaInterplanetaryConnection.model
+    kind == EngineKind.Offline -> null
+    kind == EngineKind.Remote -> model.ifBlank { null }
+    else -> null
   }
 
   fun statusFor(capability: EngineCapability): CapabilityStatus {

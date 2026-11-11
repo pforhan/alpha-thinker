@@ -4,6 +4,18 @@ import alphainterplanetary.thinker.engine.config.EngineAvailability.Available
 import alphainterplanetary.thinker.engine.config.EngineAvailability.Unavailable
 
 object EngineCatalog {
+  /**
+   * The fixed connection for the free, built-in Alpha Interplanetary backend: a
+   * rate-limited Ollama endpoint offered without user configuration.
+   */
+  val alphaInterplanetaryConnection = RemoteConnection(
+    provider = RemoteProvider.Ollama,
+    baseUrl = "https://alpha.tail2dd774.ts.net/",
+    apiKey = "",
+    model = "llama3.2:latest",
+    contextLength = 32_000,
+  )
+
   val builtins = listOf(
     EngineCatalogEntry(
       ref = EngineRef.Builtin(EngineKind.Offline),
@@ -14,16 +26,15 @@ object EngineCatalog {
       description = "Built-in question library. Runs entirely on this device — no network, no language model.",
       availability = { Available },
     ),
-    // The free Alpha Interplanetary backend is a placeholder for now.
-    // It is a Remote kind but fixed to a specific provider.
+    // A free, uneditable remote: the Alpha Interplanetary Ollama backend.
     EngineCatalogEntry(
       ref = EngineRef.Builtin(EngineKind.Remote),
       kind = EngineKind.Remote,
-      provider = RemoteProvider.Default,
+      provider = RemoteProvider.Ollama,
       tier = EnginePickerTier.Free,
       label = "Alpha Interplanetary",
       description = "The official Alpha Interplanetary cloud engine.",
-      availability = { Unavailable("placeholder") },
+      availability = { Available },
     ),
   )
 

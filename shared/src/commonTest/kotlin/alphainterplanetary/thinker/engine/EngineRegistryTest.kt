@@ -130,12 +130,14 @@ class EngineRegistryTest {
   }
 
   @Test
-  fun `a builtin other than Offline fails loudly until implemented`() = runTest {
+  fun `the Remote builtin resolves to the free Alpha Interplanetary engine`() = runTest {
     val registry = EngineRegistry(loadedRepository(instance))
 
-    assertFailsWith<IllegalStateException> {
-      registry.getEngine(EngineRef.Builtin(EngineKind.Remote))
-    }
+    val engine = registry.getEngine(EngineRef.Builtin(EngineKind.Remote))
+
+    assertIs<KoogPlanningEngine>(engine)
+    assertEquals(LogSource.RemoteLLM, engine.source)
+    assertEquals(32_000, engine.contextWindowTokens)
   }
 
   @Test
