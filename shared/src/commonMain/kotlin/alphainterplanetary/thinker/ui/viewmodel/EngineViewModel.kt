@@ -69,9 +69,37 @@ class EngineViewModel(
    */
   val firstRunPending: StateFlow<Boolean> = engineRepository.firstRunPending
 
+  /**
+   * True while the engine picker is answering the first-run welcome: the picker
+   * was opened because no engine had ever been chosen, so it leads with the
+   * explanation that flow needs. Cleared when the picker is dismissed or after
+   * the user makes a choice, so it never outlives that first visit.
+   */
+  private val _firstRunIntro = MutableStateFlow(false)
+  val firstRunIntro: StateFlow<Boolean> = _firstRunIntro.asStateFlow()
+
+  /**
+   * Set after the user makes a choice from the first-run welcome so the chrome
+   * can point out where that choice lives; cleared once the hint has been shown
+   * or dismissed.
+   */
+  private val _showEngineStatusHint = MutableStateFlow(false)
+  val showEngineStatusHint: StateFlow<Boolean> = _showEngineStatusHint.asStateFlow()
+
   /** Marks the first-run picker shown; see [firstRunPending] and 3d. */
   fun markFirstRunSeen() {
+    _firstRunIntro.value = true
     engineRepository.markFirstRunSeen()
+  }
+
+  /** Clears the first-run intro once the picker is no longer answering it. */
+  fun clearFirstRunIntro() {
+    _firstRunIntro.value = false
+  }
+
+  /** Dismisses the one-shot hint that points at the engine status. */
+  fun dismissEngineStatusHint() {
+    _showEngineStatusHint.value = false
   }
 
   /**
@@ -83,6 +111,9 @@ class EngineViewModel(
     entry.availability(engineRepository)
 
   fun selectEngine(ref: EngineRef) {
+    if (_firstRunIntro.value) {
+      _showEngineStatusHint.value = true
+    }
     engineRepository.select(ref)
   }
 

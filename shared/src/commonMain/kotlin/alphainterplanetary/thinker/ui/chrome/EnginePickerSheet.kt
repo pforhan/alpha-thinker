@@ -30,8 +30,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -68,7 +70,12 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
   val draft by chrome.engines.draft.collectAsState()
   val draftModels by chrome.engines.draftModels.collectAsState()
   val pulls by chrome.engines.downloads.collectAsState()
+  val firstRunIntro by chrome.engines.firstRunIntro.collectAsState()
   val engines = chrome.engines
+
+  DisposableEffect(engines) {
+    onDispose { engines.clearFirstRunIntro() }
+  }
 
   val groups = remember(instances, lastUsedAt) {
     EngineCatalog.groupedByTier(instances, lastUsedAt)
@@ -81,6 +88,9 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
       .padding(bottom = Dimens.ScreenPadding),
     verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
   ) {
+    if (firstRunIntro) {
+      FirstRunIntro()
+    }
     PreferredEngines(
       groups = groups,
       selectedRef = selectedRef,
@@ -285,6 +295,42 @@ private fun TierHeader(label: String) {
     style = MaterialTheme.typography.titleSmall,
     color = MaterialTheme.colorScheme.onSurfaceVariant,
   )
+}
+
+/**
+ * The explanation shown the first time this picker opens: why an engine must be
+ * chosen and what the choice means for where the user's project data goes.
+ */
+@Composable
+private fun FirstRunIntro() {
+  Surface(
+    color = MaterialTheme.colorScheme.secondaryContainer,
+    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    shape = MaterialTheme.shapes.medium,
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(Dimens.CardPadding),
+      verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+    ) {
+      Text(
+        text = "Choose how Alpha Thinker works",
+        style = MaterialTheme.typography.titleMedium,
+      )
+      Text(
+        text = "Pick the engine that plans your projects. Offline runs on this " +
+          "device and keeps everything here. A remote connection sends prompts " +
+          "to the server you choose, so use it only when you're comfortable " +
+          "sharing that data.",
+        style = MaterialTheme.typography.bodyMedium,
+      )
+      Text(
+        text = "You can change this anytime from the engine status in the top bar.",
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
+  }
 }
 
 /**

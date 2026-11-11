@@ -49,7 +49,9 @@ fun AppScaffold(
   content: @Composable (PaddingValues) -> Unit,
 ) {
   val status by chrome.engineStatus.collectAsState()
+  val showEngineStatusHint by chrome.engines.showEngineStatusHint.collectAsState()
   val showBack = backEnabled && !chrome.isSheetOpen
+  val showHint = showEngineStatusHint && chrome.sheet != ChromeSheet.Intelligence
 
   Scaffold(
     modifier = modifier,
@@ -71,6 +73,8 @@ fun AppScaffold(
           StatusCluster(
             status = status,
             onClick = { chrome.openSheet(ChromeSheet.Status) },
+            showHint = showHint,
+            onDismissHint = chrome.engines::dismissEngineStatusHint,
           )
           // Last, so the chrome's own controls read as the bar's trailing edge
           // on every screen rather than shifting around per screen.

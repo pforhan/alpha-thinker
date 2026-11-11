@@ -43,7 +43,7 @@ As phases are completed they move to the end of IMPLEMENTATION-PLAN-COMPLETED.md
 - [x] add a dedicated alphainterplanetary backend (ollama at https://alpha.tail2dd774.ts.net/ model llama3.2:latest context 32k) for slow, rate-limited, but free access. **Done —** the Free-tier built-in now resolves to a fixed, uneditable Ollama connection to that endpoint with `llama3.2:latest` and a 32k window.
 - [x] There's an unusual default provider connection to ollama supplied, we probably don't need that any longer.  its presence doesn't trigger expansion of the advanced list for some reason.  If you delete and recreate it that entry acts the same.
 - [x] Default settings for OpenAI compatible aren't super useful probably, especially since they just point back to ollama. Consider just making user supply the URL.
-- [ ] UI: it's a little weird for the first run popup of Engine Picker to be a bottom sheet, with no surrounding explanations.  May need a lead in first-run block of text above the normal picker (or make them all a dialog) that requires the user to select an engine -- don't pick one by default.
+- [x] UI: it's a little weird for the first run popup of Engine Picker to be a bottom sheet, with no surrounding explanations.  May need a lead in first-run block of text above the normal picker (or make them all a dialog) that requires the user to select an engine -- don't pick one by default. **Done —** the first-run engine picker now leads with an explanation of what the choice means (offline on-device vs. sending prompts to a chosen connection) and, after a first-run selection, shows a one-shot hint pointing at the engine status in the top bar so users know where to review or change it later.
 - [ ] EngineStatus is pretty ugly; description is only ever used once and it's derived weirdly -- should we shuffle logic around to make it more clear? label and description need individual justification for their existence.  mode only used in tests, although description usually comes from mode.
 - [ ] **Koog agentic lookup + web search tools:** custom `webSearch` / `fetchPage` tools on a `ToolRegistry` (or an external web-search MCP server via `McpToolRegistryProvider` — HTTP/SSE on mobile, stdio/`fromProcess` on desktop); the LLM performs lookup/web search only as needed. Research in ENG-DESIGN.md "LLM Inference Layer".
 - [ ] **Lookup settings + graceful degradation:** opt-in setting to enable/disable LLM lookup & web search (Settings screen, alongside the LLM on/off toggle); graceful degradation when search is disabled/unavailable/offline; route tool/search results through the app-wide activity log as `Lookup`-category (`Tool`-source) rows.
@@ -52,7 +52,7 @@ As phases are completed they move to the end of IMPLEMENTATION-PLAN-COMPLETED.md
 - [x] **Desktop in-process LiteRT (deferred from the Android-only Local tier):** **Removed —** the local-model track was cut before the desktop actuals landed, so its seams and dependencies are gone. See [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
 - [x] **iOS in-process local models (deferred — needs a bridge, not a new runtime):** **Removed —** the local-model track was cut before the iOS bridge was built. See [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
 - [x] **Llamatik contingency:** if the `litertlm-jvm` desktop path stalls, evaluate Llamatik (llama.cpp KMP: Android, iOS, Desktop, WASM) as the in-process engine behind a Koog `LLMClient` we write. **Removed —** the contingency is moot now that local models are gone.
-- [ ] **Hostability flag:** Apply memory fit heuristics (see [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next to size/context chips for Ollama instances on localhost; consider chip color changes for outliers (MLX versions require recent Macs).
+- [x] **Won't do / impractical: Hostability flag:** Apply memory fit heuristics (see [llm-memory-fit.md](llm-memory-fit.md)) as a note (not a filter) next to size/context chips for Ollama instances on localhost; consider chip color changes for outliers (MLX versions require recent Macs). This would be hard to determine remotely. 
 
 ## Phase 3.8: typed activity-log events
 
@@ -88,6 +88,7 @@ Deferred from the Phase 3.6 vocabulary audit's `LogMarkers` item. Today the log'
 - [ ] Implement background notification for long-running LLM tasks
 
 ## Phase 5: Refinement & UX
+- [ ] after first run, combine status sheet and engine picker sheet
 - [ ] activitylog: timing is off when things are queued and waiting; we should not count queue time in execution time. may need an extra event when execution starts?
 - [ ] activitylog: no indication of which engine / which config was in use -- maybe log the remote when the task begins full execution?
 - [ ] activitylog: http errors do not have detail affordances and can't be copied.
