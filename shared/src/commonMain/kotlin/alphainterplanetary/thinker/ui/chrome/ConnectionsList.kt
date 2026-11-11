@@ -18,14 +18,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,17 +42,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
  *
  * No wrapper card and no kind heading: the connections are their own cards,
  * stacked directly on the sheet's surface beside the other cards in the
- * picker's Advanced area. The "Remote" label and its description were a
+ * picker's Custom area. The "Remote" label and its description were a
  * heading over a kind the user never chose — a connection's own name is what
  * they picked, and it is the card's title.
  *
  * Tapping a card selects it as the running engine, which fills the card with
  * the same [selectedEngineColors] the tier cards use, and marks it with the
- * same dot. Everything else about a connection lives behind the add/edit
- * dialog ([ConnectionDialog]), which holds the fields as a draft and commits
- * them on Save: the card keeps just the edit and delete affordances, and a
- * connection gets a name of the user's own when it is created instead of
- * inheriting the provider's label.
+ * same dot. Editing and deleting live on the card's icons, while adding a
+ * connection is handled by the surrounding section.
  */
 @Composable
 internal fun ConnectionsList(
@@ -63,7 +58,6 @@ internal fun ConnectionsList(
   onSelect: (EngineRef.Instance) -> Unit,
   onEdit: (EngineRef.Instance) -> Unit,
   onDelete: (EngineRef.Instance) -> Unit,
-  onAdd: () -> Unit,
 ) {
   var deleting by remember { mutableStateOf<EngineInstance?>(null) }
 
@@ -71,13 +65,6 @@ internal fun ConnectionsList(
     modifier = Modifier.fillMaxWidth(),
     verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
   ) {
-    if (instances.isEmpty()) {
-      Text(
-        text = "No connections yet.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    }
     instances.forEach { instance ->
       val ref = EngineRef.Instance(instance.id)
       ConnectionCard(
@@ -87,15 +74,6 @@ internal fun ConnectionsList(
         onEdit = { onEdit(ref) },
         onDelete = { deleting = instance },
       )
-    }
-    Spacer(modifier = Modifier.height(Dimens.ContentGap))
-    OutlinedButton(
-      onClick = onAdd,
-      modifier = Modifier.fillMaxWidth(),
-    ) {
-      Icon(Icons.Default.Add, contentDescription = null)
-      Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-      Text("Add connection")
     }
   }
 

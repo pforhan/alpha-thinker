@@ -50,7 +50,7 @@ object EngineCatalog {
         ref = EngineRef.Instance(instance.id),
         kind = instance.kind,
         provider = instance.provider,
-        tier = EnginePickerTier.Advanced,
+        tier = EnginePickerTier.Custom,
         label = instance.label,
         description = instance.kind.description,
         availability = { repo ->

@@ -30,8 +30,8 @@ enum class EnginePickerTier(
   ),
 
   /** Configured Remote connections. */
-  Advanced(
-    label = "Advanced",
+  Custom(
+    label = "Custom",
     tagline = null,
   ),
 }

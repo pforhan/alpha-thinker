@@ -45,7 +45,7 @@ class EngineCatalogTest {
     val groups = EngineCatalog.groupedByTier(listOf(ollama))
 
     assertEquals(
-      listOf(EnginePickerTier.Offline, EnginePickerTier.Free, EnginePickerTier.Advanced),
+      listOf(EnginePickerTier.Offline, EnginePickerTier.Free, EnginePickerTier.Custom),
       groups.map { it.first },
     )
   }
@@ -71,8 +71,8 @@ class EngineCatalogTest {
 
   @Test
   fun `connections land under Advanced`() {
-    val advanced = EngineCatalog.groupedByTier(listOf(ollama, claude))
-      .first { it.first == EnginePickerTier.Advanced }
+    val custom = EngineCatalog.groupedByTier(listOf(ollama, claude))
+      .first { it.first == EnginePickerTier.Custom }
       .second
 
     assertEquals(
@@ -80,41 +80,41 @@ class EngineCatalogTest {
         EngineRef.Instance("conn-1"),
         EngineRef.Instance("conn-2"),
       ),
-      advanced.map { it.ref }.toSet(),
+      custom.map { it.ref }.toSet(),
     )
   }
 
   @Test
   fun `a tier is ordered most recently used first`() {
-    val advanced = EngineCatalog.groupedByTier(
+    val custom = EngineCatalog.groupedByTier(
       instances = listOf(ollama, claude),
       lastUsedAt = mapOf(
         EngineRef.Instance("conn-1") to 1_000L,
         EngineRef.Instance("conn-2") to 2_000L,
       ),
-    ).first { it.first == EnginePickerTier.Advanced }.second
+    ).first { it.first == EnginePickerTier.Custom }.second
 
     assertEquals(
       listOf(EngineRef.Instance("conn-2"), EngineRef.Instance("conn-1")),
-      advanced.map { it.ref }.filterIsInstance<EngineRef.Instance>(),
+      custom.map { it.ref }.filterIsInstance<EngineRef.Instance>(),
     )
   }
 
   @Test
   fun `never-used engines keep their order behind the used ones`() {
-    val advanced = EngineCatalog.groupedByTier(
+    val custom = EngineCatalog.groupedByTier(
       instances = listOf(ollama, claude),
       // Only the second connection has ever run. The never-used connection
       // keeps the catalog's own order behind it.
       lastUsedAt = mapOf(EngineRef.Instance("conn-2") to 2_000L),
-    ).first { it.first == EnginePickerTier.Advanced }.second
+    ).first { it.first == EnginePickerTier.Custom }.second
 
     assertEquals(
       listOf(
         EngineRef.Instance("conn-2"),
         EngineRef.Instance("conn-1"),
       ),
-      advanced.map { it.ref },
+      custom.map { it.ref },
     )
   }
 

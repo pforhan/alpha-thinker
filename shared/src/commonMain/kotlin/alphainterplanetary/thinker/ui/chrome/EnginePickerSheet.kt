@@ -14,25 +14,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
@@ -49,16 +51,14 @@ private val PreferredTiers = listOf(EnginePickerTier.Offline, EnginePickerTier.F
  *
  * It is a projection of [EngineCatalog.groupedByTier] over the user's
  * instances: a **Preferred** row of two large cards — Offline and Free — over
- * an **Advanced** disclosure holding [ConnectionsList] (3b's list verbatim, so
- * a tap selects and the per-row icons open the add/edit dialog). The split is
- * the whole new-user story: the common choices are named cards with one-line
- * taglines, and the ever-growing list of endpoints is behind a header that says
- * it takes configuring.
+ * the **Custom** connections (a tap selects and the per-row icons open the
+ * add/edit dialog) and an add-connection action. The split keeps the common
+ * choices as named cards with one-line taglines, with user-configured
+ * endpoints listed below; when there are no custom engines, only the
+ * add-connection button is shown.
  *
  * A preferred tier with no selectable entry is a card that says so rather than
- * an absent card, so the row keeps its shapes as backends land. Free is still a
- * placeholder and wears that treatment — a muted card with the reason
- * underneath and no select target.
+ * an absent card, so the row keeps its shapes as backends land.
  */
 @Composable
 internal fun EnginePickerSheetContent(chrome: AppChromeState) {
@@ -87,13 +87,9 @@ internal fun EnginePickerSheetContent(chrome: AppChromeState) {
       availability = engines::availability,
       onSelect = engines::selectEngine,
     )
-    AdvancedEngines(
+    CustomEngines(
       instances = instances,
       selectedRef = selectedRef,
-      advancedSelected = groups
-        .firstOrNull { it.first == EnginePickerTier.Advanced }
-        ?.second
-        ?.any { it.ref == selectedRef } == true,
       onSelect = engines::selectEngine,
       onEdit = { ref -> engines.startEditConnection(ref.id) },
       onDelete = { ref -> engines.deleteInstance(ref.id) },
@@ -142,7 +138,7 @@ private fun PreferredEngines(
   onSelect: (EngineRef) -> Unit,
 ) {
   Column(verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap)) {
-    TierHeader(label = "Preferred")
+    TierHeader(label = "Recommended")
     Row(
       modifier = Modifier
         .fillMaxWidth()
@@ -241,50 +237,42 @@ private fun PlaceholderNote(text: String) {
 }
 
 /**
- * The Advanced disclosure: the configured connections.
+ * The configured custom connections, always shown.
  *
  * There is no "Remote" card or heading grouping them: a heading for the kind
  * would be a label the user never chose between. Selection is the
  * [SelectionDot] every row carries, and the row's own icons edit and delete
- * it. It opens by default when the running engine is one of these, so a user
- * who has already gone advanced does not have to find it again.
+ * it. When there are no custom engines, the section header is omitted and only
+ * the add-connection button is shown.
  */
 @Composable
-private fun AdvancedEngines(
+private fun CustomEngines(
   instances: List<EngineInstance>,
   selectedRef: EngineRef,
-  advancedSelected: Boolean,
   onSelect: (EngineRef) -> Unit,
   onEdit: (EngineRef.Instance) -> Unit,
   onDelete: (EngineRef.Instance) -> Unit,
   onAdd: () -> Unit,
 ) {
-  var expanded by rememberSaveable { mutableStateOf(advancedSelected) }
-
   Column(verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap)) {
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
-      Text(
-        text = EnginePickerTier.Advanced.label,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.weight(1f),
-      )
-      TextButton(onClick = { expanded = !expanded }) {
-        Text(if (expanded) "Hide" else "Show")
-      }
-    }
-    if (expanded) {
+    if (instances.isNotEmpty()) {
+      TierHeader(label = EnginePickerTier.Custom.label)
       ConnectionsList(
         instances = instances,
         selectedRef = selectedRef,
         onSelect = onSelect,
         onEdit = onEdit,
         onDelete = onDelete,
-        onAdd = onAdd,
       )
+      Spacer(modifier = Modifier.height(Dimens.ContentGap))
+    }
+    OutlinedButton(
+      onClick = onAdd,
+      modifier = Modifier.fillMaxWidth(),
+    ) {
+      Icon(Icons.Default.Add, contentDescription = null)
+      Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
+      Text("Add connection")
     }
   }
 }
