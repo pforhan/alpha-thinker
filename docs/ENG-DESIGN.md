@@ -204,11 +204,11 @@ We propose a set of interconnected, technology-neutral entities to serve as the 
     The rename from `LLMInteraction` (and simplification from `EngineActivity`)
     reflects that the app tracks more than LLM traffic: **remote HTTP calls**
     (cloud / OpenAI-compatible backends, PRD 6), the **hardcoded Lite
-    fallback**, and **tool calls** (e.g. an LLM-requested web lookup) all land
-    here. The log is the *persisted* form of the current in-memory
-    `GenerationTask`, so the System/Debug workspace (PRD 5.5: LLM Interaction
-    Log + Task Manager) reads one append-only table. `TaskRunner` still
-    reads/writes its in-memory StateFlow today; the derived
+    fallback**, and **lookups** (e.g. a user-requested web lookup that fills an
+    answer draft) all land here. The log is the *persisted* form of the current
+    in-memory `GenerationTask`, so the System/Debug workspace (PRD 5.5: LLM
+    Interaction Log + Task Manager) reads one append-only table. `TaskRunner`
+    still reads/writes its in-memory StateFlow today; the derived
     `ActivityRecord.groupByActivity()` read model powers the Activity Log viewer
     (Phase 3). The engine-family naming collision this removes (item 4's old
     `engine` enum vs the `LogCategory` type) is why the engines report
@@ -471,12 +471,12 @@ as `LogSource` on each activity-log row):
 
 **Capabilities** (`engine/EngineCapabilities.kt`, `EngineKind.capabilities`) are
 what each engine *will do*, and the header's status cluster renders them as one
-pill per slot — Network, LLM, Tools — with an unused slot muted. They are a
+pill per slot — Network and LLM — with an unused slot muted. They are a
 projection of the selected engine, never a probe of the device: there is
 deliberately no connectivity detection and no per-capability toggle, because a
 switch the engine can override is a second source of truth that can disagree with
-what actually runs. Tools is unused by every engine until the agentic-lookup work
-lands.
+what actually runs. (Answer-time research is a user-initiated app action, not an
+engine/tool-calling capability — see "Answer-time research" below.)
 
 **Recovery (user-driven, not automatic).** A backend that raises
 `AnalysisFailure` — or answers with an empty batch while claiming more is
@@ -557,19 +557,34 @@ Remote choice cannot quietly run Lite behind a header that still reads "Remote".
 Availability is a *selection-time* gate (`EngineKind.available()`, which greys
 the card in the picker), not a runtime fallback.
 
-**Web search / research augmentation — supported via Koog tools.** Search
-capable (tool-calling) backends can invoke custom tools we register (`webSearch`,
-`fetchPage`) on a `ToolRegistry`, or Koog can import an external web-search MCP
-server's tools with zero tool code (`McpToolRegistryProvider`: HTTP/SSE on
-mobile, stdio/`fromProcess` on desktop), or use the `rag`/embeddings module for
-local retrieval. Tool-call rows land in the activity log as flat `Lookup`
-category rows from the `Tool` source (schema item 4), their own activities until
-grouped with a shared `activityId`.
+**Answer-time research (Option A, planned — Phase 3.9).** Research is a
+user-initiated action in the answer flow, not an LLM tool call and not an agent
+loop. Question generation stays unchanged (a single JSON-array reply). When the
+user chooses "Search for me," the app performs the lookup (search/fetch and
+crude extraction), runs one summarization pass to produce a short, sourced
+answer, and writes it into the answer **draft** with a `Source:` line — never
+auto-committed — so the user can review, edit, and commit it as a normal
+answer. The selected planning model is not asked to call tools; the app drives
+the lookup and may reuse the summarization call shape.
 
-- [ ] **Confirm Koog support on every `shared` target on the current toolchain** during integration (JVM, JS, WasmJS, iOS; Android consumes the JVM artifact).
-- [ ] **Choose lookup/search backends.** Options: provider-native web search (`webSearchOptions` / `enableSearch` on OpenAI-style clients), a custom `webSearch` / `fetchPage` tool, or the `rag` module for local lookup/memory. Decide per backend given the offline-first constraint.
-- [ ] **Privacy & network trade-offs.** Web search sends queries to external services; short-circuit the offline-first guarantee. Gate it behind an opt-in setting surfaced in the settings UI alongside the LLM on/off toggle.
-- [ ] **Failure behavior.** Define graceful degradation (no results, offline, provider unreachable); tool/search calls are captured in the app-wide activity log.
+- **Opt-in and privacy.** Research runs only when the user explicitly requests it
+  from the answer dialog (after reviewing/editing search terms), so no dedicated
+  enable/disable setting is needed; queries and fetched content leave the device
+  and go to external services only on that action. Provider configuration (such
+  as an API key) is stored only if the chosen search provider requires it.
+- **Graceful degradation.** When unconfigured, offline, provider-unreachable, or
+  unsupported on a target (e.g. arbitrary-origin fetch limited by wasm/CORS),
+  surface the state and let the user answer manually; never guess or silently
+  fall back.
+- **Activity log.** Each research action is recorded as `Lookup`-category /
+  `Tool`-source rows (query, source/result summary, timing, errors) tied to the
+  relevant activity/project, consistent with schema item 4.
+- **Open choices (tracked in Phase 3.9).** Pick the search backend/provider and
+  where any provider key lives; define fetch/size caps and the draft-summary
+  prompt; confirm per-target feasibility; and remove the unused `Tools`
+  capability from the engine/capability model and status chrome. A
+  model-initiated "insufficient/need clarification" prompt branch (Phase 5)
+  composes with this without changing the JSON array contract.
 
 ### TODO: LLM Inference Strategy
 - [ ] Define fallback behavior for low-resource devices.

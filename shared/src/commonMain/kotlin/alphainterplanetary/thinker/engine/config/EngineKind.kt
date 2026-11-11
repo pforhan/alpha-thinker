@@ -31,7 +31,7 @@ enum class EngineKind(
   Offline(
     key = "offline",
     label = "Offline",
-    description = "Built-in question library. Runs entirely on this device — no network, no language model.",
+    description = "Built-in question library. Runs entirely on this device — no network, no AI.",
     emptySet(),
   ),
   Remote(
