@@ -46,11 +46,13 @@ class EngineViewModelTest {
    * loads) run in [TestScope.backgroundScope] — cancelled with the test but not
    * one of its children, so `runTest` never waits on the collector.
    */
-  private fun TestScope.fixture(
+  private suspend fun TestScope.fixture(
     catalog: RemoteModelCatalog = FakeModelCatalog(),
     downloader: ModelDownloader? = null,
+    initialInstances: List<EngineInstance> = emptyList(),
   ): Fixture {
     val fakeStorage = FakeStorage()
+    initialInstances.forEach { fakeStorage.upsertEngineInstance(it) }
     val scope = backgroundScope
     val engines = EngineRepository(fakeStorage, scope)
     val registry = EngineRegistry(engines)
@@ -65,7 +67,7 @@ class EngineViewModelTest {
     return Fixture(vm, engines, fakeStorage, registry)
   }
 
-  private fun TestScope.viewModel(
+  private suspend fun TestScope.viewModel(
     catalog: RemoteModelCatalog = FakeModelCatalog(),
   ): EngineViewModel = fixture(catalog).vm
 
@@ -105,8 +107,9 @@ class EngineViewModelTest {
 
   @Test
   fun `selectEngine persists the selection through the repository`() = runTest {
-    val fixture = fixture()
-    val ref = EngineRef.Instance(fixture.engines.instances.value.first().id)
+    val instance = EngineInstance.remote()
+    val fixture = fixture(initialInstances = listOf(instance))
+    val ref = EngineRef.Instance(instance.id)
 
     fixture.vm.selectEngine(ref)
     settle()
@@ -149,12 +152,12 @@ class EngineViewModelTest {
 
   @Test
   fun `the edit draft starts from the stored row`() = runTest {
-    val fixture = fixture()
-    val id = fixture.engines.instances.value.first().id
+    val instance = EngineInstance.remote()
+    val fixture = fixture(initialInstances = listOf(instance))
 
-    fixture.vm.startEditConnection(id)
+    fixture.vm.startEditConnection(instance.id)
 
-    assertEquals(fixture.engines.getInstance(id), fixture.vm.draft.value)
+    assertEquals(instance, fixture.vm.draft.value)
   }
 
   @Test
@@ -404,22 +407,22 @@ class EngineViewModelTest {
 
   @Test
   fun `editing a draft leaves the stored rows alone until saved`() = runTest {
-    val fixture = fixture()
-    val id = fixture.engines.instances.value.first().id
-    val before = fixture.engines.getInstance(id)
+    val instance = EngineInstance.remote()
+    val fixture = fixture(initialInstances = listOf(instance))
+    val before = fixture.engines.getInstance(instance.id)
 
-    fixture.vm.startEditConnection(id)
+    fixture.vm.startEditConnection(instance.id)
     fixture.vm.setDraftModel("my-own-model")
     settle()
 
     // The dialog shapes a draft: the running engine keeps its stored values
     // until Save commits them.
-    assertEquals(before, fixture.engines.getInstance(id))
+    assertEquals(before, fixture.engines.getInstance(instance.id))
 
     fixture.vm.saveDraft()
     settle()
 
-    assertEquals("my-own-model", fixture.engines.getInstance(id)?.model)
+    assertEquals("my-own-model", fixture.engines.getInstance(instance.id)?.model)
     assertNull(fixture.vm.draft.value)
   }
 
@@ -449,12 +452,12 @@ class EngineViewModelTest {
 
   @Test
   fun `saving an edit updates its row without switching the running engine`() = runTest {
-    val fixture = fixture()
-    val firstId = fixture.engines.instances.value.first().id
+    val first = EngineInstance.remote().copy(label = "First")
+    val fixture = fixture(initialInstances = listOf(first))
     val other = addConnection(fixture.vm, "Second")
     settle()
 
-    fixture.vm.startEditConnection(firstId)
+    fixture.vm.startEditConnection(first.id)
     fixture.vm.setDraftLabel("Renamed away")
     fixture.vm.setDraftModel("my-own-model")
     fixture.vm.saveDraft()
@@ -463,7 +466,7 @@ class EngineViewModelTest {
     // Edits are row-scoped: pointing the dialog at another row must not switch
     // the running engine the way selecting its row would.
     assertEquals(other, fixture.vm.selectedRef.value)
-    val edited = fixture.engines.getInstance(firstId)
+    val edited = fixture.engines.getInstance(first.id)
     assertEquals("Renamed away", edited?.label)
     assertEquals("my-own-model", edited?.model)
     assertEquals("Second", fixture.engines.getInstance(other.id)?.label)
@@ -502,12 +505,12 @@ class EngineViewModelTest {
 
   @Test
   fun `saving an edit drops the cached engine so the next request rebuilds`() = runTest {
-    val fixture = fixture()
-    val id = fixture.engines.instances.value.first().id
-    val ref = EngineRef.Instance(id)
+    val instance = EngineInstance.remote()
+    val fixture = fixture(initialInstances = listOf(instance))
+    val ref = EngineRef.Instance(instance.id)
     val before = fixture.registry.getEngine(ref)
 
-    fixture.vm.startEditConnection(id)
+    fixture.vm.startEditConnection(instance.id)
     fixture.vm.setDraftBaseUrl("http://example.com:11434")
     fixture.vm.saveDraft()
     settle()
@@ -519,12 +522,12 @@ class EngineViewModelTest {
 
   @Test
   fun `deleting a row drops the cached engine`() = runTest {
-    val fixture = fixture()
-    val id = fixture.engines.instances.value.first().id
-    val ref = EngineRef.Instance(id)
+    val instance = EngineInstance.remote()
+    val fixture = fixture(initialInstances = listOf(instance))
+    val ref = EngineRef.Instance(instance.id)
     fixture.registry.getEngine(ref)
 
-    fixture.vm.deleteInstance(id)
+    fixture.vm.deleteInstance(instance.id)
     settle()
 
     // A cached engine would still be served even though its row is gone.
@@ -533,56 +536,55 @@ class EngineViewModelTest {
 
   @Test
   fun `deleting a row removes it and leaves the other engines alone`() = runTest {
-    val fixture = fixture()
-    val firstId = fixture.engines.instances.value.first().id
+    val first = EngineInstance.remote().copy(label = "First")
+    val fixture = fixture(initialInstances = listOf(first))
     val other = addConnection(fixture.vm, "Second")
     settle()
 
-    fixture.vm.deleteInstance(firstId)
+    fixture.vm.deleteInstance(first.id)
     settle()
 
-    assertEquals(null, fixture.engines.getInstance(firstId))
+    assertEquals(null, fixture.engines.getInstance(first.id))
     assertEquals(listOf(other.id), fixture.engines.instances.value.map { it.id })
     assertEquals(other, fixture.vm.selectedRef.value)
   }
 
   @Test
   fun `deleting the selected row falls back to the offline builtin`() = runTest {
-    val fixture = fixture()
-    val id = fixture.engines.instances.value.first().id
-    fixture.vm.selectEngine(EngineRef.Instance(id))
+    val instance = EngineInstance.remote()
+    val fixture = fixture(initialInstances = listOf(instance))
+    fixture.vm.selectEngine(EngineRef.Instance(instance.id))
     settle()
 
-    fixture.vm.deleteInstance(id)
+    fixture.vm.deleteInstance(instance.id)
     settle()
 
     assertEquals(EngineRef.Builtin(EngineKind.Default), fixture.vm.selectedRef.value)
-    assertEquals(true, fixture.engines.instances.value.none { it.id == id })
+    assertEquals(true, fixture.engines.instances.value.none { it.id == instance.id })
   }
 
   @Test
   fun `instances lists the rows the connections list renders`() = runTest {
     val fixture = fixture()
-    val seededLabel = fixture.engines.instances.value.first().label
 
-    assertEquals(listOf(seededLabel), fixture.vm.instances.value.map { it.label })
+    assertEquals(emptyList(), fixture.vm.instances.value.map { it.label })
 
     // The list the connections UI renders follows the CRUD: a saved draft
     // appends its row beside the add button, an edit updates in place, a
     // delete drops it.
     val created = addConnection(fixture.vm, "Work")
     settle()
-    assertEquals(listOf(seededLabel, "Work"), fixture.vm.instances.value.map { it.label })
+    assertEquals(listOf("Work"), fixture.vm.instances.value.map { it.label })
 
     fixture.vm.startEditConnection(created.id)
     fixture.vm.setDraftLabel("Day job")
     fixture.vm.saveDraft()
     settle()
-    assertEquals(listOf(seededLabel, "Day job"), fixture.vm.instances.value.map { it.label })
+    assertEquals(listOf("Day job"), fixture.vm.instances.value.map { it.label })
 
     fixture.vm.deleteInstance(created.id)
     settle()
-    assertEquals(listOf(seededLabel), fixture.vm.instances.value.map { it.label })
+    assertEquals(emptyList(), fixture.vm.instances.value.map { it.label })
   }
 
   @Test

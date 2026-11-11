@@ -24,10 +24,11 @@ import me.tatarka.inject.annotations.Inject
  * [EngineSelectionState] per [EngineRef], so several connections can coexist and each
  * keeps its own endpoint, key, model, and window (ENGINE-CONFIG-PLAN.md).
  *
- * A fresh install is seeded with one Remote instance ([EngineInstance.defaultRemote]),
- * so the picker always has something configured; the built-in `Offline` engine
- * stays selected until the user chooses otherwise. Built-in refs are never
- * promoted to instance rows — [lastUsedAt] is what orders them in the picker.
+ * A fresh install starts with no custom instances; the built-in engines (e.g.
+ * `Offline` and the free Alpha Interplanetary backend) are always available and
+ * the built-in `Offline` engine stays selected until the user chooses
+ * otherwise. Built-in refs are never promoted to instance rows — [lastUsedAt]
+ * is what orders them in the picker.
  */
 @AppScope
 class EngineRepository @Inject constructor(
@@ -72,9 +73,9 @@ class EngineRepository @Inject constructor(
     scope.launch { load() }
   }
 
-  /** Reads the persisted engines and selection; seeds a default Remote on first read. */
+  /** Reads the persisted engines and selection. */
   suspend fun load() {
-    val instances = readInstances()
+    val instances = storage.getEngineInstances()
     _instances.value = instances
     // A retired kind or deleted instance can still be sitting in
     // `engine_selection_state` (an old "on-device" / "downloaded" key parses as an
@@ -158,14 +159,6 @@ class EngineRepository @Inject constructor(
       select(EngineRef.Builtin(EngineKind.Default))
     }
     scope.launch { storage.deleteEngineInstance(id) }
-  }
-
-  private suspend fun readInstances(): List<EngineInstance> {
-    val stored = storage.getEngineInstances()
-    if (stored.isNotEmpty()) return stored
-    val seeded = EngineInstance.defaultRemote()
-    storage.upsertEngineInstance(seeded)
-    return listOf(seeded)
   }
 }
 

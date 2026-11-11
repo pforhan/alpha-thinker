@@ -272,7 +272,7 @@ private fun CustomEngines(
     ) {
       Icon(Icons.Default.Add, contentDescription = null)
       Spacer(modifier = Modifier.width(Dimens.IconLabelGap))
-      Text("Add connection")
+      Text("Add your own connection")
     }
   }
 }

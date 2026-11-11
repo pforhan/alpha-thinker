@@ -41,13 +41,5 @@ data class EngineInstance(
       model = provider.defaultModel,
       contextTokens = provider.defaultContextTokens,
     )
-
-    /**
-     * The Remote connection a fresh install starts from: the app's documented
-     * local target ([RemoteProvider.Default], Ollama) with its starter endpoint,
-     * model, and window. The repository seeds one so the picker always offers
-     * something configured rather than an empty list on first run.
-     */
-    fun defaultRemote(): EngineInstance = remote()
   }
 }

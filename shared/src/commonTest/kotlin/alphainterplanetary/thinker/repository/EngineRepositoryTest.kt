@@ -32,16 +32,11 @@ class EngineRepositoryTest {
     )
 
   @Test
-  fun `a fresh install seeds one default Remote instance`() = runTest {
+  fun `a fresh install has no custom instances`() = runTest {
     val repo = repository()
     testScheduler.advanceUntilIdle()
 
-    val seeded = repo.instances.value.single()
-    assertEquals(EngineKind.Remote, seeded.kind)
-    assertEquals(RemoteProvider.Default, seeded.provider)
-    assertEquals(RemoteProvider.Default.defaultBaseUrl, seeded.baseUrl)
-    assertEquals(RemoteProvider.Default.defaultModel, seeded.model)
-    assertEquals(RemoteProvider.Default.defaultContextTokens, seeded.contextTokens)
+    assertEquals(emptyList(), repo.instances.value)
   }
 
   @Test
@@ -119,9 +114,7 @@ class EngineRepositoryTest {
     testScheduler.advanceUntilIdle()
 
     assertEquals(3_000L, repo.lastUsedAt.value[EngineRef.Builtin(EngineKind.Offline)])
-    val seeded = repo.instances.value.single()
-    assertEquals(EngineKind.Remote, seeded.kind)
-    assertEquals(RemoteProvider.Default, seeded.provider)
+    assertEquals(emptyList(), repo.instances.value)
   }
 
   @Test
