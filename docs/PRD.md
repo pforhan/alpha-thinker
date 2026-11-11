@@ -1,30 +1,30 @@
 # Product Requirements Document (PRD): Alpha Thinker
 
 ## 1. Product Vision
-Alpha Thinker is a project planning application that transforms a vague project idea (synopsis) into a detailed plan through iterative, synthesized questions. It is available in two editions: **Alpha Thinker Edge**, powered by an LLM, and **Alpha Thinker Lite**, a lightweight version focused on manual user-driven planning.
+Alpha Thinker is a project planning application that transforms a vague project idea (synopsis) into a detailed plan through iterative, synthesized questions. It is a single app with a selectable planning engine: an LLM-backed engine (remote or localhost) for generated questions and synthesis, and a built-in Offline engine for manual, user-driven planning without a model.
 
-## 2. Product Editions
+## 2. Planning Engines
 
-Both Editions share the same general UI, but differ in source of question material and ability to generate content.
+The app shares one UI regardless of the selected engine; engines differ in the source of question material and the ability to generate content.
 
 ### 2.0 Shared Features
 - **Custom Questions**: Users can extend the question pool by adding their own questions, specifying whether they are unique to the current project or added to a global pool for use in all projects.
 
-### 2.1 Alpha Thinker Edge
+### 2.1 LLM Engine
 - **Feature Set**: Full iterative synthesis using a remote or localhost LLM.
-- **Intelligence**: Automatically generates tailored questions and suggested answers based on the specific project synopsis and history. Includes any global questions added by the user. Every round is grounded in the project's accumulated Q&A — committed answers, drafts, and ignored marks — so questions sharpen as the plan fills in; 4.3 bounds that context for the model's window.
+- **Intelligence**: Automatically generates tailored questions and a recommended title based on the specific project synopsis and history. Includes any global questions added by the user. Every round is grounded in the project's accumulated Q&A — committed answers, drafts, and ignored marks — so questions sharpen as the plan fills in; 4.3 bounds that context for the model's window.
 - **Automation**: LLM-driven question archiving and synopsis updates.
 
-### 2.2 Alpha Thinker Lite
-- **Feature Set**: Manual planning workspace.
-- **Intelligence**: Uses a robust set of 20 hardcoded "Seed Questions" to kickstart the planning process, along with any global questiosn added.
+### 2.2 Offline Engine
+- **Feature Set**: Manual planning workspace that runs entirely on-device with no network and no language model.
+- **Intelligence**: Uses a built-in pool of seed questions to kickstart the planning process, along with any global questions added by the user.
 - **User-Powered UI**: The user is responsible for creating their own follow-up questions or modifying the plan without automated synthesis.
 
 ## 3. Core User Flow
 1. **Ideation**: User provides a brief project synopsis.
 2. **Initial Analysis**: 
-    - **Edge**: The LLM generates an editable title and initial tailored questions.
-    - **Lite**: The system applies the project title from the synopsis and loads the 20 Seed Questions.
+    - **LLM engine**: The engine generates an editable title and initial tailored questions.
+    - **Offline engine**: The system applies the project title from the synopsis and loads seed questions.
 3. **Iterative Synthesis**:
     - **Planning Phases**: Projects advance through a fixed library of six
       planning phases — Scope & Goals, Research, Design, Execution Plan,
@@ -37,7 +37,7 @@ Both Editions share the same general UI, but differ in source of question materi
     - User is presented a list of questions on cards, roughly enough to fill the screen without scrolling (though scrolling is acceptable on small screens).
     - As the user answers or dismisses questions, the response is recorded, the card moves to an "answered" list, and unseen questions replace them.
     - **Round Wrap-Up**: Once the questions in the current round are resolved (answered or ignored), the user intentionally wraps up the round to advance the planning phase and trigger the next round's generation. Round completion is always a manual, deliberate step — there is no automatic transition. At wrap-up the app presents a "what's next?" choice of 2–3 adjacent phases suggested from the current phase, the phases picked so far, and the project's status (detail in PROJECT-FLOWS.md).
-    - **Manual Expansion (Lite)**: The user manually adds new questions or works through the fixed seed list.
+    - **Manual Expansion (Offline engine)**: The user manually adds new questions or works through the seed list.
 4. **Documentation**: The final synthesized knowledge is exported as structured markdown.
 
 ## 4. Functional Requirements
@@ -52,17 +52,19 @@ Both Editions share the same general UI, but differ in source of question materi
 - **Answer Management**: Support for reading, answering, and editing answers.
 - **Question Archiving**: Users can manually deactivate or archive questions.
 - **Immediate Archiving**: Option to archive questions immediately upon being answered.
-- **Auto-Archive (Edge Only)**: Provide a user app-wide setting to determine behavior when the synopsis or preceding questions change: a) do nothing, b) clear all prior questions and answers, or c) ask the LLM if each question is still relevant.
-- **Next Round Generation**: When the user wraps up the current round, generate the first round's questions for the phase they chose in the wrap-up "what's next?" chooser. When the user taps "Get more questions", start a new `UserRequested` round in the current phase while pool questions remain. Works in both editions (hardcoded generator in Lite; LLM in Edge). "Get more questions" disables once the current phase's question pool is exhausted; "Finish the plan" then surfaces as the way out.
+- **Auto-Archive (requires an LLM engine)**: Provide a user app-wide setting to determine behavior when the synopsis or preceding questions change: a) do nothing, b) clear all prior questions and answers, or c) ask the LLM if each question is still relevant.
+- **Next Round Generation**: When the user wraps up the current round, generate the first round's questions for the phase they chose in the wrap-up "what's next?" chooser. When the user taps "Get more questions", start a new `UserRequested` round in the current phase while pool questions remain. Works with both the Offline engine and an LLM engine. "Get more questions" disables once the current phase's question pool is exhausted; "Finish the plan" then surfaces as the way out.
 
-### 4.3 LLM Integration (Alpha Thinker Edge Only)
+### 4.3 LLM Integration
 - Generate a set of tailored initial questions based on the project synopsis.
-- Generate initial and follow-up questions grounded in the project's accumulated Q&A (committed answers, drafts, and ignored questions), not just the synopsis — a wrap-up advancing to a new phase seeds that phase's first round with everything already written. When the accumulated context exceeds a configurable token budget, answers from the earliest phases are dropped (question text retained; the current phase's answers are never cut) to stay within the model's window. Planned refinement (IMPLEMENTATION-PLAN.md Phase 3.5): a near-limit choice to keep everything, drop early answers, or ask the LLM to summarize earlier phases.
+- Generate initial and follow-up questions grounded in the project's accumulated Q&A (committed answers, drafts, and ignored questions), not just the synopsis — a wrap-up advancing to a new phase seeds that phase's first round with everything already written. The transcript is budgeted to a share of the selected model's context window; when it nears that limit the user can choose to keep everything, drop earlier answers (question text retained; the current phase's answers are never cut), or ask the LLM to summarize earlier phases so later rounds stay within the window.
 - **Answer-time research:** when answering a question the user can choose to research it (a Research action in the answer dialog with editable search terms) — the app runs a search/fetch and summarizes findings into the answer draft with a source link, for the user to review and edit before committing. Research is initiated only by that user action (never an automatic LLM tool call) and degrades gracefully when unavailable (unconfigured, offline, or unsupported on the target) so the user can always answer manually. Provider configuration (such as an API key) is stored only if the chosen search provider requires it. It does not change question generation, which remains a single JSON-array reply.
 - **Model selection & curation:** The app surfaces remote models in presentation groupings — **Recommended** (best balance of quality and speed for Alpha Thinker's planning tasks: concise title generation, JSON-conforming question lists, and phase summarization), **High-quality but Slower**, **Lower-quality but Fast**, **Unknown** (unmeasured models), and **Discouraged**. Groupings are presentational only; no model is ever hidden and every discovered model remains selectable. Rankings use measured eval data when available, falling back to family heuristics for unmeasured models. The app auto-selects the best available model from Recommended, falling back to High-quality but Slower, then Lower-quality but Fast (otherwise the first ranked model) when no valid model is selected or the current selection is missing. Model identities resolve `:latest` aliases for display while keeping canonical IDs for selection. When using an **Ollama** server, the UI can pull models directly (by tag) with progress/cancel feedback.
 
 ### 4.4 Seed Questions 
-The app ships with a large body of default questions; see [HardcodedQuestions.kt](../shared/src/commonMain/kotlin/alphainterplanetary/thinker/engine/OfflinePlanningEngine.kt)
+The app ships a built-in pool of seed questions for the Offline engine; see [OfflinePlanningEngine](../shared/src/commonMain/kotlin/alphainterplanetary/thinker/engine/OfflinePlanningEngine.kt).
+
+## 5. User Interface
 
 ### 5.1 Projects List
 - Display summary of all projects, including synopsis.
@@ -79,7 +81,7 @@ The app ships with a large body of default questions; see [HardcodedQuestions.kt
 - Ability to view unanswered questions, archived questions, or both.
 - Ability to ask a new question, optionally adding to global list.
 - Visual indicators for completed/answered questions.
-- Picker for "Auto-Archive" behavior (Edge Only).
+- Picker for "Auto-Archive" behavior (requires an LLM engine).
 - Action to export the final project state.
 - **Phase progress**: The detail header and project list card show the current planning phase and a display-only phase timeline (traversed / current / upcoming), plus the current phase's completion % (resolved vs. total questions). In the Answered view, questions are grouped under per-phase section headers (e.g. "Research — 5 answered"). Rounds themselves stay invisible — they are metadata, not UI.
 
@@ -119,7 +121,7 @@ The app ships with a large body of default questions; see [HardcodedQuestions.kt
 {{/each}}
 {{/with}}
 ```
-- Alpha Thinker Edge can also ask the LLM to rewrite the above as a cohesive doc.
+- An LLM engine can also be asked to rewrite the above as a cohesive doc.
 
 ## 7. Non-Functional Requirements
 - **Offline First**: The app should rely on the built-in Offline engine or local mocks to ensure rapid iteration and privacy.

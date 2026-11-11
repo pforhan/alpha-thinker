@@ -10,16 +10,16 @@ This document outlines the technical investigations and design decisions require
 ### Key Decisions
 - **Layered Architecture:** The UI layer (Compose Multiplatform) remains "logic-free," acting as a presentation layer that observes the KMP engine. Complex business logic and data management reside within the KMP layer.
 - **Inference Engine:** Adopted **Koog** (`ai.koog:koog-agents`) as the LLM abstraction and agent layer, with a **selectable inference backend per engine** (see "LLM Inference Layer" below): remote cloud / OpenAI-compatible / Ollama through Koog's shipped clients. Local and system on-device models were removed rather than shipped; see [ARCHIVED-LOCAL-MODELS.md](ARCHIVED-LOCAL-MODELS.md).
-- **Resilience & Recovery:** If the LLM inference fails (e.g., due to resource constraints or malformed output), the app **surfaces the failure and lets the user choose**: retry, switch to the **Alpha Thinker Lite** engine, or pick another engine. Nothing silently switches engines behind the user's back — see "Recovery" under "LLM Inference Layer".
+- **Resilience & Recovery:** If the LLM inference fails (e.g., due to resource constraints or malformed output), the app **surfaces the failure and lets the user choose**: retry, switch to the **Offline** engine, or pick another engine. Nothing silently switches engines behind the user's back — see "Recovery" under "LLM Inference Layer".
 - **State Management:** UI state follows Compose Multiplatform conventions, with ViewModels exposing `StateFlow` state.
-- **Unified UX:** The visual styling and user interface will remain consistent across both the Lite and Edge editions.
+- **Unified UX:** The visual styling and user interface remain consistent across the app regardless of the selected engine.
 - **Data Persistence:** For the development phase, complex schema migrations will be ignored.
 
 ## Target Architecture (v1.0)
 This iteration proposes a clear separation of concerns:
 1. **Frontend UI:** Compose Multiplatform for a single, unified, and cross-platform user experience.
 2. **Core Logic/Engine:** Kotlin Multiplatform (KMP) for handling core domain logic, data persistence, and heavy computational lifting.
-3. **LLM Inference Layer:** Koog-backed edge-LLM execution for autonomous question generation, synthesis, and (opt-in) agentic lookup. Backends plug into Koog's `LLMClient` / prompt-executor seam: remote OpenAI-compatible / Ollama via Koog's shipped clients (see "LLM Inference Layer" below).
+3. **LLM Inference Layer:** Koog-backed edge-LLM execution for autonomous question generation and synthesis, plus user-initiated answer-time research. Backends plug into Koog's `LLMClient` / prompt-executor seam: remote OpenAI-compatible / Ollama via Koog's shipped clients (see "LLM Inference Layer" below).
 
 This model allows the KMP core to be the 'source of truth' for the application's business logic, decoupling it from UI platform specifics.
 
