@@ -36,12 +36,12 @@ class TaskBackedModelDownloader(
             // A cancellation is the downloader's own terminal state: the task
             // runner reports a cancelled body as failed, which would relabel
             // the row the user just stopped.
-            if (state.status == DownloadStatus.Cancelled) return@map state
+            if (state.status == DownloadProgress.Cancelled) return@map state
             val mappedStatus = when (task.status) {
-              TaskStatus.Queued -> DownloadStatus.Queued
-              TaskStatus.Running -> DownloadStatus.Running
-              TaskStatus.Succeeded -> DownloadStatus.Succeeded
-              TaskStatus.Failed -> DownloadStatus.Failed
+              TaskStatus.Queued -> DownloadProgress.Queued
+              TaskStatus.Running -> DownloadProgress.Running
+              TaskStatus.Succeeded -> DownloadProgress.Succeeded
+              TaskStatus.Failed -> DownloadProgress.Failed
             }
             state.copy(
               status = mappedStatus,
@@ -118,7 +118,7 @@ class TaskBackedModelDownloader(
     _downloads.update {
       it + DownloadState(
         handle = handle,
-        status = DownloadStatus.Running,
+        status = DownloadProgress.Running,
         modelId = modelId,
         source = "ollama",
       )
@@ -137,7 +137,7 @@ class TaskBackedModelDownloader(
     _downloads.update { list ->
       list.map { current ->
         if (current.handle.id == handleId) {
-          current.copy(status = DownloadStatus.Cancelled)
+          current.copy(status = DownloadProgress.Cancelled)
         } else {
           current
         }

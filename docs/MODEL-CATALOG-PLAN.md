@@ -198,7 +198,7 @@ browser chip shows the resolved name while the id stays canonical.
   - [x] Define `ModelDownloader` (`downloads()`, `pullOllama(modelId, baseUrl)`,
         `cancel(handleId)`), `DownloadHandle(id, taskId)`,
         `DownloadState` (handle/task/kind/status/modelId/bytes/throughput/progress/message/source),
-        `DownloadKind` (`OllamaPull`), `DownloadStatus` (`Queued`,
+        `DownloadKind` (`OllamaPull`), `DownloadProgress` (`Queued`,
         `Running`, `Paused`, `Succeeded`, `Failed`, `Cancelled`).
 - [x] **Ollama pull client:** Add `OllamaPullClient` using `KoogHttpClient` for
       streaming NDJSON from `POST /api/pull` with `{"model": ..., "stream": true}`.

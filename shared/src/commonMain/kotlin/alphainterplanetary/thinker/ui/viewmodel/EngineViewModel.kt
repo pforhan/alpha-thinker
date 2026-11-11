@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.downloads.DownloadState
-import alphainterplanetary.thinker.downloads.DownloadStatus
+import alphainterplanetary.thinker.downloads.DownloadProgress
 import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.engine.config.EngineAvailability
 import alphainterplanetary.thinker.engine.config.EngineCatalogEntry
@@ -235,7 +235,7 @@ class EngineViewModel(
       var completedPulls = emptySet<String>()
       downloads.collect { states ->
         val succeeded = states
-          .filter { it.status == DownloadStatus.Succeeded }
+          .filter { it.status == DownloadProgress.Succeeded }
           .map { it.handle.id }
           .toSet()
         if ((succeeded - completedPulls).isNotEmpty() && _draft.value != null) {

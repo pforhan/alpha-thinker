@@ -29,7 +29,7 @@ class TaskBackedModelDownloaderTest {
     testScheduler.runCurrent()
 
     val state = downloader.downloads().value.single { it.handle.id == handle.id }
-    assertEquals(DownloadStatus.Succeeded, state.status)
+    assertEquals(DownloadProgress.Succeeded, state.status)
     assertEquals(100L, state.bytesDone)
     assertEquals(100L, state.bytesTotal)
     assertEquals(1f, state.progress)
@@ -84,7 +84,7 @@ class TaskBackedModelDownloaderTest {
     testScheduler.runCurrent()
 
     val state = downloader.downloads().value.single { it.handle.id == handle.id }
-    assertEquals(DownloadStatus.Failed, state.status)
+    assertEquals(DownloadProgress.Failed, state.status)
     assertEquals("manifest missing", state.message)
     assertEquals(null, state.progress)
   }

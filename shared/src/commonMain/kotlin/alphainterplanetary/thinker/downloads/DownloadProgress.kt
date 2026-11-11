@@ -3,7 +3,7 @@ package alphainterplanetary.thinker.downloads
 /**
  * State of a download.
  */
-enum class DownloadStatus(val finished: Boolean = false) {
+enum class DownloadProgress(val finished: Boolean = false) {
   Queued,
   Running,
   Paused,

@@ -69,9 +69,9 @@ this audit except 26.2, which landed first.
 | Type | File | Responsibility | Key call sites | Verdict | Rationale |
 |---|---|---|---|---|---|
 | `DownloadKind` | *(removed)* | Former download kind enum (`OllamaPull` only). | — | **Eliminated**. | Redundant after local-model removal/27.2: only Ollama pulls exist, so `DownloadState.kind` and kind-based filters were removed. |
-| `DownloadStatus` | `downloads/DownloadStatus.kt` | Lifecycle phase enum (`Queued`…`Cancelled`, `finished`). | `DownloadState`, `TaskBackedModelDownloader` status mapping, pull UI/tests. | **Keep, naming review** (27.2 split). | Phase enum vs. aggregate `DownloadState`; parallels `TaskStatus`. Decide rename to `DownloadPhase` only if low churn (26.8). |
+| `DownloadProgress` | `downloads/DownloadStatus.kt` | Lifecycle phase enum (`Queued`…`Cancelled`, `finished`). | `DownloadState`, `TaskBackedModelDownloader` status mapping, pull UI/tests. | **Keep, naming review** (27.2 split). | Phase enum vs. aggregate `DownloadState`; parallels `TaskStatus`. Decide rename to `DownloadPhase` only if low churn (26.8). |
 | `DownloadHandle` | `downloads/DownloadHandle.kt` | Download handle linking `id` to task id. | `ModelDownloader`/`TaskBackedModelDownloader`, VM/UI cancel. | **Keep** (27.2). | Split from `DownloadModels.kt`. |
-| `DownloadState` | `downloads/DownloadState.kt` | Observable aggregate snapshot of a download. | `ModelDownloader.downloads()`, pull chips/progress/cancel UI, tests. | **Keep** (27.2). | The observed shape; distinct from `DownloadStatus` phase. |
+| `DownloadState` | `downloads/DownloadState.kt` | Observable aggregate snapshot of a download. | `ModelDownloader.downloads()`, pull chips/progress/cancel UI, tests. | **Keep** (27.2). | The observed shape; distinct from `DownloadProgress` phase. |
 | `ModelDownloader` (interface) | `downloads/ModelDownloader.kt` | Narrow pull API: observe, `pullOllama`, `cancel`. | `TaskBackedModelDownloader`, `EngineViewModel`/DI. | **Keep**. | Contract for fakes and the task-backed impl. |
 | `TaskBackedModelDownloader` | `downloads/TaskBackedModelDownloader.kt` | Bridges Ollama pulls to `TaskRunner`/progress/metadata/cancel. | DI, `ModelDownloader` impl, tests. | **Keep**. | The live pull path. |
 | `OllamaPullClient` (interface) | `downloads/OllamaPullClient.kt` | Streaming pull contract. | `KoogOllamaPullClient`, `TaskBackedModelDownloader`, tests. | **Keep** (27.2). | Split from impl/event. |
@@ -138,7 +138,7 @@ Known coupling to resolve deliberately during moves (not pure-domain):
 - One-type-per-file (AGENTS) for the plan's scope: resolved in 26.6/26.9/27.2
   (`ModelCuration` → 6 files; `RemoteConnection` extracted; `RemoteModelCatalog` →
   `RemoteModelInfo`/contract/`KoogRemoteModelCatalog` impl with private DTOs local;
-  `DownloadModels` → `DownloadStatus`/`Handle`/`State` (`DownloadKind` later eliminated);
+  `DownloadModels` → `DownloadProgress`/`Handle`/`State` (`DownloadKind` later eliminated);
   `OllamaPullClient` → interface/event/impl with private DTOs local;
   `PlanningEngine`/`QuestionBatch`, `EngineDelayConfig`/`EngineInteraction`,
   `ModelBrowserMerge`/`ModelBrowserEntry`, `EngineCatalog`/`EngineCatalogEntry` split).

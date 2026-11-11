@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.downloads.DownloadHandle
 import alphainterplanetary.thinker.downloads.DownloadState
-import alphainterplanetary.thinker.downloads.DownloadStatus
+import alphainterplanetary.thinker.downloads.DownloadProgress
 import alphainterplanetary.thinker.downloads.ModelDownloader
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineKind
@@ -654,7 +654,7 @@ class EngineViewModelTest {
       states.update {
         it + DownloadState(
           handle = handle,
-          status = DownloadStatus.Running,
+          status = DownloadProgress.Running,
           modelId = modelId,
           source = "ollama",
         )
@@ -665,7 +665,7 @@ class EngineViewModelTest {
     fun succeed() {
       val id = checkNotNull(lastHandle).id
       states.update { list ->
-        list.map { if (it.handle.id == id) it.copy(status = DownloadStatus.Succeeded) else it }
+        list.map { if (it.handle.id == id) it.copy(status = DownloadProgress.Succeeded) else it }
       }
     }
 
