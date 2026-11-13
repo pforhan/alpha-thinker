@@ -122,4 +122,4 @@ class LogScopeTest {
 }
 
 private fun questionLog(log: RecordingActivityLogger, activityId: String) =
-  log.context(activityId, LogCategory.QuestionGeneration, LogSource.RemoteLLM)
+  log.context(activityId, LogTopic.QuestionGeneration, LogSource.RemoteLLM)

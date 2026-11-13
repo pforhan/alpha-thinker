@@ -1,8 +1,9 @@
 package alphainterplanetary.thinker.database
 
-import alphainterplanetary.thinker.activitylog.LogCategory
 import alphainterplanetary.thinker.activitylog.LogEntry
 import alphainterplanetary.thinker.activitylog.LogSource
+import alphainterplanetary.thinker.activitylog.LogStep
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineKind
 import alphainterplanetary.thinker.engine.config.EngineRef
@@ -62,8 +63,9 @@ fun LogEntry.toEntity(): LogEntryEntity = LogEntryEntity(
   id = id ?: 0,
   projectId = projectId,
   activityId = activityId,
-  category = category.name,
+  topic = topic.name,
   source = source?.name,
+  step = step.name,
   log = log,
   timestampMillis = timestamp.toEpochMilliseconds(),
   raw = raw,
@@ -123,19 +125,23 @@ fun LogEntryEntity.toModel(): LogEntry = LogEntry(
   id = id,
   projectId = projectId,
   activityId = activityId,
-  category = parseCategory(category),
+  topic = parseTopic(topic),
   source = source?.let(::parseSource),
+  step = parseStep(step),
   log = log,
   timestamp = Instant.fromEpochMilliseconds(timestampMillis),
   raw = raw,
 )
 
-/** Unknown stored categories degrade to [LogCategory.Info] rather than crash. */
-private fun parseCategory(name: String): LogCategory =
-  runCatching { LogCategory.valueOf(name) }.getOrElse { LogCategory.Info }
+/** Unknown stored topics degrade to [LogTopic.Info] rather than crash. */
+private fun parseTopic(name: String): LogTopic =
+  runCatching { LogTopic.valueOf(name) }.getOrElse { LogTopic.Info }
 
 private fun parseSource(name: String): LogSource? =
   runCatching { LogSource.valueOf(name) }.getOrNull()
+
+private fun parseStep(name: String): LogStep =
+  runCatching { LogStep.valueOf(name) }.getOrElse { LogStep.Note }
 
 fun EngineInstance.toEntity() = EngineInstanceEntity(
   id = id,

@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.downloads
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.tasks.ConcurrencyGroup
 import alphainterplanetary.thinker.tasks.TaskKind
@@ -69,8 +69,7 @@ class TaskBackedModelDownloader(
       // Milestone notes join the task's activity under a download/Ollama category so the
       // Activity Log can label the work meaningfully; TaskRunner owns the lifecycle rows.
       val logContext = activityLogger.context(
-        activityId = taskId,
-        category = LogCategory.ModelDownload,
+        activityId = taskId, topic = LogTopic.ModelDownload,
         source = LogSource.Ollama,
         projectId = "",
       )

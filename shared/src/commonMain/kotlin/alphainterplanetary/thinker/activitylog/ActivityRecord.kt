@@ -13,8 +13,10 @@ import kotlin.time.Duration
  * This is the read model the viewer builds from (see
  * [groupByActivity]); the "interesting bits" — category, source, a synthesized
  * summary, an elapsed duration, whether anything failed — are derived here so
- * the view stays a thin projection over the raw log. Rows are parsed through
- * the [LogMarkers] conventions the writers ([LogContext], [TaskRunner]) file.
+ * the view stays a thin projection over the raw log. Rows are interpreted by
+ * their typed [LogStep] (set by the writers, e.g. [LogContext]/[TaskRunner]);
+ * response/batch counts and round-note action/phase remain prose payloads read
+ * from [LogEntry.log].
  */
 class ActivityRecord private constructor(
   val activityId: String,
@@ -27,22 +29,22 @@ class ActivityRecord private constructor(
   /**
    * The activity's topics as a display string: the distinct work categories its
    * rows carry, in the order they first appear, joined by `" • "`. The
-   * [LogCategory.TaskRun] lifecycle wrapper is omitted (every task has one), so
+   * [LogTopic.TaskRun] lifecycle wrapper is omitted (every task has one), so
    * a generation activity reads "Question generation" or, for a fan-out,
    * "Prior-phase summary • Question generation"; a pure lifecycle activity
    * falls back to "Task" unless the task kind implies a more specific label.
    */
-  val category: String
+  val topic: String
     get() = workCategories().joinToString(CATEGORY_SEPARATOR) { it.label }
-      .ifEmpty { taskKind()?.displayCategory ?: entries.first().category.label }
+      .ifEmpty { taskKind()?.displayCategory ?: entries.first().topic.label }
 
   /** The distinct, non-lifecycle categories the activity's rows carry, in order. */
-  private fun workCategories(): List<LogCategory> =
-    entries.map { it.category }.filter { it != LogCategory.TaskRun }.distinct()
+  private fun workCategories(): List<LogTopic> =
+    entries.map { it.topic }.filter { it != LogTopic.TaskRun }.distinct()
 
   private val TaskKind.displayCategory: String?
     get() = when (this) {
-      TaskKind.OllamaModelPull -> LogCategory.ModelDownload.label
+      TaskKind.OllamaModelPull -> LogTopic.ModelDownload.label
       else -> null
     }
 
@@ -52,7 +54,7 @@ class ActivityRecord private constructor(
 
   /**
    * The producer behind the activity. Task-runner lifecycle rows bracket every
-   * task (the `started:`/terminal rows, and the repository's compaction notes),
+   * task (the started/terminal rows, and the repository's compaction notes),
    * so the first populated source would always read "Task runner"; prefer the
    * first non-[LogSource.TaskRunner] source — the engine that did the work —
    * falling back to the task kind's implied source (e.g. an Ollama pull is
@@ -82,7 +84,7 @@ class ActivityRecord private constructor(
       return (stamps.max() - stamps.min()).takeIf { it > Duration.ZERO }
     }
 
-  /** Whether any row failed or was cancelled (`failed:`/`cancelled`). */
+  /** Whether any row failed or was cancelled. */
   val hasError: Boolean
     get() = entries.any { it.isFailureLine() }
 
@@ -101,7 +103,7 @@ class ActivityRecord private constructor(
       failureHeadline()?.let { return it }
 
       val kind = taskKind()
-      if (kind?.isGeneration == true || entries.any { it.category == LogCategory.QuestionGeneration }) {
+      if (kind?.isGeneration == true || entries.any { it.topic == LogTopic.QuestionGeneration }) {
         batchCount()?.let { count ->
           advancedToPhase()?.let { phase -> return "Advanced to $phase — ${generatedClause(count)}" }
           return batchSummary(count)
@@ -123,7 +125,7 @@ class ActivityRecord private constructor(
       return lastResponseLine()?.log ?: latest.log
     }
 
-  /** The question count a batch `response:` row reports (`N questions`), if any. */
+  /** The question count a batch response row reports (`N questions`), if any. */
   private fun batchCount(): Int? {
     val count = batchCountRegex
       .find(entries.lastOrNull { it.isDetailResponse() }?.log.orEmpty())
@@ -138,15 +140,17 @@ class ActivityRecord private constructor(
    * activity carries one: a generation that opened a new phase rather than
    * adding questions to the current one. Null for any other action ("more
    * questions") or a round note without an advance action, so only a real
-   * advance changes the headline.
+   * advance changes the headline. The action/phase remain prose payloads in the
+   * note's [LogEntry.log].
    */
   private fun advancedToPhase(): String? {
-    val note = entries.lastOrNull { it.log.startsWith(LogMarkers.Action) } ?: return null
-    val action = note.log.substringBefore('\n').removePrefix(LogMarkers.Action).trim()
-    if (action != LogMarkers.ActionAdvancePhase) return null
+    val note = entries.lastOrNull { it.step == LogStep.Note && it.log.startsWith(ACTION_PREFIX) }
+      ?: return null
+    val action = note.log.substringBefore('\n').removePrefix(ACTION_PREFIX).trim()
+    if (action != ACTION_ADVANCE_PHASE) return null
     return note.log.lineSequence()
-      .firstOrNull { it.startsWith(LogMarkers.Phase) }
-      ?.removePrefix(LogMarkers.Phase)
+      .firstOrNull { it.startsWith(PHASE_PREFIX) }
+      ?.removePrefix(PHASE_PREFIX)
       ?.trim()
   }
 
@@ -159,12 +163,13 @@ class ActivityRecord private constructor(
     val kind = taskKind()
     val model = if (kind == TaskKind.OllamaModelPull) startedModelName() else null
     val subject = model?.let { "Pull $it" } ?: kind?.title
-    return when {
-      line.log == LogMarkers.Cancelled -> if (subject != null) "$subject cancelled" else line.log
-      else -> {
-        val message = line.log.removePrefix("${LogMarkers.Failed} ")
+    return when (line.step) {
+      LogStep.Cancelled -> if (subject != null) "$subject cancelled" else line.log
+      LogStep.Failed -> {
+        val message = line.log.removePrefix("failed:").trimStart()
         if (subject != null) "$subject failed: $message" else line.log
       }
+      else -> null
     }
   }
 
@@ -175,10 +180,11 @@ class ActivityRecord private constructor(
   private fun succeededRow(): LogEntry? = entries.lastOrNull { it.isSucceededRow() }
 
   /**
-   * The kind of task this activity carries, parsed from its `started:` lifecycle
-   * row; null when the activity has no lifecycle rows (a standalone detail).
-   * The started row may carry a human detail after the enum name (e.g.
-   * `started: OllamaModelPull qwen2.5:7b`), so the name is matched by prefix.
+   * The kind of task this activity carries, read from its started lifecycle row;
+   * null when the activity has no lifecycle rows (a standalone detail). The
+   * started row's display text may carry a human detail after the enum name
+   * (e.g. `started: OllamaModelPull qwen2.5:7b`), so the name is matched by
+   * prefix.
    */
   private fun taskKind(): TaskKind? {
     val label = startedLabel() ?: return null
@@ -187,7 +193,7 @@ class ActivityRecord private constructor(
     }
   }
 
-  /** The detail after the task kind in the `started:` row (e.g. a model name), if any. */
+  /** The detail after the task kind in the started row (e.g. a model name), if any. */
   private fun startedModelName(): String? {
     val label = startedLabel() ?: return null
     val kind = TaskKind.entries.firstOrNull { candidate ->
@@ -197,18 +203,17 @@ class ActivityRecord private constructor(
   }
 
   private fun startedLabel(): String? = entries.firstNotNullOfOrNull { row ->
-    if (row.log.startsWith(LogMarkers.Started))
-      row.log.substringAfter(LogMarkers.Started).trim() else null
+    if (row.step == LogStep.Started) row.log.removePrefix("started:").trim() else null
   }
 
-  /** A title recommendation headline from the activity's `response:` row, if any. */
+  /** A title recommendation headline from the activity's response row, if any. */
   private fun titleSummary(): String? {
     val isTitleActivity = taskKind() == TaskKind.TitleRecommendation ||
-      entries.any { it.category == LogCategory.TitleRecommendation }
+      entries.any { it.topic == LogTopic.TitleRecommendation }
     if (!isTitleActivity) return null
     val text = entries.lastOrNull { it.isDetailResponse() }
       ?.log
-      ?.substringAfter(LogMarkers.Response)
+      ?.removePrefix("response:")
       ?.trim()
       .orEmpty()
     if (text.isEmpty()) return null
@@ -241,31 +246,33 @@ class ActivityRecord private constructor(
   }
 }
 
-/** Joins an activity's distinct topic labels into its [ActivityRecord.category]. */
+/** Joins an activity's distinct topic labels into its [ActivityRecord.topic]. */
 private const val CATEGORY_SEPARATOR = " • "
 
-private val RESPONSE_PREFIXES = listOf(
-  LogMarkers.Response,
-  LogMarkers.Succeeded,
-  LogMarkers.Failed,
-  LogMarkers.Cancelled,
-)
+/** Round-note action line prefix (prose payload, see Phase 3.8). */
+private const val ACTION_PREFIX = "Action:"
+
+/** Round-note phase line prefix (prose payload). */
+private const val PHASE_PREFIX = "Phase:"
+
+/** Round-note action meaning "wrap up into a new phase". */
+private const val ACTION_ADVANCE_PHASE = "advance phase"
 
 /** A row that reads as an outcome: a response or a terminal marker. */
-private fun LogEntry.isResponseLine(): Boolean =
-  RESPONSE_PREFIXES.any { log.startsWith(it) }
+private fun LogEntry.isResponseLine(): Boolean = when (step) {
+  LogStep.Response, LogStep.Succeeded, LogStep.Failed, LogStep.Cancelled -> true
+  LogStep.Started, LogStep.Prompt, LogStep.Note -> false
+}
 
 /** A row that reads as a failure or cancellation. */
 private fun LogEntry.isFailureLine(): Boolean =
-  log.startsWith(LogMarkers.Failed) ||
-    log == LogMarkers.Cancelled
+  step == LogStep.Failed || step == LogStep.Cancelled
 
-/** An engine-produced detail row (`response: …`), not a lifecycle terminal. */
-private fun LogEntry.isDetailResponse(): Boolean = log.startsWith(LogMarkers.Response)
+/** An engine-produced detail row, not a lifecycle terminal. */
+private fun LogEntry.isDetailResponse(): Boolean = step == LogStep.Response
 
-/** A plain success terminal row (`succeeded` or `succeeded: …`). */
-private fun LogEntry.isSucceededRow(): Boolean =
-  log == LogMarkers.Succeeded || log.startsWith("${LogMarkers.Succeeded}:")
+/** A plain success terminal row. */
+private fun LogEntry.isSucceededRow(): Boolean = step == LogStep.Succeeded
 
 private val TaskKind.isGeneration: Boolean
   get() = this == TaskKind.QuestionGeneration

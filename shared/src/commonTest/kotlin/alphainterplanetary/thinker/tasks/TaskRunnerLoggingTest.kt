@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.tasks
 
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import kotlin.test.Test
@@ -34,7 +34,7 @@ class TaskRunnerLoggingTest {
       "lifecycle rows carry the task's project",
     )
     assertTrue(
-      log.entries.all { it.category == LogCategory.TaskRun && it.source == LogSource.TaskRunner },
+      log.entries.all { it.topic == LogTopic.TaskRun && it.source == LogSource.TaskRunner },
       "lifecycle rows report the TaskRun category and TaskRunner source",
     )
   }

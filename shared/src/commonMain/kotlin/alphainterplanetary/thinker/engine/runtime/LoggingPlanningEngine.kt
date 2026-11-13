@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.engine.runtime
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogScope
 import alphainterplanetary.thinker.engine.core.ForwardingPlanningEngine
 import alphainterplanetary.thinker.engine.core.PlanningContext.PhaseSummary
@@ -28,7 +28,7 @@ import kotlinx.coroutines.withContext
  * log. An engine that did report gets exactly one row pair per request and no
  * second, duplicate summary.
  *
- * [LogCategory] is chosen per interaction and [source] reflects whichever
+ * [LogTopic] is chosen per interaction and [source] reflects whichever
  * engine actually ran. Other decorators need no change: a plain `suspend`
  * delegation (as [SlowDownPlanningEngine] does) carries the scope through.
  *
@@ -46,8 +46,7 @@ class LoggingPlanningEngine(
 
   override suspend fun recommendTitle(synopsis: String, activityId: String): String =
     logged(
-      activityId = activityId,
-      category = LogCategory.TitleRecommendation,
+      activityId = activityId, topic = LogTopic.TitleRecommendation,
       summary = { title -> title },
     ) {
       delegate.recommendTitle(synopsis, activityId)
@@ -61,8 +60,7 @@ class LoggingPlanningEngine(
     activityId: String,
   ): String =
     logged(
-      activityId = activityId,
-      category = LogCategory.PriorSummary,
+      activityId = activityId, topic = LogTopic.PriorSummary,
       summary = { summary -> summary },
     ) {
       delegate.summarizePriorAnswers(title, synopsis, phase, transcript, activityId)
@@ -78,8 +76,7 @@ class LoggingPlanningEngine(
     priorSummaries: List<PhaseSummary>,
   ): QuestionBatch =
     logged(
-      activityId = activityId,
-      category = LogCategory.QuestionGeneration,
+      activityId = activityId, topic = LogTopic.QuestionGeneration,
       summary = { batch -> batch.summary() },
     ) {
       delegate.generateQuestions(
@@ -100,11 +97,11 @@ class LoggingPlanningEngine(
    */
   private suspend fun <T> logged(
     activityId: String,
-    category: LogCategory,
+    topic: LogTopic,
     summary: (T) -> String,
     block: suspend () -> T,
   ): T {
-    val scope = LogScope { log.context(activityId, category, source) }
+    val scope = LogScope { log.context(activityId, topic, source) }
     return try {
       val result = withContext(scope) { block() }
       scope.fallback()?.response(summary(result))

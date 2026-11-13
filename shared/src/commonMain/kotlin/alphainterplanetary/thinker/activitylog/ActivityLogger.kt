@@ -25,17 +25,17 @@ interface ActivityLogger {
 
   /**
    * A scoped writer for one activity's rows (see [LogContext]): carries the
-   * fixed [activityId]/[category]/[source]/[projectId] and files each row under
-   * the [LogMarkers] prefix the read model parses, so a writer appending a
-   * sequence ("started" → interaction rows → one terminal row) never repeats
-   * the sibling fields or hand-builds a `log` string.
+   * fixed [activityId]/[topic]/[source]/[projectId] and files each row with the
+   * right [LogStep] and display text, so a writer appending a sequence
+   * ("started" → interaction rows → one terminal row) never repeats the sibling
+   * fields or hand-builds a row.
    */
   fun context(
     activityId: String = randomUUID(),
-    category: LogCategory,
+    topic: LogTopic,
     source: LogSource?,
     projectId: String? = null,
-  ): LogContext = LogContext(this, activityId, category, source, projectId)
+  ): LogContext = LogContext(this, activityId, topic, source, projectId)
 
   /** Creates a scoped writer for a task-based activity. */
   fun taskContext(
@@ -43,7 +43,7 @@ interface ActivityLogger {
     projectId: String,
   ): LogContext = context(
     activityId = activityId,
-    category = LogCategory.TaskRun,
+    topic = LogTopic.TaskRun,
     source = LogSource.TaskRunner,
     projectId = projectId,
   )

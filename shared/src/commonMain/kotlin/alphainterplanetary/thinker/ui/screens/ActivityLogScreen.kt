@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
 import alphainterplanetary.thinker.activitylog.LogEntry
-import alphainterplanetary.thinker.activitylog.LogMarkers
+import alphainterplanetary.thinker.activitylog.LogStep
 import alphainterplanetary.thinker.ui.chrome.AppChromeState
 import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.components.EmptyState
@@ -140,7 +140,7 @@ private fun ActivityLogCard(item: ActivityLogItem) {
         Column(modifier = Modifier.weight(1f)) {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-              text = activity.category,
+              text = activity.topic,
               style = MaterialTheme.typography.titleSmall,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis,
@@ -213,10 +213,9 @@ private fun summaryColor(hasError: Boolean): Color =
 private fun EntryRow(entry: LogEntry) {
   var showFull by remember { mutableStateOf(false) }
   val raw = entry.raw
-  val isVerbose =
-    entry.log.startsWith(LogMarkers.Prompt) || entry.log.startsWith(LogMarkers.Response)
+  val isVerbose = entry.step == LogStep.Prompt || entry.step == LogStep.Response
   val valueColor = when {
-    entry.log.startsWith(LogMarkers.Failed) || entry.log == LogMarkers.Cancelled -> {
+    entry.step == LogStep.Failed || entry.step == LogStep.Cancelled -> {
       MaterialTheme.colorScheme.error
     }
 

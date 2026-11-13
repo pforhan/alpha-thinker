@@ -9,11 +9,11 @@ import alphainterplanetary.thinker.util.now
 /**
  * A scoped writer for the rows of one activity in the app-wide log. Obtained
  * from [ActivityLogger.context] with the activity's fixed sibling fields
- * ([activityId], [category], [source], [projectId]) and filed once; callers
- * phrase only the content and the row is rendered under the right [LogMarkers]
- * prefix here — so a sequence filed across several calls ("started" →
- * interaction rows → one terminal row) can't drift from what the read model
- * ([ActivityRecord]) parses.
+ * ([activityId], [topic], [source], [projectId]) and filed once; callers
+ * phrase only the content and the row is filed with the right [LogStep] and
+ * human-readable [LogEntry.log] text here — so a sequence filed across several
+ * calls ("started" → interaction rows → one terminal row) can't drift from what
+ * the read model ([ActivityRecord]) expects.
  *
  * Lifecycle: an activity opens with [started] (or just interaction rows for a
  * standalone detail), then any number of [prompt]/[response] rows, then exactly
@@ -32,66 +32,60 @@ import alphainterplanetary.thinker.util.now
 class LogContext internal constructor(
   private val log: ActivityLogger,
   val activityId: String,
-  val category: LogCategory,
+  val topic: LogTopic,
   val source: LogSource?,
   val projectId: String? = null,
 ) {
   private var closed = false
 
   /** A lifecycle opening row, e.g. `started: InitialQuestions`. */
-  suspend fun started(label: String) = file("${LogMarkers.Started} $label")
+  suspend fun started(label: String) = file("started: $label", LogStep.Started)
 
   /** A success terminal row (`succeeded`). */
-  suspend fun closeSucceeded() = terminal(LogMarkers.Succeeded)
+  suspend fun closeSucceeded() = terminal("succeeded", LogStep.Succeeded)
 
   /**
-   * A failure terminal row rendering `failed: $message` — the single failure
-   * marker (previously a separate `error:` variant; the read model treats the
-   * two rows identically, so there's only one writer path). [raw] is the
-   * verbatim payload behind the failure (an unreadable model reply, say), kept
-   * so the popup can show what actually came back.
+   * A failure terminal row rendering `failed: $message`. [raw] is the verbatim
+   * payload behind the failure (an unreadable model reply, say), kept so the
+   * popup can show what actually came back.
    */
   suspend fun closeFailed(message: String, raw: String? = null) =
-    terminal("${LogMarkers.Failed} $message", raw)
+    terminal("failed: $message", LogStep.Failed, raw)
 
   /** A cancellation terminal row (`cancelled`). */
-  suspend fun closeCancelled() = terminal(LogMarkers.Cancelled)
+  suspend fun closeCancelled() = terminal("cancelled", LogStep.Cancelled)
 
   /** A `prompt:` detail row (a prompt, verbatim). */
-  suspend fun prompt(text: String) = file("${LogMarkers.Prompt} $text")
+  suspend fun prompt(text: String) = file("prompt: $text", LogStep.Prompt)
 
   /**
    * A `response:` detail row (the engine's produced outcome), optionally with
    * the verbatim payload it was read from (see [LogEntry.raw]).
    */
   suspend fun response(text: String, raw: String? = null) =
-    file("${LogMarkers.Response} $text", raw)
+    file("response: $text", LogStep.Response, raw)
 
-  /** Files a row verbatim — the escape hatch for text that has no marker. */
-  suspend fun append(text: String) = file(text)
+  /** Files a plain note row — text with no lifecycle/interaction marker. */
+  suspend fun append(text: String) = file(text, LogStep.Note)
 
   /**
    * The generation's `context checked:` note: the transcript's estimated cost
    * and the budget it was measured against, in the same "tokens … budget" words
-   * the near-limit dialog uses. Obtained from a fresh standalone context — the
-   * check is taken before any task is enqueued, so it has no task activity to
-   * join — and the note is plain text, so the read model's started/terminal
-   * parsing is unaffected.
+   * the near-limit dialog uses. A plain [LogStep.Note], so lifecycle parsing is
+   * unaffected.
    */
   suspend fun contextChecked(check: ContextCheck) = append(contextCheckText(check))
 
   /**
    * The generation's round note — `Action: more questions` for a "Get more
    * questions" round, `Action: advance phase` for a wrap-up into a new phase,
-   * each under a `Phase:` line. Might be a standalone context sharing the task's
-   * activity without its lifecycle, and is plain text under the
-   * [LogMarkers.Action] prefix, so the read model's started/terminal parsing is
-   * unaffected and [ActivityRecord] can headline an advance off it. Nothing is
-   * filed for a round with no action (the project's opening round).
+   * each under a `Phase:` line. A plain [LogStep.Note]; [ActivityRecord] can
+   * headline an advance off its text. Nothing is filed for a round with no
+   * action (the project's opening round).
    */
   suspend fun round(round: Round) {
     val action = roundAction(round) ?: return
-    append("${LogMarkers.Action} $action\n${LogMarkers.Phase} ${round.phase.label}")
+    append("Action: $action\nPhase: ${round.phase.label}")
   }
 
   /**
@@ -142,22 +136,23 @@ class LogContext internal constructor(
    * open an Initial round: only the latter is an advance.
    */
   private fun roundAction(round: Round): String? = when (round.origin) {
-    RoundOrigin.UserRequested, RoundOrigin.FollowUp -> LogMarkers.ActionMoreQuestions
-    RoundOrigin.Initial -> if (round.roundNumber == 1) null else LogMarkers.ActionAdvancePhase
+    RoundOrigin.UserRequested, RoundOrigin.FollowUp -> ACTION_MORE_QUESTIONS
+    RoundOrigin.Initial -> if (round.roundNumber == 1) null else ACTION_ADVANCE_PHASE
   }
 
   private fun checkOpen() {
     check(!closed) { "activity $activityId already terminated; no further rows accepted" }
   }
 
-  private suspend fun file(text: String, raw: String? = null) {
+  private suspend fun file(text: String, step: LogStep, raw: String? = null) {
     checkOpen()
     log.append(
       LogEntry(
         projectId = projectId,
         activityId = activityId,
-        category = category,
+        topic = topic,
         source = source,
+        step = step,
         log = text,
         timestamp = now(),
         raw = raw?.ifBlank { null },
@@ -165,8 +160,16 @@ class LogContext internal constructor(
     )
   }
 
-  private suspend fun terminal(text: String, raw: String? = null) {
-    file(text, raw)
+  private suspend fun terminal(text: String, step: LogStep, raw: String? = null) {
+    file(text, step, raw)
     closed = true
+  }
+
+  companion object {
+    /** Action value for a "Get more questions" round in the current phase. */
+    const val ACTION_MORE_QUESTIONS = "more questions"
+
+    /** Action value for a wrap-up into a new phase. */
+    const val ACTION_ADVANCE_PHASE = "advance phase"
   }
 }

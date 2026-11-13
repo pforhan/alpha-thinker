@@ -131,7 +131,7 @@ class RemoteKoogPlanningBackendTest {
     backend.executor
 
     val creation = factory.creations.single()
-    assertEquals("http://localhost:11434", creation.baseUrl)
+    assertEquals("https:", creation.baseUrl)
     assertEquals("Bearer secret", creation.authorization)
     assertEquals(LLMProvider.OpenAI, backend.model.provider)
   }

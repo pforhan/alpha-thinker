@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.activitylog.logRequest
 import alphainterplanetary.thinker.engine.core.PlanningContext
@@ -42,7 +42,7 @@ class LoggingPlanningEngineTest {
     assertEquals(1, log.entries.size, "nothing was sent to a model, so there is no prompt row")
     val terminal = log.entries.single()
     assertEquals("task-1", terminal.activityId)
-    assertEquals(LogCategory.TitleRecommendation, terminal.category)
+    assertEquals(LogTopic.TitleRecommendation, terminal.topic)
     assertEquals(LogSource.Offline, terminal.source)
     assertEquals("response: Recommended", terminal.log)
     assertNull(terminal.raw, "an engine that never spoke to a model has no reply to keep")
@@ -67,7 +67,7 @@ class LoggingPlanningEngineTest {
 
     assertEquals(2, questions.size)
     val terminal = log.entries.last()
-    assertEquals(LogCategory.QuestionGeneration, terminal.category)
+    assertEquals(LogTopic.QuestionGeneration, terminal.topic)
     assertEquals(1, log.entries.size, "the result row, nothing else")
     assertTrue(terminal.log.startsWith("response: 2 questions, done=false"))
     assertTrue(terminal.log.contains("first"))
@@ -91,7 +91,7 @@ class LoggingPlanningEngineTest {
     )
 
     val terminal = log.entries.last()
-    assertEquals(LogCategory.QuestionGeneration, terminal.category)
+    assertEquals(LogTopic.QuestionGeneration, terminal.topic)
     assertTrue(terminal.log.startsWith("response: 0 questions, done=true"))
   }
 
@@ -132,7 +132,7 @@ class LoggingPlanningEngineTest {
     }
 
     val terminal = log.entries.last()
-    assertEquals(LogCategory.QuestionGeneration, terminal.category)
+    assertEquals(LogTopic.QuestionGeneration, terminal.topic)
     assertEquals("task-4", terminal.activityId)
     assertEquals("failed: model exploded", terminal.log)
   }
@@ -254,7 +254,7 @@ class LoggingPlanningEngineTest {
     assertEquals("A menu planner for home cooks.", summary)
     val terminal = log.entries.single()
     assertEquals("task-9", terminal.activityId)
-    assertEquals(LogCategory.PriorSummary, terminal.category)
+    assertEquals(LogTopic.PriorSummary, terminal.topic)
     assertEquals("response: A menu planner for home cooks.", terminal.log)
   }
 
@@ -343,7 +343,7 @@ class LoggingPlanningEngineTest {
     }
 
     val terminal = log.entries.single()
-    assertEquals(LogCategory.PriorSummary, terminal.category)
+    assertEquals(LogTopic.PriorSummary, terminal.topic)
     assertTrue(terminal.log.startsWith("failed: "))
   }
 

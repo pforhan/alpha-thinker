@@ -1,5 +1,8 @@
 package alphainterplanetary.thinker.activitylog
 
+import alphainterplanetary.thinker.activitylog.LogTopic
+import alphainterplanetary.thinker.activitylog.LogStep
+import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,8 +16,7 @@ class LogContextTest {
   fun `rows carry the context's siblings and marker formatting`() = runTest {
     val log = RecordingActivityLogger()
     val context = log.context(
-      activityId = "task-1",
-      category = LogCategory.TaskRun,
+      activityId = "task-1", topic = LogTopic.TaskRun,
       source = LogSource.TaskRunner,
       projectId = "p1",
     )
@@ -24,10 +26,12 @@ class LogContextTest {
 
     assertEquals(2, log.entries.size)
     val started = log.entries[0]
+    assertEquals(LogStep.Started, started.step)
     assertEquals("started: InitialQuestions", started.log)
     assertCommon(started, context)
 
     val terminal = log.entries[1]
+    assertEquals(LogStep.Succeeded, terminal.step)
     assertEquals("succeeded", terminal.log)
     assertCommon(terminal, context)
     assertTrue(terminal.timestamp >= started.timestamp)
@@ -36,7 +40,7 @@ class LogContextTest {
   @Test
   fun `prompt response and failure rows render their markers`() = runTest {
     val log = RecordingActivityLogger()
-    val context = log.context("task-2", LogCategory.QuestionGeneration, LogSource.Offline)
+    val context = log.context("task-2", LogTopic.QuestionGeneration, LogSource.Offline)
 
     context.prompt("SYSTEM\nTitle system")
     context.prompt("SYSTEM\nQuestions system")
@@ -52,6 +56,10 @@ class LogContextTest {
       ),
       log.entries.map { it.log },
     )
+    assertEquals(
+      listOf(LogStep.Prompt, LogStep.Prompt, LogStep.Response, LogStep.Failed),
+      log.entries.map { it.step },
+    )
   }
 
   /**
@@ -61,21 +69,23 @@ class LogContextTest {
   @Test
   fun `outcome rows carry their raw payload without adding a row`() = runTest {
     val log = RecordingActivityLogger()
-    val context = log.context("task-4", LogCategory.QuestionGeneration, LogSource.RemoteLLM)
+    val context = log.context("task-4", LogTopic.QuestionGeneration, LogSource.RemoteLLM)
 
     context.response("0 questions, done=true", raw = """["a", ]""")
     context.closeFailed("model exploded")
 
     assertEquals(2, log.entries.size)
+    assertEquals(LogStep.Response, log.entries[0].step)
     assertEquals("response: 0 questions, done=true", log.entries[0].log)
     assertEquals("""["a", ]""", log.entries[0].raw)
+    assertEquals(LogStep.Failed, log.entries[1].step)
     assertEquals(null, log.entries[1].raw, "a row with no payload carries no raw")
   }
 
   @Test
   fun `a write after a terminal row fails fast`() = runTest {
     val log = RecordingActivityLogger()
-    val context = log.context("task-3", LogCategory.TaskRun, LogSource.TaskRunner)
+    val context = log.context("task-3", LogTopic.TaskRun, LogSource.TaskRunner)
 
     context.closeSucceeded()
 
@@ -90,7 +100,7 @@ class LogContextTest {
   private fun assertCommon(entry: LogEntry, context: LogContext) {
     assertEquals(context.activityId, entry.activityId)
     assertEquals(context.projectId, entry.projectId)
-    assertEquals(context.category, entry.category)
+    assertEquals(context.topic, entry.topic)
     assertEquals(context.source, entry.source)
   }
 }

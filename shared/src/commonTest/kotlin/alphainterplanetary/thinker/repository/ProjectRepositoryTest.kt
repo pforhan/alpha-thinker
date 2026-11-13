@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.activitylog.ActivityLogger
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
@@ -752,7 +752,7 @@ class ProjectRepositoryTest {
     assertEquals("context compacted: 1 answer dropped to fit budget", note.log)
     val task = runner.tasks.value.single()
     assertEquals(task.id, note.activityId, "the note rides the generation task's activity")
-    assertEquals(LogCategory.TaskRun, note.category)
+    assertEquals(LogTopic.TaskRun, note.topic)
     assertEquals(LogSource.TaskRunner, note.source)
     assertEquals("p1", note.projectId)
   }
@@ -978,7 +978,7 @@ class ProjectRepositoryTest {
 
     val row = log.entries.single()
     assertEquals("p1", row.projectId)
-    assertEquals(LogCategory.Info, row.category)
+    assertEquals(LogTopic.Info, row.topic)
     assertEquals(LogSource.App, row.source)
     assertEquals(
       "context checked: ${formatTokens(check.estimatedTokens)} tokens estimated, " +

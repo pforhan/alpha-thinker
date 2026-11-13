@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.database
 
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -26,9 +26,8 @@ class LogDaoTest {
     source: LogSource? = LogSource.TaskRunner,
   ): LogEntryEntity = LogEntryEntity(
     projectId = projectId,
-    activityId = activityId,
-    category = LogCategory.TaskRun.name,
-    source = source?.name,
+    activityId = activityId, topic = LogTopic.TaskRun.name,
+    source = source?.name, step = "Started",
     log = "started: InitialQuestions",
     timestampMillis = timestamp.toEpochMilliseconds(),
   )
@@ -47,8 +46,9 @@ class LogDaoTest {
     assertEquals(2, rows.size)
     assertEquals(listOf("a1", "a1"), rows.map { it.activityId })
     assertTrue(rows.map { it.id } == listOf(first, second))
-    assertEquals(LogCategory.TaskRun.name, rows[0].category)
+    assertEquals(LogTopic.TaskRun.name, rows[0].topic)
     assertEquals(LogSource.TaskRunner.name, rows[0].source)
+    assertEquals("Started", rows[0].step)
   }
 
   @Test

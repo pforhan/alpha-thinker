@@ -6,9 +6,8 @@ import androidx.room3.PrimaryKey
 
 /**
  * Append-only storage row for the app-wide activity log. Timestamps persist as
- * epoch millis like every other entity in this app's schema; [category] and
- * [source] persist as enum names, decoded in `Mappers.kt` alongside the other
- * entities.
+ * epoch millis like every other entity in this app's schema; [topic], [source],
+ * and [step] persist as enum names, decoded in `Mappers.kt`.
  */
 @Entity(
   tableName = "log_events",
@@ -21,8 +20,10 @@ data class LogEntryEntity(
   @PrimaryKey(autoGenerate = true) val id: Long = 0,
   val projectId: String? = null,
   val activityId: String? = null,
-  val category: String,
+  val topic: String,
   val source: String? = null,
+  /** Typed step, stored as the [alphainterplanetary.thinker.activitylog.LogStep] name. */
+  val step: String,
   val log: String,
   val timestampMillis: Long,
   /** The verbatim payload behind [log] (see `LogEntry.raw`); rarely null. */

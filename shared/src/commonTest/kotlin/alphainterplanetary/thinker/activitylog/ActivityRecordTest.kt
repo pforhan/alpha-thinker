@@ -15,17 +15,29 @@ class ActivityRecordTest {
     id: Long,
     activityId: String?,
     log: String,
-    category: LogCategory = LogCategory.QuestionGeneration,
+    topic: LogTopic = LogTopic.QuestionGeneration,
     source: LogSource? = LogSource.RemoteLLM,
     timestamp: Instant = now(),
+    step: LogStep = inferStep(log),
   ): LogEntry = LogEntry(
     id = id,
     activityId = activityId,
-    category = category,
+    topic = topic,
     source = source,
+    step = step,
     log = log,
     timestamp = timestamp,
   )
+
+  private fun inferStep(log: String): LogStep = when {
+    log.startsWith("started:") -> LogStep.Started
+    log == "succeeded" || log.startsWith("succeeded:") -> LogStep.Succeeded
+    log.startsWith("failed:") -> LogStep.Failed
+    log == "cancelled" -> LogStep.Cancelled
+    log.startsWith("prompt:") -> LogStep.Prompt
+    log.startsWith("response:") -> LogStep.Response
+    else -> LogStep.Note
+  }
 
   /** A title-recommendation activity: input, then a produced title. */
   private fun titleActivity(entries: List<LogEntry>): List<ActivityRecord> =
@@ -41,28 +53,28 @@ class ActivityRecordTest {
           1,
           "task-1",
           "input: synopsis=Build a rocketship",
-          LogCategory.TitleRecommendation,
+          LogTopic.TitleRecommendation,
           timestamp = old
         ),
         entry(
           2,
           "task-1",
           "response: Rocketship",
-          LogCategory.TitleRecommendation,
+          LogTopic.TitleRecommendation,
           timestamp = old
         ),
         entry(
           3,
           "task-2",
           "input: synopsis=Build a rocketship",
-          LogCategory.TitleRecommendation,
+          LogTopic.TitleRecommendation,
           timestamp = newer
         ),
         entry(
           4,
           "task-2",
           "response: Rocketship",
-          LogCategory.TitleRecommendation,
+          LogTopic.TitleRecommendation,
           timestamp = newer
         ),
       )
@@ -78,8 +90,8 @@ class ActivityRecordTest {
   fun `standalone rows become their own single-row activities`() {
     val activities = titleActivity(
       listOf(
-        entry(1, "task-1", "input: x", LogCategory.TitleRecommendation, timestamp = now()),
-        entry(2, null, "capability notice", LogCategory.Info, LogSource.App, timestamp = now()),
+        entry(1, "task-1", "input: x", LogTopic.TitleRecommendation, timestamp = now()),
+        entry(2, null, "capability notice", LogTopic.Info, LogSource.App, timestamp = now()),
       )
     )
 
@@ -98,24 +110,24 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
         entry(
           2,
           "task-1",
           "input: phase=ScopeGoals, synopsis=S",
-          LogCategory.QuestionGeneration,
+          LogTopic.QuestionGeneration,
           LogSource.RemoteLLM
         ),
         entry(
           3,
           "task-1",
           "response: 1 questions, done=false",
-          LogCategory.QuestionGeneration,
+          LogTopic.QuestionGeneration,
           LogSource.RemoteLLM
         ),
-        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(4, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -130,10 +142,10 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -148,21 +160,21 @@ class ActivityRecordTest {
           1,
           "task-1",
           "input: synopsis=S",
-          LogCategory.TitleRecommendation,
+          LogTopic.TitleRecommendation,
           timestamp = now() - 1.days
         ),
         entry(
           2,
           "task-1",
           "response: First title",
-          LogCategory.TitleRecommendation,
+          LogTopic.TitleRecommendation,
           timestamp = now() - 1.days
         ),
         entry(
           3,
           "task-1",
           "response: Revised title",
-          LogCategory.TitleRecommendation,
+          LogTopic.TitleRecommendation,
           timestamp = now()
         ),
       )
@@ -175,7 +187,7 @@ class ActivityRecordTest {
   fun `summary falls back to the newest row when no response surfaced`() {
     val activity = titleActivity(
       listOf(
-        entry(1, "task-1", "input: synopsis=S", LogCategory.TitleRecommendation, timestamp = now()),
+        entry(1, "task-1", "input: synopsis=S", LogTopic.TitleRecommendation, timestamp = now()),
       )
     ).single()
 
@@ -191,7 +203,7 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner,
           timestamp = base
         ),
@@ -199,7 +211,7 @@ class ActivityRecordTest {
           2,
           "task-1",
           "succeeded",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner,
           timestamp = base + 5.days
         ),
@@ -231,10 +243,10 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       ).map { it.copy(projectId = "p1") }
     ).single()
 
@@ -246,7 +258,7 @@ class ActivityRecordTest {
             1,
             "task-1",
             "capability notice",
-            LogCategory.Info,
+            LogTopic.Info,
             LogSource.App
           )
         )
@@ -262,18 +274,18 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "prompt: SYSTEM\nSummarize", LogCategory.PriorSummary),
-        entry(3, "task-1", "response: a summary", LogCategory.PriorSummary),
-        entry(4, "task-1", "prompt: SYSTEM\nQuestions", LogCategory.QuestionGeneration),
-        entry(5, "task-1", "response: 4 questions, done=false", LogCategory.QuestionGeneration),
-        entry(6, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "prompt: SYSTEM\nSummarize", LogTopic.PriorSummary),
+        entry(3, "task-1", "response: a summary", LogTopic.PriorSummary),
+        entry(4, "task-1", "prompt: SYSTEM\nQuestions", LogTopic.QuestionGeneration),
+        entry(5, "task-1", "response: 4 questions, done=false", LogTopic.QuestionGeneration),
+        entry(6, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
-    assertEquals("Prior-phase summary • Question generation", activity.category)
+    assertEquals("Prior-phase summary • Question generation", activity.topic)
   }
 
   @Test
@@ -284,15 +296,15 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "response: 1 questions, done=false", LogCategory.QuestionGeneration),
-        entry(3, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "response: 1 questions, done=false", LogTopic.QuestionGeneration),
+        entry(3, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
-    assertEquals("Question generation", activity.category)
+    assertEquals("Question generation", activity.topic)
   }
 
   @Test
@@ -303,14 +315,14 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
-    assertEquals(LogCategory.TaskRun.label, activity.category)
+    assertEquals(LogTopic.TaskRun.label, activity.topic)
   }
 
   @Test
@@ -321,17 +333,17 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
+        entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogTopic.QuestionGeneration),
         entry(
           3,
           "task-1",
           "response: 3 questions, done=false\n• first\n• second\n• third",
-          LogCategory.QuestionGeneration,
+          LogTopic.QuestionGeneration,
         ),
-        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(4, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -350,18 +362,18 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
         entry(
           2,
           "task-1",
           "Action: advance phase\nPhase: Design",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(3, "task-1", "response: 4 questions, done=false", LogCategory.QuestionGeneration),
-        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(3, "task-1", "response: 4 questions, done=false", LogTopic.QuestionGeneration),
+        entry(4, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -377,18 +389,18 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
         entry(
           2,
           "task-1",
           "Action: more questions\nPhase: Design",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(3, "task-1", "response: 2 questions, done=false", LogCategory.QuestionGeneration),
-        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(3, "task-1", "response: 2 questions, done=false", LogTopic.QuestionGeneration),
+        entry(4, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -404,18 +416,18 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
         entry(
           2,
           "task-1",
           "Action: advance phase\nPhase: Research",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(3, "task-1", "response: 0 questions, done=true", LogCategory.QuestionGeneration),
-        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(3, "task-1", "response: 0 questions, done=true", LogTopic.QuestionGeneration),
+        entry(4, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -430,17 +442,17 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
         entry(
           2,
           "task-1",
           "input: phase=ExecutionPlan, previous questions=12",
-          LogCategory.QuestionGeneration
+          LogTopic.QuestionGeneration
         ),
-        entry(3, "task-1", "response: 0 questions, done=true", LogCategory.QuestionGeneration),
-        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(3, "task-1", "response: 0 questions, done=true", LogTopic.QuestionGeneration),
+        entry(4, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -460,19 +472,19 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "prompt: SYSTEM\nSummarize", LogCategory.QuestionGeneration),
+        entry(2, "task-1", "prompt: SYSTEM\nSummarize", LogTopic.QuestionGeneration),
         entry(
           3,
           "task-1",
           "response: a summary of earlier answers",
-          LogCategory.QuestionGeneration
+          LogTopic.QuestionGeneration
         ),
-        entry(4, "task-1", "prompt: SYSTEM\nQuestions", LogCategory.QuestionGeneration),
-        entry(5, "task-1", "response: 4 questions, done=false", LogCategory.QuestionGeneration),
-        entry(6, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(4, "task-1", "prompt: SYSTEM\nQuestions", LogTopic.QuestionGeneration),
+        entry(5, "task-1", "response: 4 questions, done=false", LogTopic.QuestionGeneration),
+        entry(6, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -488,12 +500,12 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: TitleRecommendation",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "input: synopsis=Build a rocketship", LogCategory.TitleRecommendation),
-        entry(3, "task-1", "response: Rocketship", LogCategory.TitleRecommendation),
-        entry(4, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "input: synopsis=Build a rocketship", LogTopic.TitleRecommendation),
+        entry(3, "task-1", "response: Rocketship", LogTopic.TitleRecommendation),
+        entry(4, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -508,12 +520,12 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogCategory.QuestionGeneration),
-        entry(3, "task-1", "failed: model exploded", LogCategory.QuestionGeneration),
-        entry(4, "task-1", "failed: model exploded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "input: phase=ScopeGoals, synopsis=S", LogTopic.QuestionGeneration),
+        entry(3, "task-1", "failed: model exploded", LogTopic.QuestionGeneration),
+        entry(4, "task-1", "failed: model exploded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 
@@ -528,10 +540,10 @@ class ActivityRecordTest {
           1,
           "task-1",
           "started: QuestionGeneration",
-          LogCategory.TaskRun,
+          LogTopic.TaskRun,
           LogSource.TaskRunner
         ),
-        entry(2, "task-1", "succeeded", LogCategory.TaskRun, LogSource.TaskRunner),
+        entry(2, "task-1", "succeeded", LogTopic.TaskRun, LogSource.TaskRunner),
       )
     ).single()
 

@@ -6,7 +6,7 @@ import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogScope
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.core.PlanningContext
@@ -520,7 +520,7 @@ class KoogPlanningEngineTest {
     val log = RecordingActivityLogger()
     val engine = engine(client)
 
-    withContext(LogScope { log.context("t1", LogCategory.PriorSummary, LogSource.RemoteLLM) }) {
+    withContext(LogScope { log.context("t1", LogTopic.PriorSummary, LogSource.RemoteLLM) }) {
       engine.summarizePriorAnswers(
         title = "T",
         synopsis = "S",
@@ -535,7 +535,7 @@ class KoogPlanningEngineTest {
     assertTrue(log.entries.first().log.startsWith("prompt: SYSTEM"))
     assertEquals("response: the project is a menu planner for home cooks", log.entries.last().log)
     assertEquals("the project is a menu planner for home cooks", log.entries.last().raw)
-    assertEquals(LogCategory.PriorSummary, log.entries.last().category)
+    assertEquals(LogTopic.PriorSummary, log.entries.last().topic)
   }
 
   /**
@@ -683,7 +683,7 @@ class KoogPlanningEngineTest {
     withContext(LogScope {
       log.context(
         "t1",
-        LogCategory.QuestionGeneration,
+        LogTopic.QuestionGeneration,
         LogSource.RemoteLLM
       )
     }) {

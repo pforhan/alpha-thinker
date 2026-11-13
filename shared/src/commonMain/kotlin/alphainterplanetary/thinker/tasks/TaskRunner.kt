@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.tasks
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
@@ -114,9 +114,10 @@ class TaskRunner(
           alphainterplanetary.thinker.activitylog.LogEntry(
             projectId = current.projectId,
             activityId = taskId,
-            category = LogCategory.TaskRun,
+            topic = LogTopic.TaskRun,
             source = LogSource.TaskRunner,
-            log = alphainterplanetary.thinker.activitylog.LogMarkers.Cancelled,
+            step = alphainterplanetary.thinker.activitylog.LogStep.Cancelled,
+            log = "cancelled",
             timestamp = finishedAt,
           ),
         )
@@ -169,7 +170,7 @@ class TaskRunner(
     _tasks.update { it + task }
     val logContext = activityLogger?.context(
       activityId = task.id,
-      category = LogCategory.TaskRun,
+      topic = LogTopic.TaskRun,
       source = LogSource.TaskRunner,
       projectId = task.projectId,
     )

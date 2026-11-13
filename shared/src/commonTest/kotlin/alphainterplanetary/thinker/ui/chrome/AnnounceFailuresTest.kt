@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.ui.chrome
 
 import alphainterplanetary.thinker.activitylog.ActivityRecord
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogEntry
-import alphainterplanetary.thinker.activitylog.LogMarkers
+import alphainterplanetary.thinker.activitylog.LogStep
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.util.now
@@ -32,19 +32,17 @@ class AnnounceFailuresTest {
       LogEntry(
         id = 1,
         activityId = activityId,
-        projectId = projectId,
-        category = LogCategory.QuestionGeneration,
-        source = source,
-        log = "${LogMarkers.Started} ${TaskKind.QuestionGeneration.name}",
+        projectId = projectId, topic = LogTopic.QuestionGeneration,
+        source = source, step = LogStep.Started,
+        log = "started: ${TaskKind.QuestionGeneration.name}",
         timestamp = now(),
       ),
       LogEntry(
         id = 2,
         activityId = activityId,
-        projectId = projectId,
-        category = LogCategory.QuestionGeneration,
-        source = source,
-        log = if (failed) "${LogMarkers.Failed} model exploded" else LogMarkers.Succeeded,
+        projectId = projectId, topic = LogTopic.QuestionGeneration,
+        source = source, step = if (failed) LogStep.Failed else LogStep.Succeeded,
+        log = if (failed) "failed: model exploded" else "succeeded",
         timestamp = now(),
       ),
     ),

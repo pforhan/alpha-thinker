@@ -2,7 +2,7 @@ package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.activitylog.ActivityLogger
-import alphainterplanetary.thinker.activitylog.LogCategory
+import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
@@ -412,11 +412,11 @@ class ProjectRepository @Inject constructor(
         canSummarize = engine.canSummarize && phases.isNotEmpty(),
       )
     }
-    // Filed as its own standalone event: taken before any task is enqueued, so
+    // Filed as its own standalone step: taken before any task is enqueued, so
     // it has no task activity to join, and a fresh context gives each check one
     // line rather than folding unrelated checks into one activity.
     activityLogger.context(
-      category = LogCategory.Info,
+      topic = LogTopic.Info,
       source = LogSource.App,
       projectId = projectId,
     ).contextChecked(check)

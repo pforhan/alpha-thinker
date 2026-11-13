@@ -6,10 +6,10 @@ import kotlin.time.Instant
  * The topic a [LogEntry] is about — abstract enough to group and filter across
  * the whole app, detailed enough to tell operations apart. This is composite
  * dimension one of two (with [LogSource]): a remote-LLM question batch reads
- * `category = QuestionGeneration`, `source = RemoteLLM`; a task framework row
- * reads `category = TaskRun`, `source = TaskRunner`.
+ * `topic = QuestionGeneration`, `source = RemoteLLM`; a task framework row reads
+ * `topic = TaskRun`, `source = TaskRunner`.
  */
-enum class LogCategory(val label: String) {
+enum class LogTopic(val label: String) {
   /** Initial or follow-up question batches. */
   QuestionGeneration("Question generation"),
 
@@ -33,7 +33,7 @@ enum class LogCategory(val label: String) {
 }
 
 /**
- * What produced a [LogEntry] — composite dimension two (with [LogCategory]).
+ * What produced a [LogEntry] — composite dimension two (with [LogTopic]).
  * `null` on a row means a source doesn't apply (e.g. a standalone note).
  */
 enum class LogSource(val label: String) {
@@ -57,60 +57,32 @@ enum class LogSource(val label: String) {
 }
 
 /**
- * The stable text markers that synchronize log writers and the read model. A
- * row's [LogEntry.log] carries one of these prefixes so [ActivityRecord] can tell
- * a lifecycle opening from an outcome and an outcome from an interaction row
- * without parsing free prose. Writers file rows through [LogContext] (which
- * renders these markers) or — for standalone rows that don't belong to a
- * lifecycle — build them around [LogEntry.companion]-style factories; the
- * reader never invents its own expectations. Keep the markers and their reader
- * in lockstep: every addition here belongs on both sides.
+ * The step a [LogEntry] row represents. Writers set it so the read model
+ * ([ActivityRecord]) and the UI can branch on structure instead of parsing
+ * marker prefixes out of [LogEntry.log]; [LogEntry.log] remains the row's
+ * human-readable display text.
  */
-object LogMarkers {
-  /** A lifecycle opening, e.g. `started: InitialQuestions`. */
-  const val Started = "started:"
+enum class LogStep {
+  /** A lifecycle opening (e.g. a task starting). */
+  Started,
 
-  /** A success terminal, e.g. `succeeded`. */
-  const val Succeeded = "succeeded"
+  /** A success terminal. */
+  Succeeded,
 
-  /** A failure terminal carrying a message, e.g. `failed: model exploded`. */
-  const val Failed = "failed:"
+  /** A failure terminal carrying a message in [LogEntry.log]. */
+  Failed,
 
-  /** A cancellation terminal (`cancelled`). */
-  const val Cancelled = "cancelled"
+  /** A cancellation terminal. */
+  Cancelled,
 
-  /**
-   * A compact summary of what was sent, e.g. `input: phase=…, previous=2`.
-   *
-   * Unused by the current writers — a request that sends anything files the
-   * prompt itself, and an engine that never speaks to a model has nothing to
-   * summarize. It stays in the vocabulary because a persisted log can still
-   * carry these rows, and the read model must not choke on them.
-   */
-  const val Input = "input:"
+  /** A rendered prompt, verbatim in [LogEntry.log]. */
+  Prompt,
 
-  /**
-   * The first line of a round note — what the generation is for, one of the
-   * `Action` values below; the note's second line names the phase ([Phase]). A
-   * plain note (no interaction payload); [ActivityRecord] reads the
-   * [ActionAdvancePhase] form to headline an opening into a new phase.
-   */
-  const val Action = "Action:"
+  /** An engine-produced outcome in [LogEntry.log]. */
+  Response,
 
-  /** The second line of a round note, naming the round's phase: `Phase: Design`. */
-  const val Phase = "Phase:"
-
-  /** [Action] value for a "Get more questions" round in the current phase. */
-  const val ActionMoreQuestions = "more questions"
-
-  /** [Action] value for a wrap-up into a new phase. */
-  const val ActionAdvancePhase = "advance phase"
-
-  /** A rendered prompt, verbatim. */
-  const val Prompt = "prompt:"
-
-  /** The engine's produced outcome, e.g. `response: 2 questions, done=false`. */
-  const val Response = "response:"
+  /** A plain note or any row that is not a lifecycle/interaction marker. */
+  Note,
 }
 
 /**
@@ -121,10 +93,9 @@ object LogMarkers {
  * Global order is the autoincrement [id] primary key once persisted; before
  * that (in-memory) it is null. [activityId] is an optional UUID that ties
  * related rows together — a generation task's start/finish rows, or a prompt
- * and its response share an id; rows without one stand alone. [log] is free
- * text carrying whatever the row records (a prompt, a response, an error, a
- * result, a note) under one of the [LogMarkers] prefixes that the read model
- * ([ActivityRecord]) parses to derive summaries and outcomes.
+ * and its response share an id; rows without one stand alone. [log] is the
+ * row's human-readable display text; [step] records its typed step so readers
+ * do not have to parse marker prefixes out of [log].
  */
 data class LogEntry(
   /** Autoincrement primary key; null until persisted. */
@@ -132,9 +103,11 @@ data class LogEntry(
   val projectId: String? = null,
   /** UUID tying related rows together; null means a standalone line. */
   val activityId: String? = null,
-  val category: LogCategory,
+  val topic: LogTopic,
   val source: LogSource? = null,
-  /** The row's content: a prompt, response, error, result, or note. */
+  /** The typed step this row represents. */
+  val step: LogStep = LogStep.Note,
+  /** The row's human-readable content: a prompt, response, error, result, or note. */
   val log: String,
   val timestamp: Instant,
   /**
@@ -143,8 +116,8 @@ data class LogEntry(
    * [log]: the row's text stays the readable summary the headlines are derived
    * from, and the raw is what the viewer's full-entry popup adds on top (never
    * a second copy of the row). Null when there is no underlying payload — a
-   * lifecycle marker, a synthesized `input:` summary, or an engine that never
-   * spoke to a model (Offline).
+   * lifecycle marker, a synthesized note, or an engine that never spoke to a
+   * model (Offline).
    */
   val raw: String? = null,
 )
