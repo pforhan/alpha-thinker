@@ -49,7 +49,7 @@ class AppChromeStateTest {
       val status = awaitItem()
       assertEquals(EngineKind.Offline, status.kind)
       assertEquals(
-        listOf(CapabilityReadiness.Unused, CapabilityReadiness.Unused, CapabilityReadiness.Unused),
+        listOf(CapabilityReadiness.Unused, CapabilityReadiness.Unused),
         status.slots.map { it.readiness },
       )
       cancelAndIgnoreRemainingEvents()

@@ -66,7 +66,7 @@ data class EngineStatus(
   val description: String,
   val slots: List<CapabilityStatus>,
 ) {
-  /** The slot for [capability]; every mode reports all three, so always found. */
+  /** The slot for [capability]; every mode reports each capability, so always found. */
   fun slot(capability: EngineCapability): CapabilityStatus =
     slots.first { it.capability == capability }
 
@@ -144,9 +144,6 @@ fun engineStatus(
     val detail = when (capability) {
       EngineCapability.Network -> networkDetail
       EngineCapability.Llm -> llmDetail
-      // No mode reports Tools yet; it arrives with the agentic-lookup work, and
-      // until then the slot is stable-and-muted rather than absent.
-      EngineCapability.Tools -> null
     }
 
     return CapabilityStatus(

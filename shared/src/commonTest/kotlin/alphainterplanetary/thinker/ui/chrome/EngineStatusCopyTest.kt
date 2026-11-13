@@ -52,7 +52,7 @@ class EngineStatusCopyTest {
 
     // Unused across the board, so "not used" is the only word the column can show.
     assertEquals(
-      listOf("Not used", "Not used", "Not used"),
+      listOf("Not used", "Not used"),
       offline.slots.map { it.displayDetail() },
     )
     offline.slots.forEach { slot ->
@@ -88,7 +88,7 @@ class EngineStatusCopyTest {
     // but the fill and check already say "in use", so a word here would only repeat
     // them — and the next mode that produces the pair must not change that.
     val slot = CapabilityStatus(
-      capability = EngineCapability.Tools,
+      capability = EngineCapability.Llm,
       readiness = CapabilityReadiness.Active,
       detail = "",
     )

@@ -4,7 +4,6 @@ import alphainterplanetary.thinker.engine.config.EngineCapability
 import alphainterplanetary.thinker.engine.config.EngineKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 
 class EngineCapabilitiesTest {
 
@@ -40,10 +39,4 @@ class EngineCapabilitiesTest {
     }
   }
 
-  @Test
-  fun `no kind calls tools until agentic lookup lands`() {
-    EngineKind.entries.forEach { mode ->
-      assertFalse(mode.capabilities.contains(EngineCapability.Tools), mode.name)
-    }
-  }
 }

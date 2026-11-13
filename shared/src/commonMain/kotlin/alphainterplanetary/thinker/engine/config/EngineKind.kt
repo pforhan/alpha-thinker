@@ -21,10 +21,6 @@ enum class EngineKind(
    * the built-in question library entirely on device, so it has none; only
    * [EngineKind.Remote] egresses, because it talks to a cloud or localhost
    * endpoint.
-   *
-   * [EngineCapability.Tools] is absent from every kind until the agentic-lookup
-   * work lands a tool registry — at which point a Koog backend can report its own
-   * capability rather than this static mapping.
    */
   val capabilities: Set<EngineCapability>,
 ) {

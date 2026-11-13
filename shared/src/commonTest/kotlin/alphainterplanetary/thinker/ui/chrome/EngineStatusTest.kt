@@ -177,33 +177,6 @@ class EngineStatusTest {
   }
 
   @Test
-  fun toolsStaysUnusedForEveryRefKind() {
-    EngineKind.entries.forEach { kind ->
-      val builtin = engineStatus(
-        ref = EngineRef.Builtin(kind),
-        instance = remoteInstance(),
-        availability = Available,
-      )
-      val instance = engineStatus(
-        ref = EngineRef.Instance("conn-1"),
-        instance = remoteInstance().copy(kind = kind),
-        availability = Available,
-      )
-
-      assertEquals(
-        CapabilityReadiness.Unused,
-        builtin.slot(EngineCapability.Tools).readiness,
-        "builtin $kind"
-      )
-      assertEquals(
-        CapabilityReadiness.Unused,
-        instance.slot(EngineCapability.Tools).readiness,
-        "instance $kind"
-      )
-    }
-  }
-
-  @Test
   fun anInstanceIsNamedByItsOwnLabel() {
     // The chrome words the engine by what the user called it, not by its kind:
     // a connection called "Work Claude" is not a "Remote" in the status sheet.

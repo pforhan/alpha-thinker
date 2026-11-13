@@ -13,7 +13,6 @@ internal fun EngineCapability.displayName(): String =
   when (this) {
     EngineCapability.Network -> "Network"
     EngineCapability.Llm -> "LLM"
-    EngineCapability.Tools -> "Tools"
   }
 
 /**

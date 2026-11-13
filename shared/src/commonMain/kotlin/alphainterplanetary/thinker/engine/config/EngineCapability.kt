@@ -23,7 +23,4 @@ enum class EngineCapability {
    * [PlanningEngine.contextWindowTokens].
    */
   Llm,
-
-  /** The engine may call tools (lookup / web search) on the model's behalf. */
-  Tools,
 }

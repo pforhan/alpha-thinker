@@ -79,9 +79,8 @@ settings ViewModel. A new tool arrives behind one of these seams.
 
 **Naming and the build split.** These are called "tools", not "dev tools" or
 "debug tools": they are reachable from the shipped UI, so "dev" would describe a
-boundary the code does not actually have. The name is kept distinct from two
-unrelated uses of the word — `EngineCapability.Tools` (the LLM tool-calling pill)
-and `LogSource.Tool` (a log source). The tools stay in `commonMain`: the Phase 8
+boundary the code does not actually have. The name is kept distinct from
+`LogSource.Tool` (a log source). The tools stay in `commonMain`: the Phase 8
 "debug-build split" that would move them behind a Gradle property is **declined**
 as not worth the source-set and expect/actual complexity for an app this size
 (see Phase 8 in `IMPLEMENTATION-PLAN.md`).
