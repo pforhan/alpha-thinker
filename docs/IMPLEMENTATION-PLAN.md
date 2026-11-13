@@ -5,10 +5,26 @@ As phases are completed they move to the end of IMPLEMENTATION-PLAN-COMPLETED.md
 
 ## Phase 4: Advanced Features & Export
 
-### 4A. Export
-- [ ] **Export pipeline (design + implementation):** Define and implement the Markdown export path (synthesis → file system). Decide whether export should reuse existing summarization/context-building logic or produce a fuller document directly.
-- [ ] **Phase-structured export:** Group answered Q&A under the phase it came from (e.g. `## Scope & Goals`, `## Execution Plan`) and include an opening "phase trail" summary (phases traversed, question counts, completion %). Rounds remain internal metadata and do not appear in the export.
+**Focus:** (1) Export, (2) Answer work. Other items are follow-ons/backlog within the phase.
+
+### 4A. Export (primary)
+
+#### 4A.1 Export model & rendering
+- [ ] **Export configuration model:** Define export options and an export artifact/record model (e.g. project id, created timestamp, filename, format, config snapshot, storage location/ref or status). Initial options should cover at least: include/exclude ignored questions, unanswered items, drafts, answer revision history, and optional LLM-generated summaries/sections; keep the model extensible.
+- [ ] **Phase-structured Markdown renderer:** Generate a phase-grouped Markdown document (e.g. `## Scope & Goals`, `## Execution Plan`) with an opening "phase trail" summary (phases traversed, question counts, completion %). Rounds remain internal metadata and do not appear in the export. Apply export options consistently (filtering/section inclusion).
 - [ ] **Reconcile export with the transcript renderer:** Share the transcript’s *state semantics* and phase grouping (`PhaseTranscript`) with the export instead of maintaining a divergent format (`PlanningContext.kt` notes this intent, but `ProjectRepository.exportProject` currently predates phases, ignores rounds/`phaseForQuestion`, mishandles drafts/ignored questions, and emits malformed tables). Replace the current flat renderer and its single test as part of this work; export remains a detailed human document while the transcript remains the token-optimized prompt block.
+- [ ] **Optional summarization in export:** Decide and implement whether/how export reuses existing summarization/context-building logic for overview or per-phase summaries when requested by config. Run as async work with a clear fallback when no capable engine is available so export still succeeds without summaries.
+
+#### 4A.2 Generation, storage, and sharing
+- [ ] **Export generation service:** Add an app-level export/use-case flow that builds the document from project data, reports progress/state, integrates with task/activity logging as appropriate, and handles failures/cancellation without corrupting saved artifacts.
+- [ ] **Local persistence strategy:** Decide where generated exports live (filesystem, DB table/blob, or metadata table + file) using a KMP-friendly approach. Implement saving, naming/collision handling, and retrieval of export records per project; define retention/overwrite/regenerate behavior.
+- [ ] **Per-platform save/share (expect/actual):** Implement platform-specific save and share/open flows (e.g. Android share/save intent, desktop save dialog or open containing folder, web download) behind a common interface, with graceful degradation where a capability is unavailable.
+
+#### 4A.3 UI entry points & management
+- [ ] **Project list export action:** Change project list swipe actions so **swipe right exports** (instead of delete). Redesign the delete affordance accordingly (e.g. swipe left and/or an explicit delete action/button with confirmation) and update swipe labels/icons/behavior and related tests to match.
+- [ ] **Additional export entry points:** Add an export action in `ProjectDetailScreen` and, where layout allows, an export button/action on project cards. Reuse the same export flow and configuration UI from all entry points.
+- [ ] **Export configuration UI:** Add a dialog/sheet opened before generation to configure export options (ignored/unanswered/drafts, revisions, summaries, etc.), show destination/filename context as relevant, and confirm/cancel generation.
+- [ ] **Export library/management UI:** Provide a UI to view saved exports for a project (and/or globally, as appropriate) with actions to open/share/download, delete, and regenerate with the same or edited options. Surface generation progress and errors clearly.
 
 ### 4B. Answer work
 - [ ] **Answer revision history (data + UI):** Persist revisions for committed answers and draft edits (with timestamps) and add a revision-history view in the answer UI.
