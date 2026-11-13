@@ -334,6 +334,12 @@ class ProjectDetailViewModel(
     }
   }
 
+  fun logResearchHandoff(projectId: String, query: String) {
+    vmScope.launch {
+      repository.logResearchHandoff(projectId, query)
+    }
+  }
+
   fun ignoreQuestion(projectId: String, questionId: String) {
     val snapshot = (_uiState.value as? ProjectDetailUiState.Success)?.project ?: return
     val optimistic = snapshot.copy(

@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.window.DialogProperties
 
 enum class AnswerDialogResult {
@@ -59,17 +60,24 @@ enum class AnswerDialogResult {
  *   committed answer or a draft, ignored or not.
  * - The question's phase is always shown as a pill below the question text,
  *   above the answer field.
+ * - "Research" performs a lightweight browser handoff: review/edit search terms
+ *   and launch the query in the system browser. No in-app search/fetch/extraction
+ *   or automatic draft fill.
  */
 @Composable
 fun AnswerDialog(
   question: Question,
   phase: Phase,
   onDismiss: () -> Unit,
+  onResearch: (String) -> Unit,
   onResult: (AnswerDialogResult, String) -> Unit,
 ) {
   val initialText = question.currentAnswer?.text ?: question.draftText ?: ""
   var answerText by remember { mutableStateOf(initialText) }
+  var showResearchTerms by remember { mutableStateOf(false) }
+  var researchTerms by remember { mutableStateOf(question.text) }
   val focusRequester = remember { FocusRequester() }
+  val uriHandler = LocalUriHandler.current
 
   // Anything to clear: a committed answer, a draft, or — ignoring a question
   // doesn't freeze it — both. Deliberately not gated on the question being
@@ -90,6 +98,12 @@ fun AnswerDialog(
       },
       trimmed,
     )
+  }
+
+  fun launchResearch(terms: String) {
+    val trimmedTerms = terms.trim().ifBlank { question.text }
+    onResearch(trimmedTerms)
+    uriHandler.openUri(searchUrlFor(trimmedTerms))
   }
 
   AlertDialog(
@@ -159,6 +173,17 @@ fun AnswerDialog(
           }
         }
 
+        Spacer(modifier = Modifier.height(Dimens.ContentGap))
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          TextButton(onClick = { showResearchTerms = true }) {
+            Text("Research")
+          }
+        }
+
         if (hasAnswer) {
           Spacer(modifier = Modifier.height(Dimens.ContentGap))
           HorizontalDivider()
@@ -196,4 +221,61 @@ fun AnswerDialog(
       }
     },
   )
+
+  if (showResearchTerms) {
+    AlertDialog(
+      onDismissRequest = { showResearchTerms = false },
+      title = { Text("Research") },
+      text = {
+        Column {
+          Text(
+            text = "Review or edit the search terms, then open them in your browser to research this question.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+          Spacer(modifier = Modifier.height(Dimens.ContentGap))
+          OutlinedTextField(
+            value = researchTerms,
+            onValueChange = { researchTerms = it },
+            label = { Text("Search terms") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+          )
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            showResearchTerms = false
+            launchResearch(researchTerms)
+          },
+        ) {
+          Text("Open in browser")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { showResearchTerms = false }) {
+          Text("Cancel")
+        }
+      },
+    )
+  }
+}
+
+private fun searchUrlFor(query: String): String =
+  "https://duckduckgo.com/?q=" + encodeQueryComponent(query.trim())
+
+private fun encodeQueryComponent(value: String): String = buildString {
+  for (char in value.encodeToByteArray()) {
+    val b = char.toInt() and 0xFF
+    val c = b.toChar()
+    when {
+      c.isLetterOrDigit() || c == '-' || c == '_' || c == '.' || c == '~' -> append(c)
+      c == ' ' -> append('+')
+      else -> {
+        append('%')
+        append(b.toString(16).uppercase().padStart(2, '0'))
+      }
+    }
+  }
 }

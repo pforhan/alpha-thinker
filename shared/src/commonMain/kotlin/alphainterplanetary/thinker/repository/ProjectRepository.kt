@@ -366,6 +366,17 @@ class ProjectRepository @Inject constructor(
     return updatedProject
   }
 
+  /** Records a lightweight research handoff (browser launch) for a question. */
+  suspend fun logResearchHandoff(projectId: String, query: String) {
+    val trimmed = query.trim()
+    if (trimmed.isEmpty()) return
+    activityLogger.context(
+      topic = LogTopic.Lookup,
+      source = LogSource.Tool,
+      projectId = projectId,
+    ).append("research handoff: $trimmed")
+  }
+
   /**
    * How much planning context a project would send with its next round, and
    * whether that is worth putting to the user first.
