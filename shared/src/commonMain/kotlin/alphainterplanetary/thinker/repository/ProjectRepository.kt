@@ -412,7 +412,7 @@ class ProjectRepository @Inject constructor(
       )
     } else {
       val budgetTokens = PlanningContext.budgetTokens(window)
-      val phases = PlanningContext.summarizablePhases(project)
+      val candidates = PhaseSummarization.compactionCandidates(project)
       ContextCheck(
         estimatedTokens = estimatedTokens,
         windowTokens = window,
@@ -422,8 +422,8 @@ class ProjectRepository @Inject constructor(
           budgetTokens = budgetTokens,
         ),
         droppableAnswers = PlanningContext.trim(project, budgetTokens).droppedAnswers,
-        summarizablePhases = phases.map { it.phase },
-        canSummarize = engine.canSummarize && phases.isNotEmpty(),
+        summarizablePhases = candidates.map { it.phase },
+        canSummarize = engine.canSummarize && candidates.isNotEmpty(),
       )
     }
     // Filed as its own standalone step: taken before any task is enqueued, so

@@ -18,6 +18,10 @@ object PhaseSummarization {
   /**
    * One phase's summarizable content: the questions that would be covered, the
    * rendered transcript to hand the model, and its estimated token cost.
+   *
+   * Serves as the shared input unit for prompt compaction and export/background
+   * summarization; pair with [toPhaseSummary] to produce a prompt/context-ready
+   * [PlanningContext.PhaseSummary].
    */
   data class Candidate(
     val phase: Phase,
@@ -28,6 +32,14 @@ object PhaseSummarization {
     /** The questions a summary of this phase would cover. */
     val coveredQuestionIds: Set<String>
       get() = questions.mapTo(mutableSetOf()) { it.id }
+
+    /** Builds a [PlanningContext.PhaseSummary] for [summary] covering this candidate. */
+    fun toPhaseSummary(summary: String): PlanningContext.PhaseSummary =
+      PlanningContext.PhaseSummary(
+        phase = phase,
+        summary = summary,
+        coversQuestionIds = coveredQuestionIds,
+      )
   }
 
   /**
@@ -45,13 +57,11 @@ object PhaseSummarization {
   fun exportCandidates(project: Project): List<Candidate> {
     val phaseLookup = project.phaseLookup()
     return project.questions
-      .asSequence()
       .sortedBy { it.timestamp }
       .groupBy { phaseLookup(it) }
       .toList()
       .sortedBy { (phase, _) -> phase.order }
       .mapNotNull { (phase, questions) -> candidateFor(phase, questions) }
-      .toList()
   }
 
   /**
