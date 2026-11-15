@@ -20,7 +20,7 @@ import alphainterplanetary.thinker.phases.Phase
  * question is [SkippedNote] and nothing else, and an omitted answer keeps the
  * answer slot rather than reading as one the user never gave.
  *
- * The question prompt sends this transcript ([KoogPlanningEngine]); the
+ * The question prompt sends this transcript; the
  * human-facing export (rebuilt via `ProjectExportRenderer` /
  * `ProjectRepository.exportProject`) shares its state semantics and phase
  * grouping rather than re-deriving them, though the export renders a detailed
@@ -293,9 +293,9 @@ object PlanningContext {
 
     var trimmed = questions
     var dropped = 0
-    for (question in compactable) {
+    for ((id) in compactable) {
       if (estimateTokens(trimmed, summaries) <= budgetTokens) break
-      val next = trimmed.map { if (it.id == question.id) it.asCompacted() else it }
+      val next = trimmed.map { if (it.id == id) it.asCompacted() else it }
       if (next != trimmed) {
         dropped += 1
       }

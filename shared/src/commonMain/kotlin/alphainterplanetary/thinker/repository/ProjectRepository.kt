@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
+import alphainterplanetary.thinker.engine.core.PhaseSummarization
 import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
@@ -485,37 +486,37 @@ class ProjectRepository @Inject constructor(
     else -> {
       val summaries = mutableListOf<PlanningContext.PhaseSummary>()
       var questions = project.questions
-      for (unit in PlanningContext.summarizablePhases(project)) {
+      for (candidate in PhaseSummarization.compactionCandidates(project)) {
         if (summaries.isNotEmpty() &&
           PlanningContext.estimateTokens(questions, summaries) <= budgetTokens
         ) {
           break
         }
-        val summary = engine.summarizePriorAnswers(
+        val summary = PhaseSummarization.summarize(
+          engine = engine,
           title = project.title,
           synopsis = project.synopsis,
-          phase = unit.phase,
-          transcript = unit.transcript,
+          candidate = candidate,
           activityId = taskId,
         )
         summaries += PlanningContext.PhaseSummary(
-          phase = unit.phase,
+          phase = candidate.phase,
           summary = summary,
-          coversQuestionIds = unit.coveredQuestionIds,
+          coversQuestionIds = candidate.coveredQuestionIds,
         )
         // The phase's answers are replaced by the summary, which is what the
         // next re-measurement has to see — the summary only costs anything once
         // the verbatim answers it stands in for are actually gone.
         questions = questions.map { question ->
-          if (question.id in unit.coveredQuestionIds) question.asCompacted() else question
+          if (question.id in candidate.coveredQuestionIds) question.asCompacted() else question
         }
         activityLogger.taskContext(
           activityId = taskId,
           projectId = project.id,
         ).contextCompacted(
-          phaseLabel = unit.phase.label,
-          count = unit.questions.size,
-          oldEstTokens = unit.estimatedTokens,
+          phaseLabel = candidate.phase.label,
+          count = candidate.questions.size,
+          oldEstTokens = candidate.estimatedTokens,
           newEstTokens = PlanningContext.estimateTokens(summary),
         )
       }

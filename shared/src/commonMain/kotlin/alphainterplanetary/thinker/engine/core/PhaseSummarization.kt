@@ -71,6 +71,27 @@ object PhaseSummarization {
   }
 
   /**
+   * Summarizes [candidate] and returns the trimmed summary text.
+   *
+   * Propagates failures from [PlanningEngine.summarizePriorAnswers] (except
+   * callers that want best-effort behavior should use [summarizeOrNull]).
+   */
+  suspend fun summarize(
+    engine: PlanningEngine,
+    title: String,
+    synopsis: String,
+    candidate: Candidate,
+    activityId: String,
+  ): String =
+    engine.summarizePriorAnswers(
+      title = title,
+      synopsis = synopsis,
+      phase = candidate.phase,
+      transcript = candidate.transcript,
+      activityId = activityId,
+    )
+
+  /**
    * Summarizes [candidate] and returns the trimmed summary text, or null when
    * [engine] cannot summarize or summarization fails. Cancellation is rethrown.
    */
@@ -83,13 +104,7 @@ object PhaseSummarization {
   ): String? {
     if (!engine.canSummarize) return null
     val summary = try {
-      engine.summarizePriorAnswers(
-        title = title,
-        synopsis = synopsis,
-        phase = candidate.phase,
-        transcript = candidate.transcript,
-        activityId = activityId,
-      )
+      summarize(engine, title, synopsis, candidate, activityId)
     } catch (e: CancellationException) {
       throw e
     } catch (_: Exception) {
