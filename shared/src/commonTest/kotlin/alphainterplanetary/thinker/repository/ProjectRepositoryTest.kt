@@ -2115,11 +2115,11 @@ class ProjectRepositoryTest {
   // ---------- exportProject ----------
 
   @Test
-  fun `exportProject renders answered and unanswered questions`() = runTest {
+  fun `exportProject renders phase-grouped markdown with trail and question states`() = runTest {
     val project = Project(
       id = "p1",
       synopsis = "Build a thing",
-      title = "t",
+      title = "Project Title",
       status = "Draft",
       questions = listOf(
         question("q1", "What is it?", answers = listOf(answer("q1", "A thing"))),
@@ -2132,10 +2132,16 @@ class ProjectRepositoryTest {
 
     val markdown = repository.exportProject(project)
 
-    assertTrue(markdown.contains("# Build a thing"))
+    assertTrue(markdown.contains("# Project Title"))
+    assertTrue(markdown.contains("## Overview"))
+    assertTrue(markdown.contains("Build a thing"))
+    assertTrue(markdown.contains("## Phase Trail"))
+    assertTrue(markdown.contains("## Scope & Goals"))
     assertTrue(markdown.contains("### Q: What is it?"))
-    assertTrue(markdown.contains("| **Answer:** | A thing |"))
-    assertTrue(markdown.contains("|**Status:** | unanswered |"))
+    assertTrue(markdown.contains("**Answer:**"))
+    assertTrue(markdown.contains("A thing"))
+    assertTrue(markdown.contains("### Q: When done?"))
+    assertTrue(markdown.contains("_Unanswered_"))
   }
 
   // ---------- engines that never read the transcript ----------

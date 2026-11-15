@@ -21,10 +21,10 @@ import alphainterplanetary.thinker.phases.Phase
  * answer slot rather than reading as one the user never gave.
  *
  * The question prompt sends this transcript ([KoogPlanningEngine]); the
- * human-facing export (`ProjectRepository.exportProject`, rebuilt in Phase 4)
- * is expected to share its state semantics and phase grouping rather than
- * re-derive them, though the export renders a detailed document rather than
- * these terse [line]s.
+ * human-facing export (rebuilt via `ProjectExportRenderer` /
+ * `ProjectRepository.exportProject`) shares its state semantics and phase
+ * grouping rather than re-deriving them, though the export renders a detailed
+ * document rather than these terse [line]s.
  *
  * Edge models have small context windows and answers run long, so a transcript
  * is measured against a budget ([estimateTokens], ~1 token ≈ [CharsPerToken]
@@ -143,7 +143,7 @@ object PlanningContext {
       .joinToString(separator = "\n") { question ->
         line(
           question,
-          summarized = question.id in covered
+          coveredBySummary = question.id in covered
         )
       }
     val summarized = spoken
@@ -163,14 +163,14 @@ object PlanningContext {
    *
    * Ignored wins over everything, answer included: the user passed on the
    * question, so what they wrote for it is not part of the plan going forward,
-   * and the transcript says so in one word. [summarized] is what a
+   * and the transcript says so in one word. [coveredBySummary] is what a
    * [PhaseSummary] covering this question renders instead of an answer.
    */
-  fun line(question: Question, summarized: Boolean = false): String {
+  fun line(question: Question, coveredBySummary: Boolean = false): String {
     val answer = question.currentAnswer
     val state = when {
       question.isIgnored -> SkippedNote
-      summarized -> "A: $SummarizedNote"
+      coveredBySummary -> "A: $SummarizedNote"
       question.compacted -> "A: $OmittedNote"
       answer != null -> "A: ${answer.text}"
       question.isDraft -> "Draft: ${question.draftText}"

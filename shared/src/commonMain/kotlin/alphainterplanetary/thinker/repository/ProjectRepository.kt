@@ -11,6 +11,8 @@ import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.model.Answer
+import alphainterplanetary.thinker.export.ProjectExportRenderer
+import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
@@ -695,36 +697,18 @@ class ProjectRepository @Inject constructor(
     storage.deleteAllProjects()
   }
 
-  fun exportProject(project: Project): String = buildString {
-    appendLine(
-      """
-        # ${project.synopsis}
-
-        ## Overview
-        ${project.synopsis}
-        
-        """.trimIndent()
-    )
-
-    for (question in project.questions.sortedBy { it.timestamp }) {
-      val answer = question.currentAnswer
-      val answerBlock = if (answer != null) {
-        """
-            | **Answer:** | ${answer.text} |
-            |-------------|--------
-            | **Answered:** | ${answer.createdAt} |
-            """.trimIndent()
-      } else {
-        """
-            |**Status:** | unanswered |
-            |------------|----------
-            """.trimIndent()
-      }
-
-      appendLine("### Q: ${question.text}\n")
-      appendLine(answerBlock)
-      appendLine()
-    }
+  /**
+   * Exports [project] as a detailed, human-readable Markdown document using a
+   * default [ExportConfig]. Rendering is phase-grouped with a phase-trail summary
+   * and shares transcript state semantics/phase grouping via [ProjectExportRenderer].
+   */
+  fun exportProject(project: Project): String {
+    val outputName = (project.title.ifBlank { project.synopsis })
+      .trim()
+      .lowercase()
+      .replace(Regex("\\s+"), "-")
+      .ifBlank { "export" }
+    return ProjectExportRenderer(ExportConfig(outputName = outputName)).render(project)
   }
 
   private companion object {

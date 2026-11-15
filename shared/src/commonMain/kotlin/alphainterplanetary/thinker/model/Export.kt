@@ -8,7 +8,6 @@ import kotlin.time.Instant
  * breaking existing callers.
  *
  * [outputName] is the requested base name for the export (without extension).
- * When null, callers derive a default (e.g. from the project title in the UI).
  */
 data class ExportConfig(
   val outputName: String,
