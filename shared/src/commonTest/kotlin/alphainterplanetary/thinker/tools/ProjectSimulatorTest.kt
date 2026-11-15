@@ -495,7 +495,7 @@ private class ScriptedPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PlanningContext.PhaseSummary>,
+    priorSummaries: List<PlanningContext.SummarizedPhase>,
   ): QuestionBatch {
     calls += 1
     val batch = delegate.generateQuestions(
@@ -543,7 +543,7 @@ private class FailFirstPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PlanningContext.PhaseSummary>,
+    priorSummaries: List<PlanningContext.SummarizedPhase>,
   ): QuestionBatch {
     calls += 1
     if (calls <= failures) throw IllegalStateException("generation call $calls failed")

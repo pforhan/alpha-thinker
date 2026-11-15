@@ -8,7 +8,7 @@ import alphainterplanetary.thinker.activitylog.LogRequest
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.activitylog.logRequest
 import alphainterplanetary.thinker.engine.core.PlanningContext
-import alphainterplanetary.thinker.engine.core.PlanningContext.PhaseSummary
+import alphainterplanetary.thinker.engine.core.PlanningContext.SummarizedPhase
 import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.model.Question
@@ -114,7 +114,7 @@ class KoogPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PhaseSummary>,
+    priorSummaries: List<SummarizedPhase>,
   ): QuestionBatch {
     // An empty list is only ever a brand-new project's opening round, so it is
     // the one thing that still distinguishes the two prompt shapes — kept in
@@ -245,7 +245,7 @@ class KoogPlanningEngine(
     synopsis: String,
     phase: Phase,
     previousQuestions: List<Question>,
-    priorSummaries: List<PhaseSummary> = emptyList(),
+    priorSummaries: List<SummarizedPhase> = emptyList(),
   ): String =
     "Planning a project titled \"$title\".\n" +
       "Project synopsis:\n$synopsis\n\n" +

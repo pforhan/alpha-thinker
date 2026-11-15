@@ -51,7 +51,7 @@ class OfflinePlanningEngine @Inject constructor(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PlanningContext.PhaseSummary>,
+    priorSummaries: List<PlanningContext.SummarizedPhase>,
   ): QuestionBatch {
     // Summaries stand in for answers this engine never reads; see
     // [contextUse]. The repository knows not to send any, and none would mean

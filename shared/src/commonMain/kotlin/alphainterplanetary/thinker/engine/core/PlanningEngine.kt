@@ -1,7 +1,7 @@
 package alphainterplanetary.thinker.engine.core
 
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.engine.core.PlanningContext.PhaseSummary
+import alphainterplanetary.thinker.engine.core.PlanningContext.SummarizedPhase
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.coroutines.cancellation.CancellationException
@@ -85,7 +85,7 @@ interface PlanningEngine {
   val contextWindowTokens: Int?
 
   /**
-   * Whether this engine can write a [PhaseSummary] for a past phase
+   * Whether this engine can write a [SummarizedPhase] for a past phase
    * ([summarizePriorAnswers]). False by default — an engine that can't would
    * otherwise be offered a choice it can only fail at. Only meaningful when
    * [contextWindowTokens] is set: an engine with no window has nothing to
@@ -123,7 +123,7 @@ interface PlanningEngine {
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PhaseSummary> = emptyList(),
+    priorSummaries: List<SummarizedPhase> = emptyList(),
   ): QuestionBatch
 
   /**
@@ -131,7 +131,7 @@ interface PlanningEngine {
    * [PlanningContext.PhaseTranscript]) — condensed to the handful of decisions
    * and findings a later round needs in order to avoid re-asking what is
    * already settled. Returns the summary text; the caller pairs it with the
-   * phase and the question ids it covers as a [PhaseSummary].
+   * phase and the question ids it covers as a [SummarizedPhase].
    *
    * Defaults to refusing, so an engine that hasn't taught to write summaries
    * (or can't) fails loudly if it is asked rather than silently sending back

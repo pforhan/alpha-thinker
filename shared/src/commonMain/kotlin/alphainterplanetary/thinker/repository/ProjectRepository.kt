@@ -484,7 +484,7 @@ class ProjectRepository @Inject constructor(
       PlanningContext.trim(project, budgetTokens)
 
     else -> {
-      val summaries = mutableListOf<PlanningContext.PhaseSummary>()
+      val summaries = mutableListOf<PlanningContext.SummarizedPhase>()
       var questions = project.questions
       for (candidate in PhaseSummarization.compactionCandidates(project)) {
         if (summaries.isNotEmpty() &&
@@ -499,7 +499,7 @@ class ProjectRepository @Inject constructor(
           candidate = candidate,
           activityId = taskId,
         )
-        summaries += PlanningContext.PhaseSummary(
+        summaries += PlanningContext.SummarizedPhase(
           phase = candidate.phase,
           summary = summary,
           coversQuestionIds = candidate.coveredQuestionIds,

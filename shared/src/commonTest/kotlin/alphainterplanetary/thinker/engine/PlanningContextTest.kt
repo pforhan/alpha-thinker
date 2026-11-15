@@ -247,7 +247,7 @@ class PlanningContextTest {
    */
   @Test
   fun `a summary leads the transcript and marks the answers it replaces`() {
-    val summary = PlanningContext.PhaseSummary(
+    val summary = PlanningContext.SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "A menu planner for home cooks.",
       coversQuestionIds = setOf("q1"),
@@ -280,7 +280,7 @@ class PlanningContextTest {
   @Test
   fun `a blank summary is left out rather than filed as an empty section`() {
     val questions = listOf(question("q1", "First?"))
-    val summary = PlanningContext.PhaseSummary(
+    val summary = PlanningContext.SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "   ",
       coversQuestionIds = setOf("q1"),
@@ -300,7 +300,7 @@ class PlanningContextTest {
   @Test
   fun `estimating counts the summaries as well as the transcript`() {
     val questions = listOf(answered("q1", "MVP?", "word ".repeat(80)))
-    val summary = PlanningContext.PhaseSummary(
+    val summary = PlanningContext.SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "a menu planner",
       coversQuestionIds = setOf("q1"),
@@ -499,7 +499,7 @@ class PlanningContextTest {
       BuiltInPhase.Research to answered("q2", "Second?", "kept. ".repeat(20)),
       BuiltInPhase.Design to question("live", "And now?"),
     )
-    val summary = PlanningContext.PhaseSummary(
+    val summary = PlanningContext.SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "the first phase settled on a menu planner",
       coversQuestionIds = setOf("q1"),
@@ -522,7 +522,7 @@ class PlanningContextTest {
       BuiltInPhase.Research to answered("q2", "Second?", "words. ".repeat(20)),
       BuiltInPhase.Design to question("live", "And now?"),
     )
-    val summary = PlanningContext.PhaseSummary(
+    val summary = PlanningContext.SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "a summary that is itself a good deal of text. ".repeat(10),
       coversQuestionIds = setOf("q1"),

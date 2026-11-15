@@ -572,7 +572,7 @@ class KoogPlanningEngineTest {
       phase = BuiltInPhase.Design,
       activityId = "t1",
       priorSummaries = listOf(
-        PlanningContext.PhaseSummary(
+        PlanningContext.SummarizedPhase(
           phase = BuiltInPhase.ScopeGoals,
           summary = "A menu planner for home cooks.",
           coversQuestionIds = setOf(summarized.id),

@@ -21,7 +21,7 @@ object PhaseSummarization {
    *
    * Serves as the shared input unit for prompt compaction and export/background
    * summarization; pair with [toPhaseSummary] to produce a prompt/context-ready
-   * [PlanningContext.PhaseSummary].
+   * [PlanningContext.SummarizedPhase].
    */
   data class Candidate(
     val phase: Phase,
@@ -33,9 +33,9 @@ object PhaseSummarization {
     val coveredQuestionIds: Set<String>
       get() = questions.mapTo(mutableSetOf()) { it.id }
 
-    /** Builds a [PlanningContext.PhaseSummary] for [summary] covering this candidate. */
-    fun toPhaseSummary(summary: String): PlanningContext.PhaseSummary =
-      PlanningContext.PhaseSummary(
+    /** Builds a [PlanningContext.SummarizedPhase] for [summary] covering this candidate. */
+    fun toPhaseSummary(summary: String): PlanningContext.SummarizedPhase =
+      PlanningContext.SummarizedPhase(
         phase = phase,
         summary = summary,
         coversQuestionIds = coveredQuestionIds,

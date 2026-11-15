@@ -33,7 +33,7 @@ class SlowDownPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PlanningContext.PhaseSummary>,
+    priorSummaries: List<PlanningContext.SummarizedPhase>,
   ): QuestionBatch {
     maybeDelay(EngineInteraction.QuestionGeneration)
     return delegate.generateQuestions(

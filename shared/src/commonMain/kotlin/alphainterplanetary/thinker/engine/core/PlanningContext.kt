@@ -37,7 +37,7 @@ import alphainterplanetary.thinker.phases.Phase
  *
  * Dropping is lossy, so a project that has grown enough to need it can do
  * better: [summarizablePhases] cuts the project into whole past phases, and a
- * [PhaseSummary] written by the model for one of them rides ahead of the
+ * [SummarizedPhase] written by the model for one of them rides ahead of the
  * transcript in its place. The covered questions keep their `Q:` line and read
  * [SummarizedNote] for the answer, so the reader still sees what was asked and
  * what it was told — through the model, rather than verbatim.
@@ -87,7 +87,7 @@ object PlanningContext {
   /** Stands in for an answer this transcript had to leave out to fit the budget */
   const val OmittedNote: String = "omitted"
 
-  /** Stands in for an answer a [PhaseSummary] now carries on the phase's behalf. */
+  /** Stands in for an answer a [SummarizedPhase] now carries on the phase's behalf. */
   const val SummarizedNote: String = "summarized below"
 
   /** Marks a question the user genuinely hasn't reached yet. */
@@ -105,14 +105,14 @@ object PlanningContext {
    * that renders a transcript is handed a flat list of questions with no round
    * or phase to resolve, and an id is the one thing that survives that.
    */
-  data class PhaseSummary(
+  data class SummarizedPhase(
     val phase: Phase,
     val summary: String,
     val coversQuestionIds: Set<String> = emptySet(),
   )
 
   /**
-   * One past phase's answers, as the unit a [PhaseSummary] is written from:
+   * One past phase's answers, as the unit a [SummarizedPhase] is written from:
    * the phase, its answered/draft questions, and the rendered transcript to
    * hand the model. Whole phases rather than individual answers, because a
    * summary of three unrelated answers answers no question — and a phase is
@@ -136,7 +136,7 @@ object PlanningContext {
    * answer slot — dropping the line would hide what was already asked, which
    * is the one thing the transcript exists to convey.
    */
-  fun render(questions: List<Question>, summaries: List<PhaseSummary> = emptyList()): String {
+  fun render(questions: List<Question>, summaries: List<SummarizedPhase> = emptyList()): String {
     val spoken = summaries.filter { it.summary.isNotBlank() }
     val covered = spoken.flatMapTo(mutableSetOf()) { it.coversQuestionIds }
     val lines = questions
@@ -164,7 +164,7 @@ object PlanningContext {
    * Ignored wins over everything, answer included: the user passed on the
    * question, so what they wrote for it is not part of the plan going forward,
    * and the transcript says so in one word. [coveredBySummary] is what a
-   * [PhaseSummary] covering this question renders instead of an answer.
+   * [SummarizedPhase] covering this question renders instead of an answer.
    */
   fun line(question: Question, coveredBySummary: Boolean = false): String {
     val answer = question.currentAnswer
@@ -188,7 +188,7 @@ object PlanningContext {
     (text.length + CharsPerToken - 1) / CharsPerToken
 
   /** The estimated token cost of a project's transcript, rendered fresh. */
-  fun estimateTokens(questions: List<Question>, summaries: List<PhaseSummary> = emptyList()): Int =
+  fun estimateTokens(questions: List<Question>, summaries: List<SummarizedPhase> = emptyList()): Int =
     estimateTokens(render(questions, summaries))
 
   /**
@@ -236,14 +236,14 @@ object PlanningContext {
   }
 
   /**
-   * Result of [trim]: the questions to send as context, the [PhaseSummary]s
+   * Result of [trim]: the questions to send as context, the [SummarizedPhase]s
    * riding with them, and how many answers it had to compact away to fit the
    * budget.
    */
   data class TrimResult(
     val questions: List<Question>,
     val droppedAnswers: Int = 0,
-    val summaries: List<PhaseSummary> = emptyList(),
+    val summaries: List<SummarizedPhase> = emptyList(),
   )
 
   /**
@@ -266,14 +266,14 @@ object PlanningContext {
    * Ignored questions are not candidates: [line] renders one as [SkippedNote]
    * whatever it holds, so their answers cost nothing here to begin with and
    * compacting them would report a loss that never reached the model. Neither
-   * are questions a [PhaseSummary] already covers: their answers are gone from
+   * are questions a [SummarizedPhase] already covers: their answers are gone from
    * the prompt in favor of the summary, so "dropping" one again would compact a
    * question the model can already read.
    */
   fun trim(
     project: Project,
     budgetTokens: Int,
-    summaries: List<PhaseSummary> = emptyList(),
+    summaries: List<SummarizedPhase> = emptyList(),
   ): TrimResult {
     val questions = project.questions
     if (estimateTokens(questions, summaries) <= budgetTokens) {

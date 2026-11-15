@@ -76,7 +76,7 @@ open class FakePlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PlanningContext.PhaseSummary>,
+    priorSummaries: List<PlanningContext.SummarizedPhase>,
   ): QuestionBatch {
     val call = Call(title, synopsis, previousQuestions, roundId, phase, priorSummaries)
     calls += call
@@ -92,7 +92,7 @@ open class FakePlanningEngine(
     val previousQuestions: List<Question>,
     val roundId: String,
     val phase: Phase,
-    val priorSummaries: List<PlanningContext.PhaseSummary> = emptyList(),
+    val priorSummaries: List<PlanningContext.SummarizedPhase> = emptyList(),
   )
 
   /** One recorded summarize request, carrying the phase transcript it was asked about. */

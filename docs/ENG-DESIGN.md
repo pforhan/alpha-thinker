@@ -414,7 +414,7 @@ take it as a parameter and the dialog is asked from the ViewModel; the
 summarizing itself runs inside the generation task, where each phase is one
 `PlanningEngine.summarizePriorAnswers` request filed as its own
 `prompt:`/`response:` pair under the same activity, oldest phase first,
-re-measured after each, until the transcript fits. The returned `PhaseSummary`
+re-measured after each, until the transcript fits. The returned `SummarizedPhase`
 rides ahead of the transcript and the questions it covers read `A: summarized
 below` instead of `A: omitted`, so a model still sees what was asked and is told
 what it was told. Only an engine that reports `canSummarize` is offered the

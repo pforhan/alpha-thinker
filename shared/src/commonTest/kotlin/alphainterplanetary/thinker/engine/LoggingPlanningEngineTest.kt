@@ -376,7 +376,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
-      priorSummaries: List<PlanningContext.PhaseSummary>,
+      priorSummaries: List<PlanningContext.SummarizedPhase>,
     ): QuestionBatch {
       // The repository summarizes before it asks; modelled here as the calls
       // that happen on the way in, so the pairs land in the order they would.
@@ -415,7 +415,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
-      priorSummaries: List<PlanningContext.PhaseSummary>,
+      priorSummaries: List<PlanningContext.SummarizedPhase>,
     ): QuestionBatch = throw PlanningEngine.AnalysisFailure("not used")
   }
 
@@ -434,7 +434,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
-      priorSummaries: List<PlanningContext.PhaseSummary>,
+      priorSummaries: List<PlanningContext.SummarizedPhase>,
     ): QuestionBatch {
       val summary = logRequest("SYSTEM\nSummarize")
       if (failSummary) {

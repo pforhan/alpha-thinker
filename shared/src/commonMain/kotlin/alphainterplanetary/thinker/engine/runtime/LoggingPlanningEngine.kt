@@ -4,7 +4,7 @@ import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogScope
 import alphainterplanetary.thinker.engine.core.ForwardingPlanningEngine
-import alphainterplanetary.thinker.engine.core.PlanningContext.PhaseSummary
+import alphainterplanetary.thinker.engine.core.PlanningContext.SummarizedPhase
 import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.model.Question
@@ -73,7 +73,7 @@ class LoggingPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PhaseSummary>,
+    priorSummaries: List<SummarizedPhase>,
   ): QuestionBatch =
     logged(
       activityId = activityId, topic = LogTopic.QuestionGeneration,
