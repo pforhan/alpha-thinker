@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
-class PhaseStatsTest {
+class PhaseQuestionsTest {
 
   private val base: Instant = Instant.fromEpochMilliseconds(1_000_000)
   private val now: Instant = base + 99.minutes
@@ -31,12 +31,12 @@ class PhaseStatsTest {
   )
 
   @Test
-  fun `phaseStats is empty when the project has no rounds`() {
-    assertEquals(emptyList(), projectWith(rounds = emptyList()).phaseStats(now))
+  fun `phaseQuestions is empty when the project has no rounds`() {
+    assertEquals(emptyList(), projectWith(rounds = emptyList()).allPhaseContent(now))
   }
 
   @Test
-  fun `phaseStats lists visited phases in library order`() {
+  fun `phaseQuestions lists visited phases in library order`() {
     val p = projectWith(
       rounds = listOf(
         round(
@@ -60,12 +60,12 @@ class PhaseStatsTest {
 
     assertEquals(
       listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Design),
-      p.phaseStats(now).map { it.phase },
+      p.allPhaseContent(now).map { it.phase },
     )
   }
 
   @Test
-  fun `phaseStats resolves questions by the phase of their round and counts resolved`() {
+  fun `phaseQuestions resolves questions by the phase of their round and counts resolved`() {
     val p = projectWith(
       rounds = listOf(
         round(
@@ -93,7 +93,7 @@ class PhaseStatsTest {
       ),
     )
 
-    val stats = p.phaseStats(now)
+    val stats = p.allPhaseContent(now)
     val scope = stats.first { it.phase == BuiltInPhase.ScopeGoals }
     assertEquals(2, scope.resolved)
     assertEquals(4, scope.total)
@@ -125,7 +125,7 @@ class PhaseStatsTest {
       ),
     )
 
-    assertEquals(140.minutes, p.phaseStats(now).single().spent)
+    assertEquals(140.minutes, p.allPhaseContent(now).single().spent)
   }
 
   @Test
@@ -142,7 +142,7 @@ class PhaseStatsTest {
       ),
     )
 
-    assertEquals(99.minutes, p.phaseStats(now).single().spent)
+    assertEquals(99.minutes, p.allPhaseContent(now).single().spent)
   }
 
   @Test
@@ -159,6 +159,6 @@ class PhaseStatsTest {
       ),
     )
 
-    assertEquals(0.minutes, p.phaseStats(base).single().spent)
+    assertEquals(0.minutes, p.allPhaseContent(base).single().spent)
   }
 }

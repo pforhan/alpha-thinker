@@ -1,6 +1,6 @@
 package alphainterplanetary.thinker.ui.components
 
-import alphainterplanetary.thinker.model.PhaseStats
+import alphainterplanetary.thinker.model.PhaseQuestions
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.theme.BadgeShape
 import alphainterplanetary.thinker.ui.theme.Dimens
@@ -172,7 +172,7 @@ private fun calloutContentPadding(arrow: CalloutArrow): PaddingValues = when (ar
  */
 @Composable
 fun PhaseAdvanceDialog(
-  phaseStats: List<PhaseStats>,
+  phaseStats: List<PhaseQuestions>,
   completedPhase: Phase,
   suggestions: List<Phase>,
   suggestionsLoading: Boolean = false,
@@ -273,7 +273,7 @@ fun PhaseAdvanceDialog(
 
 @Composable
 private fun PhaseTimelineRow(
-  stats: PhaseStats,
+  stats: PhaseQuestions,
   activated: Boolean,
   isCompleted: Boolean,
   modifier: Modifier = Modifier,

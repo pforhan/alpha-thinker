@@ -652,7 +652,7 @@ class ProjectRepository @Inject constructor(
   private fun nextRound(project: Project, origin: RoundOrigin, startedAt: Instant): Round = Round(
     id = randomUUID(),
     projectId = project.id,
-    phase = project.currentRound?.phase ?: Phase.first,
+    phase = project.currentPhase,
     roundNumber = nextRoundNumber(project),
     origin = origin,
     startedAt = startedAt,

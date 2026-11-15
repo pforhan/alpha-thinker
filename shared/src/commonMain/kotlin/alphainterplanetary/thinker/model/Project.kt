@@ -2,7 +2,8 @@ package alphainterplanetary.thinker.model
 
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
-import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 data class Project(
@@ -93,23 +94,55 @@ data class Project(
 
   /** Questions asked while the current planning phase was in progress. */
   val currentPhaseQuestions: List<Question>
-    get() {
-      val roundIds = currentPhaseRounds.map { it.id }.toSet()
-      return questions.filter { it.roundId in roundIds }
-    }
+    get() = currentPhaseContent.questions
+
+  /** Content/questions for the current planning phase (across all its rounds). */
+  val currentPhaseContent: PhaseQuestions
+    get() = PhaseQuestions(
+      phase = currentPhase,
+      questions = run {
+        val roundIds = currentPhaseRounds.map { it.id }.toSet()
+        questions.filter { it.roundId in roundIds }
+      },
+      rounds = currentPhaseRounds,
+      spent = Duration.ZERO,
+    )
+
+  /**
+   * Per-phase content for the project's visited phases (those with at least one
+   * round), ordered by library order. Each PhaseQuestion's [PhaseQuestions.spent] sums each
+   * phase's round durations — `(completedAt ?: now) - startedAt` — floored at zero.
+   * `now` will be used as the end time for an incomplete phase.
+   */
+  fun allPhaseContent(now: Instant = Clock.System.now()): List<PhaseQuestions> {
+    val roundsByPhase = rounds.groupBy { it.phase }
+    val phaseByRoundId = rounds.associate { it.id to it.phase }
+    return roundsByPhase.keys
+      .sortedBy { it.order }
+      .map { phase ->
+        val phaseRounds = roundsByPhase.getValue(phase)
+        PhaseQuestions(
+          phase = phase,
+          questions = questions.filter { phaseByRoundId[it.roundId] == phase },
+          rounds = phaseRounds,
+          spent = phaseRounds.fold(Duration.ZERO) { acc, round ->
+            acc + ((round.completedAt ?: now) - round.startedAt).coerceAtLeast(Duration.ZERO)
+          },
+        )
+      }
+  }
 
   /** Questions resolved (answered or ignored) in the current planning phase. */
   val currentPhaseResolvedCount: Int
-    get() = currentPhaseQuestions.count { it.isAnswered || it.isIgnored }
+    get() = currentPhaseContent.resolved
 
   /** Total questions asked in the current planning phase. */
   val currentPhaseQuestionCount: Int
-    get() = currentPhaseQuestions.size
+    get() = currentPhaseContent.total
 
   /** The current phase's completion as a whole percent, rounded to the nearest percent (0 if no questions). */
   val currentPhaseCompletionPercent: Int
-    get() = if (currentPhaseQuestionCount == 0) 0
-    else (currentPhaseResolvedCount * 100.0 / currentPhaseQuestionCount).roundToInt()
+    get() = currentPhaseContent.completionPercent
 
   val unansweredQuestions: List<Question>
     get() = questions.filter { it.isUnanswered }
