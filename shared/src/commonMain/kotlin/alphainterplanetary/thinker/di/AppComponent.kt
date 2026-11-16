@@ -17,7 +17,10 @@ import alphainterplanetary.thinker.engine.model.KoogRemoteModelCatalog
 import alphainterplanetary.thinker.engine.model.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.runtime.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.runtime.dev.SlowDownPlanningEngine
+import alphainterplanetary.thinker.export.PlatformExportActions
+import alphainterplanetary.thinker.export.providePlatformExportActions
 import alphainterplanetary.thinker.repository.EngineRepository
+import alphainterplanetary.thinker.repository.ExportRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.repository.SettingsRepository
@@ -36,6 +39,8 @@ import me.tatarka.inject.annotations.Provides
 @Component
 abstract class AppComponent(@get:Provides val platformContext: PlatformContext) {
   abstract val projectRepository: ProjectRepository
+
+  abstract val exportRepository: ExportRepository
 
   abstract val settingsRepository: SettingsRepository
 
@@ -66,6 +71,11 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   @AppScope
   @Provides
   fun providesStorage(): Storage = provideStorage(platformContext)
+
+  @AppScope
+  @Provides
+  fun providesPlatformExportActions(): PlatformExportActions =
+    providePlatformExportActions(platformContext)
 
   @AppScope
   @Provides

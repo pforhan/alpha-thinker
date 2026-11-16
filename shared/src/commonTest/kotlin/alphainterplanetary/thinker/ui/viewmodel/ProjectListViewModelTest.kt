@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
+import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites
@@ -19,6 +20,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 
@@ -198,6 +200,23 @@ class ProjectListViewModelTest {
     }
 
     override suspend fun setSelectedEngine(ref: EngineRef) {
+      throw IllegalStateException("boom")
+    }
+
+    override suspend fun saveExportArtifact(artifact: ExportArtifact) {
+      throw IllegalStateException("boom")
+    }
+
+    override suspend fun getExportArtifact(id: String): ExportArtifact? =
+      throw IllegalStateException("boom")
+
+    override fun observeExportArtifacts(projectId: String): Flow<List<ExportArtifact>> =
+      throw IllegalStateException("boom")
+
+    override suspend fun getExportArtifacts(projectId: String): List<ExportArtifact> =
+      throw IllegalStateException("boom")
+
+    override suspend fun deleteExportArtifact(id: String) {
       throw IllegalStateException("boom")
     }
   }

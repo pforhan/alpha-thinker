@@ -7,6 +7,7 @@ val TaskKind.title: String
     TaskKind.TitleRecommendation -> "Title recommendation"
     TaskKind.SynopsisRewrite -> "Synopsis rewrite"
     TaskKind.AutoArchive -> "Auto-archive"
+    TaskKind.Export -> "Export"
     TaskKind.OllamaModelPull -> "Ollama model pull"
   }
 
@@ -17,5 +18,6 @@ val TaskKind.progressLabel: String
     TaskKind.TitleRecommendation -> "Generating title"
     TaskKind.SynopsisRewrite -> "Rewriting synopsis"
     TaskKind.AutoArchive -> "Reviewing answers"
+    TaskKind.Export -> "Generating export"
     TaskKind.OllamaModelPull -> "Pulling model"
   }

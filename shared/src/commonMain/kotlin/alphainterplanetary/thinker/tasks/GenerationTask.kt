@@ -26,6 +26,9 @@ enum class TaskKind {
   /** Deciding whether older questions should be auto-archived/deselected. */
   AutoArchive,
 
+  /** Generating and persisting a project export. */
+  Export,
+
   /** Server-side model pull streamed from an Ollama instance. */
   OllamaModelPull;
 
@@ -43,6 +46,7 @@ enum class TaskKind {
       TitleRecommendation,
       SynopsisRewrite,
       AutoArchive,
+      Export,
         -> ConcurrencyGroup.Engine
 
       OllamaModelPull -> ConcurrencyGroup.Download

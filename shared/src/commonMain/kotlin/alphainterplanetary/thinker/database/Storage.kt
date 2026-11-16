@@ -4,7 +4,9 @@ import alphainterplanetary.thinker.di.PlatformContext
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
+import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.Project
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Well-known app-wide setting keys. The durable [storageKey] string is what's
@@ -61,6 +63,12 @@ interface Storage {
 
   /** Marks [ref] as the sole selected engine, clearing every other selection. */
   suspend fun setSelectedEngine(ref: EngineRef)
+
+  suspend fun saveExportArtifact(artifact: ExportArtifact)
+  suspend fun getExportArtifact(id: String): ExportArtifact?
+  fun observeExportArtifacts(projectId: String): Flow<List<ExportArtifact>>
+  suspend fun getExportArtifacts(projectId: String): List<ExportArtifact>
+  suspend fun deleteExportArtifact(id: String)
 }
 
 /**

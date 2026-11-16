@@ -20,8 +20,9 @@ import kotlinx.coroutines.Dispatchers
     SettingsEntity::class,
     EngineInstanceEntity::class,
     EngineSelectionStateEntity::class,
+    ExportArtifactEntity::class,
   ],
-  version = 14,
+  version = 15,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -33,6 +34,7 @@ abstract class AppDatabase : RoomDatabase() {
   abstract fun settingsDao(): SettingsDao
   abstract fun engineInstanceDao(): EngineInstanceDao
   abstract fun engineSelectionStateDao(): EngineSelectionStateDao
+  abstract fun exportArtifactDao(): ExportArtifactDao
 }
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
@@ -47,7 +49,7 @@ expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
  * `prepare`, web a suspending one), which this shared `commonMain` builder
  * cannot express, so an upgrade rebuilds the local database.
  *
- * The v13/v14 rebuilds also clear projects and settings, not just the engine tables.
+ * Destructive upgrades clear persisted data, including exports.
  */
 fun getRoomDatabase(builder: RoomDatabase.Builder<AppDatabase>): AppDatabase {
   return builder

@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.model
 
 import kotlin.time.Instant
+import kotlinx.serialization.Serializable
 
 /**
  * Options that control what an export includes and how it is rendered.
@@ -9,6 +10,7 @@ import kotlin.time.Instant
  *
  * [outputName] is the requested base name for the export (without extension).
  */
+@Serializable
 data class ExportConfig(
   val outputName: String,
   val includeIgnoredQuestions: Boolean = false,
@@ -20,8 +22,19 @@ data class ExportConfig(
 )
 
 /** Output format for a generated export. */
+@Serializable
 enum class ExportFormat {
-  Markdown,
+  Markdown;
+
+  val extension: String
+    get() = when (this) {
+      Markdown -> "md"
+    }
+
+  val mimeType: String
+    get() = when (this) {
+      Markdown -> "text/markdown"
+    }
 }
 
 /** Lifecycle state of a generated or persisted export artifact. */
@@ -39,7 +52,9 @@ enum class ExportStatus {
  * path or platform URI) once [status] is [ExportStatus.Completed]; it is null
  * before the artifact has been saved or when generation failed. [config] is the
  * snapshot of options used to produce this export so it can be inspected or
- * regenerated later.
+ * regenerated later. [content] holds the rendered export text for completed,
+ * app-persisted exports so it can be retrieved, re-shared, or saved out on any
+ * platform.
  */
 data class ExportArtifact(
   val id: String,
@@ -51,4 +66,5 @@ data class ExportArtifact(
   val status: ExportStatus,
   val storageRef: String? = null,
   val error: String? = null,
+  val content: String? = null,
 )

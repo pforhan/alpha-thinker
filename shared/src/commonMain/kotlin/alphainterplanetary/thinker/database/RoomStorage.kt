@@ -3,9 +3,12 @@ package alphainterplanetary.thinker.database
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
+import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
 import androidx.room3.withWriteTransaction
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import me.tatarka.inject.annotations.Inject
 
 class RoomStorage @Inject constructor(private val database: AppDatabase) : Storage {
@@ -143,5 +146,22 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
 
   override suspend fun setSelectedEngine(ref: EngineRef) {
     database.engineSelectionStateDao().setSelected(ref.storageKey)
+  }
+
+  override suspend fun saveExportArtifact(artifact: ExportArtifact) {
+    database.exportArtifactDao().upsert(artifact.toEntity())
+  }
+
+  override suspend fun getExportArtifact(id: String): ExportArtifact? =
+    database.exportArtifactDao().getById(id)?.toModel()
+
+  override fun observeExportArtifacts(projectId: String): Flow<List<ExportArtifact>> =
+    database.exportArtifactDao().observeForProject(projectId).map { rows -> rows.map { it.toModel() } }
+
+  override suspend fun getExportArtifacts(projectId: String): List<ExportArtifact> =
+    database.exportArtifactDao().getForProject(projectId).map { it.toModel() }
+
+  override suspend fun deleteExportArtifact(id: String) {
+    database.exportArtifactDao().deleteById(id)
   }
 }

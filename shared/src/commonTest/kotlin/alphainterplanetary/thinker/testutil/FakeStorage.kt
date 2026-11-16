@@ -5,8 +5,13 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
+import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 
 /**
  * In-memory [alphainterplanetary.thinker.database.Storage] fake for tests.
@@ -16,7 +21,14 @@ class FakeStorage(
   val settings: MutableMap<String, String> = mutableMapOf(),
   val engineInstances: MutableMap<String, EngineInstance> = mutableMapOf(),
   val engineSelectionStates: MutableMap<String, EngineSelectionState> = mutableMapOf(),
+  val exportArtifacts: MutableMap<String, ExportArtifact> = mutableMapOf(),
 ) : Storage {
+  private val exportFlows = MutableStateFlow(exportArtifacts.toMap())
+
+  private fun publishExports() {
+    exportFlows.value = exportArtifacts.toMap()
+  }
+
   override suspend fun saveProject(project: Project) {
     projects[project.id] = project
   }
@@ -79,5 +91,25 @@ class FakeStorage(
     if (key !in engineSelectionStates) {
       engineSelectionStates[key] = EngineSelectionState(ref = ref, selected = true)
     }
+  }
+
+  override suspend fun saveExportArtifact(artifact: ExportArtifact) {
+    exportArtifacts[artifact.id] = artifact
+    publishExports()
+  }
+
+  override suspend fun getExportArtifact(id: String): ExportArtifact? = exportArtifacts[id]
+
+  override fun observeExportArtifacts(projectId: String): Flow<List<ExportArtifact>> =
+    exportFlows.map { all ->
+      all.values.filter { it.projectId == projectId }.sortedByDescending { it.createdAt }
+    }
+
+  override suspend fun getExportArtifacts(projectId: String): List<ExportArtifact> =
+    exportArtifacts.values.filter { it.projectId == projectId }.sortedByDescending { it.createdAt }
+
+  override suspend fun deleteExportArtifact(id: String) {
+    exportArtifacts.remove(id)
+    publishExports()
   }
 }

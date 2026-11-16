@@ -10,6 +10,10 @@ import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
 import alphainterplanetary.thinker.engine.config.RemoteProvider
 import alphainterplanetary.thinker.model.Answer
+import alphainterplanetary.thinker.model.ExportArtifact
+import alphainterplanetary.thinker.model.ExportConfig
+import alphainterplanetary.thinker.model.ExportFormat
+import alphainterplanetary.thinker.model.ExportStatus
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
@@ -17,6 +21,8 @@ import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.time.Instant
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 fun Project.toEntity() = ProjectEntity(
   id = id,
@@ -182,4 +188,33 @@ fun EngineSelectionStateEntity.toModel() = EngineSelectionState(
   ref = EngineRef.fromStorageKey(refKey),
   selected = selected,
   lastUsedAt = lastUsedAt,
+)
+
+private val exportJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+
+fun ExportArtifact.toEntity(): ExportArtifactEntity = ExportArtifactEntity(
+  id = id,
+  projectId = projectId,
+  createdAt = createdAt.toEpochMilliseconds(),
+  filename = filename,
+  format = format.name,
+  configJson = exportJson.encodeToString(config),
+  status = status.name,
+  storageRef = storageRef,
+  error = error,
+  content = content,
+)
+
+fun ExportArtifactEntity.toModel(): ExportArtifact = ExportArtifact(
+  id = id,
+  projectId = projectId,
+  createdAt = Instant.fromEpochMilliseconds(createdAt),
+  filename = filename,
+  format = runCatching { ExportFormat.valueOf(format) }.getOrElse { ExportFormat.Markdown },
+  config = runCatching { exportJson.decodeFromString<ExportConfig>(configJson) }
+    .getOrElse { ExportConfig(outputName = filename.substringBeforeLast('.')) },
+  status = runCatching { ExportStatus.valueOf(status) }.getOrElse { ExportStatus.Failed },
+  storageRef = storageRef,
+  error = error,
+  content = content,
 )
