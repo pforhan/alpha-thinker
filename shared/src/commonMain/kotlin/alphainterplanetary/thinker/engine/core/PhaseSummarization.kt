@@ -27,7 +27,8 @@ object PhaseSummarization {
     project.phaseTranscripts(includeCurrentPhase = true)
 
   /**
-   * Summarizes [transcript] and returns the summary text.
+   * Summarizes a phase [transcript] and returns the summary text. Note that
+   * this does not summarize an entire project.
    *
    * Propagates failures from [PlanningEngine.summarizePriorAnswers]; callers
    * that want best-effort behavior should use [summarizeOrNull].
