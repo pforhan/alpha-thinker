@@ -12,6 +12,8 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
   DesktopPlatformExportActions()
 
 private class DesktopPlatformExportActions : PlatformExportActions {
+  override val supportsShare: Boolean = false
+
   override suspend fun save(
     filename: String,
     mimeType: String,

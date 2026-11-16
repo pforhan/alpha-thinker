@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.PhaseQuestions
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
@@ -14,6 +15,8 @@ import alphainterplanetary.thinker.ui.components.AnswerDialogResult
 import alphainterplanetary.thinker.ui.components.ContextCompactionDialog
 import alphainterplanetary.thinker.ui.components.EditProjectDialog
 import alphainterplanetary.thinker.ui.components.EmptyState
+import alphainterplanetary.thinker.ui.components.ExportConfigDialog
+import alphainterplanetary.thinker.ui.components.ExportLibraryDialog
 import alphainterplanetary.thinker.ui.components.PhaseAdvanceDialog
 import alphainterplanetary.thinker.ui.components.PhaseBadgeCell
 import alphainterplanetary.thinker.ui.components.PhasePill
@@ -60,6 +63,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
@@ -83,6 +88,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,6 +97,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import kotlin.time.Clock
+import kotlinx.coroutines.launch
 
 private const val SubtleCheckIntensity = 10
 
@@ -148,7 +155,12 @@ fun ProjectDetailScreen(
   var selectedView by remember { mutableStateOf(QuestionViewMode.Unanswered) }
   var showEditDialog by remember { mutableStateOf(false) }
   var showPhaseAdvanceDialog by remember { mutableStateOf(false) }
+  var showExportDialog by remember { mutableStateOf(false) }
+  var showExportLibrary by remember { mutableStateOf(false) }
+  var exportInitialConfig by remember { mutableStateOf<ExportConfig?>(null) }
   var selectedQuestion by remember { mutableStateOf<Question?>(null) }
+  val scope = rememberCoroutineScope()
+  val exports by appComponent.exportRepository.observeExports(projectId).collectAsState(emptyList())
 
   LaunchedEffect(pendingUndo) {
     val undo = pendingUndo ?: return@LaunchedEffect
@@ -190,6 +202,17 @@ fun ProjectDetailScreen(
       if (untitled && !titleGenerating) {
         IconButton(onClick = { viewModel.retryTitle(projectId) }) {
           Icon(Icons.Default.Refresh, contentDescription = "Suggest a title")
+        }
+      }
+      if (uiState is ProjectDetailUiState.Success) {
+        IconButton(onClick = {
+          exportInitialConfig = null
+          showExportDialog = true
+        }) {
+          Icon(Icons.Default.IosShare, contentDescription = "Export project")
+        }
+        IconButton(onClick = { showExportLibrary = true }) {
+          Icon(Icons.Default.FolderOpen, contentDescription = "View exports")
         }
       }
       IconButton(onClick = { showEditDialog = true }) {
@@ -293,6 +316,82 @@ fun ProjectDetailScreen(
       check = prompt.check,
       onChoose = { viewModel.resolveContextPrompt(it) },
       onDismiss = { viewModel.dismissContextPrompt() },
+    )
+  }
+
+  if (showExportDialog) {
+    val project = (uiState as? ProjectDetailUiState.Success)?.project
+    if (project != null) {
+      ExportConfigDialog(
+        project = project,
+        initialConfig = exportInitialConfig,
+        onDismiss = {
+          showExportDialog = false
+          exportInitialConfig = null
+        },
+        onViewExports = {
+          showExportDialog = false
+          exportInitialConfig = null
+          showExportLibrary = true
+        },
+        onConfirm = { config ->
+          showExportDialog = false
+          exportInitialConfig = null
+          showExportLibrary = true
+          scope.launch {
+            runCatching {
+              appComponent.exportRepository.generateExport(project.id, config)
+            }.onFailure { error ->
+              chrome.showMessage(
+                "Couldn't prepare export: ${error.message ?: "Unknown error"}"
+              )
+            }
+          }
+        },
+      )
+    }
+  }
+
+  if (showExportLibrary) {
+    ExportLibraryDialog(
+      exports = exports,
+      showOpen = appComponent.exportRepository.supportsOpen,
+      showShare = appComponent.exportRepository.supportsShare,
+      showSave = appComponent.exportRepository.supportsSave,
+      saveLabel = appComponent.exportRepository.saveActionLabel,
+      onDismiss = { showExportLibrary = false },
+      onExportAgain = { config ->
+        showExportLibrary = false
+        exportInitialConfig = config
+        showExportDialog = true
+      },
+      onShare = { artifact ->
+        scope.launch {
+          val ok = appComponent.exportRepository.shareExport(artifact.id)
+          if (!ok) chrome.showMessage("Sharing isn't available on this platform")
+        }
+      },
+      onSave = { artifact ->
+        scope.launch {
+          val result = appComponent.exportRepository.saveExport(artifact.id)
+          when {
+            result == null -> chrome.showMessage("${appComponent.exportRepository.saveActionLabel} cancelled or unavailable")
+            else -> chrome.showMessage("Export ${appComponent.exportRepository.saveActionLabel.lowercase()}d")
+          }
+        }
+      },
+      onOpen = { artifact ->
+        scope.launch {
+          val ok = appComponent.exportRepository.openExport(artifact.id)
+          if (!ok) chrome.showMessage("Couldn't open export")
+        }
+      },
+      onDelete = { artifact ->
+        scope.launch {
+          appComponent.exportRepository.deleteExport(artifact.id)
+            .onFailure { chrome.showMessage(it.message ?: "Failed to delete prepared export") }
+        }
+      },
     )
   }
 

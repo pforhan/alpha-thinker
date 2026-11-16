@@ -12,6 +12,10 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
 
 @OptIn(ExperimentalWasmJsInterop::class)
 private class WasmPlatformExportActions : PlatformExportActions {
+  override val supportsOpen: Boolean = false
+  override val supportsShare: Boolean = false
+  override val saveActionLabel: String = "Download"
+
   override suspend fun save(
     filename: String,
     mimeType: String,

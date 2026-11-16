@@ -22,6 +22,9 @@ enum class LogTopic(val label: String) {
   /** A past phase's answers condensed into a summary the question prompt uses. */
   PriorSummary("Prior-phase summary"),
 
+  /** Rendering and saving a project export artifact. */
+  Export("Export"),
+
   /** Long-running task lifecycle rows (start/finish). */
   TaskRun("Task"),
 

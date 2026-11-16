@@ -31,6 +31,11 @@ class ExportRepository @Inject constructor(
   private val platformExportActions: PlatformExportActions,
   private val exportFileStore: ExportFileStore,
 ) {
+  val supportsSave: Boolean get() = platformExportActions.supportsSave
+  val supportsOpen: Boolean get() = platformExportActions.supportsOpen
+  val supportsShare: Boolean get() = platformExportActions.supportsShare
+  val saveActionLabel: String get() = platformExportActions.saveActionLabel
+
   fun observeExports(projectId: String): Flow<List<ExportArtifact>> =
     storage.observeExportArtifacts(projectId)
 
@@ -188,7 +193,7 @@ class ExportRepository @Inject constructor(
   ) {
     val log = activityLogger.context(
       activityId = taskId,
-      topic = LogTopic.Info,
+      topic = LogTopic.Export,
       source = LogSource.App,
       projectId = projectId,
     )

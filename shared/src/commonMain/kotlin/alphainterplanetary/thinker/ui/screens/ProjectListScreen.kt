@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.di.AppComponent
+import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskKind
@@ -9,6 +10,8 @@ import alphainterplanetary.thinker.ui.chrome.AppScaffold
 import alphainterplanetary.thinker.ui.chrome.ChromeSheet
 import alphainterplanetary.thinker.ui.components.CreateProjectDialog
 import alphainterplanetary.thinker.ui.components.EmptyState
+import alphainterplanetary.thinker.ui.components.ExportConfigDialog
+import alphainterplanetary.thinker.ui.components.ExportLibraryDialog
 import alphainterplanetary.thinker.ui.components.GenerationProblemKind
 import alphainterplanetary.thinker.ui.components.PhaseBadge
 import alphainterplanetary.thinker.ui.components.PhaseCard
@@ -39,6 +42,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,11 +62,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +80,17 @@ fun ProjectListScreen(
 ) {
   var showCreateDialog by remember { mutableStateOf(false) }
   var projectToDelete by remember { mutableStateOf<Project?>(null) }
+  var projectToExport by remember { mutableStateOf<Project?>(null) }
+  var projectForExportLibrary by remember { mutableStateOf<Project?>(null) }
+  var exportInitialConfig by remember { mutableStateOf<ExportConfig?>(null) }
   var deletingId by remember { mutableStateOf<String?>(null) }
+  val scope = rememberCoroutineScope()
+  val exportLibraryProjectId = projectForExportLibrary?.id
+  val exportLibraryExports by if (exportLibraryProjectId != null) {
+    appComponent.exportRepository.observeExports(exportLibraryProjectId).collectAsState(emptyList())
+  } else {
+    remember { mutableStateOf(emptyList()) }
+  }
 
   val viewModel = remember {
     ProjectListViewModel(
@@ -145,6 +161,7 @@ fun ProjectListScreen(
             deletingId = deletingId,
             onProjectClick = onProjectClick,
             onCreateClick = { showCreateDialog = true },
+            onExportProject = { projectToExport = it },
             onDeleteProject = { projectToDelete = it },
             onDeleteConfirmed = { project ->
               deletingId = null
@@ -187,6 +204,79 @@ fun ProjectListScreen(
       },
     )
   }
+
+  projectToExport?.let { project ->
+    ExportConfigDialog(
+      project = project,
+      initialConfig = exportInitialConfig,
+      onDismiss = {
+        projectToExport = null
+        exportInitialConfig = null
+      },
+      onViewExports = {
+        projectToExport = null
+        exportInitialConfig = null
+        projectForExportLibrary = project
+      },
+      onConfirm = { config ->
+        projectToExport = null
+        exportInitialConfig = null
+        projectForExportLibrary = project
+        scope.launch {
+          runCatching {
+            appComponent.exportRepository.generateExport(project.id, config)
+          }.onFailure { error ->
+            chrome.showMessage(
+              "Couldn't prepare export: ${error.message ?: "Unknown error"}"
+            )
+          }
+        }
+      },
+    )
+  }
+
+  projectForExportLibrary?.let { project ->
+    ExportLibraryDialog(
+      exports = exportLibraryExports,
+      showOpen = appComponent.exportRepository.supportsOpen,
+      showShare = appComponent.exportRepository.supportsShare,
+      showSave = appComponent.exportRepository.supportsSave,
+      saveLabel = appComponent.exportRepository.saveActionLabel,
+      onDismiss = { projectForExportLibrary = null },
+      onExportAgain = { config ->
+        projectForExportLibrary = null
+        exportInitialConfig = config
+        projectToExport = project
+      },
+      onShare = { artifact ->
+        scope.launch {
+          val ok = appComponent.exportRepository.shareExport(artifact.id)
+          if (!ok) chrome.showMessage("Sharing isn't available on this platform")
+        }
+      },
+      onSave = { artifact ->
+        scope.launch {
+          val result = appComponent.exportRepository.saveExport(artifact.id)
+          when {
+            result == null -> chrome.showMessage("${appComponent.exportRepository.saveActionLabel} cancelled or unavailable")
+            else -> chrome.showMessage("Export ${appComponent.exportRepository.saveActionLabel.lowercase()}d")
+          }
+        }
+      },
+      onOpen = { artifact ->
+        scope.launch {
+          val ok = appComponent.exportRepository.openExport(artifact.id)
+          if (!ok) chrome.showMessage("Couldn't open export")
+        }
+      },
+      onDelete = { artifact ->
+        scope.launch {
+          appComponent.exportRepository.deleteExport(artifact.id)
+            .onFailure { chrome.showMessage(it.message ?: "Failed to delete prepared export") }
+        }
+      },
+    )
+  }
 }
 
 @Composable
@@ -210,10 +300,12 @@ private fun ProjectListItem(
   pendingDeletionId: String?,
   deletingId: String?,
   onClick: () -> Unit,
+  onExport: () -> Unit,
   onDelete: () -> Unit,
   onDeleteConfirmed: (Project) -> Unit,
 ) {
   val dismissState = rememberSwipeToDismissBoxState()
+  val scope = rememberCoroutineScope()
 
   // Gesture-initiated deletes leave the card swiped out while the dialog is open.
   // When the dialog closes without confirming, slide the card back into place.
@@ -239,22 +331,30 @@ private fun ProjectListItem(
     }
   }
 
-  // Gesture path: a full swipe counts as the delete gesture itself, so just show
+  // Gesture path: a full swipe-left counts as the delete gesture itself, so show
   // the dialog and keep the card held out. Guarded so the programmatic dismiss
   // used by the trash-icon path doesn't re-open the dialog on its way out.
-  val handleSwipeDismiss = {
+  val handleDeleteSwipe = {
     if (deletingId != project.id) {
       onDelete()
     }
   }
+  // Swipe-right exports: open the shared export flow and return the card to place.
+  val handleExportSwipe = {
+    if (deletingId != project.id) {
+      onExport()
+      scope.launch { dismissState.reset() }
+    }
+  }
 
+  val exportAction = SwipeAction("Export", Icons.Default.IosShare, SwipeActionStyle.AskLater)
   val deleteAction = SwipeAction("Delete", Icons.Default.Delete, SwipeActionStyle.Delete)
   SwipeableFrame(
     state = dismissState,
-    startAction = deleteAction,
+    startAction = exportAction,
     endAction = deleteAction,
-    onSwipeStart = handleSwipeDismiss,
-    onSwipeEnd = handleSwipeDismiss,
+    onSwipeStart = handleExportSwipe,
+    onSwipeEnd = handleDeleteSwipe,
     settleAfterDismiss = false,
   ) {
     PhaseCard(phase = project.currentPhase, onClick = onClick) {
@@ -301,6 +401,9 @@ private fun ProjectListItem(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
           )
+          IconButton(onClick = onExport) {
+            Icon(Icons.Default.IosShare, contentDescription = "Export project")
+          }
           // Tap path: no swipe here — just open the confirmation; the card is
           // animated out after the dialog is accepted (see the deletingId effect).
           IconButton(onClick = onDelete) {
@@ -323,6 +426,7 @@ private fun ProjectListSuccess(
   onProjectClick: (Project) -> Unit,
   onOpenEngineStatus: () -> Unit,
   onCreateClick: () -> Unit,
+  onExportProject: (Project) -> Unit,
   onDeleteProject: (Project) -> Unit,
   onDeleteConfirmed: (Project) -> Unit,
 ) {
@@ -346,6 +450,7 @@ private fun ProjectListSuccess(
           pendingDeletionId = pendingDeletionId,
           deletingId = deletingId,
           onClick = { onProjectClick(project) },
+          onExport = { onExportProject(project) },
           onDelete = { onDeleteProject(project) },
           onDeleteConfirmed = onDeleteConfirmed,
         )

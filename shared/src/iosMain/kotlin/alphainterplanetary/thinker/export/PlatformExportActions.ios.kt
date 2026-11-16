@@ -6,6 +6,10 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
   IosPlatformExportActions()
 
 private class IosPlatformExportActions : PlatformExportActions {
+  override val supportsSave: Boolean = false
+  override val supportsOpen: Boolean = false
+  override val supportsShare: Boolean = false
+
   override suspend fun save(
     filename: String,
     mimeType: String,

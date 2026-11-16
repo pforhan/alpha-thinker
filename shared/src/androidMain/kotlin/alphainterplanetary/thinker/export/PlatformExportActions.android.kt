@@ -12,6 +12,9 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
 private class AndroidPlatformExportActions(
   private val context: Context?,
 ) : PlatformExportActions {
+  override val supportsSave: Boolean = false
+  override val supportsOpen: Boolean = false
+
   override suspend fun save(
     filename: String,
     mimeType: String,

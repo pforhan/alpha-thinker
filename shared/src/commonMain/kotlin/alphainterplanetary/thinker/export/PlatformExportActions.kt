@@ -12,6 +12,18 @@ import alphainterplanetary.thinker.di.PlatformContext
  * gracefully (return null/false).
  */
 interface PlatformExportActions {
+  /** Whether saving/exporting a copy to a user destination is a distinct action. */
+  val supportsSave: Boolean get() = true
+
+  /** Whether opening in a viewer/default handler is a distinct action. */
+  val supportsOpen: Boolean get() = true
+
+  /** Whether sharing via a platform-native mechanism is a distinct action. */
+  val supportsShare: Boolean get() = true
+
+  /** UI label for the save action (e.g. "Save" or "Download"). */
+  val saveActionLabel: String get() = "Save"
+
   /**
    * Saves/exports a copy to a user-chosen or platform destination. Returns the
    * destination ref/path/URI on success, or null if cancelled/unavailable.
@@ -23,7 +35,7 @@ interface PlatformExportActions {
     content: String,
   ): String?
 
-  /** Shares or opens the export via a platform-native mechanism. */
+  /** Shares the export via a platform-native mechanism. */
   suspend fun share(
     filename: String,
     mimeType: String,

@@ -45,6 +45,7 @@ class ActivityRecord private constructor(
   private val TaskKind.displayCategory: String?
     get() = when (this) {
       TaskKind.OllamaModelPull -> LogTopic.ModelDownload.label
+      TaskKind.Export -> LogTopic.Export.label
       else -> null
     }
 
