@@ -12,4 +12,7 @@ class DesktopPlatformContext : PlatformContext {
     dir.mkdirs()
     return File(dir, name).absolutePath
   }
+
+  override fun exportsDirectoryPath(): String =
+    File(home, "exports").apply { mkdirs() }.absolutePath
 }

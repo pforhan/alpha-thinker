@@ -48,13 +48,11 @@ enum class ExportStatus {
 /**
  * A generated export and the metadata needed to persist, list, and share it.
  *
- * [storageRef] identifies where the exported content lives (for example a file
- * path or platform URI) once [status] is [ExportStatus.Completed]; it is null
- * before the artifact has been saved or when generation failed. [config] is the
- * snapshot of options used to produce this export so it can be inspected or
- * regenerated later. [content] holds the rendered export text for completed,
- * app-persisted exports so it can be retrieved, re-shared, or saved out on any
- * platform.
+ * [storageRef] is the canonical internal managed-file path/ref once [status] is
+ * [ExportStatus.Completed]; it is null before generation completes or when it
+ * failed. [config] is the snapshot of options used to produce this export so it
+ * can be inspected or replayed (e.g. to prefill an export dialog and generate a
+ * new export). Rendered export content lives in the managed file, not in the DB.
  */
 data class ExportArtifact(
   val id: String,
@@ -66,5 +64,4 @@ data class ExportArtifact(
   val status: ExportStatus,
   val storageRef: String? = null,
   val error: String? = null,
-  val content: String? = null,
 )

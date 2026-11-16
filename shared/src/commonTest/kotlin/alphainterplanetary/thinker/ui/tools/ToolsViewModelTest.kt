@@ -6,6 +6,7 @@ import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.repository.SettingsRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
+import alphainterplanetary.thinker.testutil.FakeExportFileStore
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
@@ -31,6 +32,7 @@ class ToolsViewModelTest {
       engineSelector = { FakePlanningEngine() },
       taskRunner = runner,
       activityLogger = RecordingActivityLogger(),
+      exportFileStore = FakeExportFileStore(),
     )
     return ToolsViewModel(
       settingsRepository = SettingsRepository(storage, scope),

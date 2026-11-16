@@ -16,6 +16,7 @@ import alphainterplanetary.thinker.tasks.TaskFailed
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
+import alphainterplanetary.thinker.testutil.FakeExportFileStore
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
@@ -47,7 +48,13 @@ class ProjectRepositoryTest {
     runner: TaskRunner = TaskRunner(CoroutineScope(coroutineContext)),
     activityLogger: ActivityLogger = RecordingActivityLogger(),
   ): ProjectRepository =
-    ProjectRepository(storage, { generator }, runner, activityLogger)
+    ProjectRepository(
+      storage,
+      { generator },
+      runner,
+      activityLogger,
+      FakeExportFileStore(),
+    )
 
   // ---------- createProject ----------
 
@@ -190,6 +197,7 @@ class ProjectRepositoryTest {
         { current },
         runner,
         RecordingActivityLogger(),
+        FakeExportFileStore(),
       )
 
       // createProject enqueues the title + initial batch under `current` (enqueued).

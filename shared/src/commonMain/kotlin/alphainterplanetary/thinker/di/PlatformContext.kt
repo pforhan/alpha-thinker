@@ -9,4 +9,7 @@ package alphainterplanetary.thinker.di
 interface PlatformContext {
   /** Where the database file called [name] lives: an absolute path, or on web a bare file name. */
   fun databaseFile(name: String): String
+
+  /** App-private directory for managed export files (absolute path or platform-managed location key). */
+  fun exportsDirectoryPath(): String
 }

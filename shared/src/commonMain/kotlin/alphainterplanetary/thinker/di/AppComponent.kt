@@ -17,7 +17,9 @@ import alphainterplanetary.thinker.engine.model.KoogRemoteModelCatalog
 import alphainterplanetary.thinker.engine.model.RemoteModelCatalog
 import alphainterplanetary.thinker.engine.runtime.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.runtime.dev.SlowDownPlanningEngine
+import alphainterplanetary.thinker.export.ExportFileStore
 import alphainterplanetary.thinker.export.PlatformExportActions
+import alphainterplanetary.thinker.export.provideExportFileStore
 import alphainterplanetary.thinker.export.providePlatformExportActions
 import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ExportRepository
@@ -71,6 +73,10 @@ abstract class AppComponent(@get:Provides val platformContext: PlatformContext) 
   @AppScope
   @Provides
   fun providesStorage(): Storage = provideStorage(platformContext)
+
+  @AppScope
+  @Provides
+  fun providesExportFileStore(): ExportFileStore = provideExportFileStore(platformContext)
 
   @AppScope
   @Provides

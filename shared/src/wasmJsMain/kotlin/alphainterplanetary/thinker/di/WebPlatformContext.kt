@@ -6,4 +6,6 @@ package alphainterplanetary.thinker.di
  */
 class WebPlatformContext : PlatformContext {
   override fun databaseFile(name: String): String = name
+
+  override fun exportsDirectoryPath(): String = "exports"
 }

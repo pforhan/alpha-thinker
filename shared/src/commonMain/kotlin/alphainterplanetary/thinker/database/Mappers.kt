@@ -202,7 +202,6 @@ fun ExportArtifact.toEntity(): ExportArtifactEntity = ExportArtifactEntity(
   status = status.name,
   storageRef = storageRef,
   error = error,
-  content = content,
 )
 
 fun ExportArtifactEntity.toModel(): ExportArtifact = ExportArtifact(
@@ -216,5 +215,4 @@ fun ExportArtifactEntity.toModel(): ExportArtifact = ExportArtifact(
   status = runCatching { ExportStatus.valueOf(status) }.getOrElse { ExportStatus.Failed },
   storageRef = storageRef,
   error = error,
-  content = content,
 )

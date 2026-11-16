@@ -12,9 +12,9 @@ import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.engine.core.SummarizedPhase
-import alphainterplanetary.thinker.util.TokenEstimator
-import alphainterplanetary.thinker.model.Answer
+import alphainterplanetary.thinker.export.ExportFileStore
 import alphainterplanetary.thinker.export.ProjectExportRenderer
+import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Round
@@ -25,6 +25,7 @@ import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskFailed
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
+import alphainterplanetary.thinker.util.TokenEstimator
 import alphainterplanetary.thinker.util.now
 import alphainterplanetary.thinker.util.randomUUID
 import kotlin.coroutines.cancellation.CancellationException
@@ -37,6 +38,7 @@ class ProjectRepository @Inject constructor(
   private val engineSelector: PlanningEngineSelector,
   private val taskRunner: TaskRunner,
   private val activityLogger: ActivityLogger,
+  private val exportFileStore: ExportFileStore,
 ) {
 
   /**
@@ -258,7 +260,8 @@ class ProjectRepository @Inject constructor(
   }
 
   suspend fun deleteProject(id: String) {
-    return storage.deleteProject(id)
+    deleteExportFilesForProject(id)
+    storage.deleteProject(id)
   }
 
   suspend fun getProject(id: String): Project? {
@@ -698,7 +701,14 @@ class ProjectRepository @Inject constructor(
   }
 
   suspend fun deleteAllProjects() {
+    storage.getAllProjects().forEach { deleteExportFilesForProject(it.id) }
     storage.deleteAllProjects()
+  }
+
+  private suspend fun deleteExportFilesForProject(projectId: String) {
+    storage.getExportArtifacts(projectId).forEach { artifact ->
+      artifact.storageRef?.let { ref -> runCatching { exportFileStore.delete(ref) } }
+    }
   }
 
   /**

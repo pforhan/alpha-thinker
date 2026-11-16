@@ -13,6 +13,7 @@ import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ContextCompaction
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
+import alphainterplanetary.thinker.testutil.FakeExportFileStore
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
@@ -58,6 +59,7 @@ class ProjectSimulatorTest {
       engineSelector = { generator },
       taskRunner = runner,
       activityLogger = RecordingActivityLogger(),
+      exportFileStore = FakeExportFileStore(),
     )
     val simulator = ProjectSimulator(
       repository = repository,

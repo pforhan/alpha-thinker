@@ -22,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
     EngineSelectionStateEntity::class,
     ExportArtifactEntity::class,
   ],
-  version = 15,
+  version = 16,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -49,7 +49,8 @@ expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
  * `prepare`, web a suspending one), which this shared `commonMain` builder
  * cannot express, so an upgrade rebuilds the local database.
  *
- * Destructive upgrades clear persisted data, including exports.
+ * Destructive upgrades clear persisted data, including export metadata; managed
+ * export files may be orphaned and should be treated as best-effort cleanup.
  */
 fun getRoomDatabase(builder: RoomDatabase.Builder<AppDatabase>): AppDatabase {
   return builder

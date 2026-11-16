@@ -126,10 +126,10 @@ data class EngineSelectionStateEntity(
 )
 
 /**
- * A persisted project export: metadata plus rendered content. [configJson] is
- * the serialized [alphainterplanetary.thinker.model.ExportConfig] snapshot used
- * to produce the export. [content] holds the generated document text for
- * completed exports so it can be retrieved and saved/shared on any platform.
+ * A persisted project export: metadata and canonical managed-file reference.
+ * [configJson] is the serialized [alphainterplanetary.thinker.model.ExportConfig]
+ * snapshot used to produce the export. Rendered content is stored in the managed
+ * export file identified by [storageRef], not in this row.
  */
 @Entity(
   tableName = "export_artifacts",
@@ -151,7 +151,6 @@ data class ExportArtifactEntity(
   val status: String,
   val storageRef: String? = null,
   val error: String? = null,
-  val content: String? = null,
 )
 
 data class ProjectWithQuestions(

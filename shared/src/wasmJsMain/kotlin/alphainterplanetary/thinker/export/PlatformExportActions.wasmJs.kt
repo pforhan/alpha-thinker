@@ -12,11 +12,26 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
 
 @OptIn(ExperimentalWasmJsInterop::class)
 private class WasmPlatformExportActions : PlatformExportActions {
-  override suspend fun save(filename: String, mimeType: String, content: String): String? =
-    if (download(filename, mimeType, content)) filename else null
+  override suspend fun save(
+    filename: String,
+    mimeType: String,
+    internalPath: String,
+    content: String,
+  ): String? = if (download(filename, mimeType, content)) filename else null
 
-  override suspend fun share(filename: String, mimeType: String, content: String): Boolean =
-    download(filename, mimeType, content)
+  override suspend fun share(
+    filename: String,
+    mimeType: String,
+    internalPath: String,
+    content: String,
+  ): Boolean = download(filename, mimeType, content)
+
+  override suspend fun open(
+    filename: String,
+    mimeType: String,
+    internalPath: String,
+    content: String,
+  ): Boolean = download(filename, mimeType, content)
 
   private fun download(filename: String, mimeType: String, content: String): Boolean =
     runCatching {

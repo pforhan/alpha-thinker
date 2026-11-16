@@ -14,6 +14,7 @@ import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
+import alphainterplanetary.thinker.testutil.FakeExportFileStore
 import alphainterplanetary.thinker.testutil.FakePlanningEngine
 import alphainterplanetary.thinker.testutil.FakeStorage
 import alphainterplanetary.thinker.testutil.RecordingActivityLogger
@@ -56,6 +57,7 @@ class ProjectDetailViewModelTest {
       PlanningEngineSelector { generator },
       runner,
       RecordingActivityLogger(),
+      FakeExportFileStore(),
     )
     val vm = ProjectDetailViewModel(
       repository = repository,
