@@ -11,6 +11,8 @@ import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.core.QuestionBatch
+import alphainterplanetary.thinker.engine.core.SummarizedPhase
+import alphainterplanetary.thinker.util.TokenEstimator
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.export.ProjectExportRenderer
 import alphainterplanetary.thinker.model.ExportConfig
@@ -412,7 +414,7 @@ class ProjectRepository @Inject constructor(
       )
     } else {
       val budgetTokens = PlanningContext.budgetTokens(window)
-      val candidates = PhaseSummarization.compactionCandidates(project)
+      val candidates = PhaseSummarization.compactionTranscripts(project)
       ContextCheck(
         estimatedTokens = estimatedTokens,
         windowTokens = window,
@@ -484,9 +486,9 @@ class ProjectRepository @Inject constructor(
       PlanningContext.trim(project, budgetTokens)
 
     else -> {
-      val summaries = mutableListOf<PlanningContext.SummarizedPhase>()
+      val summaries = mutableListOf<SummarizedPhase>()
       var questions = project.questions
-      for (candidate in PhaseSummarization.compactionCandidates(project)) {
+      for (transcript in PhaseSummarization.compactionTranscripts(project)) {
         if (summaries.isNotEmpty() &&
           PlanningContext.estimateTokens(questions, summaries) <= budgetTokens
         ) {
@@ -496,28 +498,24 @@ class ProjectRepository @Inject constructor(
           engine = engine,
           title = project.title,
           synopsis = project.synopsis,
-          candidate = candidate,
+          transcript = transcript,
           activityId = taskId,
         )
-        summaries += PlanningContext.SummarizedPhase(
-          phase = candidate.phase,
-          summary = summary,
-          coversQuestionIds = candidate.coveredQuestionIds,
-        )
+        summaries += transcript.toSummarizedPhase(summary)
         // The phase's answers are replaced by the summary, which is what the
         // next re-measurement has to see — the summary only costs anything once
         // the verbatim answers it stands in for are actually gone.
         questions = questions.map { question ->
-          if (question.id in candidate.coveredQuestionIds) question.asCompacted() else question
+          if (question.id in transcript.coveredQuestionIds) question.asCompacted() else question
         }
         activityLogger.taskContext(
           activityId = taskId,
           projectId = project.id,
         ).contextCompacted(
-          phaseLabel = candidate.phase.label,
-          count = candidate.questions.size,
-          oldEstTokens = candidate.estimatedTokens,
-          newEstTokens = PlanningContext.estimateTokens(summary),
+          phaseLabel = transcript.phase.label,
+          count = transcript.questions.size,
+          oldEstTokens = transcript.estimatedTokens,
+          newEstTokens = TokenEstimator.estimateTokens(summary),
         )
       }
       PlanningContext.trim(project.copy(questions = questions), budgetTokens, summaries)

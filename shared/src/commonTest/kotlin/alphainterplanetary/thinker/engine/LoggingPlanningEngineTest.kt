@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.activitylog.logRequest
 import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.QuestionBatch
+import alphainterplanetary.thinker.engine.core.SummarizedPhase
 import alphainterplanetary.thinker.engine.runtime.LoggingPlanningEngine
 import alphainterplanetary.thinker.engine.runtime.OfflinePlanningEngine
 import alphainterplanetary.thinker.model.Question
@@ -376,7 +377,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
-      priorSummaries: List<PlanningContext.SummarizedPhase>,
+      priorSummaries: List<SummarizedPhase>,
     ): QuestionBatch {
       // The repository summarizes before it asks; modelled here as the calls
       // that happen on the way in, so the pairs land in the order they would.
@@ -415,7 +416,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
-      priorSummaries: List<PlanningContext.SummarizedPhase>,
+      priorSummaries: List<SummarizedPhase>,
     ): QuestionBatch = throw PlanningEngine.AnalysisFailure("not used")
   }
 
@@ -434,7 +435,7 @@ class LoggingPlanningEngineTest {
       roundId: String,
       phase: Phase,
       activityId: String,
-      priorSummaries: List<PlanningContext.SummarizedPhase>,
+      priorSummaries: List<SummarizedPhase>,
     ): QuestionBatch {
       val summary = logRequest("SYSTEM\nSummarize")
       if (failSummary) {

@@ -8,9 +8,9 @@ import alphainterplanetary.thinker.activitylog.LogRequest
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.activitylog.logRequest
 import alphainterplanetary.thinker.engine.core.PlanningContext
-import alphainterplanetary.thinker.engine.core.PlanningContext.SummarizedPhase
 import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.QuestionBatch
+import alphainterplanetary.thinker.engine.core.SummarizedPhase
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.Phase

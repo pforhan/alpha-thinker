@@ -11,6 +11,7 @@ import alphainterplanetary.thinker.activitylog.LogScope
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.engine.core.SummarizedPhase
 import alphainterplanetary.thinker.engine.runtime.KoogPlanningBackend
 import alphainterplanetary.thinker.engine.runtime.KoogPlanningEngine
 import alphainterplanetary.thinker.model.Answer
@@ -572,7 +573,7 @@ class KoogPlanningEngineTest {
       phase = BuiltInPhase.Design,
       activityId = "t1",
       priorSummaries = listOf(
-        PlanningContext.SummarizedPhase(
+        SummarizedPhase(
           phase = BuiltInPhase.ScopeGoals,
           summary = "A menu planner for home cooks.",
           coversQuestionIds = setOf(summarized.id),

@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.engine.core
 
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.engine.core.PlanningContext.SummarizedPhase
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import kotlin.coroutines.cancellation.CancellationException
@@ -111,7 +110,7 @@ interface PlanningEngine {
    * [previousQuestions] is every question the project has already asked,
    * carrying its answer state — empty only for a project's very first round.
    * [priorSummaries] are the phases' answers already replaced by model-written
-   * summaries (see [PlanningContext.summarizablePhases]); they are rendered
+   * summaries (see [PhaseSummarization.compactionTranscripts]); they are rendered
    * ahead of the transcript, and the questions they cover read as summarized
    * rather than omitted.
    */
@@ -127,11 +126,11 @@ interface PlanningEngine {
   ): QuestionBatch
 
   /**
-   * [transcript] — one past phase's rendered Q&A (see
-   * [PlanningContext.PhaseTranscript]) — condensed to the handful of decisions
-   * and findings a later round needs in order to avoid re-asking what is
-   * already settled. Returns the summary text; the caller pairs it with the
-   * phase and the question ids it covers as a [SummarizedPhase].
+   * [transcript] — one past phase's rendered Q&A (see [PhaseTranscript]) —
+   * condensed to the handful of decisions and findings a later round needs in
+   * order to avoid re-asking what is already settled. Returns the summary text;
+   * the caller pairs it with the phase and covered question ids as a
+   * [SummarizedPhase].
    *
    * Defaults to refusing, so an engine that hasn't taught to write summaries
    * (or can't) fails loudly if it is asked rather than silently sending back

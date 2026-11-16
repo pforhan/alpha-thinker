@@ -1,6 +1,9 @@
 package alphainterplanetary.thinker.engine
 
+import alphainterplanetary.thinker.engine.core.PhaseSummarization
 import alphainterplanetary.thinker.engine.core.PlanningContext
+import alphainterplanetary.thinker.engine.core.SummarizedPhase
+import alphainterplanetary.thinker.util.TokenEstimator
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
@@ -126,19 +129,11 @@ class PlanningContextTest {
   // ---------- estimating the cost ----------
 
   @Test
-  fun `an estimate is the character count at four chars per token rounded up`() {
-    assertEquals(0, PlanningContext.estimateTokens(""))
-    assertEquals(1, PlanningContext.estimateTokens("abcd"))
-    assertEquals(2, PlanningContext.estimateTokens("abcde"))
-    assertEquals(25, PlanningContext.estimateTokens("x".repeat(100)))
-  }
-
-  @Test
   fun `estimating a transcript measures what is actually rendered`() {
     val questions = listOf(question("q1", "x".repeat(40)))
 
     assertEquals(
-      PlanningContext.estimateTokens(PlanningContext.render(questions)),
+      TokenEstimator.estimateTokens(PlanningContext.render(questions)),
       PlanningContext.estimateTokens(questions),
     )
   }
@@ -198,7 +193,7 @@ class PlanningContextTest {
       BuiltInPhase.Design to answered("q3", "Third?", "yes"),
     )
 
-    val phases = PlanningContext.summarizablePhases(project)
+    val phases = PhaseSummarization.compactionTranscripts(project)
 
     assertEquals(
       listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research),
@@ -217,7 +212,7 @@ class PlanningContextTest {
       BuiltInPhase.Design to answered("q3", "Live?", "yes"),
     )
 
-    assertEquals(emptyList(), PlanningContext.summarizablePhases(project))
+    assertEquals(emptyList(), PhaseSummarization.compactionTranscripts(project))
   }
 
   @Test
@@ -228,7 +223,7 @@ class PlanningContextTest {
       BuiltInPhase.Design to question("live", "And now?"),
     )
 
-    val unit = PlanningContext.summarizablePhases(project).single()
+    val unit = PhaseSummarization.compactionTranscripts(project).single()
 
     assertEquals(BuiltInPhase.ScopeGoals, unit.phase)
     assertEquals(
@@ -247,7 +242,7 @@ class PlanningContextTest {
    */
   @Test
   fun `a summary leads the transcript and marks the answers it replaces`() {
-    val summary = PlanningContext.SummarizedPhase(
+    val summary = SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "A menu planner for home cooks.",
       coversQuestionIds = setOf("q1"),
@@ -280,7 +275,7 @@ class PlanningContextTest {
   @Test
   fun `a blank summary is left out rather than filed as an empty section`() {
     val questions = listOf(question("q1", "First?"))
-    val summary = PlanningContext.SummarizedPhase(
+    val summary = SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "   ",
       coversQuestionIds = setOf("q1"),
@@ -300,7 +295,7 @@ class PlanningContextTest {
   @Test
   fun `estimating counts the summaries as well as the transcript`() {
     val questions = listOf(answered("q1", "MVP?", "word ".repeat(80)))
-    val summary = PlanningContext.SummarizedPhase(
+    val summary = SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "a menu planner",
       coversQuestionIds = setOf("q1"),
@@ -308,7 +303,7 @@ class PlanningContextTest {
 
     assertTrue(PlanningContext.estimateTokens(questions, listOf(summary)) > 0)
     assertEquals(
-      PlanningContext.estimateTokens(PlanningContext.render(questions, listOf(summary))),
+      TokenEstimator.estimateTokens(PlanningContext.render(questions, listOf(summary))),
       PlanningContext.estimateTokens(questions, listOf(summary)),
     )
   }
@@ -499,7 +494,7 @@ class PlanningContextTest {
       BuiltInPhase.Research to answered("q2", "Second?", "kept. ".repeat(20)),
       BuiltInPhase.Design to question("live", "And now?"),
     )
-    val summary = PlanningContext.SummarizedPhase(
+    val summary = SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "the first phase settled on a menu planner",
       coversQuestionIds = setOf("q1"),
@@ -522,7 +517,7 @@ class PlanningContextTest {
       BuiltInPhase.Research to answered("q2", "Second?", "words. ".repeat(20)),
       BuiltInPhase.Design to question("live", "And now?"),
     )
-    val summary = PlanningContext.SummarizedPhase(
+    val summary = SummarizedPhase(
       phase = BuiltInPhase.ScopeGoals,
       summary = "a summary that is itself a good deal of text. ".repeat(10),
       coversQuestionIds = setOf("q1"),

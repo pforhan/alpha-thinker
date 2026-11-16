@@ -4,6 +4,7 @@ import alphainterplanetary.thinker.engine.core.ForwardingPlanningEngine
 import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.QuestionBatch
+import alphainterplanetary.thinker.engine.core.SummarizedPhase
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.RoundOutcome
@@ -495,7 +496,7 @@ private class ScriptedPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PlanningContext.SummarizedPhase>,
+    priorSummaries: List<SummarizedPhase>,
   ): QuestionBatch {
     calls += 1
     val batch = delegate.generateQuestions(
@@ -543,7 +544,7 @@ private class FailFirstPlanningEngine(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PlanningContext.SummarizedPhase>,
+    priorSummaries: List<SummarizedPhase>,
   ): QuestionBatch {
     calls += 1
     if (calls <= failures) throw IllegalStateException("generation call $calls failed")

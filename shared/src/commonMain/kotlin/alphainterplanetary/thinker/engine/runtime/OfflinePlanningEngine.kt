@@ -1,9 +1,9 @@
 package alphainterplanetary.thinker.engine.runtime
 
 import alphainterplanetary.thinker.activitylog.LogSource
-import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
 import alphainterplanetary.thinker.engine.core.QuestionBatch
+import alphainterplanetary.thinker.engine.core.SummarizedPhase
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.BuiltInPhase.DefinitionOfDone
 import alphainterplanetary.thinker.phases.BuiltInPhase.Design
@@ -51,7 +51,7 @@ class OfflinePlanningEngine @Inject constructor(
     roundId: String,
     phase: Phase,
     activityId: String,
-    priorSummaries: List<PlanningContext.SummarizedPhase>,
+    priorSummaries: List<SummarizedPhase>,
   ): QuestionBatch {
     // Summaries stand in for answers this engine never reads; see
     // [contextUse]. The repository knows not to send any, and none would mean

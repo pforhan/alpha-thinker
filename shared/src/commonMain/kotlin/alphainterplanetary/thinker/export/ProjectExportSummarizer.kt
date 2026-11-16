@@ -30,15 +30,15 @@ object ProjectExportSummarizer {
     if (!engine.canSummarize) return emptyMap()
 
     val summaries = linkedMapOf<Phase, String>()
-    PhaseSummarization.exportCandidates(project).forEach { candidate ->
+    PhaseSummarization.exportTranscripts(project).forEach { transcript ->
       val summary = PhaseSummarization.summarizeOrNull(
         engine = engine,
         title = project.title,
         synopsis = project.synopsis,
-        candidate = candidate,
+        transcript = transcript,
         activityId = activityId,
       ) ?: return@forEach
-      summaries[candidate.phase] = summary
+      summaries[transcript.phase] = summary
     }
     return summaries
   }

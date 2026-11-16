@@ -1,8 +1,10 @@
 package alphainterplanetary.thinker.engine
 
 import alphainterplanetary.thinker.engine.core.PhaseSummarization
+import alphainterplanetary.thinker.engine.core.PhaseTranscript
 import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
+import alphainterplanetary.thinker.model.PhaseQuestions
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
@@ -17,54 +19,12 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.test.runTest
 
 class PhaseSummarizationTest {
-
-  @Test
-  fun `candidateFor returns null when there is no summarizable content`() {
-    val questions = listOf(
-      question("ignored", ignoredAt = defaultTestInstant),
-      question("open"),
-    )
-
-    assertNull(PhaseSummarization.candidateFor(BuiltInPhase.ScopeGoals, questions))
-  }
-
-  @Test
-  fun `candidateFor builds a transcript from answered and draft non-ignored questions`() {
-    val questions = listOf(
-      answered("a1", "Answered?", "yes", at = 0),
-      question(
-        "d1",
-        "Draft?",
-        draftText = "maybe",
-        draftUpdatedAt = defaultTestInstant,
-        timestamp = defaultTestInstant + 1.seconds,
-      ),
-      question("ignored", "Ignored?", ignoredAt = defaultTestInstant),
-      question("open", "Open?", timestamp = defaultTestInstant + 2.seconds),
-    )
-
-    val candidate = PhaseSummarization.candidateFor(BuiltInPhase.ScopeGoals, questions)
-
-    assertNotNull(candidate)
-    assertEquals(BuiltInPhase.ScopeGoals, candidate.phase)
-    assertEquals(listOf("a1", "d1"), candidate.questions.map { it.id })
-    assertEquals(setOf("a1", "d1"), candidate.coveredQuestionIds)
-    assertEquals(
-      PlanningContext.render(candidate.questions),
-      candidate.transcript,
-    )
-    assertEquals(
-      PlanningContext.estimateTokens(candidate.transcript),
-      candidate.estimatedTokens,
-    )
-  }
 
   @Test
   fun `compactionCandidates match summarizable phases and exclude the current phase`() {
@@ -74,14 +34,14 @@ class PhaseSummarizationTest {
       BuiltInPhase.Design to answered("q3", "Third?", "yes"),
     )
 
-    val candidates = PhaseSummarization.compactionCandidates(project)
+    val candidates = PhaseSummarization.compactionTranscripts(project)
 
     assertEquals(
       listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research),
       candidates.map { it.phase },
     )
     assertEquals(
-      PlanningContext.summarizablePhases(project).map { it.coveredQuestionIds },
+      listOf(setOf("q1"), setOf("q2")),
       candidates.map { it.coveredQuestionIds },
     )
   }
@@ -93,7 +53,7 @@ class PhaseSummarizationTest {
       BuiltInPhase.Design to answered("q3", "Third?", "yes"),
     )
 
-    val candidates = PhaseSummarization.exportCandidates(project)
+    val candidates = PhaseSummarization.exportTranscripts(project)
 
     assertEquals(
       listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Design),
@@ -109,7 +69,7 @@ class PhaseSummarizationTest {
       BuiltInPhase.Design to answered("q3", "Live?", "yes"),
     )
 
-    val candidates = PhaseSummarization.exportCandidates(project)
+    val candidates = PhaseSummarization.exportTranscripts(project)
 
     assertEquals(listOf(BuiltInPhase.Design), candidates.map { it.phase })
   }
@@ -125,7 +85,7 @@ class PhaseSummarizationTest {
       engine = engine,
       title = "Title",
       synopsis = "Synopsis",
-      candidate = candidate,
+      transcript = candidate,
       activityId = "a1",
     )
 
@@ -144,7 +104,7 @@ class PhaseSummarizationTest {
       engine = engine,
       title = "Title",
       synopsis = "Synopsis",
-      candidate = candidate,
+      transcript = candidate,
       activityId = "a1",
     )
 
@@ -191,8 +151,13 @@ class PhaseSummarizationTest {
     }
   }
 
-  private fun candidate(phase: Phase, question: Question): PhaseSummarization.Candidate =
-    checkNotNull(PhaseSummarization.candidateFor(phase, listOf(question)))
+  private fun candidate(phase: Phase, question: Question): PhaseTranscript =
+    checkNotNull(
+      PhaseTranscript.from(
+        PhaseQuestions(phase, listOf(question), emptyList(), Duration.ZERO),
+        PlanningContext::render,
+      )
+    )
 
   private fun throwingEngine(failure: Throwable): PlanningEngine =
     object : FakePlanningEngine(canSummarize = true) {
