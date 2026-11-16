@@ -23,9 +23,23 @@ class ProjectExportRenderer(
     val title = project.title.ifBlank { project.synopsis }
     document.documentHeader(title = title, synopsis = project.synopsis)
 
+    val phaseContent = project.allPhaseContent().sortedBy { it.phase.order }
     val phaseLookup = project.phaseLookup()
-    val questionsByPhase = groupedQuestionsByPhase(project, phaseLookup)
-    val traversedPhases = traversedPhases(project, questionsByPhase)
+    val questionsByPhase = project.questions
+      .sortedBy { it.timestamp }
+      .groupBy { phaseLookup(it) }
+      .toMutableMap()
+    // Prefer PhaseQuestions as the visited-phase source, but include any phases
+    // traversed by rounds or inferred from questions (e.g. projects without rounds).
+    phaseContent.forEach { content ->
+      questionsByPhase[content.phase] = questionsByPhase[content.phase]
+        ?: content.questions.sortedBy { it.timestamp }
+    }
+    val traversedPhases = (
+      phaseContent.map { it.phase } +
+        project.rounds.map { it.phase } +
+        questionsByPhase.keys
+      ).distinct().sortedBy { it.order }
 
     val blocksByPhase = traversedPhases.associateWith { phase ->
       questionsByPhase[phase].orEmpty().mapNotNull { toBlock(it) }
@@ -64,27 +78,6 @@ class ProjectExportRenderer(
     }
 
     return document.build()
-  }
-
-  private fun groupedQuestionsByPhase(
-    project: Project,
-    phaseLookup: (Question) -> Phase,
-  ): Map<Phase, List<Question>> = project.questions
-    .sortedBy { it.timestamp }
-    .groupBy { phaseLookup(it) }
-
-  /**
-   * Phases traversed in this project, in phase-library order. A phase is
-   * included when it has at least one round or any question mapped to it.
-   */
-  private fun traversedPhases(
-    project: Project,
-    questionsByPhase: Map<Phase, List<Question>>,
-  ): List<Phase> {
-    val fromRounds = project.rounds.map { it.phase }
-    val fromQuestions = questionsByPhase.keys
-    val present = (fromRounds + fromQuestions).toSet()
-    return present.sortedBy { it.order }
   }
 
   private fun toBlock(question: Question): ExportQuestionBlock? {

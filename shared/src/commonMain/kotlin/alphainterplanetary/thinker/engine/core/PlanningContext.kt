@@ -218,21 +218,22 @@ object PlanningContext {
    */
   fun summarizablePhases(project: Project): List<PhaseTranscript> {
     val current = project.currentPhase
-    return project.questions
-      .filter { (it.isAnswered || it.isDraft) && !it.isIgnored }
-      .groupBy { project.phaseForQuestion(it) }
-      .filterKeys { it != current }
-      .toList()
-      .sortedBy { (phase, _) -> phase.order }
-      .map { (phase, questions) ->
+    return project.allPhaseContent()
+      .asSequence()
+      .filter { it.phase != current }
+      .sortedBy { it.phase.order }
+      .mapNotNull { phaseContent ->
+        val questions = phaseContent.summarizableQuestions
+        if (questions.isEmpty()) return@mapNotNull null
         val transcript = render(questions)
         PhaseTranscript(
-          phase = phase,
+          phase = phaseContent.phase,
           questions = questions,
           transcript = transcript,
           estimatedTokens = estimateTokens(transcript),
         )
       }
+      .toList()
   }
 
   /**

@@ -54,15 +54,12 @@ object PhaseSummarization {
    * Candidates for export/background summarization: phases with answered/draft,
    * non-ignored content (including the current phase), in phase-library order.
    */
-  fun exportCandidates(project: Project): List<Candidate> {
-    val phaseLookup = project.phaseLookup()
-    return project.questions
-      .sortedBy { it.timestamp }
-      .groupBy { phaseLookup(it) }
-      .toList()
-      .sortedBy { (phase, _) -> phase.order }
-      .mapNotNull { (phase, questions) -> candidateFor(phase, questions) }
-  }
+  fun exportCandidates(project: Project): List<Candidate> =
+    project.allPhaseContent()
+      .sortedBy { it.phase.order }
+      .mapNotNull { content ->
+        candidateFor(content.phase, content.summarizableQuestions.sortedBy { it.timestamp })
+      }
 
   /**
    * Builds a [Candidate] for [phase] from [questions], or null when there is no

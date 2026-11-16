@@ -35,4 +35,8 @@ data class PhaseQuestions(
   /** Resolved questions as a whole percent, rounded to the nearest percent (0 if no questions). */
   val completionPercent: Int
     get() = if (total == 0) 0 else (resolved * 100.0 / total).roundToInt()
+
+  /** Questions with content worth summarizing (answered or draft, not ignored). */
+  val summarizableQuestions: List<Question>
+    get() = questions.filter { (it.isAnswered || it.isDraft) && !it.isIgnored }
 }

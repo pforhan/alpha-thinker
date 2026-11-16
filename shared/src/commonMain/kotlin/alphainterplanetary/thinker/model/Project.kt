@@ -68,7 +68,7 @@ data class Project(
     }
 
   /** Rounds belonging to the current planning phase (a phase can span several rounds). */
-  val currentPhaseRounds: List<Round>
+  private val currentPhaseRounds: List<Round>
     get() = rounds.filter { it.phase == currentPhase }
 
   /** The newest round in the current phase — the one carrying its latest generation answer. */
