@@ -145,6 +145,7 @@ class ExportRepository @Inject constructor(
           status = ExportStatus.Failed,
           error = message,
           storageRef = artifact.storageRef,
+          completedAt = now(),
         )
       )
     }
@@ -230,6 +231,7 @@ class ExportRepository @Inject constructor(
         status = ExportStatus.Completed,
         storageRef = path,
         error = null,
+        completedAt = now(),
       )
       runCatching { storage.saveExportArtifact(completed) }.getOrElse { dbError ->
         // DB failed after file was written: best-effort cleanup, but surface failure.
@@ -262,6 +264,7 @@ class ExportRepository @Inject constructor(
         status = ExportStatus.Failed,
         error = message,
         storageRef = null,
+        completedAt = now(),
       )
     )
   }

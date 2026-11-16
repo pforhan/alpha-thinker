@@ -4,12 +4,14 @@ import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.ExportStatus
 import alphainterplanetary.thinker.ui.theme.Dimens
+import alphainterplanetary.thinker.util.formatTaskDuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.time.Instant
 
 /**
  * Minimal prepared-export library/management view for a project. Shows prepared
@@ -115,19 +118,13 @@ private fun ExportArtifactRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = artifact.filename,
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
-          Text(
-            text = "${artifact.format.name} · ${artifact.status}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
+        Text(
+          text = artifact.filename,
+          modifier = Modifier.weight(1f),
+          style = MaterialTheme.typography.titleSmall,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
         if (inProgress) {
           CircularProgressIndicator(
             modifier = Modifier.size(Dimens.ProgressIndicatorSize),
@@ -135,6 +132,7 @@ private fun ExportArtifactRow(
           )
         }
       }
+      ExportMetadataRow(artifact = artifact)
       artifact.error?.takeIf { it.isNotBlank() }?.let { error ->
         Text(
           text = error,
@@ -168,3 +166,70 @@ private fun ExportArtifactRow(
     }
   }
 }
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ExportMetadataRow(artifact: ExportArtifact) {
+  val duration = artifact.completedAt?.let { completed ->
+    val delta = completed - artifact.createdAt
+    if (delta.isPositive()) formatTaskDuration(delta) else null
+  }
+  val pills = buildList {
+    if (artifact.config.includeSummaries) add("Summaries")
+    if (artifact.config.includeDrafts) add("Drafts")
+    if (artifact.config.includeIgnoredQuestions) add("Ignored")
+    if (!artifact.config.includeUnansweredQuestions) add("No unanswered")
+    if (artifact.config.includeAnswerRevisionHistory) add("Revisions")
+  }
+  val details = buildString {
+    append(artifact.format.name)
+    append(" • ")
+    append(artifact.status.name)
+    append(" • ")
+    append(formatTimestamp(artifact.createdAt))
+    if (duration != null) {
+      append(" • ")
+      append("Took $duration")
+    }
+  }
+  Column(verticalArrangement = Arrangement.spacedBy(Dimens.TightGap)) {
+    MetadataText(details)
+    if (pills.isNotEmpty()) {
+      FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+        verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+      ) {
+        pills.forEach { label ->
+          ConfigPill(label = label)
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun MetadataText(text: String) {
+  Text(
+    text = text,
+    style = MaterialTheme.typography.bodySmall,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
+}
+
+@Composable
+private fun ConfigPill(label: String) {
+  Surface(
+    color = MaterialTheme.colorScheme.secondaryContainer,
+    shape = MaterialTheme.shapes.small,
+  ) {
+    Text(
+      text = label,
+      modifier = Modifier.padding(horizontal = Dimens.TightGap, vertical = 2.dp),
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.onSecondaryContainer,
+    )
+  }
+}
+
+private fun formatTimestamp(instant: Instant): String =
+  instant.toString().take(16).replace('T', ' ')

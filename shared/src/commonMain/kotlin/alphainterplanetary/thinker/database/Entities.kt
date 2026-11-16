@@ -151,6 +151,7 @@ data class ExportArtifactEntity(
   val status: String,
   val storageRef: String? = null,
   val error: String? = null,
+  val completedAt: Long? = null,
 )
 
 data class ProjectWithQuestions(

@@ -64,4 +64,6 @@ data class ExportArtifact(
   val status: ExportStatus,
   val storageRef: String? = null,
   val error: String? = null,
+  /** When generation reached a terminal state ([Completed] or [Failed]), if known. */
+  val completedAt: Instant? = null,
 )

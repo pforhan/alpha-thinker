@@ -22,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
     EngineSelectionStateEntity::class,
     ExportArtifactEntity::class,
   ],
-  version = 16,
+  version = 17,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)

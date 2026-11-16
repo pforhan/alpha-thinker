@@ -202,6 +202,7 @@ fun ExportArtifact.toEntity(): ExportArtifactEntity = ExportArtifactEntity(
   status = status.name,
   storageRef = storageRef,
   error = error,
+  completedAt = completedAt?.toEpochMilliseconds(),
 )
 
 fun ExportArtifactEntity.toModel(): ExportArtifact = ExportArtifact(
@@ -215,4 +216,5 @@ fun ExportArtifactEntity.toModel(): ExportArtifact = ExportArtifact(
   status = runCatching { ExportStatus.valueOf(status) }.getOrElse { ExportStatus.Failed },
   storageRef = storageRef,
   error = error,
+  completedAt = completedAt?.let { Instant.fromEpochMilliseconds(it) },
 )
