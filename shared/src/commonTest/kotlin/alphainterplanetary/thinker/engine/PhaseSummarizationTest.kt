@@ -27,51 +27,51 @@ import kotlinx.coroutines.test.runTest
 class PhaseSummarizationTest {
 
   @Test
-  fun `compactionCandidates match summarizable phases and exclude the current phase`() {
+  fun `compactionTranscripts include past phases with summarizable content in order`() {
     val project = project(
       BuiltInPhase.ScopeGoals to answered("q1", "First?", "yes"),
       BuiltInPhase.Research to answered("q2", "Second?", "yes"),
       BuiltInPhase.Design to answered("q3", "Third?", "yes"),
     )
 
-    val candidates = PhaseSummarization.compactionTranscripts(project)
+    val transcripts = PhaseSummarization.compactionTranscripts(project)
 
     assertEquals(
       listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Research),
-      candidates.map { it.phase },
+      transcripts.map { it.phase },
     )
     assertEquals(
       listOf(setOf("q1"), setOf("q2")),
-      candidates.map { it.coveredQuestionIds },
+      transcripts.map { it.coveredQuestionIds },
     )
   }
 
   @Test
-  fun `exportCandidates include the current phase and all phases with summarizable content`() {
+  fun `exportTranscripts include the current phase and all phases with summarizable content`() {
     val project = project(
       BuiltInPhase.ScopeGoals to answered("q1", "First?", "yes"),
       BuiltInPhase.Design to answered("q3", "Third?", "yes"),
     )
 
-    val candidates = PhaseSummarization.exportTranscripts(project)
+    val transcripts = PhaseSummarization.exportTranscripts(project)
 
     assertEquals(
       listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.Design),
-      candidates.map { it.phase },
+      transcripts.map { it.phase },
     )
   }
 
   @Test
-  fun `exportCandidates skip phases without summarizable content`() {
+  fun `exportTranscripts skip phases without summarizable content`() {
     val project = project(
       BuiltInPhase.ScopeGoals to question("ignored", ignoredAt = defaultTestInstant),
       BuiltInPhase.Research to question("open"),
       BuiltInPhase.Design to answered("q3", "Live?", "yes"),
     )
 
-    val candidates = PhaseSummarization.exportTranscripts(project)
+    val transcripts = PhaseSummarization.exportTranscripts(project)
 
-    assertEquals(listOf(BuiltInPhase.Design), candidates.map { it.phase })
+    assertEquals(listOf(BuiltInPhase.Design), transcripts.map { it.phase })
   }
 
   @Test
