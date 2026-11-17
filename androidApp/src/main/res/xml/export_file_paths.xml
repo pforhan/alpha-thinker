@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+  <!-- App-private managed export files (PlatformContext.exportsDirectoryPath -> filesDir/exports). -->
+  <files-path
+    name="exports"
+    path="exports/" />
+</paths>
