@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
 import alphainterplanetary.thinker.export.ExportFileStore
+import alphainterplanetary.thinker.export.ExportSnapshot
 import alphainterplanetary.thinker.export.PlatformExportActions
 import alphainterplanetary.thinker.export.ProjectExportRenderer
 import alphainterplanetary.thinker.export.ProjectExportSummarizer
@@ -210,6 +211,11 @@ class ExportRepository @Inject constructor(
       val project = storage.getProject(projectId)
         ?: throw IllegalStateException("Project $projectId no longer exists")
 
+      // Build canonical snapshot in-memory for this revision; summaries are resolved
+      // separately via cache. Persisted snapshot payloads deferred until needed.
+      val snapshot = ExportSnapshot.from(project)
+      taskRunner.setProgress(taskId, 0.15f)
+
       val summaries = if (config.includeSummaries) {
         taskRunner.setProgress(taskId, 0.2f)
         log.append("Summarizing phases for export")
@@ -225,7 +231,7 @@ class ExportRepository @Inject constructor(
       }
 
       taskRunner.setProgress(taskId, 0.85f)
-      val content = ProjectExportRenderer(config).render(project, phaseSummaries = summaries)
+      val content = ProjectExportRenderer(config).render(snapshot, phaseSummaries = summaries)
       val path = exportFileStore.pathFor(artifactId, current.format.extension)
       exportFileStore.writeText(path, content).getOrElse { throw it }
       writtenPath = path

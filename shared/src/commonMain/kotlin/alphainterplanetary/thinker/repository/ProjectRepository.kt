@@ -15,6 +15,7 @@ import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
 import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.engine.core.SummarizedPhase
 import alphainterplanetary.thinker.export.ExportFileStore
+import alphainterplanetary.thinker.export.ExportSnapshot
 import alphainterplanetary.thinker.export.ProjectExportRenderer
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.ExportConfig
@@ -755,7 +756,8 @@ class ProjectRepository @Inject constructor(
       .lowercase()
       .replace(Regex("\\s+"), "-")
       .ifBlank { "export" }
-    return ProjectExportRenderer(ExportConfig(outputName = outputName)).render(project)
+    return ProjectExportRenderer(ExportConfig(outputName = outputName))
+      .render(ExportSnapshot.from(project))
   }
 
   private companion object {

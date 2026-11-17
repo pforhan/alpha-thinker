@@ -4,13 +4,16 @@ import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
+import kotlin.time.Instant
 
 /**
- * Renders a project into an [ExportDocument] using [config].
+ * Renders an export into an [ExportDocument] using [config].
  *
- * Output is phase-grouped (no round structure) with an opening phase-trail
- * summary. [phaseSummaries] provides optional per-phase summary text rendered
- * when [ExportConfig.includeSummaries] is enabled.
+ * Prefers rendering from a canonical [ExportSnapshot] (build once, render many)
+ * with resolved per-phase summaries; [render] from [Project] builds a snapshot for
+ * compatibility. Output is phase-grouped with an opening phase-trail summary.
+ * [phaseSummaries] provides optional per-phase summary text (Export intent by
+ * default) rendered when [ExportConfig.includeSummaries] is enabled.
  */
 class ProjectExportRenderer(
   private val config: ExportConfig,
@@ -19,47 +22,37 @@ class ProjectExportRenderer(
     project: Project,
     document: ExportDocument = MarkdownExportDocument(),
     phaseSummaries: Map<Phase, String> = emptyMap(),
+  ): String = render(ExportSnapshot.from(project), document, phaseSummaries)
+
+  fun render(
+    snapshot: ExportSnapshot,
+    document: ExportDocument = MarkdownExportDocument(),
+    phaseSummaries: Map<Phase, String> = emptyMap(),
+    phaseSummariesByKey: Map<String, String> = emptyMap(),
   ): String {
-    val title = project.title.ifBlank { project.synopsis }
-    document.documentHeader(title = title, synopsis = project.synopsis)
+    val title = snapshot.title.ifBlank { snapshot.synopsis }
+    document.documentHeader(title = title, synopsis = snapshot.synopsis)
 
-    val phaseContent = project.allPhaseContent().sortedBy { it.phase.order }
-    val phaseLookup = project.phaseLookup()
-    val questionsByPhase = project.questions
-      .sortedBy { it.timestamp }
-      .groupBy { phaseLookup(it) }
-      .toMutableMap()
-    // Prefer PhaseQuestions as the visited-phase source, but include any phases
-    // traversed by rounds or inferred from questions (e.g. projects without rounds).
-    phaseContent.forEach { content ->
-      questionsByPhase[content.phase] = questionsByPhase[content.phase]
-        ?: content.questions.sortedBy { it.timestamp }
+    val phases = snapshot.phases.mapNotNull { phaseSnapshot ->
+      val phase = Phase.fromKey(phaseSnapshot.phaseKey) ?: return@mapNotNull null
+      ResolvedPhase(
+        phase = phase,
+        snapshot = phaseSnapshot,
+        blocks = phaseSnapshot.questions.mapNotNull { toBlock(it) },
+        summary = resolveSummary(phase, phaseSnapshot.phaseKey, phaseSummaries, phaseSummariesByKey),
+      )
     }
-    val traversedPhases = (
-      phaseContent.map { it.phase } +
-        project.rounds.map { it.phase } +
-        questionsByPhase.keys
-      ).distinct().sortedBy { it.order }
 
-    val blocksByPhase = traversedPhases.associateWith { phase ->
-      questionsByPhase[phase].orEmpty().mapNotNull { toBlock(it) }
-    }
-    val summariesByPhase = traversedPhases.associateWith { phase ->
-      phaseSummaries[phase]?.takeIf { config.includeSummaries && it.isNotBlank() }
-    }
-    val phasesInExport = traversedPhases.filter { phase ->
-      blocksByPhase[phase].orEmpty().isNotEmpty() || summariesByPhase[phase] != null
-    }
+    val phasesInExport = phases.filter { it.blocks.isNotEmpty() || it.summary != null }
 
     document.phaseTrail(
-      phasesInExport.mapIndexed { index, phase ->
-        val blocks = blocksByPhase[phase].orEmpty()
-        val resolved = blocks.count {
+      phasesInExport.mapIndexed { index, entry ->
+        val resolved = entry.blocks.count {
           it.status == ExportAnswerStatus.Answered || it.status == ExportAnswerStatus.Ignored
         }
-        val total = blocks.size
+        val total = entry.blocks.size
         PhaseTrailEntry(
-          phase = phase,
+          phase = entry.phase,
           traversalIndex = index + 1,
           questionCount = total,
           resolvedCount = resolved,
@@ -68,16 +61,85 @@ class ProjectExportRenderer(
       }
     )
 
-    phasesInExport.forEach { phase ->
-      document.beginPhase(phase)
-      summariesByPhase[phase]?.let { summary ->
-        document.phaseSummary(phase, summary)
-      }
-      blocksByPhase[phase].orEmpty().forEach { document.question(it) }
-      document.endPhase(phase)
+    phasesInExport.forEach { entry ->
+      document.beginPhase(entry.phase)
+      entry.summary?.let { document.phaseSummary(entry.phase, it) }
+      entry.blocks.forEach { document.question(it) }
+      document.endPhase(entry.phase)
     }
 
     return document.build()
+  }
+
+  private fun resolveSummary(
+    phase: Phase,
+    phaseKey: String,
+    phaseSummaries: Map<Phase, String>,
+    phaseSummariesByKey: Map<String, String>,
+  ): String? {
+    if (!config.includeSummaries) return null
+    val summary = phaseSummaries[phase] ?: phaseSummariesByKey[phaseKey]
+    return summary?.takeIf { it.isNotBlank() }
+  }
+
+  private fun toBlock(question: ExportQuestionSnapshot): ExportQuestionBlock? {
+    if (question.ignoredAtEpochMs != null) {
+      if (!config.includeIgnoredQuestions) return null
+      return ExportQuestionBlock(
+        questionText = question.text,
+        status = ExportAnswerStatus.Ignored,
+      )
+    }
+
+    if (question.compacted) {
+      return ExportQuestionBlock(
+        questionText = question.text,
+        status = ExportAnswerStatus.Omitted,
+      )
+    }
+
+    if (question.answerId != null) {
+      val current = question.answers.find { it.id == question.answerId }
+        ?: question.answers.lastOrNull()
+      if (current != null) {
+        val revisions = if (config.includeAnswerRevisionHistory) {
+          question.answers
+            .filter { it.id != current.id }
+            .sortedByDescending { it.createdAtEpochMs }
+            .map { ExportAnswerRevision(text = it.text, createdAt = formatEpochMs(it.createdAtEpochMs)) }
+        } else {
+          emptyList()
+        }
+        return ExportQuestionBlock(
+          questionText = question.text,
+          status = ExportAnswerStatus.Answered,
+          answerText = current.text,
+          answeredAt = formatEpochMs(current.createdAtEpochMs),
+          revisionHistory = revisions,
+        )
+      }
+    }
+
+    if (!question.draftText.isNullOrBlank()) {
+      if (!config.includeDrafts) {
+        return if (config.includeUnansweredQuestions) {
+          ExportQuestionBlock(questionText = question.text, status = ExportAnswerStatus.Unanswered)
+        } else {
+          null
+        }
+      }
+      return ExportQuestionBlock(
+        questionText = question.text,
+        status = ExportAnswerStatus.Draft,
+        draftText = question.draftText,
+      )
+    }
+
+    if (!config.includeUnansweredQuestions) return null
+    return ExportQuestionBlock(
+      questionText = question.text,
+      status = ExportAnswerStatus.Unanswered,
+    )
   }
 
   private fun toBlock(question: Question): ExportQuestionBlock? {
@@ -90,8 +152,6 @@ class ProjectExportRenderer(
     }
 
     if (question.compacted) {
-      // Compacted copies mark an omitted answer; export stored state semantics
-      // by rendering an explicit omitted state when such a question is present.
       return ExportQuestionBlock(
         questionText = question.text,
         status = ExportAnswerStatus.Omitted,
@@ -138,4 +198,14 @@ class ProjectExportRenderer(
       status = ExportAnswerStatus.Unanswered,
     )
   }
+
+  private fun formatEpochMs(epochMs: Long): String =
+    Instant.fromEpochMilliseconds(epochMs).toString()
+
+  private data class ResolvedPhase(
+    val phase: Phase,
+    val snapshot: ExportPhaseSnapshot,
+    val blocks: List<ExportQuestionBlock>,
+    val summary: String?,
+  )
 }
