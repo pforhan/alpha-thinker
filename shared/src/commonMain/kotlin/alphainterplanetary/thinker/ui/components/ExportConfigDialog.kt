@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,6 +33,7 @@ import androidx.compose.ui.Modifier
  * the form (e.g. "export again" from an existing artifact); otherwise defaults are
  * derived from [project]. Confirm always requests a new export artifact.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExportConfigDialog(
   project: Project,
@@ -43,12 +47,12 @@ fun ExportConfigDialog(
   }
   val base = initialConfig ?: ExportConfig(outputName = defaultName)
   var outputName by remember(base) { mutableStateOf(base.outputName.ifBlank { defaultName }) }
+  var format by remember(base) { mutableStateOf(base.format) }
   var includeIgnored by remember(base) { mutableStateOf(base.includeIgnoredQuestions) }
   var includeUnanswered by remember(base) { mutableStateOf(base.includeUnansweredQuestions) }
   var includeDrafts by remember(base) { mutableStateOf(base.includeDrafts) }
   var includeRevisions by remember(base) { mutableStateOf(base.includeAnswerRevisionHistory) }
   var includeSummaries by remember(base) { mutableStateOf(base.includeSummaries) }
-  val format = base.format
 
   AlertDialog(
     onDismissRequest = onDismiss,
@@ -68,7 +72,22 @@ fun ExportConfigDialog(
           singleLine = true,
           modifier = Modifier.fillMaxWidth(),
         )
-        Text("Format: ${format.name}")
+        Column(verticalArrangement = Arrangement.spacedBy(Dimens.TightGap)) {
+          Text("Format")
+          FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+            verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+          ) {
+            ExportFormat.entries.forEach { option ->
+              FilterChip(
+                selected = format == option,
+                onClick = { format = option },
+                label = { Text(formatLabel(option)) },
+                elevation = null,
+              )
+            }
+          }
+        }
         ExportOptionRow(
           checked = includeIgnored,
           onCheckedChange = { includeIgnored = it },
@@ -142,4 +161,9 @@ private fun ExportOptionRow(
     Checkbox(checked = checked, onCheckedChange = onCheckedChange)
     Text(text = label)
   }
+}
+
+private fun formatLabel(format: ExportFormat): String = when (format) {
+  ExportFormat.Markdown -> "Markdown (.md)"
+  ExportFormat.Html -> "HTML (.html)"
 }
