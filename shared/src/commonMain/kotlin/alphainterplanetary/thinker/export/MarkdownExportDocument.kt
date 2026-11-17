@@ -7,6 +7,8 @@ class MarkdownExportDocument : ExportDocument {
   private val out = StringBuilder()
   private var needsSeparator = false
 
+  override fun beginDocument(snapshot: ExportSnapshot): ExportDocument = this
+
   override fun documentHeader(title: String, synopsis: String): ExportDocument = apply {
     val heading = title.ifBlank { "Project Export" }
     out.appendLine("# ${escapeInline(heading)}")
@@ -106,6 +108,8 @@ class MarkdownExportDocument : ExportDocument {
     out.appendLine()
     needsSeparator = false
   }
+
+  override fun endDocument(): ExportDocument = this
 
   override fun build(): String = out.toString().trimEnd() + "\n"
 

@@ -7,8 +7,18 @@ import alphainterplanetary.thinker.phases.Phase
  *
  * Implementations render the same structural events to different formats
  * (Markdown today, HTML later) without changing the export orchestration.
+ * The renderer drives lifecycle hooks in order: [beginDocument], document content
+ * ([documentHeader], [phaseTrail], [beginPhase]/[phaseSummary]/[question]/[endPhase]),
+ * [endDocument], then [build].
  */
 interface ExportDocument {
+  /**
+   * Opens the document. Receives the canonical snapshot-derived render context so
+   * formats can emit wrappers/boilerplate (e.g. HTML head/body) without changing
+   * orchestration.
+   */
+  fun beginDocument(snapshot: ExportSnapshot): ExportDocument = this
+
   /** Sets the document title and opening synopsis/overview text. */
   fun documentHeader(title: String, synopsis: String): ExportDocument
 
@@ -29,6 +39,12 @@ interface ExportDocument {
 
   /** Renders an optional summary block for the current phase. */
   fun phaseSummary(phase: Phase, summary: String): ExportDocument
+
+  /**
+   * Closes the document, paired with [beginDocument]. Provides a hook for formats
+   * that need trailing wrappers (e.g. closing HTML body/document containers).
+   */
+  fun endDocument(): ExportDocument = this
 
   /** Returns the rendered document. */
   fun build(): String

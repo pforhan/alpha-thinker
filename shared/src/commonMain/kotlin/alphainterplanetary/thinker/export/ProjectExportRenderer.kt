@@ -31,6 +31,7 @@ class ProjectExportRenderer(
     phaseSummariesByKey: Map<String, String> = emptyMap(),
   ): String {
     val title = snapshot.title.ifBlank { snapshot.synopsis }
+    document.beginDocument(snapshot)
     document.documentHeader(title = title, synopsis = snapshot.synopsis)
 
     val phases = snapshot.phases.mapNotNull { phaseSnapshot ->
@@ -68,6 +69,7 @@ class ProjectExportRenderer(
       document.endPhase(entry.phase)
     }
 
+    document.endDocument()
     return document.build()
   }
 
