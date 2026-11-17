@@ -299,6 +299,37 @@ class ProjectTest {
     assertEquals(BuiltInPhase.ScopeGoals, lookup(p.questions.first()))
   }
 
+  // ---------- roundless projects ----------
+  // Questions without matching rounds are not part of the current round model, but
+  // phase resolution falls back to the first/current phase so they remain attributable
+  // (relevant if global/user-defined questions are introduced).
+
+  @Test
+  fun `roundless project defaults to first phase with no current round`() {
+    val p = project(question("q1", roundId = "r-unknown"))
+
+    assertNull(p.currentRound)
+    assertEquals(BuiltInPhase.ScopeGoals, p.currentPhase)
+  }
+
+  @Test
+  fun `roundless project attributes questions to the first phase`() {
+    val p = project(question("q1", roundId = "r-unknown"), question("q2", roundId = "r-missing"))
+
+    assertEquals(BuiltInPhase.ScopeGoals, p.phaseForQuestion(p.questions[0]))
+    assertEquals(BuiltInPhase.ScopeGoals, p.phaseForQuestion(p.questions[1]))
+    assertEquals(listOf(BuiltInPhase.ScopeGoals, BuiltInPhase.ScopeGoals), p.questions.map(p.phaseLookup()))
+  }
+
+  @Test
+  fun `roundless project has no phase content derived from rounds`() {
+    val p = project(question("q1", roundId = "r-unknown"))
+
+    assertTrue(p.allPhaseContent().isEmpty())
+    assertTrue(p.currentPhaseQuestions.isEmpty())
+    assertEquals(0, p.currentPhaseQuestionCount)
+  }
+
   // ---------- phase completion ----------
 
   private fun projectWithRounds(
