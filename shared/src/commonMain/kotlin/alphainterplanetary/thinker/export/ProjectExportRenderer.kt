@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.export
 
 import alphainterplanetary.thinker.model.ExportConfig
+import alphainterplanetary.thinker.model.ExportFormat
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
@@ -20,16 +21,17 @@ class ProjectExportRenderer(
 ) {
   fun render(
     project: Project,
-    document: ExportDocument = MarkdownExportDocument(),
+    document: ExportDocument? = null,
     phaseSummaries: Map<Phase, String> = emptyMap(),
   ): String = render(ExportSnapshot.from(project), document, phaseSummaries)
 
   fun render(
     snapshot: ExportSnapshot,
-    document: ExportDocument = MarkdownExportDocument(),
+    document: ExportDocument? = null,
     phaseSummaries: Map<Phase, String> = emptyMap(),
     phaseSummariesByKey: Map<String, String> = emptyMap(),
   ): String {
+    val document = document ?: defaultDocument()
     val title = snapshot.title.ifBlank { snapshot.synopsis }
     document.beginDocument(snapshot)
     document.documentHeader(title = title, synopsis = snapshot.synopsis)
@@ -199,6 +201,11 @@ class ProjectExportRenderer(
       questionText = question.text,
       status = ExportAnswerStatus.Unanswered,
     )
+  }
+
+  private fun defaultDocument(): ExportDocument = when (config.format) {
+    ExportFormat.Markdown -> MarkdownExportDocument()
+    ExportFormat.Html -> HtmlExportDocument()
   }
 
   private fun formatEpochMs(epochMs: Long): String =

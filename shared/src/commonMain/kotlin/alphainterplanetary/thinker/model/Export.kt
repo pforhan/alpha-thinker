@@ -24,16 +24,19 @@ data class ExportConfig(
 /** Output format for a generated export. */
 @Serializable
 enum class ExportFormat {
-  Markdown;
+  Markdown,
+  Html;
 
   val extension: String
     get() = when (this) {
       Markdown -> "md"
+      Html -> "html"
     }
 
   val mimeType: String
     get() = when (this) {
       Markdown -> "text/markdown"
+      Html -> "text/html"
     }
 }
 
