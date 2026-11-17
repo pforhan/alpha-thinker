@@ -3,6 +3,8 @@ package alphainterplanetary.thinker.database
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
+import alphainterplanetary.thinker.engine.core.CachedPhaseSummary
+import alphainterplanetary.thinker.engine.core.PhaseSummaryIntent
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
@@ -163,5 +165,57 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
 
   override suspend fun deleteExportArtifact(id: String) {
     database.exportArtifactDao().deleteById(id)
+  }
+
+  override suspend fun saveCachedPhaseSummary(entry: CachedPhaseSummary) {
+    // Keep at most one row per (revision, phase, intent, engine, content hash) by
+    // replacing any existing match; a fresh id is fine for an immutable cache value.
+    val existing = database.phaseSummaryCacheDao().getMatching(
+      projectId = entry.projectId,
+      projectRevisionEpochMs = entry.projectRevisionEpochMs,
+      phaseKey = entry.phaseKey,
+      intent = entry.intent.storageKey,
+      engineIdentity = entry.engineIdentity,
+      coveredContentHash = entry.coveredContentHash,
+    )
+    database.phaseSummaryCacheDao().upsert(entry.toEntity(id = existing?.id ?: alphainterplanetary.thinker.util.randomUUID()))
+  }
+
+  override suspend fun getCachedPhaseSummary(
+    projectId: String,
+    projectRevisionEpochMs: Long,
+    phaseKey: String,
+    intent: PhaseSummaryIntent,
+    engineIdentity: String,
+    coveredContentHash: String,
+  ): CachedPhaseSummary? =
+    database.phaseSummaryCacheDao().getMatching(
+      projectId = projectId,
+      projectRevisionEpochMs = projectRevisionEpochMs,
+      phaseKey = phaseKey,
+      intent = intent.storageKey,
+      engineIdentity = engineIdentity,
+      coveredContentHash = coveredContentHash,
+    )?.toModel()
+
+  override suspend fun getCachedPhaseSummariesForRevision(
+    projectId: String,
+    projectRevisionEpochMs: Long,
+    intent: PhaseSummaryIntent,
+    engineIdentity: String,
+  ): List<CachedPhaseSummary> =
+    database.phaseSummaryCacheDao().getForRevision(
+      projectId = projectId,
+      projectRevisionEpochMs = projectRevisionEpochMs,
+      intent = intent.storageKey,
+      engineIdentity = engineIdentity,
+    ).mapNotNull { it.toModel() }
+
+  override suspend fun deleteStalePhaseSummaryCache(projectId: String, currentRevisionEpochMs: Long) {
+    database.phaseSummaryCacheDao().deleteStaleRevisions(projectId, currentRevisionEpochMs)
+  }
+
+  override suspend fun deletePhaseSummaryCacheForProject(projectId: String) {
+    database.phaseSummaryCacheDao().deleteForProject(projectId)
   }
 }

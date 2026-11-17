@@ -162,3 +162,46 @@ data class ProjectWithQuestions(
   )
   val questions: List<QuestionEntity>,
 )
+
+/**
+ * Cached per-phase summary, keyed by project revision, phase, summary intent/kind,
+ * and engine/model identity so expensive summarization can be reused across
+ * export, compaction, and future background generation.
+ *
+ * [coveredContentHash] fingerprints the covered transcript/content; a cache hit
+ * is valid only when it matches the current covered content. [coveredQuestionIdsJson]
+ * records the question ids the summary stands in for (provenance / [SummarizedPhase]).
+ */
+@Entity(
+  tableName = "phase_summary_cache",
+  foreignKeys = [ForeignKey(
+    entity = ProjectEntity::class,
+    parentColumns = ["id"],
+    childColumns = ["projectId"],
+    onDelete = ForeignKey.CASCADE,
+  )],
+  indices = [
+    Index("projectId"),
+    Index(
+      value = [
+        "projectId",
+        "projectRevisionEpochMs",
+        "phaseKey",
+        "intent",
+        "engineIdentity",
+      ],
+    ),
+  ],
+)
+data class PhaseSummaryCacheEntity(
+  @PrimaryKey val id: String,
+  val projectId: String,
+  val projectRevisionEpochMs: Long,
+  val phaseKey: String,
+  val intent: String,
+  val engineIdentity: String,
+  val coveredContentHash: String,
+  val coveredQuestionIdsJson: String,
+  val summaryText: String,
+  val createdAtEpochMs: Long,
+)

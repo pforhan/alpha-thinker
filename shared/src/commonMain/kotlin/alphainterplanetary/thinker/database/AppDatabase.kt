@@ -21,8 +21,9 @@ import kotlinx.coroutines.Dispatchers
     EngineInstanceEntity::class,
     EngineSelectionStateEntity::class,
     ExportArtifactEntity::class,
+    PhaseSummaryCacheEntity::class,
   ],
-  version = 17,
+  version = 18,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -35,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
   abstract fun engineInstanceDao(): EngineInstanceDao
   abstract fun engineSelectionStateDao(): EngineSelectionStateDao
   abstract fun exportArtifactDao(): ExportArtifactDao
+  abstract fun phaseSummaryCacheDao(): PhaseSummaryCacheDao
 }
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")

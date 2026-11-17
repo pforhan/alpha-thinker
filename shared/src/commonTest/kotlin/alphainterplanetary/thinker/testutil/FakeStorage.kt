@@ -5,6 +5,8 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
+import alphainterplanetary.thinker.engine.core.CachedPhaseSummary
+import alphainterplanetary.thinker.engine.core.PhaseSummaryIntent
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.util.now
@@ -22,6 +24,7 @@ class FakeStorage(
   val engineInstances: MutableMap<String, EngineInstance> = mutableMapOf(),
   val engineSelectionStates: MutableMap<String, EngineSelectionState> = mutableMapOf(),
   val exportArtifacts: MutableMap<String, ExportArtifact> = mutableMapOf(),
+  val phaseSummaryCache: MutableMap<String, CachedPhaseSummary> = mutableMapOf(),
 ) : Storage {
   private val exportFlows = MutableStateFlow(exportArtifacts.toMap())
 
@@ -111,5 +114,69 @@ class FakeStorage(
   override suspend fun deleteExportArtifact(id: String) {
     exportArtifacts.remove(id)
     publishExports()
+  }
+
+  private fun phaseSummaryCacheKey(entry: CachedPhaseSummary): String = phaseSummaryCacheKey(
+    entry.projectId,
+    entry.projectRevisionEpochMs,
+    entry.phaseKey,
+    entry.intent,
+    entry.engineIdentity,
+    entry.coveredContentHash,
+  )
+
+  private fun phaseSummaryCacheKey(
+    projectId: String,
+    projectRevisionEpochMs: Long,
+    phaseKey: String,
+    intent: PhaseSummaryIntent,
+    engineIdentity: String,
+    coveredContentHash: String,
+  ): String = listOf(
+    projectId,
+    projectRevisionEpochMs.toString(),
+    phaseKey,
+    intent.storageKey,
+    engineIdentity,
+    coveredContentHash,
+  ).joinToString("|")
+
+  override suspend fun saveCachedPhaseSummary(entry: CachedPhaseSummary) {
+    phaseSummaryCache[phaseSummaryCacheKey(entry)] = entry
+  }
+
+  override suspend fun getCachedPhaseSummary(
+    projectId: String,
+    projectRevisionEpochMs: Long,
+    phaseKey: String,
+    intent: PhaseSummaryIntent,
+    engineIdentity: String,
+    coveredContentHash: String,
+  ): CachedPhaseSummary? =
+    phaseSummaryCache[phaseSummaryCacheKey(projectId, projectRevisionEpochMs, phaseKey, intent, engineIdentity, coveredContentHash)]
+
+  override suspend fun getCachedPhaseSummariesForRevision(
+    projectId: String,
+    projectRevisionEpochMs: Long,
+    intent: PhaseSummaryIntent,
+    engineIdentity: String,
+  ): List<CachedPhaseSummary> =
+    phaseSummaryCache.values.filter {
+      it.projectId == projectId &&
+        it.projectRevisionEpochMs == projectRevisionEpochMs &&
+        it.intent == intent &&
+        it.engineIdentity == engineIdentity
+    }
+
+  override suspend fun deleteStalePhaseSummaryCache(projectId: String, currentRevisionEpochMs: Long) {
+    val stale = phaseSummaryCache.values.filter {
+      it.projectId == projectId && it.projectRevisionEpochMs != currentRevisionEpochMs
+    }.map { phaseSummaryCacheKey(it) }
+    stale.forEach { phaseSummaryCache.remove(it) }
+  }
+
+  override suspend fun deletePhaseSummaryCacheForProject(projectId: String) {
+    val keys = phaseSummaryCache.values.filter { it.projectId == projectId }.map { phaseSummaryCacheKey(it) }
+    keys.forEach { phaseSummaryCache.remove(it) }
   }
 }

@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.ExportStatus
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.phases.BuiltInPhase
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.tasks.TaskStatus
 import alphainterplanetary.thinker.testutil.FakeExportFileStore
@@ -92,6 +93,7 @@ class ExportRepositoryTest {
       activityLogger = activityLogger,
       platformExportActions = platform,
       exportFileStore = fileStore,
+      engineRepository = EngineRepository(storage, CoroutineScope(coroutineContext)),
     ),
     storage = storage,
     fileStore = fileStore,

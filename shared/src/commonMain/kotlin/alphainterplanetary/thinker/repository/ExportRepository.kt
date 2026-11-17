@@ -30,6 +30,7 @@ class ExportRepository @Inject constructor(
   private val activityLogger: ActivityLogger,
   private val platformExportActions: PlatformExportActions,
   private val exportFileStore: ExportFileStore,
+  private val engineRepository: EngineRepository,
 ) {
   val supportsSave: Boolean get() = platformExportActions.supportsSave
   val supportsOpen: Boolean get() = platformExportActions.supportsOpen
@@ -216,6 +217,8 @@ class ExportRepository @Inject constructor(
           project = project,
           engine = engineSelector.selectedEngine(),
           activityId = taskId,
+          storage = storage,
+          engineIdentity = engineRepository.selectedConfiguredIdentity,
         ).also { taskRunner.setProgress(taskId, 0.7f) }
       } else {
         emptyMap()

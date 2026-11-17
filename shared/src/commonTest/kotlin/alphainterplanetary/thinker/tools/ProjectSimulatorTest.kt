@@ -11,6 +11,7 @@ import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ContextCompaction
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.tasks.TaskRunner
 import alphainterplanetary.thinker.testutil.FakeExportFileStore
@@ -53,13 +54,15 @@ class ProjectSimulatorTest {
     storage: FakeStorage = FakeStorage(),
     generator: PlanningEngine = engine(),
   ): Harness {
-    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val scope = CoroutineScope(coroutineContext)
+    val runner = TaskRunner(scope)
     val repository = ProjectRepository(
       storage = storage,
       engineSelector = { generator },
       taskRunner = runner,
       activityLogger = RecordingActivityLogger(),
       exportFileStore = FakeExportFileStore(),
+      engineRepository = EngineRepository(storage, scope),
     )
     val simulator = ProjectSimulator(
       repository = repository,

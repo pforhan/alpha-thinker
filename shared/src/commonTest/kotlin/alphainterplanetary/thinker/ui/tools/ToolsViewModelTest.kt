@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.tools
 
 import alphainterplanetary.thinker.engine.runtime.dev.EngineDelayConfig
 import alphainterplanetary.thinker.engine.runtime.dev.EngineInteraction
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.repository.SettingsRepository
@@ -33,6 +34,7 @@ class ToolsViewModelTest {
       taskRunner = runner,
       activityLogger = RecordingActivityLogger(),
       exportFileStore = FakeExportFileStore(),
+      engineRepository = EngineRepository(storage, scope),
     )
     return ToolsViewModel(
       settingsRepository = SettingsRepository(storage, scope),

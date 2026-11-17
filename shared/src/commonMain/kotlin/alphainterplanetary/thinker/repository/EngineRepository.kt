@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineKind
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
+import alphainterplanetary.thinker.engine.config.normalizeRemoteBaseUrl
 import alphainterplanetary.thinker.util.now
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -53,6 +54,15 @@ class EngineRepository @Inject constructor(
 
   /** The engine a task will run on; the built-in `Offline` until chosen. */
   val selected: StateFlow<EngineRef> = _selected.asStateFlow()
+
+  /**
+   * A configured-identity fingerprint for the currently selected engine, used as a
+   * cache/provenance key. For a user-created instance this includes provider,
+   * normalized endpoint, model id, and context window so config/model changes under
+   * the same ref invalidate cached results; for a built-in ref the ref key is used.
+   */
+  val selectedConfiguredIdentity: String
+    get() = configuredIdentity(_selected.value)
 
   private val _lastUsedAt = MutableStateFlow<Map<EngineRef, Long>>(emptyMap())
 
@@ -159,6 +169,26 @@ class EngineRepository @Inject constructor(
       select(EngineRef.Builtin(EngineKind.Default))
     }
     scope.launch { storage.deleteEngineInstance(id) }
+  }
+
+  private fun configuredIdentity(ref: EngineRef): String = when (ref) {
+    is EngineRef.Builtin -> ref.storageKey
+    is EngineRef.Instance -> {
+      val instance = _instances.value.find { it.id == ref.id }
+      if (instance == null) {
+        ref.storageKey
+      } else {
+        val provider = instance.provider?.key ?: "unknown"
+        val baseUrl = normalizeRemoteBaseUrl(instance.baseUrl)
+        listOf(
+          ref.storageKey,
+          provider,
+          baseUrl,
+          instance.model.trim(),
+          instance.contextTokens.toString(),
+        ).joinToString("|")
+      }
+    }
   }
 }
 

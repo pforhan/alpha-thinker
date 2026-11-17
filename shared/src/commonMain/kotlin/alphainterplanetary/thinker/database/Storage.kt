@@ -4,6 +4,8 @@ import alphainterplanetary.thinker.di.PlatformContext
 import alphainterplanetary.thinker.engine.config.EngineInstance
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
+import alphainterplanetary.thinker.engine.core.CachedPhaseSummary
+import alphainterplanetary.thinker.engine.core.PhaseSummaryIntent
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.Project
 import kotlinx.coroutines.flow.Flow
@@ -69,6 +71,36 @@ interface Storage {
   fun observeExportArtifacts(projectId: String): Flow<List<ExportArtifact>>
   suspend fun getExportArtifacts(projectId: String): List<ExportArtifact>
   suspend fun deleteExportArtifact(id: String)
+
+  /** Persists a cached phase summary (intent-aware, revision/content-keyed). */
+  suspend fun saveCachedPhaseSummary(entry: CachedPhaseSummary)
+
+  /**
+   * Returns a cached summary matching the exact revision, phase, intent, engine
+   * identity, and covered content hash, or null when no valid cache entry exists.
+   */
+  suspend fun getCachedPhaseSummary(
+    projectId: String,
+    projectRevisionEpochMs: Long,
+    phaseKey: String,
+    intent: PhaseSummaryIntent,
+    engineIdentity: String,
+    coveredContentHash: String,
+  ): CachedPhaseSummary?
+
+  /** Returns all cached summaries for [projectId] at [projectRevisionEpochMs] for [intent]/[engineIdentity]. */
+  suspend fun getCachedPhaseSummariesForRevision(
+    projectId: String,
+    projectRevisionEpochMs: Long,
+    intent: PhaseSummaryIntent,
+    engineIdentity: String,
+  ): List<CachedPhaseSummary>
+
+  /** Deletes cached summaries for [projectId] whose revision differs from [currentRevisionEpochMs]. */
+  suspend fun deleteStalePhaseSummaryCache(projectId: String, currentRevisionEpochMs: Long)
+
+  /** Deletes all cached summaries for [projectId]. */
+  suspend fun deletePhaseSummaryCacheForProject(projectId: String)
 }
 
 /**

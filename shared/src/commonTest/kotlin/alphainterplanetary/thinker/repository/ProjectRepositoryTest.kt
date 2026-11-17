@@ -12,6 +12,7 @@ import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.tasks.TaskFailed
 import alphainterplanetary.thinker.tasks.TaskKind
 import alphainterplanetary.thinker.tasks.TaskRunner
@@ -54,6 +55,7 @@ class ProjectRepositoryTest {
       runner,
       activityLogger,
       FakeExportFileStore(),
+      EngineRepository(storage, CoroutineScope(coroutineContext)),
     )
 
   // ---------- createProject ----------
@@ -198,6 +200,7 @@ class ProjectRepositoryTest {
         runner,
         RecordingActivityLogger(),
         FakeExportFileStore(),
+        EngineRepository(storage, CoroutineScope(coroutineContext)),
       )
 
       // createProject enqueues the title + initial batch under `current` (enqueued).

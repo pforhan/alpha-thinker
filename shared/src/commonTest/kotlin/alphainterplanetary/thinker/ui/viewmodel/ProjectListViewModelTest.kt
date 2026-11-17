@@ -8,6 +8,7 @@ import alphainterplanetary.thinker.engine.config.EngineSelectionState
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.TaskKind
@@ -33,13 +34,15 @@ class ProjectListViewModelTest {
     projectWrites: ProjectWrites = ProjectWrites(),
     block: suspend (ProjectListViewModel) -> Unit,
   ) {
-    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val scope = CoroutineScope(coroutineContext)
+    val runner = TaskRunner(scope)
     val repository = ProjectRepository(
       storage,
       PlanningEngineSelector { FakePlanningEngine() },
       runner,
       RecordingActivityLogger(),
       FakeExportFileStore(),
+      EngineRepository(storage, scope),
     )
     val vm = ProjectListViewModel(
       repository,
@@ -172,54 +175,55 @@ class ProjectListViewModelTest {
       throw IllegalStateException("boom")
     }
 
-    override suspend fun getSetting(key: SettingsKey, default: String): String =
-      throw IllegalStateException("boom")
+    override suspend fun getSetting(key: SettingsKey, default: String): String = default
 
-    override suspend fun saveSetting(key: SettingsKey, value: String) {
-      throw IllegalStateException("boom")
-    }
+    override suspend fun saveSetting(key: SettingsKey, value: String) {}
 
-    override suspend fun getEngineInstances(): List<EngineInstance> =
-      throw IllegalStateException("boom")
+    override suspend fun getEngineInstances(): List<EngineInstance> = emptyList()
 
-    override suspend fun upsertEngineInstance(instance: EngineInstance) {
-      throw IllegalStateException("boom")
-    }
+    override suspend fun upsertEngineInstance(instance: EngineInstance) {}
 
-    override suspend fun deleteEngineInstance(id: String) {
-      throw IllegalStateException("boom")
-    }
+    override suspend fun deleteEngineInstance(id: String) {}
 
-    override suspend fun getEngineSelectionStates(): List<EngineSelectionState> =
-      throw IllegalStateException("boom")
+    override suspend fun getEngineSelectionStates(): List<EngineSelectionState> = emptyList()
 
-    override suspend fun upsertEngineSelectionState(state: EngineSelectionState) {
-      throw IllegalStateException("boom")
-    }
+    override suspend fun upsertEngineSelectionState(state: EngineSelectionState) {}
 
-    override suspend fun deleteEngineSelectionState(ref: EngineRef) {
-      throw IllegalStateException("boom")
-    }
+    override suspend fun deleteEngineSelectionState(ref: EngineRef) {}
 
-    override suspend fun setSelectedEngine(ref: EngineRef) {
-      throw IllegalStateException("boom")
-    }
+    override suspend fun setSelectedEngine(ref: EngineRef) {}
 
-    override suspend fun saveExportArtifact(artifact: ExportArtifact) {
-      throw IllegalStateException("boom")
-    }
+    override suspend fun saveExportArtifact(artifact: ExportArtifact) {}
 
-    override suspend fun getExportArtifact(id: String): ExportArtifact? =
-      throw IllegalStateException("boom")
+    override suspend fun getExportArtifact(id: String): ExportArtifact? = null
 
     override fun observeExportArtifacts(projectId: String): Flow<List<ExportArtifact>> =
-      throw IllegalStateException("boom")
+      kotlinx.coroutines.flow.flowOf(emptyList())
 
-    override suspend fun getExportArtifacts(projectId: String): List<ExportArtifact> =
-      throw IllegalStateException("boom")
+    override suspend fun getExportArtifacts(projectId: String): List<ExportArtifact> = emptyList()
 
-    override suspend fun deleteExportArtifact(id: String) {
-      throw IllegalStateException("boom")
-    }
+    override suspend fun deleteExportArtifact(id: String) {}
+
+    override suspend fun saveCachedPhaseSummary(entry: alphainterplanetary.thinker.engine.core.CachedPhaseSummary) {}
+
+    override suspend fun getCachedPhaseSummary(
+      projectId: String,
+      projectRevisionEpochMs: Long,
+      phaseKey: String,
+      intent: alphainterplanetary.thinker.engine.core.PhaseSummaryIntent,
+      engineIdentity: String,
+      coveredContentHash: String,
+    ): alphainterplanetary.thinker.engine.core.CachedPhaseSummary? = null
+
+    override suspend fun getCachedPhaseSummariesForRevision(
+      projectId: String,
+      projectRevisionEpochMs: Long,
+      intent: alphainterplanetary.thinker.engine.core.PhaseSummaryIntent,
+      engineIdentity: String,
+    ): List<alphainterplanetary.thinker.engine.core.CachedPhaseSummary> = emptyList()
+
+    override suspend fun deleteStalePhaseSummaryCache(projectId: String, currentRevisionEpochMs: Long) {}
+
+    override suspend fun deletePhaseSummaryCacheForProject(projectId: String) {}
   }
 }

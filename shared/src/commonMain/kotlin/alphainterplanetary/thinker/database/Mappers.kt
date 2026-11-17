@@ -9,6 +9,8 @@ import alphainterplanetary.thinker.engine.config.EngineKind
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.engine.config.EngineSelectionState
 import alphainterplanetary.thinker.engine.config.RemoteProvider
+import alphainterplanetary.thinker.engine.core.CachedPhaseSummary
+import alphainterplanetary.thinker.engine.core.PhaseSummaryIntent
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.ExportConfig
@@ -20,7 +22,10 @@ import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.util.randomUUID
 import kotlin.time.Instant
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -218,3 +223,38 @@ fun ExportArtifactEntity.toModel(): ExportArtifact = ExportArtifact(
   error = error,
   completedAt = completedAt?.let { Instant.fromEpochMilliseconds(it) },
 )
+
+private val cacheJson = Json { ignoreUnknownKeys = true }
+private val stringSetSerializer = ListSerializer(String.serializer())
+
+fun CachedPhaseSummary.toEntity(id: String = randomUUID()): PhaseSummaryCacheEntity =
+  PhaseSummaryCacheEntity(
+    id = id,
+    projectId = projectId,
+    projectRevisionEpochMs = projectRevisionEpochMs,
+    phaseKey = phaseKey,
+    intent = intent.storageKey,
+    engineIdentity = engineIdentity,
+    coveredContentHash = coveredContentHash,
+    coveredQuestionIdsJson = cacheJson.encodeToString(stringSetSerializer, coveredQuestionIds.toList()),
+    summaryText = summaryText,
+    createdAtEpochMs = createdAtEpochMs,
+  )
+
+fun PhaseSummaryCacheEntity.toModel(): CachedPhaseSummary? {
+  val intent = PhaseSummaryIntent.fromStorageKey(intent) ?: return null
+  val coveredIds = runCatching {
+    cacheJson.decodeFromString(stringSetSerializer, coveredQuestionIdsJson).toSet()
+  }.getOrElse { emptySet() }
+  return CachedPhaseSummary(
+    projectId = projectId,
+    projectRevisionEpochMs = projectRevisionEpochMs,
+    phaseKey = phaseKey,
+    intent = intent,
+    engineIdentity = engineIdentity,
+    coveredContentHash = coveredContentHash,
+    coveredQuestionIds = coveredIds,
+    summaryText = summaryText,
+    createdAtEpochMs = createdAtEpochMs,
+  )
+}

@@ -6,6 +6,8 @@ import alphainterplanetary.thinker.activitylog.LogTopic
 import alphainterplanetary.thinker.activitylog.LogSource
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
+import alphainterplanetary.thinker.engine.core.CachedPhaseSummary
+import alphainterplanetary.thinker.engine.core.PhaseSummaryIntent
 import alphainterplanetary.thinker.engine.core.PhaseSummarization
 import alphainterplanetary.thinker.engine.core.PlanningContext
 import alphainterplanetary.thinker.engine.core.PlanningEngine
@@ -39,6 +41,7 @@ class ProjectRepository @Inject constructor(
   private val taskRunner: TaskRunner,
   private val activityLogger: ActivityLogger,
   private val exportFileStore: ExportFileStore,
+  private val engineRepository: EngineRepository,
 ) {
 
   /**
@@ -496,19 +499,49 @@ class ProjectRepository @Inject constructor(
     else -> {
       val summaries = mutableListOf<SummarizedPhase>()
       var questions = project.questions
+      val projectRevisionEpochMs = project.updatedAt.toEpochMilliseconds()
+      val engineIdentity = engineRepository.selectedConfiguredIdentity
+      storage.deleteStalePhaseSummaryCache(project.id, projectRevisionEpochMs)
       for (transcript in PhaseSummarization.compactionTranscripts(project)) {
         if (summaries.isNotEmpty() &&
           PlanningContext.estimateTokens(questions, summaries) <= budgetTokens
         ) {
           break
         }
-        val summary = PhaseSummarization.summarize(
-          engine = engine,
-          title = project.title,
-          synopsis = project.synopsis,
-          transcript = transcript,
-          activityId = taskId,
+        val coveredContentHash = transcript.coveredContentHash
+        val cached = storage.getCachedPhaseSummary(
+          projectId = project.id,
+          projectRevisionEpochMs = projectRevisionEpochMs,
+          phaseKey = transcript.phase.key,
+          intent = PhaseSummaryIntent.Compaction,
+          engineIdentity = engineIdentity,
+          coveredContentHash = coveredContentHash,
         )
+        val summary = if (cached != null) {
+          cached.summaryText
+        } else {
+          PhaseSummarization.summarize(
+            engine = engine,
+            title = project.title,
+            synopsis = project.synopsis,
+            transcript = transcript,
+            activityId = taskId,
+          ).also { generated ->
+            storage.saveCachedPhaseSummary(
+              CachedPhaseSummary(
+                projectId = project.id,
+                projectRevisionEpochMs = projectRevisionEpochMs,
+                phaseKey = transcript.phase.key,
+                intent = PhaseSummaryIntent.Compaction,
+                engineIdentity = engineIdentity,
+                coveredContentHash = coveredContentHash,
+                coveredQuestionIds = transcript.coveredQuestionIds,
+                summaryText = generated,
+                createdAtEpochMs = now().toEpochMilliseconds(),
+              )
+            )
+          }
+        }
         summaries += transcript.toSummarizedPhase(summary)
         // The phase's answers are replaced by the summary, which is what the
         // next re-measurement has to see — the summary only costs anything once

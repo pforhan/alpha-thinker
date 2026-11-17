@@ -24,6 +24,13 @@ data class PhaseTranscript(
   val coveredQuestionIds: Set<String>
     get() = questions.mapTo(mutableSetOf()) { it.id }
 
+  /**
+   * Stable fingerprint of this transcript's covered content, used as a cache-key
+   * component so a cached summary is reused only when the summarized content is unchanged.
+   */
+  val coveredContentHash: String
+    get() = hashCoveredContent(transcript)
+
   /** Builds a [SummarizedPhase] for [summary] covering this transcript. */
   fun toSummarizedPhase(summary: String): SummarizedPhase =
     SummarizedPhase(
@@ -51,6 +58,16 @@ data class PhaseTranscript(
         transcript = transcript,
         estimatedTokens = TokenEstimator.estimateTokens(transcript),
       )
+    }
+
+    /** Stable FNV-1a 64-bit fingerprint of rendered phase transcript content. */
+    fun hashCoveredContent(text: String): String {
+      var hash = -0x340d631b7bdddcdbL // 14695981039346656037UL offset basis
+      for (ch in text) {
+        hash = hash xor ch.code.toLong()
+        hash *= 0x100000001b3L // 1099511628211 prime
+      }
+      return hash.toULong().toString(16).padStart(16, '0')
     }
   }
 }

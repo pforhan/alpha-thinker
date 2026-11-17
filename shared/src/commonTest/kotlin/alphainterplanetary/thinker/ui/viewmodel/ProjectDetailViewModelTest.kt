@@ -9,6 +9,7 @@ import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.RoundOutcome
 import alphainterplanetary.thinker.phases.BuiltInPhase
 import alphainterplanetary.thinker.repository.ContextCompaction
+import alphainterplanetary.thinker.repository.EngineRepository
 import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.repository.ProjectWrites
 import alphainterplanetary.thinker.tasks.TaskKind
@@ -51,13 +52,15 @@ class ProjectDetailViewModelTest {
     projectWrites: ProjectWrites = ProjectWrites(),
     block: suspend (VmContext) -> Unit,
   ) {
-    val runner = TaskRunner(CoroutineScope(coroutineContext))
+    val scope = CoroutineScope(coroutineContext)
+    val runner = TaskRunner(scope)
     val repository = ProjectRepository(
       storage,
       PlanningEngineSelector { generator },
       runner,
       RecordingActivityLogger(),
       FakeExportFileStore(),
+      EngineRepository(storage, scope),
     )
     val vm = ProjectDetailViewModel(
       repository = repository,
