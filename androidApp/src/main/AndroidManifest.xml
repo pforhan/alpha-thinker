@@ -28,4 +28,31 @@
     </provider>
   </application>
 
+  <!-- Declare which MIME types your app intends to query -->
+  <queries>
+    <!-- For HTML files -->
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:mimeType="text/html" />
+    </intent>
+
+    <!-- For PDF files -->
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:mimeType="application/pdf" />
+    </intent>
+
+    <!-- For Markdown files -->
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:mimeType="text/markdown" />
+    </intent>
+
+    <!-- For Markdown as text files -->
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:mimeType="text/plain" />
+    </intent>
+  </queries>
+
 </manifest>

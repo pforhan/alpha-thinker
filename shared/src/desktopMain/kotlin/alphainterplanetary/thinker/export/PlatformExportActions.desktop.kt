@@ -14,6 +14,18 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
 private class DesktopPlatformExportActions : PlatformExportActions {
   override val supportsShare: Boolean = false
 
+  override suspend fun openCapability(
+    filename: String,
+    mimeType: String,
+    internalPath: String,
+  ): ExportOpenCapability {
+    val file = File(internalPath)
+    if (!supportsOpen || !file.exists() || !Desktop.isDesktopSupported()) {
+      return ExportOpenCapability.Unavailable
+    }
+    return ExportOpenCapability.Single()
+  }
+
   override suspend fun save(
     filename: String,
     mimeType: String,

@@ -7,6 +7,7 @@ import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.di.AppScope
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
 import alphainterplanetary.thinker.export.ExportFileStore
+import alphainterplanetary.thinker.export.ExportOpenCapability
 import alphainterplanetary.thinker.export.ExportSnapshot
 import alphainterplanetary.thinker.export.PlatformExportActions
 import alphainterplanetary.thinker.export.ProjectExportRenderer
@@ -128,6 +129,18 @@ class ExportRepository @Inject constructor(
     withCompletedContent(artifactId) { artifact, path, content ->
       platformExportActions.open(artifact.filename, artifact.format.mimeType, path, content)
     } ?: false
+
+  /**
+   * Returns how [openExport] can be handled for a completed export (viewer
+   * availability and, when known, the handler label/count). Returns
+   * [ExportOpenCapability.Unavailable] for missing or non-completed artifacts.
+   */
+  suspend fun openCapabilityForExport(artifactId: String): ExportOpenCapability {
+    val artifact = storage.getExportArtifact(artifactId) ?: return ExportOpenCapability.Unavailable
+    val path = artifact.storageRef ?: return ExportOpenCapability.Unavailable
+    if (artifact.status != ExportStatus.Completed) return ExportOpenCapability.Unavailable
+    return platformExportActions.openCapability(artifact.filename, artifact.format.mimeType, path)
+  }
 
   private suspend fun <T> withCompletedContent(
     artifactId: String,

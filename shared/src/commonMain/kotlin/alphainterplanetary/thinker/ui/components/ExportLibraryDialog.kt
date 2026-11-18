@@ -1,10 +1,12 @@
 package alphainterplanetary.thinker.ui.components
 
+import alphainterplanetary.thinker.export.ExportOpenCapability
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.ExportStatus
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.util.formatTaskDuration
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -13,25 +15,41 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import kotlin.time.Instant
 
 /**
- * Minimal prepared-export library/management view for a project. Shows prepared
- * export files and provides basic actions; full management UX is expanded in 4A.3/4A.4.
+ * Prepared-export library/management view for a project. Completed exports show
+ * icon actions with short hints (view in an app, send/share, save a copy).
+ * [openCapability] is checked per artifact so View is hidden or labeled based on
+ * available viewers/handlers.
  */
 @Composable
 fun ExportLibraryDialog(
@@ -46,9 +64,12 @@ fun ExportLibraryDialog(
   onSave: (ExportArtifact) -> Unit,
   onOpen: (ExportArtifact) -> Unit,
   onDelete: (ExportArtifact) -> Unit,
+  openCapability: suspend (ExportArtifact) -> ExportOpenCapability = { ExportOpenCapability.Single() },
 ) {
   AlertDialog(
     onDismissRequest = onDismiss,
+    modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
+    properties = DialogProperties(usePlatformDefaultWidth = false),
     title = { Text("Prepared exports") },
     text = {
       if (exports.isEmpty()) {
@@ -74,6 +95,7 @@ fun ExportLibraryDialog(
               onSave = { onSave(artifact) },
               onOpen = { onOpen(artifact) },
               onDelete = { onDelete(artifact) },
+              openCapability = openCapability,
             )
           }
         }
@@ -99,7 +121,18 @@ private fun ExportArtifactRow(
   onSave: () -> Unit,
   onOpen: () -> Unit,
   onDelete: () -> Unit,
+  openCapability: suspend (ExportArtifact) -> ExportOpenCapability,
 ) {
+  val isCompleted = artifact.status == ExportStatus.Completed
+  val capability = produceState<ExportOpenCapability>(
+    initialValue = ExportOpenCapability.Unavailable,
+    key1 = artifact.id,
+    key2 = artifact.status,
+    key3 = showOpen,
+  ) {
+    value = if (showOpen && isCompleted) openCapability(artifact) else ExportOpenCapability.Unavailable
+  }.value
+
   Surface(
     color = MaterialTheme.colorScheme.surfaceVariant,
     shape = MaterialTheme.shapes.medium,
@@ -141,25 +174,100 @@ private fun ExportArtifactRow(
         )
       }
       HorizontalDivider()
-      val canManage = artifact.status == ExportStatus.Completed ||
-        artifact.status == ExportStatus.Failed
-      FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-        verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-      ) {
-        if (canManage) {
-          TextButton(onClick = onExportAgain) { Text("Prepare again") }
-        }
-        if (artifact.status == ExportStatus.Completed) {
-          if (showOpen) TextButton(onClick = onOpen) { Text("Open") }
-          if (showShare) TextButton(onClick = onShare) { Text("Share") }
-          if (showSave) TextButton(onClick = onSave) { Text(saveLabel) }
-        }
-        if (canManage) {
-          TextButton(onClick = onDelete) { Text("Delete") }
+      val canManage = isCompleted || artifact.status == ExportStatus.Failed
+      if (canManage) {
+        TextButton(onClick = onExportAgain) { Text("Prepare again") }
+      }
+      if (isCompleted || canManage) {
+        FlowRow(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
+          verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+        ) {
+          if (isCompleted && capability.isAvailable) {
+            ExportAction(
+              icon = Icons.AutoMirrored.Filled.OpenInNew,
+              label = "View",
+              hint = openHint(capability),
+              onClick = onOpen,
+            )
+          }
+          if (isCompleted && showShare) {
+            ExportAction(
+              icon = Icons.Default.Share,
+              label = "Share",
+              onClick = onShare,
+            )
+          }
+          if (isCompleted && showSave) {
+            ExportAction(
+              icon = Icons.Default.SaveAlt,
+              label = saveLabel,
+              onClick = onSave,
+            )
+          }
+          if (canManage) {
+            ExportAction(
+              icon = Icons.Default.Delete,
+              label = "Delete",
+              onClick = onDelete,
+              tint = MaterialTheme.colorScheme.error,
+            )
+          }
         }
       }
+    }
+  }
+}
+
+private fun openHint(capability: ExportOpenCapability): String? = when (capability) {
+  ExportOpenCapability.Unavailable -> null
+  is ExportOpenCapability.Single -> {
+    val appLabel = capability.appLabel.orEmpty().trim()
+    if (appLabel.isNotEmpty()) appLabel else "Default viewer"
+  }
+  is ExportOpenCapability.Multiple ->
+    if (capability.count > 1) "(${capability.count} viewers)" else "Select viewer"
+}
+
+@Composable
+private fun ExportAction(
+  icon: ImageVector,
+  label: String,
+  hint: String? = null,
+  onClick: () -> Unit,
+  tint: Color = MaterialTheme.colorScheme.primary,
+) {
+  Column(
+    modifier = Modifier
+      .clip(MaterialTheme.shapes.small)
+      .clickable(role = Role.Button, onClick = onClick)
+      .padding(horizontal = Dimens.TightGap, vertical = Dimens.TightGap),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(2.dp),
+  ) {
+    Icon(
+      imageVector = icon,
+      contentDescription = "$label: ${hint.orEmpty()}",
+      tint = tint,
+      modifier = Modifier.size(Dimens.IconSizeMedium),
+    )
+    Text(
+      text = label,
+      style = MaterialTheme.typography.labelSmall,
+      color = tint,
+      textAlign = TextAlign.Center,
+      maxLines = 1,
+    )
+    hint?.let {
+      Text(
+        text = it,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+      )
     }
   }
 }

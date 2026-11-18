@@ -377,6 +377,7 @@ fun ProjectDetailScreen(
       showShare = appComponent.exportRepository.supportsShare,
       showSave = appComponent.exportRepository.supportsSave,
       saveLabel = appComponent.exportRepository.saveActionLabel,
+      openCapability = { artifact -> appComponent.exportRepository.openCapabilityForExport(artifact.id) },
       onDismiss = { showExportLibrary = false },
       onExportAgain = { config ->
         showExportLibrary = false
@@ -393,7 +394,7 @@ fun ProjectDetailScreen(
       onOpen = { artifact ->
         scope.launch {
           val ok = appComponent.exportRepository.openExport(artifact.id)
-          if (!ok) chrome.showMessage("Couldn't open export")
+          if (!ok) chrome.showMessage("No app can open this file")
         }
       },
       onDelete = { artifact ->

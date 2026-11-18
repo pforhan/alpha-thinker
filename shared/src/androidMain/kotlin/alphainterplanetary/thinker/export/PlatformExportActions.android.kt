@@ -10,10 +10,10 @@ import androidx.core.content.FileProvider
 import java.io.File
 
 actual fun providePlatformExportActions(platformContext: PlatformContext): PlatformExportActions =
-  AndroidPlatformExportActions((platformContext as? AndroidPlatformContext)?.appContext)
+  AndroidPlatformExportActions((platformContext as AndroidPlatformContext).appContext)
 
 private class AndroidPlatformExportActions(
-  private val context: Context?,
+  private val context: Context,
 ) : PlatformExportActions {
   // Save is handled via UI-integrated SAF picker (rememberExportSaveAction); the
   // capability is advertised so UI surfaces the action, but direct save() remains
@@ -21,6 +21,28 @@ private class AndroidPlatformExportActions(
   override val supportsSave: Boolean = true
   override val supportsOpen: Boolean = true
   override val supportsShare: Boolean = true
+
+  override suspend fun openCapability(
+    filename: String,
+    mimeType: String,
+    internalPath: String,
+  ): ExportOpenCapability {
+    val resolvedMime = mimeType.resolved()
+    val uri = context.contentUri(internalPath) ?: return ExportOpenCapability.Unavailable
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+      setDataAndType(uri, resolvedMime)
+      addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    val handlers = context.packageManager.queryIntentActivities(intent, 0)
+    return when (handlers.size) {
+      0 -> ExportOpenCapability.Unavailable
+      1 -> {
+        val label = handlers.first().loadLabel(context.packageManager).toString().takeIf { it.isNotBlank() }
+        ExportOpenCapability.Single(label)
+      }
+      else -> ExportOpenCapability.Multiple(handlers.size)
+    }
+  }
 
   override suspend fun save(
     filename: String,
@@ -35,10 +57,9 @@ private class AndroidPlatformExportActions(
     internalPath: String,
     content: String,
   ): Boolean {
-    val ctx = context ?: return false
-    val resolvedMime = mimeType.ifBlank { "application/octet-stream" }
+    val resolvedMime = mimeType.resolved()
     return runCatching {
-      val uri = contentUri(ctx, internalPath) ?: return@runCatching false
+      val uri = this@AndroidPlatformExportActions.context.contentUri(internalPath) ?: return@runCatching false
       val intent = Intent(Intent.ACTION_SEND).apply {
         type = resolvedMime
         putExtra(Intent.EXTRA_STREAM, uri)
@@ -51,7 +72,7 @@ private class AndroidPlatformExportActions(
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
-      ctx.startActivity(chooser)
+      this@AndroidPlatformExportActions.context.startActivity(chooser)
       true
     }.getOrDefault(false)
   }
@@ -62,26 +83,24 @@ private class AndroidPlatformExportActions(
     internalPath: String,
     content: String,
   ): Boolean {
-    val ctx = context ?: return false
-    val resolvedMime = mimeType.ifBlank { "application/octet-stream" }
+    val resolvedMime = mimeType.resolved()
     return runCatching {
-      val uri = contentUri(ctx, internalPath) ?: return@runCatching false
+      val uri = this@AndroidPlatformExportActions.context.contentUri(internalPath) ?: return@runCatching false
       val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, resolvedMime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
-      ctx.startActivity(intent)
+      this@AndroidPlatformExportActions.context.startActivity(intent)
       true
-    }.getOrElse {
-      // Fall back to share if no viewer handles the type directly.
-      share(filename, mimeType, internalPath, content)
-    }
+    }.getOrDefault(false)
   }
 
-  private fun contentUri(ctx: Context, internalPath: String): Uri? {
+  private fun String.resolved(): String = ifBlank { "application/octet-stream" }
+
+  private fun Context.contentUri(internalPath: String): Uri? {
     val file = File(internalPath)
     if (!file.exists()) return null
-    return FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+    return FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
   }
 }

@@ -25,6 +25,18 @@ interface PlatformExportActions {
   val saveActionLabel: String get() = "Save"
 
   /**
+   * Returns how [open] can be handled for this export (viewer availability and,
+   * when known, the handler label/count). Defaults to a generic capability derived
+   * from [supportsOpen]; platforms may override for per-format/per-file detection.
+   */
+  suspend fun openCapability(
+    filename: String,
+    mimeType: String,
+    internalPath: String,
+  ): ExportOpenCapability =
+    if (supportsOpen) ExportOpenCapability.Single() else ExportOpenCapability.Unavailable
+
+  /**
    * Saves/exports a copy to a user-chosen or platform destination. Returns the
    * destination ref/path/URI on success, or null if cancelled/unavailable.
    */
