@@ -15,7 +15,10 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
 private class AndroidPlatformExportActions(
   private val context: Context?,
 ) : PlatformExportActions {
-  override val supportsSave: Boolean = false
+  // Save is handled via UI-integrated SAF picker (rememberExportSaveAction); the
+  // capability is advertised so UI surfaces the action, but direct save() remains
+  // unavailable outside that UI flow.
+  override val supportsSave: Boolean = true
   override val supportsOpen: Boolean = true
   override val supportsShare: Boolean = true
 
@@ -24,7 +27,7 @@ private class AndroidPlatformExportActions(
     mimeType: String,
     internalPath: String,
     content: String,
-  ): String? = null // User-chosen save (SAF) requires UI/activity integration; degrade gracefully.
+  ): String? = null // User-chosen save uses UI/activity-result integration (SAF).
 
   override suspend fun share(
     filename: String,

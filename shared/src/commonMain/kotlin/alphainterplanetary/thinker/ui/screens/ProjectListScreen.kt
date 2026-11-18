@@ -22,6 +22,7 @@ import alphainterplanetary.thinker.ui.components.SwipeableFrame
 import alphainterplanetary.thinker.ui.components.activeTaskSummary
 import alphainterplanetary.thinker.ui.components.generationProblemKind
 import alphainterplanetary.thinker.ui.format.UntitledProjectLabel
+import alphainterplanetary.thinker.ui.platform.rememberExportSaveAction
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListUiState
 import alphainterplanetary.thinker.ui.viewmodel.ProjectListViewModel
@@ -91,6 +92,23 @@ fun ProjectListScreen(
   } else {
     remember { mutableStateOf(emptyList()) }
   }
+  val platformSaveExport = rememberExportSaveAction(appComponent.exportRepository) { message ->
+    scope.launch { chrome.showMessage(message) }
+  }
+  val saveExport: (alphainterplanetary.thinker.model.ExportArtifact) -> Unit =
+    platformSaveExport ?: { artifact ->
+      scope.launch {
+        val result = appComponent.exportRepository.saveExport(artifact.id)
+        when {
+          result == null -> chrome.showMessage(
+            "${appComponent.exportRepository.saveActionLabel} cancelled or unavailable"
+          )
+          else -> chrome.showMessage(
+            "Export ${appComponent.exportRepository.saveActionLabel.lowercase()}d"
+          )
+        }
+      }
+    }
 
   val viewModel = remember {
     ProjectListViewModel(
@@ -254,15 +272,7 @@ fun ProjectListScreen(
           if (!ok) chrome.showMessage("Sharing isn't available on this platform")
         }
       },
-      onSave = { artifact ->
-        scope.launch {
-          val result = appComponent.exportRepository.saveExport(artifact.id)
-          when {
-            result == null -> chrome.showMessage("${appComponent.exportRepository.saveActionLabel} cancelled or unavailable")
-            else -> chrome.showMessage("Export ${appComponent.exportRepository.saveActionLabel.lowercase()}d")
-          }
-        }
-      },
+      onSave = saveExport,
       onOpen = { artifact ->
         scope.launch {
           val ok = appComponent.exportRepository.openExport(artifact.id)

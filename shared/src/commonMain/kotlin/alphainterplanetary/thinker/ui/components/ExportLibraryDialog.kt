@@ -7,10 +7,8 @@ import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.util.formatTaskDuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -61,7 +59,7 @@ fun ExportLibraryDialog(
         )
       } else {
         LazyColumn(
-          modifier = Modifier.heightIn(max = 420.dp),
+          modifier = Modifier.heightIn(max = 520.dp),
           verticalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
         ) {
           items(exports, key = { it.id }) { artifact ->
@@ -143,13 +141,13 @@ private fun ExportArtifactRow(
         )
       }
       HorizontalDivider()
-      Row(
+      val canManage = artifact.status == ExportStatus.Completed ||
+        artifact.status == ExportStatus.Failed
+      FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
       ) {
-        val canManage = artifact.status == ExportStatus.Completed ||
-          artifact.status == ExportStatus.Failed
         if (canManage) {
           TextButton(onClick = onExportAgain) { Text("Prepare again") }
         }
@@ -158,7 +156,6 @@ private fun ExportArtifactRow(
           if (showShare) TextButton(onClick = onShare) { Text("Share") }
           if (showSave) TextButton(onClick = onSave) { Text(saveLabel) }
         }
-        Spacer(modifier = Modifier.weight(1f))
         if (canManage) {
           TextButton(onClick = onDelete) { Text("Delete") }
         }
@@ -167,7 +164,6 @@ private fun ExportArtifactRow(
   }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ExportMetadataRow(artifact: ExportArtifact) {
   val duration = artifact.completedAt?.let { completed ->
