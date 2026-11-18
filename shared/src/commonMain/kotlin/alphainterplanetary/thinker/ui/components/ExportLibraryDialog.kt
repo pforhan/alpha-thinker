@@ -2,7 +2,6 @@ package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.export.ExportOpenCapability
 import alphainterplanetary.thinker.model.ExportArtifact
-import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.ExportStatus
 import alphainterplanetary.thinker.ui.theme.Dimens
 import alphainterplanetary.thinker.util.formatTaskDuration
@@ -59,7 +58,6 @@ fun ExportLibraryDialog(
   showSave: Boolean,
   saveLabel: String,
   onDismiss: () -> Unit,
-  onExportAgain: (ExportConfig) -> Unit,
   onShare: (ExportArtifact) -> Unit,
   onSave: (ExportArtifact) -> Unit,
   onOpen: (ExportArtifact) -> Unit,
@@ -90,7 +88,6 @@ fun ExportLibraryDialog(
               showShare = showShare,
               showSave = showSave,
               saveLabel = saveLabel,
-              onExportAgain = { onExportAgain(artifact.config) },
               onShare = { onShare(artifact) },
               onSave = { onSave(artifact) },
               onOpen = { onOpen(artifact) },
@@ -116,7 +113,6 @@ private fun ExportArtifactRow(
   showShare: Boolean,
   showSave: Boolean,
   saveLabel: String,
-  onExportAgain: () -> Unit,
   onShare: () -> Unit,
   onSave: () -> Unit,
   onOpen: () -> Unit,
@@ -176,9 +172,6 @@ private fun ExportArtifactRow(
       HorizontalDivider()
       val canManage = isCompleted || artifact.status == ExportStatus.Failed
       if (canManage) {
-        TextButton(onClick = onExportAgain) { Text("Prepare again") }
-      }
-      if (isCompleted || canManage) {
         FlowRow(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
@@ -206,14 +199,12 @@ private fun ExportArtifactRow(
               onClick = onSave,
             )
           }
-          if (canManage) {
-            ExportAction(
-              icon = Icons.Default.Delete,
-              label = "Delete",
-              onClick = onDelete,
-              tint = MaterialTheme.colorScheme.error,
-            )
-          }
+          ExportAction(
+            icon = Icons.Default.Delete,
+            label = "Delete",
+            onClick = onDelete,
+            tint = MaterialTheme.colorScheme.error,
+          )
         }
       }
     }

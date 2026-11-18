@@ -1,7 +1,6 @@
 package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.di.AppComponent
-import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.tasks.GenerationTask
 import alphainterplanetary.thinker.tasks.TaskKind
@@ -83,7 +82,6 @@ fun ProjectListScreen(
   var projectToDelete by remember { mutableStateOf<Project?>(null) }
   var projectToExport by remember { mutableStateOf<Project?>(null) }
   var projectForExportLibrary by remember { mutableStateOf<Project?>(null) }
-  var exportInitialConfig by remember { mutableStateOf<ExportConfig?>(null) }
   var deletingId by remember { mutableStateOf<String?>(null) }
   val scope = rememberCoroutineScope()
   val exportLibraryProjectId = projectForExportLibrary?.id
@@ -212,19 +210,13 @@ fun ProjectListScreen(
   projectToExport?.let { project ->
     ExportConfigDialog(
       project = project,
-      initialConfig = exportInitialConfig,
-      onDismiss = {
-        projectToExport = null
-        exportInitialConfig = null
-      },
+      onDismiss = { projectToExport = null },
       onViewExports = {
         projectToExport = null
-        exportInitialConfig = null
         projectForExportLibrary = project
       },
       onConfirm = { config ->
         projectToExport = null
-        exportInitialConfig = null
         projectForExportLibrary = project
         scope.launch {
           runCatching {
@@ -248,11 +240,6 @@ fun ProjectListScreen(
       saveLabel = saveExport.label,
       openCapability = { artifact -> appComponent.exportRepository.openCapabilityForExport(artifact.id) },
       onDismiss = { projectForExportLibrary = null },
-      onExportAgain = { config ->
-        projectForExportLibrary = null
-        exportInitialConfig = config
-        projectToExport = project
-      },
       onShare = { artifact ->
         scope.launch {
           val ok = appComponent.exportRepository.shareExport(artifact.id)

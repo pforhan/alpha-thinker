@@ -2,7 +2,6 @@ package alphainterplanetary.thinker.ui.screens
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.di.AppComponent
-import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.PhaseQuestions
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
@@ -158,7 +157,6 @@ fun ProjectDetailScreen(
   var showPhaseAdvanceDialog by remember { mutableStateOf(false) }
   var showExportDialog by remember { mutableStateOf(false) }
   var showExportLibrary by remember { mutableStateOf(false) }
-  var exportInitialConfig by remember { mutableStateOf<ExportConfig?>(null) }
   var selectedQuestion by remember { mutableStateOf<Question?>(null) }
   val scope = rememberCoroutineScope()
   val exports by appComponent.exportRepository.observeExports(projectId).collectAsState(emptyList())
@@ -209,10 +207,7 @@ fun ProjectDetailScreen(
         }
       }
       if (uiState is ProjectDetailUiState.Success) {
-        IconButton(onClick = {
-          exportInitialConfig = null
-          showExportDialog = true
-        }) {
+        IconButton(onClick = { showExportDialog = true }) {
           Icon(Icons.Default.IosShare, contentDescription = "Export project")
         }
         IconButton(onClick = { showExportLibrary = true }) {
@@ -328,19 +323,13 @@ fun ProjectDetailScreen(
     if (project != null) {
       ExportConfigDialog(
         project = project,
-        initialConfig = exportInitialConfig,
-        onDismiss = {
-          showExportDialog = false
-          exportInitialConfig = null
-        },
+        onDismiss = { showExportDialog = false },
         onViewExports = {
           showExportDialog = false
-          exportInitialConfig = null
           showExportLibrary = true
         },
         onConfirm = { config ->
           showExportDialog = false
-          exportInitialConfig = null
           showExportLibrary = true
           scope.launch {
             runCatching {
@@ -365,11 +354,6 @@ fun ProjectDetailScreen(
       saveLabel = saveExport.label,
       openCapability = { artifact -> appComponent.exportRepository.openCapabilityForExport(artifact.id) },
       onDismiss = { showExportLibrary = false },
-      onExportAgain = { config ->
-        showExportLibrary = false
-        exportInitialConfig = config
-        showExportDialog = true
-      },
       onShare = { artifact ->
         scope.launch {
           val ok = appComponent.exportRepository.shareExport(artifact.id)
