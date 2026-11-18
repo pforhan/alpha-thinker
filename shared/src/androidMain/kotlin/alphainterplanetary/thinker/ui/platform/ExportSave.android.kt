@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 actual fun rememberExportSaveAction(
   exportRepository: ExportRepository,
   onMessage: (String) -> Unit,
-): ((ExportArtifact) -> Unit)? {
+): ExportSaveAction {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   var pending by remember { mutableStateOf<PendingExportSave?>(null) }
@@ -43,21 +43,28 @@ actual fun rememberExportSaveAction(
   }
 
   return remember(exportRepository, context, launcher) {
-    { artifact ->
-      scope.launch {
-        val contentResult = exportRepository.readExportContent(artifact.id)
-        val content = contentResult.getOrNull()
-        if (content == null) {
-          val message = contentResult.exceptionOrNull()?.message
-            ?: "Export is unavailable"
-          onMessage(message)
-          return@launch
+    object : ExportSaveAction {
+      override val supported: Boolean = true
+      override val label: String = "Save"
+
+      override fun invoke(artifact: ExportArtifact) {
+        scope.launch {
+          val contentResult = exportRepository.readExportContent(artifact.id)
+          val content = contentResult.getOrNull()
+          if (content == null) {
+            val message = contentResult.exceptionOrNull()?.message
+              ?: "Export is unavailable"
+            onMessage(message)
+            return@launch
+          }
+          pending = PendingExportSave(
+            filename = artifact.filename,
+            content = content,
+          )
+          launcher.launch(
+            artifact.format.mimeType.ifBlank { "application/octet-stream" } to artifact.filename
+          )
         }
-        pending = PendingExportSave(
-          filename = artifact.filename,
-          content = content,
-        )
-        launcher.launch(artifact.format.mimeType.ifBlank { "application/octet-stream" } to artifact.filename)
       }
     }
   }

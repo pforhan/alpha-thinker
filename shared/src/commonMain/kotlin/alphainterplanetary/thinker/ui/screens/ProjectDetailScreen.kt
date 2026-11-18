@@ -162,23 +162,9 @@ fun ProjectDetailScreen(
   var selectedQuestion by remember { mutableStateOf<Question?>(null) }
   val scope = rememberCoroutineScope()
   val exports by appComponent.exportRepository.observeExports(projectId).collectAsState(emptyList())
-  val platformSaveExport = rememberExportSaveAction(appComponent.exportRepository) { message ->
+  val saveExport = rememberExportSaveAction(appComponent.exportRepository) { message ->
     scope.launch { chrome.showMessage(message) }
   }
-  val saveExport: (alphainterplanetary.thinker.model.ExportArtifact) -> Unit =
-    platformSaveExport ?: { artifact ->
-      scope.launch {
-        val result = appComponent.exportRepository.saveExport(artifact.id)
-        when {
-          result == null -> chrome.showMessage(
-            "${appComponent.exportRepository.saveActionLabel} cancelled or unavailable"
-          )
-          else -> chrome.showMessage(
-            "Export ${appComponent.exportRepository.saveActionLabel.lowercase()}d"
-          )
-        }
-      }
-    }
 
   LaunchedEffect(pendingUndo) {
     val undo = pendingUndo ?: return@LaunchedEffect
@@ -375,8 +361,8 @@ fun ProjectDetailScreen(
       exports = exports,
       showOpen = appComponent.exportRepository.supportsOpen,
       showShare = appComponent.exportRepository.supportsShare,
-      showSave = appComponent.exportRepository.supportsSave,
-      saveLabel = appComponent.exportRepository.saveActionLabel,
+      showSave = saveExport.supported,
+      saveLabel = saveExport.label,
       openCapability = { artifact -> appComponent.exportRepository.openCapabilityForExport(artifact.id) },
       onDismiss = { showExportLibrary = false },
       onExportAgain = { config ->
@@ -390,7 +376,7 @@ fun ProjectDetailScreen(
           if (!ok) chrome.showMessage("Sharing isn't available on this platform")
         }
       },
-      onSave = saveExport,
+      onSave = { saveExport(it) },
       onOpen = { artifact ->
         scope.launch {
           val ok = appComponent.exportRepository.openExport(artifact.id)

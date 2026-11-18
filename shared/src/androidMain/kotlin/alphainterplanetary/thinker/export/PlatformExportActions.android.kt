@@ -15,10 +15,9 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
 private class AndroidPlatformExportActions(
   private val context: Context,
 ) : PlatformExportActions {
-  // Save is handled via UI-integrated SAF picker (rememberExportSaveAction); the
-  // capability is advertised so UI surfaces the action, but direct save() remains
-  // unavailable outside that UI flow.
-  override val supportsSave: Boolean = true
+  // Direct/service-level save is unavailable on Android; user-chosen save is
+  // provided via the UI-integrated SAF flow (rememberExportSaveAction).
+  override val supportsSave: Boolean = false
   override val supportsOpen: Boolean = true
   override val supportsShare: Boolean = true
 
@@ -59,7 +58,7 @@ private class AndroidPlatformExportActions(
   ): Boolean {
     val resolvedMime = mimeType.resolved()
     return runCatching {
-      val uri = this@AndroidPlatformExportActions.context.contentUri(internalPath) ?: return@runCatching false
+      val uri = context.contentUri(internalPath) ?: return@runCatching false
       val intent = Intent(Intent.ACTION_SEND).apply {
         type = resolvedMime
         putExtra(Intent.EXTRA_STREAM, uri)
@@ -72,7 +71,7 @@ private class AndroidPlatformExportActions(
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
-      this@AndroidPlatformExportActions.context.startActivity(chooser)
+      context.startActivity(chooser)
       true
     }.getOrDefault(false)
   }
@@ -85,13 +84,13 @@ private class AndroidPlatformExportActions(
   ): Boolean {
     val resolvedMime = mimeType.resolved()
     return runCatching {
-      val uri = this@AndroidPlatformExportActions.context.contentUri(internalPath) ?: return@runCatching false
+      val uri = context.contentUri(internalPath) ?: return@runCatching false
       val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, resolvedMime)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
-      this@AndroidPlatformExportActions.context.startActivity(intent)
+      context.startActivity(intent)
       true
     }.getOrDefault(false)
   }

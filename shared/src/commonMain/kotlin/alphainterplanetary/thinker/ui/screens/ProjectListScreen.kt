@@ -92,23 +92,9 @@ fun ProjectListScreen(
   } else {
     remember { mutableStateOf(emptyList()) }
   }
-  val platformSaveExport = rememberExportSaveAction(appComponent.exportRepository) { message ->
+  val saveExport = rememberExportSaveAction(appComponent.exportRepository) { message ->
     scope.launch { chrome.showMessage(message) }
   }
-  val saveExport: (alphainterplanetary.thinker.model.ExportArtifact) -> Unit =
-    platformSaveExport ?: { artifact ->
-      scope.launch {
-        val result = appComponent.exportRepository.saveExport(artifact.id)
-        when {
-          result == null -> chrome.showMessage(
-            "${appComponent.exportRepository.saveActionLabel} cancelled or unavailable"
-          )
-          else -> chrome.showMessage(
-            "Export ${appComponent.exportRepository.saveActionLabel.lowercase()}d"
-          )
-        }
-      }
-    }
 
   val viewModel = remember {
     ProjectListViewModel(
@@ -258,8 +244,8 @@ fun ProjectListScreen(
       exports = exportLibraryExports,
       showOpen = appComponent.exportRepository.supportsOpen,
       showShare = appComponent.exportRepository.supportsShare,
-      showSave = appComponent.exportRepository.supportsSave,
-      saveLabel = appComponent.exportRepository.saveActionLabel,
+      showSave = saveExport.supported,
+      saveLabel = saveExport.label,
       openCapability = { artifact -> appComponent.exportRepository.openCapabilityForExport(artifact.id) },
       onDismiss = { projectForExportLibrary = null },
       onExportAgain = { config ->
@@ -273,7 +259,7 @@ fun ProjectListScreen(
           if (!ok) chrome.showMessage("Sharing isn't available on this platform")
         }
       },
-      onSave = saveExport,
+      onSave = { saveExport(it) },
       onOpen = { artifact ->
         scope.launch {
           val ok = appComponent.exportRepository.openExport(artifact.id)
