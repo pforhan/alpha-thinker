@@ -32,7 +32,9 @@ actual fun rememberExportSaveAction(
             return@launch
           }
           // presentExportPicker returns null if the file/presenter is unavailable or the user cancels.
-          val destination = presentExportPicker(path)
+          // Export a temp copy named with the requested filename so the picker
+          // suggests the friendly name instead of the canonical UUID storage name.
+          val destination = presentExportPicker(path, artifact.filename)
           onMessage(
             if (destination != null) "Saved export" else "Save cancelled or unavailable",
           )
