@@ -137,7 +137,7 @@ class ExportRepositoryTest {
     val completed = storage.getExportArtifact(pending.id)
     assertNotNull(completed)
     assertEquals(ExportStatus.Completed, completed.status)
-    assertEquals(h.fileStore.pathFor(pending.id, "md"), completed.storageRef)
+    assertEquals(h.fileStore.filenameFor(pending.id, "md"), completed.storageRef)
     assertNull(completed.error)
     val content = h.fileStore.readText(completed.storageRef!!)
     assertNotNull(content)
@@ -234,7 +234,7 @@ class ExportRepositoryTest {
     assertEquals(canonical, storage.getExportArtifact(pending.id)?.storageRef)
     assertEquals("Plan.md", h.platform.saved?.get(0))
     assertEquals("text/markdown", h.platform.saved?.get(1))
-    assertEquals(canonical, h.platform.saved?.get(2))
+    assertEquals(h.fileStore.resolve(canonical!!), h.platform.saved?.get(2))
     assertEquals(h.platform.saved?.get(3), h.platform.shared?.get(3))
   }
 

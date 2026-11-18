@@ -22,13 +22,15 @@ actual fun rememberExportSaveAction(
 
       override fun invoke(artifact: ExportArtifact) {
         scope.launch {
-          if (artifact.status != ExportStatus.Completed) {
-            onMessage("Export is not ready to save")
-            return@launch
-          }
-          val path = artifact.storageRef
-          if (path.isNullOrBlank()) {
-            onMessage("Export file is unavailable")
+          val path = exportRepository.exportFilePath(artifact.id)
+          if (path == null) {
+            onMessage(
+              if (artifact.status != ExportStatus.Completed) {
+                "Export is not ready to save"
+              } else {
+                "Export file is unavailable"
+              }
+            )
             return@launch
           }
           // presentExportPicker returns null if the file/presenter is unavailable or the user cancels.

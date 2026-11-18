@@ -6,17 +6,20 @@ import alphainterplanetary.thinker.export.ExportFileStore
 class FakeExportFileStore : ExportFileStore {
   val files: MutableMap<String, String> = mutableMapOf()
 
-  override fun pathFor(artifactId: String, extension: String): String =
-    "mem://exports/$artifactId.$extension"
+  override fun filenameFor(artifactId: String, extension: String): String =
+    "$artifactId.$extension"
 
-  override suspend fun writeText(path: String, content: String): Result<Unit> = runCatching {
-    files[path] = content
+  override fun resolve(ref: String): String =
+    if (ref.startsWith("mem://exports/")) ref else "mem://exports/$ref"
+
+  override suspend fun writeText(ref: String, content: String): Result<Unit> = runCatching {
+    files[resolve(ref)] = content
   }
 
-  override suspend fun readText(path: String): String? = files[path]
+  override suspend fun readText(ref: String): String? = files[resolve(ref)]
 
-  override suspend fun delete(path: String): Boolean {
-    files.remove(path)
+  override suspend fun delete(ref: String): Boolean {
+    files.remove(resolve(ref))
     return true
   }
 }

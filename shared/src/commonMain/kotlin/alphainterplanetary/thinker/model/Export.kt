@@ -51,11 +51,13 @@ enum class ExportStatus {
 /**
  * A generated export and the metadata needed to persist, list, and share it.
  *
- * [storageRef] is the canonical internal managed-file path/ref once [status] is
- * [ExportStatus.Completed]; it is null before generation completes or when it
- * failed. [config] is the snapshot of options used to produce this export so it
- * can be inspected or replayed (e.g. to prefill an export dialog and generate a
- * new export). Rendered export content lives in the managed file, not in the DB.
+ * [storageRef] is the canonical internal managed-file ref (relative to the
+ * exports directory) once [status] is [ExportStatus.Completed]; it is null
+ * before generation completes or when it failed. Resolve it via
+ * [alphainterplanetary.thinker.export.ExportFileStore.resolve] for file access.
+ * [config] is the snapshot of options used to produce this export so it can be
+ * inspected or replayed. Rendered export content lives in the managed file, not
+ * in the DB.
  */
 data class ExportArtifact(
   val id: String,

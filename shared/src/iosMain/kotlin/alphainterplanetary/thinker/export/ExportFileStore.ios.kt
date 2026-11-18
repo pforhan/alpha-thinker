@@ -27,10 +27,14 @@ private class IosExportFileStore(
     return dir
   }
 
-  override fun pathFor(artifactId: String, extension: String): String =
-    "${ensureDir()}/$artifactId.$extension"
+  override fun filenameFor(artifactId: String, extension: String): String =
+    "$artifactId.$extension"
 
-  override suspend fun writeText(path: String, content: String): Result<Unit> = runCatching {
+  override fun resolve(ref: String): String =
+    if (ref.startsWith("/")) ref else "${ensureDir()}/$ref"
+
+  override suspend fun writeText(ref: String, content: String): Result<Unit> = runCatching {
+    val path = resolve(ref)
     ensureDir()
     @Suppress("CAST_NEVER_SUCCEEDS")
     val ok = (content as NSString).writeToFile(
@@ -42,12 +46,14 @@ private class IosExportFileStore(
     if (!ok) error("Failed to write export file")
   }
 
-  override suspend fun readText(path: String): String? = runCatching {
+  override suspend fun readText(ref: String): String? = runCatching {
+    val path = resolve(ref)
     if (!NSFileManager.defaultManager.fileExistsAtPath(path)) return@runCatching null
     NSString.stringWithContentsOfFile(path, encoding = NSUTF8StringEncoding, error = null)
   }.getOrNull()
 
-  override suspend fun delete(path: String): Boolean = runCatching {
+  override suspend fun delete(ref: String): Boolean = runCatching {
+    val path = resolve(ref)
     val fm = NSFileManager.defaultManager
     !fm.fileExistsAtPath(path) || fm.removeItemAtPath(path, error = null)
   }.getOrDefault(false)

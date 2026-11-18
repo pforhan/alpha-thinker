@@ -64,7 +64,7 @@ class ExportRepository @Inject constructor(
     return if (content != null) {
       Result.success(content)
     } else {
-      val message = "Export file is missing or unreadable: $ref"
+      val message = "Export file is missing or unreadable: ${exportFileStore.resolve(ref)}"
       markFileUnavailable(artifact, message)
       Result.failure(IllegalStateException(message))
     }
@@ -80,7 +80,7 @@ class ExportRepository @Inject constructor(
     val errors = mutableListOf<String>()
     artifact.storageRef?.let { ref ->
       val deleted = exportFileStore.delete(ref)
-      if (!deleted) errors += "Failed to delete export file: $ref"
+      if (!deleted) errors += "Failed to delete export file: ${exportFileStore.resolve(ref)}"
     }
     runCatching { storage.deleteExportArtifact(id) }
       .onFailure { errors += "Failed to delete export record: ${it.message ?: it}" }
@@ -137,9 +137,24 @@ class ExportRepository @Inject constructor(
    */
   suspend fun openCapabilityForExport(artifactId: String): ExportOpenCapability {
     val artifact = storage.getExportArtifact(artifactId) ?: return ExportOpenCapability.Unavailable
-    val path = artifact.storageRef ?: return ExportOpenCapability.Unavailable
+    val ref = artifact.storageRef ?: return ExportOpenCapability.Unavailable
     if (artifact.status != ExportStatus.Completed) return ExportOpenCapability.Unavailable
-    return platformExportActions.openCapability(artifact.filename, artifact.format.mimeType, path)
+    return platformExportActions.openCapability(
+      filename = artifact.filename,
+      mimeType = artifact.format.mimeType,
+      internalPath = exportFileStore.resolve(ref),
+    )
+  }
+
+  /**
+   * Returns the resolved absolute path for a completed export's canonical file,
+   * or null if the artifact is missing/not completed/unavailable.
+   */
+  suspend fun exportFilePath(artifactId: String): String? {
+    val artifact = storage.getExportArtifact(artifactId) ?: return null
+    val ref = artifact.storageRef ?: return null
+    if (artifact.status != ExportStatus.Completed) return null
+    return exportFileStore.resolve(ref)
   }
 
   private suspend fun <T> withCompletedContent(
@@ -147,9 +162,9 @@ class ExportRepository @Inject constructor(
     block: suspend (ExportArtifact, String, String) -> T,
   ): T? {
     val artifact = storage.getExportArtifact(artifactId) ?: return null
-    val path = artifact.storageRef ?: return null
+    val ref = artifact.storageRef ?: return null
     val content = readExportContent(artifactId).getOrNull() ?: return null
-    return block(artifact, path, content)
+    return block(artifact, exportFileStore.resolve(ref), content)
   }
 
   private suspend fun markFileUnavailable(artifact: ExportArtifact, message: String) {
@@ -245,19 +260,19 @@ class ExportRepository @Inject constructor(
 
       taskRunner.setProgress(taskId, 0.85f)
       val content = ProjectExportRenderer(config).render(snapshot, phaseSummaries = summaries)
-      val path = exportFileStore.pathFor(artifactId, current.format.extension)
-      exportFileStore.writeText(path, content).getOrElse { throw it }
-      writtenPath = path
+      val ref = exportFileStore.filenameFor(artifactId, current.format.extension)
+      exportFileStore.writeText(ref, content).getOrElse { throw it }
+      writtenPath = ref
 
       val completed = (storage.getExportArtifact(artifactId) ?: current).copy(
         status = ExportStatus.Completed,
-        storageRef = path,
+        storageRef = ref,
         error = null,
         completedAt = now(),
       )
       runCatching { storage.saveExportArtifact(completed) }.getOrElse { dbError ->
         // DB failed after file was written: best-effort cleanup, but surface failure.
-        exportFileStore.delete(path)
+        exportFileStore.delete(ref)
         throw IllegalStateException(
           "Export file written but metadata save failed: ${dbError.message ?: dbError}",
           dbError,

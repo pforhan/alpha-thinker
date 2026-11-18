@@ -3,22 +3,28 @@ package alphainterplanetary.thinker.export
 import alphainterplanetary.thinker.di.PlatformContext
 
 /**
- * App-private managed storage for generated export files. Implementations must
- * keep files under a platform-appropriate private directory and treat paths/refs
- * returned from [pathFor] as canonical internal [alphainterplanetary.thinker.model.ExportArtifact.storageRef] values.
+ * App-private managed storage for generated export files.
+ *
+ * The canonical persisted value is a stable, storage-relative [ref] (returned by
+ * [filenameFor]) so exports remain valid if the platform's base directory changes.
+ * [resolve] maps a ref to a platform-specific absolute path/location for file IO
+ * and platform actions.
  */
 interface ExportFileStore {
-  /** Canonical managed path/ref for an export artifact file. */
-  fun pathFor(artifactId: String, extension: String): String
+  /** Canonical stored filename/ref for an export artifact file (persisted as storageRef). */
+  fun filenameFor(artifactId: String, extension: String): String
 
-  /** Writes [content] to [path], creating parent directories as needed. */
-  suspend fun writeText(path: String, content: String): Result<Unit>
+  /** Resolves a stored [ref] to an absolute path/location. */
+  fun resolve(ref: String): String
 
-  /** Reads file content, or null if missing/unreadable. */
-  suspend fun readText(path: String): String?
+  /** Writes [content] for [ref], creating parent directories as needed. */
+  suspend fun writeText(ref: String, content: String): Result<Unit>
 
-  /** Deletes the file at [path]. Returns true if removed or already absent. */
-  suspend fun delete(path: String): Boolean
+  /** Reads file content for [ref], or null if missing/unreadable. */
+  suspend fun readText(ref: String): String?
+
+  /** Deletes the file for [ref]. Returns true if removed or already absent. */
+  suspend fun delete(ref: String): Boolean
 }
 
 expect fun provideExportFileStore(platformContext: PlatformContext): ExportFileStore

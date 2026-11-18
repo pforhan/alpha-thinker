@@ -15,27 +15,32 @@ private class AndroidExportFileStore(
   private val dir: File
     get() = File(platformContext.exportsDirectoryPath()).apply { mkdirs() }
 
-  override fun pathFor(artifactId: String, extension: String): String =
-    File(dir, "$artifactId.$extension").absolutePath
+  override fun filenameFor(artifactId: String, extension: String): String =
+    "$artifactId.$extension"
 
-  override suspend fun writeText(path: String, content: String): Result<Unit> =
+  override fun resolve(ref: String): String {
+    val file = File(ref)
+    return if (file.isAbsolute) ref else File(dir, ref).absolutePath
+  }
+
+  override suspend fun writeText(ref: String, content: String): Result<Unit> =
     withContext(Dispatchers.IO) {
       runCatching {
-        val file = File(path)
+        val file = File(resolve(ref))
         file.parentFile?.mkdirs()
         file.writeText(content)
       }
     }
 
-  override suspend fun readText(path: String): String? =
+  override suspend fun readText(ref: String): String? =
     withContext(Dispatchers.IO) {
-      runCatching { File(path).takeIf { it.exists() }?.readText() }.getOrNull()
+      runCatching { File(resolve(ref)).takeIf { it.exists() }?.readText() }.getOrNull()
     }
 
-  override suspend fun delete(path: String): Boolean =
+  override suspend fun delete(ref: String): Boolean =
     withContext(Dispatchers.IO) {
       runCatching {
-        val file = File(path)
+        val file = File(resolve(ref))
         !file.exists() || file.delete()
       }.getOrDefault(false)
     }
