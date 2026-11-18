@@ -12,9 +12,20 @@ actual fun providePlatformExportActions(platformContext: PlatformContext): Platf
 
 @OptIn(ExperimentalWasmJsInterop::class)
 private class WasmPlatformExportActions : PlatformExportActions {
-  override val supportsOpen: Boolean = false
-  override val supportsShare: Boolean = false
+  // Native file sharing is available only when the Web Share API can share a
+  // File with the given type in this browser/context. Probed with a tiny sample.
+  override val supportsShare: Boolean = canShareFiles(sampleName, "text/plain", "x")
+  override val supportsOpen: Boolean = hasWindowOpen()
   override val saveActionLabel: String = "Download"
+
+  override suspend fun openCapability(
+    filename: String,
+    mimeType: String,
+    internalPath: String,
+  ): ExportOpenCapability = when {
+    supportsOpen -> ExportOpenCapability.Single(if (mimeType == "text/html") "Browser" else "New tab")
+    else -> ExportOpenCapability.Unavailable
+  }
 
   override suspend fun save(
     filename: String,
@@ -28,14 +39,31 @@ private class WasmPlatformExportActions : PlatformExportActions {
     mimeType: String,
     internalPath: String,
     content: String,
-  ): Boolean = download(filename, mimeType, content)
+  ): Boolean {
+    // Prefer native Web Share (with files) where supported; fall back to download.
+    if (canShareFiles(filename, mimeType, content) &&
+      shareFile(filename.toJsString(), mimeType.toJsString(), content.toJsString())
+    ) {
+      return true
+    }
+    return download(filename, mimeType, content)
+  }
 
   override suspend fun open(
     filename: String,
     mimeType: String,
     internalPath: String,
     content: String,
-  ): Boolean = download(filename, mimeType, content)
+  ): Boolean {
+    // Try opening in a new tab/viewer; fall back to download so the user still
+    // gets the file with the correct name and MIME type.
+    if (supportsOpen &&
+      openInNewTab(filename.toJsString(), mimeType.toJsString(), content.toJsString())
+    ) {
+      return true
+    }
+    return download(filename, mimeType, content)
+  }
 
   private fun download(filename: String, mimeType: String, content: String): Boolean =
     runCatching {
@@ -54,4 +82,59 @@ private class WasmPlatformExportActions : PlatformExportActions {
       URL.revokeObjectURL(url)
       true
     }.getOrDefault(false)
+
+  private fun canShareFiles(filename: String, mimeType: String, content: String): Boolean =
+    runCatching {
+      canShareFileJs(filename.toJsString(), mimeType.toJsString(), content.toJsString())
+    }.getOrDefault(false)
+
+  private companion object {
+    private const val sampleName = "export.txt"
+  }
 }
+
+@OptIn(ExperimentalWasmJsInterop::class)
+private fun hasWindowOpen(): Boolean = js(
+  "typeof window !== 'undefined' && typeof window.open === 'function'"
+)
+
+@OptIn(ExperimentalWasmJsInterop::class)
+private fun canShareFileJs(filename: JsString, mimeType: JsString, content: JsString): Boolean = js(
+  """(function() {
+    try {
+      if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return false;
+      var file = new File([content], filename, { type: mimeType });
+      var data = { files: [file] };
+      if (typeof navigator.canShare === 'function') return !!navigator.canShare(data);
+      // share() exists but canShare() may be absent; assume files may be shareable.
+      return true;
+    } catch (e) { return false; }
+  })()"""
+)
+
+@OptIn(ExperimentalWasmJsInterop::class)
+private fun shareFile(filename: JsString, mimeType: JsString, content: JsString): Boolean = js(
+  """(function() {
+    try {
+      var file = new File([content], filename, { type: mimeType });
+      var data = { files: [file], title: filename };
+      if (typeof navigator.canShare === 'function' && !navigator.canShare(data)) return false;
+      navigator.share(data).catch(function() {});
+      return true;
+    } catch (e) { return false; }
+  })()"""
+)
+
+@OptIn(ExperimentalWasmJsInterop::class)
+private fun openInNewTab(filename: JsString, mimeType: JsString, content: JsString): Boolean = js(
+  """(function() {
+    try {
+      var blob = new Blob([content], { type: mimeType });
+      var url = URL.createObjectURL(blob);
+      var w = window.open(url, '_blank');
+      if (!w) { URL.revokeObjectURL(url); return false; }
+      setTimeout(function() { try { URL.revokeObjectURL(url); } catch (e) {} }, 60000);
+      return true;
+    } catch (e) { return false; }
+  })()"""
+)
