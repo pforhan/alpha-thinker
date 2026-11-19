@@ -36,7 +36,46 @@ The web target is enabled: `shared/` exposes the `wasmJs` (and legacy `js(IR)`) 
 ./gradlew :webApp:wasmJsBrowserProductionRun    # serve the production bundle
 ```
 
-The production bundle lands in `webApp/build/dist/wasmJs/productionExecutable/` — serve that directory with any static server. Browser tests run via `./gradlew :shared:wasmJsBrowserTest`; like the JS browser test, they require a Chromium binary, wired from the `CHROME_EXECUTABLE`/`CHROME_BIN` environment variable (the test disables itself when absent).
+The production bundle lands in `webApp/build/dist/wasmJs/productionExecutable/` — this directory is the static site to deploy (upload/copy its contents as-is, preserving paths).
+
+#### Web deployment requirements
+
+The web build uses `sqlite-wasm`/OPFS for persistence, which requires `SharedArrayBuffer` and therefore **cross-origin isolation**. A plain static file server is not enough unless it also sends the required headers and serves the app in a secure context.
+
+- **Secure context:** serve over **HTTPS** (or `http://localhost` for local testing). Cross-origin isolation is not enabled on insecure origins, so persistence will not work over plain `http://`.
+- **Required response headers:** the production host must send
+  - `Cross-Origin-Opener-Policy: same-origin`
+  - `Cross-Origin-Embedder-Policy: require-corp`
+  (The webpack dev server sets these; production servers do not by default.) Set them for the app’s responses (easiest: for all files in the deployed directory).
+- **MIME types:** serve `.wasm` as `application/wasm` (and JS/HTML with standard types). Most servers do this by default, but confirm it.
+- **Static hosting:** upload/extract the contents of `productionExecutable/` into a directory and serve them with their relative structure intact (the app loads assets relative to `index.html`). Compression (gzip/brotli) for `.js`/`.wasm` is recommended; `file://` URLs are not supported.
+
+**Apache example** (e.g. in `.htaccess` in the deployed directory, with `mod_headers`/`mod_mime` enabled and overrides allowed, such as `AllowOverride FileInfo`):
+
+```apache
+<IfModule mod_headers.c>
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Cross-Origin-Embedder-Policy "require-corp"
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+</IfModule>
+
+# Optional: compress large JS/WASM payloads
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain \
+    text/javascript application/javascript application/wasm application/json
+</IfModule>
+```
+
+For other servers/CDNs, configure the equivalent COOP/COEP headers and WASM MIME type for the deployed path.
+
+**Verify:** load the site over HTTPS and check in the browser console that `globalThis.crossOriginIsolated === true`, then confirm data persists across reloads.
+
+**Browser/runtime notes:** remote LLM calls from a browser-hosted build are subject to CORS (and related browser constraints such as Private Network Access/mixed content), so arbitrary/user-supplied endpoints may require a CORS-enabled endpoint or proxy; the offline engine and local persistence run client-side. `COEP: require-corp` also means any cross-origin subresources must be served in a CORP/CORS-compatible way (the app’s own bundled assets are same-origin).
+
+Browser tests run via `./gradlew :shared:wasmJsBrowserTest`; they require a Chromium binary, wired from the `CHROME_EXECUTABLE`/`CHROME_BIN` environment variable (the test disables itself when absent).
 
 ### Desktop
 
