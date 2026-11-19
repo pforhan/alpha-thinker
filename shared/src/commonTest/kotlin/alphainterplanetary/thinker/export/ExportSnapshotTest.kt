@@ -39,14 +39,20 @@ class ExportSnapshotTest {
 
   @Test
   fun capturesHeaderRevisionAndSchemaVersion() {
-    val snapshot = ExportSnapshot.from(project(id = "proj", title = "Title", synopsis = "Syn", updatedAt = t2))
+    val snapshot = ExportSnapshot.from(
+      project(id = "proj", title = "Title", synopsis = "Syn", updatedAt = t2)
+        .copy(status = "Draft", createdAt = t0),
+    )
 
     assertEquals(EXPORT_SNAPSHOT_SCHEMA_VERSION, snapshot.schemaVersion)
     assertEquals("proj", snapshot.projectId)
     assertEquals("Title", snapshot.title)
     assertEquals("Syn", snapshot.synopsis)
+    assertEquals("Draft", snapshot.status)
+    assertEquals(t0.toEpochMilliseconds(), snapshot.createdAtEpochMs)
     assertEquals(t2.toEpochMilliseconds(), snapshot.revisionUpdatedAtEpochMs)
     assertTrue(snapshot.phases.isEmpty())
+    assertTrue(snapshot.rounds.isEmpty())
   }
 
   @Test
@@ -143,5 +149,31 @@ class ExportSnapshotTest {
 
     assertEquals(listOf(BuiltInPhase.Design.key), snapshot.phases.map { it.phaseKey })
     assertTrue(snapshot.phases.single().questions.isEmpty())
+  }
+
+  @Test
+  fun capturesCanonicalRoundsForInterchangeFidelity() {
+    val r1 = round(
+      id = "r1",
+      projectId = "p1",
+      phase = BuiltInPhase.ScopeGoals,
+      roundNumber = 1,
+      origin = alphainterplanetary.thinker.model.RoundOrigin.UserRequested,
+      startedAt = t1,
+      completedAt = t2,
+      outcome = alphainterplanetary.thinker.model.RoundOutcome.Exhausted,
+    )
+    val snapshot = ExportSnapshot.from(project(rounds = listOf(r1)))
+
+    val rs = snapshot.rounds.single()
+    assertEquals("r1", rs.id)
+    assertEquals("p1", rs.projectId)
+    assertEquals(BuiltInPhase.ScopeGoals.key, rs.phaseKey)
+    assertEquals(1, rs.roundNumber)
+    assertEquals(alphainterplanetary.thinker.model.RoundOrigin.UserRequested.name, rs.origin)
+    assertEquals(t1.toEpochMilliseconds(), rs.startedAtEpochMs)
+    assertEquals(t2.toEpochMilliseconds(), rs.completedAtEpochMs)
+    assertEquals(alphainterplanetary.thinker.model.RoundOutcome.Exhausted.name, rs.outcome)
+    assertNull(rs.outcomeDetail)
   }
 }

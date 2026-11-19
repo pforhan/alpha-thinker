@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  * Schema version for [ExportSnapshot]. Bump when the snapshot shape or semantics
  * change in a way that affects storage or interchange compatibility.
  */
-const val EXPORT_SNAPSHOT_SCHEMA_VERSION: Int = 1
+const val EXPORT_SNAPSHOT_SCHEMA_VERSION: Int = 2
 
 /**
  * Canonical, versioned snapshot of a project's export-relevant state at a known
@@ -22,6 +22,10 @@ const val EXPORT_SNAPSHOT_SCHEMA_VERSION: Int = 1
  *
  * Per-phase summaries are intentionally not embedded: they are expensive,
  * intent/model-specific derived artifacts resolved via the summary cache/pipeline.
+ *
+ * Compatibility: additive fields carry defaults so older snapshots that omit them
+ * (or readers that ignore unknown fields) remain usable; [schemaVersion] records
+ * the writer's snapshot shape.
  */
 @Serializable
 data class ExportSnapshot(
@@ -29,10 +33,14 @@ data class ExportSnapshot(
   val projectId: String,
   val title: String,
   val synopsis: String,
+  val status: String = "Draft",
+  val createdAtEpochMs: Long = 0L,
   /** Project revision at capture time ([Project.updatedAt], epoch milliseconds). */
   val revisionUpdatedAtEpochMs: Long,
   /** Traversed phases in export order with their canonical question records. */
   val phases: List<ExportPhaseSnapshot>,
+  /** Rounds in project order, included for portable interchange fidelity. */
+  val rounds: List<ExportRoundSnapshot> = emptyList(),
 ) {
   companion object {
     /** Builds a canonical snapshot of [project]'s current export-relevant state. */
@@ -64,6 +72,8 @@ data class ExportSnapshot(
         projectId = project.id,
         title = project.title,
         synopsis = project.synopsis,
+        status = project.status,
+        createdAtEpochMs = project.createdAt.toEpochMilliseconds(),
         revisionUpdatedAtEpochMs = project.updatedAt.toEpochMilliseconds(),
         phases = traversedPhases.map { phase ->
           ExportPhaseSnapshot(
@@ -73,10 +83,25 @@ data class ExportSnapshot(
             questions = questionsByPhase[phase].orEmpty().map { it.toSnapshotRecord() },
           )
         },
+        rounds = project.rounds.map { it.toSnapshotRecord() },
       )
     }
   }
 }
+
+/** One round's canonical state, for portable interchange and fidelity. */
+@Serializable
+data class ExportRoundSnapshot(
+  val id: String,
+  val projectId: String,
+  val phaseKey: String,
+  val roundNumber: Int,
+  val origin: String,
+  val startedAtEpochMs: Long,
+  val completedAtEpochMs: Long? = null,
+  val outcome: String,
+  val outcomeDetail: String? = null,
+)
 
 /** One traversed phase's canonical export content, in stable question order. */
 @Serializable
@@ -136,4 +161,17 @@ private fun alphainterplanetary.thinker.model.Question.toSnapshotRecord(): Expor
         createdAtEpochMs = answer.createdAt.toEpochMilliseconds(),
       )
     },
+  )
+
+private fun alphainterplanetary.thinker.model.Round.toSnapshotRecord(): ExportRoundSnapshot =
+  ExportRoundSnapshot(
+    id = id,
+    projectId = projectId,
+    phaseKey = phase.key,
+    roundNumber = roundNumber,
+    origin = origin.name,
+    startedAtEpochMs = startedAt.toEpochMilliseconds(),
+    completedAtEpochMs = completedAt?.toEpochMilliseconds(),
+    outcome = outcome.name,
+    outcomeDetail = outcomeDetail,
   )
