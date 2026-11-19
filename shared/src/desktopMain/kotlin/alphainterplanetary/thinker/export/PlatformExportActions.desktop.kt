@@ -30,7 +30,7 @@ private class DesktopPlatformExportActions : PlatformExportActions {
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): String? = withContext(Dispatchers.IO) {
     runCatching {
       val dialog = FileDialog(null as Frame?, "Save export", FileDialog.SAVE).apply {
@@ -42,7 +42,7 @@ private class DesktopPlatformExportActions : PlatformExportActions {
       val target = File(dir, selected)
       target.parentFile?.mkdirs()
       val source = File(internalPath)
-      if (source.exists()) source.copyTo(target, overwrite = true) else target.writeText(content)
+      if (source.exists()) source.copyTo(target, overwrite = true) else target.writeBytes(content)
       target.absolutePath
     }.getOrNull()
   }
@@ -51,14 +51,14 @@ private class DesktopPlatformExportActions : PlatformExportActions {
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): Boolean = open(filename, mimeType, internalPath, content)
 
   override suspend fun open(
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): Boolean = withContext(Dispatchers.IO) {
     runCatching {
       val file = File(internalPath)

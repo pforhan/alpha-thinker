@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -81,38 +82,51 @@ fun ExportConfigDialog(
             ExportFormat.entries.forEach { option ->
               FilterChip(
                 selected = format == option,
-                onClick = { format = option },
+                onClick = {
+                  format = option
+                  if (!option.isDocument) {
+                    includeSummaries = false
+                  }
+                },
                 label = { Text(formatLabel(option)) },
                 elevation = null,
               )
             }
           }
         }
-        ExportOptionRow(
-          checked = includeIgnored,
-          onCheckedChange = { includeIgnored = it },
-          label = "Include ignored questions",
-        )
-        ExportOptionRow(
-          checked = includeUnanswered,
-          onCheckedChange = { includeUnanswered = it },
-          label = "Include unanswered questions",
-        )
-        ExportOptionRow(
-          checked = includeDrafts,
-          onCheckedChange = { includeDrafts = it },
-          label = "Include drafts",
-        )
-        ExportOptionRow(
-          checked = includeRevisions,
-          onCheckedChange = { includeRevisions = it },
-          label = "Include answer revision history",
-        )
-        ExportOptionRow(
-          checked = includeSummaries,
-          onCheckedChange = { includeSummaries = it },
-          label = "Include summaries when available",
-        )
+        if (format.isDocument) {
+          ExportOptionRow(
+            checked = includeIgnored,
+            onCheckedChange = { includeIgnored = it },
+            label = "Include ignored questions",
+          )
+          ExportOptionRow(
+            checked = includeUnanswered,
+            onCheckedChange = { includeUnanswered = it },
+            label = "Include unanswered questions",
+          )
+          ExportOptionRow(
+            checked = includeDrafts,
+            onCheckedChange = { includeDrafts = it },
+            label = "Include drafts",
+          )
+          ExportOptionRow(
+            checked = includeRevisions,
+            onCheckedChange = { includeRevisions = it },
+            label = "Include answer revision history",
+          )
+          ExportOptionRow(
+            checked = includeSummaries,
+            onCheckedChange = { includeSummaries = it },
+            label = "Include summaries when available",
+          )
+        } else {
+          Text(
+            text = "Portable exports include full project data (questions, answers, drafts, rounds, and history) for transfer between Thinker instances.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+        }
         if (onViewExports != null) {
           Spacer(modifier = Modifier.height(Dimens.TightGap))
           TextButton(onClick = onViewExports) {
@@ -166,4 +180,5 @@ private fun ExportOptionRow(
 private fun formatLabel(format: ExportFormat): String = when (format) {
   ExportFormat.Markdown -> "Markdown (.md)"
   ExportFormat.Html -> "HTML (.html)"
+  ExportFormat.Interchange -> "Portable (.thinker)"
 }

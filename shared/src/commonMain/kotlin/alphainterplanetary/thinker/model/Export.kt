@@ -25,19 +25,27 @@ data class ExportConfig(
 @Serializable
 enum class ExportFormat {
   Markdown,
-  Html;
+  Html,
+  /** Portable, versioned project interchange (`.thinker`, compressed). */
+  Interchange;
 
   val extension: String
     get() = when (this) {
       Markdown -> "md"
       Html -> "html"
+      Interchange -> "thinker"
     }
 
   val mimeType: String
     get() = when (this) {
       Markdown -> "text/markdown"
       Html -> "text/html"
+      Interchange -> "application/octet-stream"
     }
+
+  /** True for human-readable rendered documents (as opposed to portable interchange). */
+  val isDocument: Boolean
+    get() = this == Markdown || this == Html
 }
 
 /** Lifecycle state of a generated or persisted export artifact. */

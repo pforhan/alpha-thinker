@@ -83,6 +83,8 @@ internal fun ChromeSheetHost(
         ChromeSheet.Intelligence -> EnginePickerSheetContent(chrome = chrome)
 
         ChromeSheet.Testing -> TestingSheetContent(chrome = chrome)
+
+        ChromeSheet.ExportProjects -> ExportProjectsSheetContent(chrome = chrome)
       }
     }
   }
@@ -140,4 +142,5 @@ internal val ChromeSheet.title: String
     ChromeSheet.PhaseColors -> "Phase colors"
     ChromeSheet.Intelligence -> "Engine"
     ChromeSheet.Testing -> "Testing"
+    ChromeSheet.ExportProjects -> "Export projects"
   }

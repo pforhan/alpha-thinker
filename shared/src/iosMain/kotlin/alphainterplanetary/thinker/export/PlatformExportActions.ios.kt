@@ -58,14 +58,14 @@ private class IosPlatformExportActions : PlatformExportActions {
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): String? = null
 
   override suspend fun share(
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): Boolean = withContext(Dispatchers.Main) {
     val sourceUrl = fileUrl(internalPath) ?: return@withContext false
     val presenter = topViewController() ?: return@withContext false
@@ -87,7 +87,7 @@ private class IosPlatformExportActions : PlatformExportActions {
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): Boolean = withContext(Dispatchers.Main) {
     val sourceUrl = fileUrl(internalPath) ?: return@withContext false
     val presenter = topViewController() ?: return@withContext false

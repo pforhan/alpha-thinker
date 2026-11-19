@@ -2,8 +2,12 @@ package alphainterplanetary.thinker.repository
 
 import alphainterplanetary.thinker.activitylog.ActivityLogger
 import alphainterplanetary.thinker.engine.core.PlanningEngineSelector
+import alphainterplanetary.thinker.export.PROJECT_INTERCHANGE_SCHEMA_VERSION
 import alphainterplanetary.thinker.export.PlatformExportActions
+import alphainterplanetary.thinker.export.ProjectInterchange
+import alphainterplanetary.thinker.export.gzipDecompress
 import alphainterplanetary.thinker.model.ExportConfig
+import alphainterplanetary.thinker.model.ExportFormat
 import alphainterplanetary.thinker.model.ExportStatus
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.phases.BuiltInPhase
@@ -36,15 +40,19 @@ class ExportRepositoryTest {
     var saved: List<String>? = null
     var shared: List<String>? = null
     var opened: List<String>? = null
+    var savedBytes: ByteArray? = null
+    var sharedBytes: ByteArray? = null
+    var openedBytes: ByteArray? = null
     var saveResult: String? = "dest:/tmp/Plan.md"
 
     override suspend fun save(
       filename: String,
       mimeType: String,
       internalPath: String,
-      content: String,
+      content: ByteArray,
     ): String? {
-      saved = listOf(filename, mimeType, internalPath, content)
+      savedBytes = content
+      saved = listOf(filename, mimeType, internalPath, content.decodeToString())
       return saveResult
     }
 
@@ -52,9 +60,10 @@ class ExportRepositoryTest {
       filename: String,
       mimeType: String,
       internalPath: String,
-      content: String,
+      content: ByteArray,
     ): Boolean {
-      shared = listOf(filename, mimeType, internalPath, content)
+      sharedBytes = content
+      shared = listOf(filename, mimeType, internalPath, content.decodeToString())
       return true
     }
 
@@ -62,9 +71,10 @@ class ExportRepositoryTest {
       filename: String,
       mimeType: String,
       internalPath: String,
-      content: String,
+      content: ByteArray,
     ): Boolean {
-      opened = listOf(filename, mimeType, internalPath, content)
+      openedBytes = content
+      opened = listOf(filename, mimeType, internalPath, content.decodeToString())
       return true
     }
   }
@@ -261,5 +271,67 @@ class ExportRepositoryTest {
     assertFailsWith<IllegalArgumentException> {
       h.repository.generateExport("missing", ExportConfig(outputName = "X"))
     }
+  }
+
+  @Test
+  fun generateExport_createsCompressedInterchangeArtifactForProject() = runTest {
+    val storage = FakeStorage(mutableMapOf("p1" to project()))
+    val h = harness(storage = storage)
+
+    val pending = h.repository.generateExport(
+      "p1",
+      ExportConfig(outputName = "Plan", format = ExportFormat.Interchange),
+    )
+    testScheduler.advanceUntilIdle()
+
+    val completed = storage.getExportArtifact(pending.id)
+    assertNotNull(completed)
+    assertEquals(ExportStatus.Completed, completed.status)
+    assertEquals(ExportFormat.Interchange, completed.format)
+    assertEquals("Plan.thinker", completed.filename)
+    assertEquals("application/octet-stream", completed.format.mimeType)
+
+    val bytes = h.fileStore.readBytes(completed.storageRef!!)
+    assertNotNull(bytes)
+    val envelope = ProjectInterchange.decode(
+      gzipDecompress(bytes).decodeToString(),
+    )
+    assertEquals(PROJECT_INTERCHANGE_SCHEMA_VERSION, envelope.schemaVersion)
+    assertEquals(1, envelope.projects.size)
+    assertEquals("p1", envelope.projects.single().snapshot.projectId)
+  }
+
+  @Test
+  fun generateGlobalInterchangeExport_writesMultiProjectEnvelopeWithoutArtifacts() = runTest {
+    val p1 = project(id = "p1", title = "One")
+    val p2 = project(id = "p2", title = "Two").copy(
+      rounds = listOf(round(id = "r2", projectId = "p2", phase = BuiltInPhase.Research)),
+      questions = listOf(
+        question(
+          id = "q2",
+          text = "Q2?",
+          roundId = "r2",
+          answers = listOf(answer("q2", "A2", id = "a2")),
+        ),
+      ),
+    )
+    val storage = FakeStorage(mutableMapOf("p1" to p1, "p2" to p2))
+    val h = harness(storage = storage)
+
+    val result = h.repository.generateGlobalInterchangeExport(
+      projectIds = listOf("p1", "p2"),
+      outputName = "all-projects",
+    ).getOrThrow()
+
+    assertEquals("all-projects.thinker", result.filename)
+    assertEquals(2, result.projectCount)
+    assertEquals("application/octet-stream", result.mimeType)
+    assertTrue(storage.exportArtifacts.isEmpty())
+
+    val bytes = h.fileStore.readBytes(result.storageRef)
+    assertNotNull(bytes)
+    val envelope = ProjectInterchange.decode(gzipDecompress(bytes).decodeToString())
+    assertEquals(listOf("p1", "p2"), envelope.projects.map { it.snapshot.projectId })
+    assertEquals(listOf("One", "Two"), envelope.projects.map { it.snapshot.title })
   }
 }

@@ -92,6 +92,7 @@ kotlin {
       implementation(libs.koog.agents)
       implementation(libs.koog.prompt.executor.ollama.client)
       implementation(libs.koog.prompt.executor.anthropic.client)
+      implementation(libs.okio)
     }
 
     androidMain.dependencies {

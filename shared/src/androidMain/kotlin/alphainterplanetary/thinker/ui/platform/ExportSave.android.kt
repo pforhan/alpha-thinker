@@ -15,7 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.repository.ExportRepository
-import java.io.OutputStreamWriter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -49,7 +48,7 @@ actual fun rememberExportSaveAction(
 
       override fun invoke(artifact: ExportArtifact) {
         scope.launch {
-          val contentResult = exportRepository.readExportContent(artifact.id)
+          val contentResult = exportRepository.readExportBytes(artifact.id)
           val content = contentResult.getOrNull()
           if (content == null) {
             val message = contentResult.exceptionOrNull()?.message
@@ -72,7 +71,7 @@ actual fun rememberExportSaveAction(
 
 private data class PendingExportSave(
   val filename: String,
-  val content: String,
+  val content: ByteArray,
 )
 
 private class CreateExportDocumentContract : ActivityResultContract<Pair<String, String>, Uri?>() {
@@ -89,12 +88,10 @@ private class CreateExportDocumentContract : ActivityResultContract<Pair<String,
   }
 }
 
-private fun writeExportToUri(context: Context, uri: Uri, content: String): Boolean =
+private fun writeExportToUri(context: Context, uri: Uri, content: ByteArray): Boolean =
   runCatching {
     context.contentResolver.openOutputStream(uri)?.use { stream ->
-      OutputStreamWriter(stream, Charsets.UTF_8).use { writer ->
-        writer.write(content)
-      }
+      stream.write(content)
     } ?: error("Unable to open destination")
     true
   }.getOrDefault(false)

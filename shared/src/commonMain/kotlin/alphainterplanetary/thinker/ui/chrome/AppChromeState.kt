@@ -6,6 +6,8 @@ import alphainterplanetary.thinker.engine.config.EngineAvailability.Unavailable
 import alphainterplanetary.thinker.engine.config.EngineCatalog
 import alphainterplanetary.thinker.engine.config.EngineRef
 import alphainterplanetary.thinker.repository.EngineRepository
+import alphainterplanetary.thinker.repository.ExportRepository
+import alphainterplanetary.thinker.repository.ProjectRepository
 import alphainterplanetary.thinker.ui.navigation.AppRoute
 import alphainterplanetary.thinker.ui.navigation.NavStack
 import alphainterplanetary.thinker.ui.navigation.Navigation
@@ -54,6 +56,9 @@ enum class ChromeSheet {
 
   /** The Task-Manager testing controls (artificial engine delay). */
   Testing,
+
+  /** Multi-project portable interchange export (selection and generate/save). */
+  ExportProjects,
 }
 
 /**
@@ -86,6 +91,10 @@ class AppChromeState internal constructor(
   val engines: EngineViewModel,
   /** The hoisted tools: the sample generator, the simulator, the engine delay. */
   val tools: ToolsViewModel,
+  /** Project data access for chrome-level flows (e.g. global export). */
+  val projects: ProjectRepository,
+  /** Export generation and file actions for chrome-level flows. */
+  val exports: ExportRepository,
   /** The newest logged activity, or null on an empty log. */
   val latestActivity: StateFlow<ActivityRecord?>,
   /**
@@ -194,11 +203,21 @@ fun rememberAppChromeState(appComponent: AppComponent): AppChromeState {
       )
   }
   val stack = rememberSaveable(saver = NavStack.Saver) { NavStack() }
-  return remember(appComponent, settings, engines, tools, latestActivity, status, stack) {
+  return remember(
+    appComponent,
+    settings,
+    engines,
+    tools,
+    latestActivity,
+    status,
+    stack,
+  ) {
     AppChromeState(
       settings = settings,
       engines = engines,
       tools = tools,
+      projects = appComponent.projectRepository,
+      exports = appComponent.exportRepository,
       latestActivity = latestActivity,
       engineStatus = status,
       stack = stack,

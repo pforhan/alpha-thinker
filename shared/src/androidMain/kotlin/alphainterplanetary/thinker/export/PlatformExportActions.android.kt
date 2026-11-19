@@ -47,14 +47,14 @@ private class AndroidPlatformExportActions(
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): String? = null // User-chosen save uses UI/activity-result integration (SAF).
 
   override suspend fun share(
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): Boolean {
     val resolvedMime = mimeType.resolved()
     return runCatching {
@@ -80,7 +80,7 @@ private class AndroidPlatformExportActions(
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): Boolean {
     val resolvedMime = mimeType.resolved()
     return runCatching {

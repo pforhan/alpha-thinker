@@ -23,18 +23,18 @@ private class AndroidExportFileStore(
     return if (file.isAbsolute) ref else File(dir, ref).absolutePath
   }
 
-  override suspend fun writeText(ref: String, content: String): Result<Unit> =
+  override suspend fun writeBytes(ref: String, bytes: ByteArray): Result<Unit> =
     withContext(Dispatchers.IO) {
       runCatching {
         val file = File(resolve(ref))
         file.parentFile?.mkdirs()
-        file.writeText(content)
+        file.writeBytes(bytes)
       }
     }
 
-  override suspend fun readText(ref: String): String? =
+  override suspend fun readBytes(ref: String): ByteArray? =
     withContext(Dispatchers.IO) {
-      runCatching { File(resolve(ref)).takeIf { it.exists() }?.readText() }.getOrNull()
+      runCatching { File(resolve(ref)).takeIf { it.exists() }?.readBytes() }.getOrNull()
     }
 
   override suspend fun delete(ref: String): Boolean =

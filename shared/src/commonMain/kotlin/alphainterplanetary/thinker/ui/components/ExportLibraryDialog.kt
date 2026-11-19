@@ -177,7 +177,7 @@ private fun ExportArtifactRow(
           horizontalArrangement = Arrangement.spacedBy(Dimens.ContentGap),
           verticalArrangement = Arrangement.spacedBy(Dimens.TightGap),
         ) {
-          if (isCompleted && capability.isAvailable) {
+          if (isCompleted && capability.isAvailable && artifact.format.isDocument) {
             ExportAction(
               icon = Icons.AutoMirrored.Filled.OpenInNew,
               label = "View",
@@ -270,11 +270,15 @@ private fun ExportMetadataRow(artifact: ExportArtifact) {
     if (delta.isPositive()) formatTaskDuration(delta) else null
   }
   val pills = buildList {
-    if (artifact.config.includeSummaries) add("Summaries")
-    if (artifact.config.includeDrafts) add("Drafts")
-    if (artifact.config.includeIgnoredQuestions) add("Ignored")
-    if (!artifact.config.includeUnansweredQuestions) add("No unanswered")
-    if (artifact.config.includeAnswerRevisionHistory) add("Revisions")
+    if (artifact.format.isDocument) {
+      if (artifact.config.includeSummaries) add("Summaries")
+      if (artifact.config.includeDrafts) add("Drafts")
+      if (artifact.config.includeIgnoredQuestions) add("Ignored")
+      if (!artifact.config.includeUnansweredQuestions) add("No unanswered")
+      if (artifact.config.includeAnswerRevisionHistory) add("Revisions")
+    } else {
+      add("Full data")
+    }
   }
   val details = buildString {
     append(artifact.format.name)

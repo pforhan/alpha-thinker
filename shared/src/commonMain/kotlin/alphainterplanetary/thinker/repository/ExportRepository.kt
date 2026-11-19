@@ -12,8 +12,11 @@ import alphainterplanetary.thinker.export.ExportSnapshot
 import alphainterplanetary.thinker.export.PlatformExportActions
 import alphainterplanetary.thinker.export.ProjectExportRenderer
 import alphainterplanetary.thinker.export.ProjectExportSummarizer
+import alphainterplanetary.thinker.export.ProjectInterchange
+import alphainterplanetary.thinker.export.gzipCompress
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.ExportConfig
+import alphainterplanetary.thinker.model.ExportFormat
 import alphainterplanetary.thinker.model.ExportStatus
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.tasks.TaskKind
@@ -23,6 +26,15 @@ import alphainterplanetary.thinker.util.randomUUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.Flow
 import me.tatarka.inject.annotations.Inject
+
+/** Result of a one-shot global/multi-project portable interchange export. */
+data class GlobalInterchangeExport(
+  val filename: String,
+  /** Canonical managed-file ref (resolved via [ExportFileStore.resolve]). */
+  val storageRef: String,
+  val mimeType: String,
+  val projectCount: Int,
+)
 
 @AppScope
 class ExportRepository @Inject constructor(
@@ -49,18 +61,18 @@ class ExportRepository @Inject constructor(
     storage.getExportArtifact(id)
 
   /**
-   * Reads rendered export content from the artifact's canonical managed file.
+   * Reads rendered export bytes from the artifact's canonical managed file.
    * Returns failure if the artifact is missing, not completed, or its file is
    * unavailable, and records a visible error on the artifact in that case.
    */
-  suspend fun readExportContent(artifactId: String): Result<String> {
+  suspend fun readExportBytes(artifactId: String): Result<ByteArray> {
     val artifact = storage.getExportArtifact(artifactId)
       ?: return Result.failure(IllegalArgumentException("No export artifact with id $artifactId"))
     val ref = artifact.storageRef
     if (artifact.status != ExportStatus.Completed || ref == null) {
       return Result.failure(IllegalStateException("Export is not completed"))
     }
-    val content = exportFileStore.readText(ref)
+    val content = exportFileStore.readBytes(ref)
     return if (content != null) {
       Result.success(content)
     } else {
@@ -69,6 +81,12 @@ class ExportRepository @Inject constructor(
       Result.failure(IllegalStateException(message))
     }
   }
+
+  /**
+   * Reads rendered export content as UTF-8 text (for document exports).
+   */
+  suspend fun readExportContent(artifactId: String): Result<String> =
+    readExportBytes(artifactId).map { it.decodeToString() }
 
   /**
    * Deletes the artifact's managed file and DB record. File and DB are removed
@@ -159,11 +177,11 @@ class ExportRepository @Inject constructor(
 
   private suspend fun <T> withCompletedContent(
     artifactId: String,
-    block: suspend (ExportArtifact, String, String) -> T,
+    block: suspend (ExportArtifact, String, ByteArray) -> T,
   ): T? {
     val artifact = storage.getExportArtifact(artifactId) ?: return null
     val ref = artifact.storageRef ?: return null
-    val content = readExportContent(artifactId).getOrNull() ?: return null
+    val content = readExportBytes(artifactId).getOrNull() ?: return null
     return block(artifact, exportFileStore.resolve(ref), content)
   }
 
@@ -239,29 +257,38 @@ class ExportRepository @Inject constructor(
       val project = storage.getProject(projectId)
         ?: throw IllegalStateException("Project $projectId no longer exists")
 
-      // Build canonical snapshot in-memory for this revision; summaries are resolved
-      // separately via cache. Persisted snapshot payloads deferred until needed.
+      // Build canonical snapshot in-memory for this revision.
       val snapshot = ExportSnapshot.from(project)
       taskRunner.setProgress(taskId, 0.15f)
 
-      val summaries = if (config.includeSummaries) {
-        taskRunner.setProgress(taskId, 0.2f)
-        log.append("Summarizing phases for export")
-        ProjectExportSummarizer.summarizePhases(
-          project = project,
-          engine = engineSelector.selectedEngine(),
-          activityId = taskId,
-          storage = storage,
-          engineIdentity = engineRepository.selectedConfiguredIdentity,
-        ).also { taskRunner.setProgress(taskId, 0.7f) }
+      val bytes = if (current.format == ExportFormat.Interchange) {
+        taskRunner.setProgress(taskId, 0.5f)
+        log.append("Encoding portable interchange")
+        val envelope = ProjectInterchange.envelopeOf(snapshot)
+        val json = ProjectInterchange.encode(envelope)
+        taskRunner.setProgress(taskId, 0.85f)
+        gzipCompress(json.encodeToByteArray())
       } else {
-        emptyMap()
+        val summaries = if (config.includeSummaries) {
+          taskRunner.setProgress(taskId, 0.2f)
+          log.append("Summarizing phases for export")
+          ProjectExportSummarizer.summarizePhases(
+            project = project,
+            engine = engineSelector.selectedEngine(),
+            activityId = taskId,
+            storage = storage,
+            engineIdentity = engineRepository.selectedConfiguredIdentity,
+          ).also { taskRunner.setProgress(taskId, 0.7f) }
+        } else {
+          emptyMap()
+        }
+
+        taskRunner.setProgress(taskId, 0.85f)
+        ProjectExportRenderer(config).render(snapshot, phaseSummaries = summaries).encodeToByteArray()
       }
 
-      taskRunner.setProgress(taskId, 0.85f)
-      val content = ProjectExportRenderer(config).render(snapshot, phaseSummaries = summaries)
       val ref = exportFileStore.filenameFor(artifactId, current.format.extension)
-      exportFileStore.writeText(ref, content).getOrElse { throw it }
+      exportFileStore.writeBytes(ref, bytes).getOrElse { throw it }
       writtenPath = ref
 
       val completed = (storage.getExportArtifact(artifactId) ?: current).copy(
@@ -293,6 +320,69 @@ class ExportRepository @Inject constructor(
     }
   }
 
+  /**
+   * Generates a single compressed portable interchange file containing [projectIds]
+   * as a multi-project envelope. Produces snapshots without creating per-project
+   * export library artifacts. The resulting managed file is written for immediate
+   * save/share and is not tracked as an [ExportArtifact].
+   */
+  suspend fun generateGlobalInterchangeExport(
+    projectIds: List<String>,
+    outputName: String = "projects-export",
+  ): Result<GlobalInterchangeExport> = runCatching {
+    require(projectIds.isNotEmpty()) { "Select at least one project to export" }
+    val projects = projectIds.map { id ->
+      storage.getProject(id) ?: throw IllegalArgumentException("No project with id $id")
+    }
+    val snapshots = projects.map { ExportSnapshot.from(it) }
+    val envelope = ProjectInterchange.envelopeOf(snapshots)
+    val bytes = gzipCompress(ProjectInterchange.encode(envelope).encodeToByteArray())
+
+    val safeName = sanitizeExportName(outputName.ifBlank { "projects-export" })
+    val filename = "$safeName.thinker"
+    // Reuse a single managed file to avoid accumulating orphaned global exports.
+    val ref = exportFileStore.filenameFor(GLOBAL_INTERCHANGE_FILE_ID, "thinker")
+    exportFileStore.writeBytes(ref, bytes).getOrElse { throw it }
+
+    GlobalInterchangeExport(
+      filename = filename,
+      storageRef = ref,
+      mimeType = ExportFormat.Interchange.mimeType,
+      projectCount = projects.size,
+    )
+  }
+
+  /** Reads bytes for a non-artifact managed export ref (e.g. global interchange). */
+  suspend fun readManagedBytes(ref: String): Result<ByteArray> {
+    val bytes = exportFileStore.readBytes(ref)
+    return if (bytes != null) Result.success(bytes)
+    else Result.failure(IllegalStateException("Export file is missing or unreadable: ${exportFileStore.resolve(ref)}"))
+  }
+
+  /** Resolves a managed export ref to an absolute path/location. */
+  fun resolveManagedPath(ref: String): String = exportFileStore.resolve(ref)
+
+  /** Deletes a non-artifact managed export ref (best-effort). */
+  suspend fun deleteManaged(ref: String): Boolean = exportFileStore.delete(ref)
+
+  /** Saves/copies a managed (non-artifact) export via platform actions. */
+  suspend fun saveManagedExport(filename: String, mimeType: String, ref: String): String? {
+    val bytes = readManagedBytes(ref).getOrNull() ?: return null
+    return platformExportActions.save(filename, mimeType, exportFileStore.resolve(ref), bytes)
+  }
+
+  /** Shares a managed (non-artifact) export via platform actions. */
+  suspend fun shareManagedExport(filename: String, mimeType: String, ref: String): Boolean {
+    val bytes = readManagedBytes(ref).getOrNull() ?: return false
+    return platformExportActions.share(filename, mimeType, exportFileStore.resolve(ref), bytes)
+  }
+
+  /** Opens a managed (non-artifact) export via platform actions. */
+  suspend fun openManagedExport(filename: String, mimeType: String, ref: String): Boolean {
+    val bytes = readManagedBytes(ref).getOrNull() ?: return false
+    return platformExportActions.open(filename, mimeType, exportFileStore.resolve(ref), bytes)
+  }
+
   private suspend fun markFailedUnlessCompleted(artifactId: String, message: String) {
     val current = storage.getExportArtifact(artifactId) ?: return
     if (current.status == ExportStatus.Completed) return
@@ -309,6 +399,8 @@ class ExportRepository @Inject constructor(
 
 private fun exportFilename(config: ExportConfig): String =
   "${config.outputName}.${config.format.extension}"
+
+private const val GLOBAL_INTERCHANGE_FILE_ID = "global-interchange"
 
 private fun sanitizeExportName(name: String): String {
   val cleaned = name

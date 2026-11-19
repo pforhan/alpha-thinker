@@ -206,6 +206,8 @@ class ProjectExportRenderer(
   private fun defaultDocument(): ExportDocument = when (config.format) {
     ExportFormat.Markdown -> MarkdownExportDocument()
     ExportFormat.Html -> HtmlExportDocument()
+    ExportFormat.Interchange ->
+      error("Portable interchange exports are not rendered as documents")
   }
 
   private fun formatEpochMs(epochMs: Long): String =

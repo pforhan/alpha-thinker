@@ -5,7 +5,8 @@ import alphainterplanetary.thinker.di.PlatformContext
 /**
  * Platform-specific save/share/open operations for generated exports backed by a
  * canonical internal managed file. [internalPath] is the managed export file ref;
- * [content] is its rendered text (loaded by the caller from the canonical file).
+ * [content] contains the rendered bytes (loaded by the caller from the canonical
+ * file) when in-memory data is needed (e.g. web download/share).
  *
  * Implementations must not treat user-destination results as canonical storage
  * refs. Capabilities may be unavailable on some platforms and should degrade
@@ -44,7 +45,7 @@ interface PlatformExportActions {
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): String?
 
   /** Shares the export via a platform-native mechanism. */
@@ -52,7 +53,7 @@ interface PlatformExportActions {
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): Boolean
 
   /** Opens the export in a viewer/default handler when supported. */
@@ -60,7 +61,7 @@ interface PlatformExportActions {
     filename: String,
     mimeType: String,
     internalPath: String,
-    content: String,
+    content: ByteArray,
   ): Boolean
 }
 
