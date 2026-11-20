@@ -5,12 +5,14 @@ import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.AlertDialog
@@ -33,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 
 enum class AnswerDialogResult {
@@ -106,121 +109,150 @@ fun AnswerDialog(
     uriHandler.openUri(searchUrlFor(trimmedTerms))
   }
 
-  AlertDialog(
-    // The two save buttons are the only things that write. Tapping outside does
-    // nothing at all, and the dismiss request that still gets through (ESC on
-    // desktop) is a plain discard rather than a save, so an answer can neither
-    // be committed nor wiped by a stray gesture.
-    onDismissRequest = { onDismiss() },
-    properties = DialogProperties(dismissOnClickOutside = false),
-    title = {
-      Column {
-        ScrollableOverflowText(
-          text = question.text,
-          collapsedMaxLines = 4,
-          modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        PhasePill(phase = phase)
-      }
-    },
-    text = {
-      Column {
-        if (question.isIgnored) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-          ) {
-            Text(
-              text = "This question is ignored.",
-              style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.weight(1f),
-            )
-            TextButton(
-              onClick = { onResult(AnswerDialogResult.Unignored, "") },
-            ) {
-              Text("Unignore")
-            }
-          }
-          Spacer(modifier = Modifier.height(Dimens.SectionGap))
-        }
-
-        Box {
-          OutlinedTextField(
-            value = answerText,
-            onValueChange = { answerText = it },
-            enabled = !question.isIgnored,
-            label = { Text("Answer") },
-            modifier = Modifier
-              .fillMaxWidth()
-              .focusRequester(focusRequester),
-            minLines = 3,
-            maxLines = 8,
-          )
-
-          if (answerText.isNotEmpty() && !question.isIgnored) {
-            IconButton(
-              onClick = { answerText = "" },
-              modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(
-                  top = Dimens.FieldOverlayInsetTop,
-                  end = Dimens.FieldOverlayInsetEnd,
-                )
-            ) {
-              Icon(Icons.Default.Clear, contentDescription = "Clear answer")
-            }
-          }
-        }
-
-        Spacer(modifier = Modifier.height(Dimens.ContentGap))
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          TextButton(onClick = { showResearchTerms = true }) {
-            Text("Research")
-          }
-        }
-
-        if (hasAnswer) {
-          Spacer(modifier = Modifier.height(Dimens.ContentGap))
-          HorizontalDivider()
-          Spacer(modifier = Modifier.height(Dimens.TightGap))
-          TextButton(
-            onClick = { onResult(AnswerDialogResult.DeletedAnswer, "") },
-          ) {
-            Text(
-              "Delete Answer",
-              color = MaterialTheme.colorScheme.error,
-            )
-          }
-        }
-      }
-    },
-    confirmButton = {
-      Row(horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap)) {
-        TextButton(
-          onClick = { save(completed = false) },
-          enabled = !question.isIgnored,
-        ) {
-          Text("Save Draft")
-        }
-        Button(
-          onClick = { save(completed = true) },
-          enabled = !question.isIgnored,
-        ) {
-          Text("Save Answer")
-        }
-      }
-    },
-    dismissButton = {
-      TextButton(onClick = { onDismiss() }) {
-        Text("Cancel")
-      }
-    },
+  val dialogProperties = DialogProperties(
+    usePlatformDefaultWidth = false,
+    dismissOnClickOutside = false,
   )
+
+  BoxWithConstraints {
+    val compactLandscape = maxWidth > maxHeight && maxHeight < 500.dp
+
+    if (compactLandscape) {
+      CompactLandscapeAnswerDialog(
+        question = question,
+        phase = phase,
+        answerText = answerText,
+        onAnswerTextChange = { answerText = it },
+        hasAnswer = hasAnswer,
+        focusRequester = focusRequester,
+        maxDialogHeight = maxHeight,
+        onDismiss = onDismiss,
+        onUnignore = { onResult(AnswerDialogResult.Unignored, "") },
+        onDelete = { onResult(AnswerDialogResult.DeletedAnswer, "") },
+        onResearch = { showResearchTerms = true },
+        onSaveDraft = { save(completed = false) },
+        onSaveAnswer = { save(completed = true) },
+      )
+    } else {
+      AlertDialog(
+        // The two save buttons are the only things that write. Tapping outside does
+        // nothing at all, and the dismiss request that still gets through (ESC on
+        // desktop) is a plain discard rather than a save, so an answer can neither
+        // be committed nor wiped by a stray gesture.
+        onDismissRequest = { onDismiss() },
+        modifier = Modifier.fillMaxWidth().widthIn(max = 560.dp),
+        properties = dialogProperties,
+        title = {
+          Column {
+            ScrollableOverflowText(
+              text = question.text,
+              collapsedMaxLines = 4,
+              style = MaterialTheme.typography.titleMedium,
+              modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(Dimens.ContentGap))
+            PhasePill(phase = phase)
+          }
+        },
+        text = {
+          Column {
+            if (question.isIgnored) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+              ) {
+                Text(
+                  text = "This question is ignored.",
+                  style = MaterialTheme.typography.bodyMedium,
+                  modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                  onClick = { onResult(AnswerDialogResult.Unignored, "") },
+                ) {
+                  Text("Unignore")
+                }
+              }
+              Spacer(modifier = Modifier.height(Dimens.SectionGap))
+            }
+
+            Box {
+              OutlinedTextField(
+                value = answerText,
+                onValueChange = { answerText = it },
+                enabled = !question.isIgnored,
+                label = { Text("Answer") },
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .focusRequester(focusRequester),
+                minLines = 3,
+                maxLines = 8,
+              )
+
+              if (answerText.isNotEmpty() && !question.isIgnored) {
+                IconButton(
+                  onClick = { answerText = "" },
+                  modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(
+                      top = Dimens.FieldOverlayInsetTop,
+                      end = Dimens.FieldOverlayInsetEnd,
+                    ),
+                ) {
+                  Icon(Icons.Default.Clear, contentDescription = "Clear answer")
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.ContentGap))
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              TextButton(onClick = { showResearchTerms = true }) {
+                Text("Research")
+              }
+            }
+
+            if (hasAnswer) {
+              Spacer(modifier = Modifier.height(Dimens.ContentGap))
+              HorizontalDivider()
+              Spacer(modifier = Modifier.height(Dimens.TightGap))
+              TextButton(
+                onClick = { onResult(AnswerDialogResult.DeletedAnswer, "") },
+              ) {
+                Text(
+                  "Delete Answer",
+                  color = MaterialTheme.colorScheme.error,
+                )
+              }
+            }
+          }
+        },
+        confirmButton = {
+          Row(horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap)) {
+            TextButton(
+              onClick = { save(completed = false) },
+              enabled = !question.isIgnored,
+            ) {
+              Text("Save Draft")
+            }
+            Button(
+              onClick = { save(completed = true) },
+              enabled = !question.isIgnored,
+            ) {
+              Text("Save Answer")
+            }
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { onDismiss() }) {
+            Text("Cancel")
+          }
+        },
+      )
+    }
+  }
 
   if (showResearchTerms) {
     AlertDialog(
