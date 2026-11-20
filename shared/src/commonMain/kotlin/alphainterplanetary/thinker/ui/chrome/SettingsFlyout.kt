@@ -136,6 +136,13 @@ internal fun SettingsFlyoutButton(
         },
       )
       FlyoutRow(
+        title = "Import projects",
+        onClick = {
+          expanded = false
+          chrome.openSheet(ChromeSheet.ImportProjects)
+        },
+      )
+      FlyoutRow(
         title = "Generate sample projects",
         onClick = {
           expanded = false

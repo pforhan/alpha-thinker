@@ -48,6 +48,7 @@ class ProjectRepository @Inject constructor(
   private val activityLogger: ActivityLogger,
   private val exportFileStore: ExportFileStore,
   private val engineRepository: EngineRepository,
+  private val projectWrites: ProjectWrites = ProjectWrites(),
 ) {
 
   /**
@@ -834,6 +835,9 @@ class ProjectRepository @Inject constructor(
           )
         }
       }
+    }
+    if (results.any { it.action != ImportProjectAction.Skip && it.importedProjectId != null && it.error == null }) {
+      projectWrites.announce()
     }
     return ImportExecutionResult(results)
   }

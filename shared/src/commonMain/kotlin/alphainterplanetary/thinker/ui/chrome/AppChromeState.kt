@@ -59,6 +59,9 @@ enum class ChromeSheet {
 
   /** Multi-project portable interchange export (selection and generate/save). */
   ExportProjects,
+
+  /** Portable interchange import (pick, preview/validate, and apply). */
+  ImportProjects,
 }
 
 /**

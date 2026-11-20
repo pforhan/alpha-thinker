@@ -85,6 +85,8 @@ internal fun ChromeSheetHost(
         ChromeSheet.Testing -> TestingSheetContent(chrome = chrome)
 
         ChromeSheet.ExportProjects -> ExportProjectsSheetContent(chrome = chrome)
+
+        ChromeSheet.ImportProjects -> ImportProjectsSheetContent(chrome = chrome)
       }
     }
   }
@@ -143,4 +145,5 @@ internal val ChromeSheet.title: String
     ChromeSheet.Intelligence -> "Engine"
     ChromeSheet.Testing -> "Testing"
     ChromeSheet.ExportProjects -> "Export projects"
+    ChromeSheet.ImportProjects -> "Import projects"
   }
