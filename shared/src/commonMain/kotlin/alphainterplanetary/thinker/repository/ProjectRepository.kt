@@ -16,7 +16,12 @@ import alphainterplanetary.thinker.engine.core.QuestionBatch
 import alphainterplanetary.thinker.engine.core.SummarizedPhase
 import alphainterplanetary.thinker.export.ExportFileStore
 import alphainterplanetary.thinker.export.ExportSnapshot
+import alphainterplanetary.thinker.export.ImportExecutionResult
+import alphainterplanetary.thinker.export.ImportPlan
+import alphainterplanetary.thinker.export.ImportProjectAction
+import alphainterplanetary.thinker.export.ImportProjectResult
 import alphainterplanetary.thinker.export.ProjectExportRenderer
+import alphainterplanetary.thinker.export.ProjectInterchangeImport
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.Project
@@ -759,6 +764,83 @@ class ProjectRepository @Inject constructor(
     return ProjectExportRenderer(ExportConfig(outputName = outputName))
       .render(ExportSnapshot.from(project))
   }
+
+  /**
+   * Executes an import [plan] (stage 3). Each candidate's [ImportProjectCandidate.action]
+   * determines behavior: [ImportProjectAction.ImportAsNew] remaps IDs and creates a
+   * new project, [ImportProjectAction.Overwrite] replaces an existing project with the
+   * same source ID (preserving IDs), and [ImportProjectAction.Skip] is ignored.
+   */
+  suspend fun executeImportPlan(plan: ImportPlan): ImportExecutionResult {
+    val results = mutableListOf<ImportProjectResult>()
+    plan.projects.forEach { candidate ->
+      when (candidate.action) {
+        ImportProjectAction.Skip -> {
+          results += ImportProjectResult(
+            index = candidate.index,
+            sourceProjectId = candidate.snapshot.projectId,
+            action = candidate.action,
+          )
+        }
+
+        ImportProjectAction.Overwrite -> {
+          if (!candidate.isImportable) {
+            results += ImportProjectResult(
+              index = candidate.index,
+              sourceProjectId = candidate.snapshot.projectId,
+              action = candidate.action,
+              error = "Project is not importable",
+            )
+            return@forEach
+          }
+          val existingId = candidate.existingProjectId ?: candidate.snapshot.projectId
+          val result = runCatching {
+            val project = ProjectInterchangeImport.toProject(candidate.snapshot, newProjectId = null)
+            // Ensure overwrite targets the existing/local project id when matched.
+            val toSave = if (project.id != existingId) project.copy(id = existingId) else project
+            storage.saveProject(toSave)
+            toSave.id
+          }
+          results += ImportProjectResult(
+            index = candidate.index,
+            sourceProjectId = candidate.snapshot.projectId,
+            action = candidate.action,
+            importedProjectId = result.getOrNull(),
+            error = result.exceptionOrNull()?.message,
+          )
+        }
+
+        ImportProjectAction.ImportAsNew -> {
+          if (!candidate.isImportable) {
+            results += ImportProjectResult(
+              index = candidate.index,
+              sourceProjectId = candidate.snapshot.projectId,
+              action = candidate.action,
+              error = "Project is not importable",
+            )
+            return@forEach
+          }
+          val result = runCatching {
+            val project = ProjectInterchangeImport.toProject(candidate.snapshot, newProjectId = randomUUID())
+            storage.saveProject(project)
+            project.id
+          }
+          results += ImportProjectResult(
+            index = candidate.index,
+            sourceProjectId = candidate.snapshot.projectId,
+            action = candidate.action,
+            importedProjectId = result.getOrNull(),
+            error = result.exceptionOrNull()?.message,
+          )
+        }
+      }
+    }
+    return ImportExecutionResult(results)
+  }
+
+  /** Parses, validates, and plans an import from compressed `.thinker` bytes (stage 1). */
+  suspend fun analyzeInterchangeImport(bytes: ByteArray): ImportPlan =
+    ProjectInterchangeImport.analyze(bytes, existingProjects = getAllProjects())
 
   private companion object {
     /**

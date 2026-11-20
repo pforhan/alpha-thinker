@@ -82,4 +82,24 @@ class PhaseTest {
       assertEquals(phase.order, Phase.indexOf(phase.key))
     }
   }
+
+  @Test
+  fun `fromKey resolves the unassigned sentinel`() {
+    assertEquals(NoPhase, Phase.fromKey(NoPhase.key))
+    assertEquals("__unassigned__", NoPhase.key)
+    assertEquals("Unassigned", NoPhase.label)
+  }
+
+  @Test
+  fun `fromKeyOrUnassigned maps unknown keys to NoPhase`() {
+    assertEquals(BuiltInPhase.Research, Phase.fromKeyOrUnassigned("research"))
+    assertEquals(NoPhase, Phase.fromKeyOrUnassigned("not-a-phase"))
+    assertEquals(NoPhase, Phase.fromKeyOrUnassigned(NoPhase.key))
+  }
+
+  @Test
+  fun `indexOf is 0 for unassigned phase`() {
+    assertEquals(0, Phase.indexOf(NoPhase.key))
+    assertEquals(Int.MAX_VALUE, NoPhase.order)
+  }
 }

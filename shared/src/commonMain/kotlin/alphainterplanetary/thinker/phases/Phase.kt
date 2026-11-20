@@ -28,11 +28,32 @@ sealed interface Phase {
       get() = BuiltInPhase.entries.first()
 
     /** Resolves a stored string key (e.g. `"scope-goals"`) back to a phase. */
-    fun fromKey(key: String): Phase? = BuiltInPhase.entries.find { it.key == key }
+    fun fromKey(key: String): Phase? =
+      BuiltInPhase.entries.find { it.key == key } ?: if (key == NoPhase.key) NoPhase else null
 
-    /** 1-based display index into the library's ordering ("Phase 3 of N"); 0 if unknown. */
-    fun indexOf(key: String): Int = fromKey(key)?.order ?: 0
+    /**
+     * Resolves a key to a known phase, or [NoPhase] when the key does not map to
+     * a known built-in phase. Use for import/migration paths that must not
+     * silently misattribute unknown/custom phase keys.
+     */
+    fun fromKeyOrUnassigned(key: String): Phase = fromKey(key) ?: NoPhase
+
+    /** 1-based display index into the library's ordering ("Phase 3 of N"); 0 if unknown/unassigned. */
+    fun indexOf(key: String): Int = fromKey(key)?.takeUnless { it == NoPhase }?.order ?: 0
   }
+}
+
+/**
+ * Sentinel for content without a known real planning phase (e.g. portable import
+ * of unknown/custom phase keys). Minimal implementation to avoid silent
+ * misattribution; full unassigned-phase semantics/slotting are defined in 4C.
+ */
+object NoPhase : Phase {
+  override val key: String = "__unassigned__"
+  override val label: String = "Unassigned"
+  override val order: Int = Int.MAX_VALUE
+  override val description: String = "Imported content that could not be mapped to a known planning phase."
+  override val completedDescription: String = description
 }
 
 /**
