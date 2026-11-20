@@ -65,9 +65,12 @@ Builds on the versioned canonical snapshot (4A.4) for machine-readable project t
 - [x] **Import UI flow:** Provide entry point(s) and per-platform file selection/open to import an interchange file. Probably a menu tool.  Show a preview/validation summary before commit (project info, counts, warnings/errors, unknown-phase/unassigned items, and any conflict/identity choice -- for exact project id matches consider an overwrite/add new choice), surface progress and actionable errors, and complete import into a browsable project state.  Support single and multiple project files. — Chrome `Import projects` sheet (`ui/chrome/ImportProjectsSheet.kt`, flyout/`ChromeSheet.ImportProjects`) with per-platform file picking (`ui/platform/ImportFilePicker` expect/actuals: Android SAF open, iOS document picker, desktop file dialog, wasm file input) supporting one or more files; analyzes via `ProjectRepository.analyzeInterchangeImport`, shows per-file/project preview with counts, issues/warnings, unknown-phase unassigned notes, and per-project actions (import as new, overwrite on ID match, skip) before commit; executes via `executeImportPlan` and surfaces progress/errors plus imported projects as openable/browsable links. Interchange gzip helpers moved to expect/actual for platform targets.
 
 ### 4B. Answer work
+- [x] AnswerDialog mobile: text size for questions is entirely too large.  It's probably on the large size even for desktop.
+- [x] AnswerDialog mobile: need more horizontal space for answers in portrait
+- [x] AnswerDialog: may need dedicated landscape layout as well.  Question text should take up no more than about 25% of vertical space.
+- [ ] **Edit questions in the answer dialog:** Allow users to revise question text while answering (define how edits interact with stored/global questions and history).
 - [ ] **Answer revision history (data + UI):** Persist revisions for committed answers and draft edits (with timestamps) and add a revision-history view in the answer UI.
 - [ ] **Seed/sample revision history:** Update `SampleProjectGenerator` to generate projects that include answer revision history for testing/demo.
-- [ ] **Edit questions in the answer dialog:** Allow users to revise question text while answering (define how edits interact with stored/global questions and history).
 
 ### 4C. Question pool & planning quality 
 - [ ] **Global question pool:** Implement global question-pool management (create/edit questions reusable across projects) and integrate it with hardcoded/seed questions and LLM-generated questions (clarify precedence, dedupe, and per-project vs global scope). Define how pooled/user-defined questions are phased when added (assigned to a real phase vs unassigned/`NoPhase`; see unassigned-phase task) so they don’t silently misattribute to an arbitrary phase.
@@ -117,9 +120,6 @@ Improves the Research handoff by synthesizing project-aware search terms while p
 - [ ] add/edit connection: prevent entries with duplicate names or duplicate url / model combinations
 - [ ] projectdetailscreen: retry title generation - try a second time automatically, after that offer a button on the edit title/synposis page.
 - [ ] ProjectDetailScreen: dedicated landscape layout with project info on left and scrolling question area on right
-- [ ] AnswerDialog mobile: text size for questions is entirely too large.  It's probably on the large size even for desktop.
-- [ ] AnswerDialog mobile: need more horizontal space for answers in portrait 
-- [ ] AnswerDialog: may need dedicated landscape layout as well.  Question text should take up no more than about 25% of vertical space.
 - [ ] To encourage freeform thought, provide a minimum of 3 blank lines on the new project synopsis field.
 - [ ] Consider throwing out some starter text for some projects
 - [ ] On phone-sized devices shrink our engine status pills greatly, perhaps to just three dots. Project titles probably won't fit on a single line no matter what.  Some screens seem to shrink this to a single icon already, so it may be project detail in particular with a problem
