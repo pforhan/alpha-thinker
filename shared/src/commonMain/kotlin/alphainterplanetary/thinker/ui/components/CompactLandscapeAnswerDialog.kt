@@ -102,16 +102,26 @@ internal fun CompactLandscapeAnswerDialog(
               style = MaterialTheme.typography.titleMedium,
               modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f, fill = false),
             )
-            IconButton(
-              onClick = onStartEditingQuestion,
-              modifier = Modifier.align(Alignment.End),
-            ) {
-              Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = "Edit question",
-              )
+          }
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            PhasePill(phase = phase)
+            TextButton(onClick = onResearch) {
+              Text("Research")
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            if (!isEditingQuestion) {
+              IconButton(onClick = onStartEditingQuestion) {
+                Icon(
+                  imageVector = Icons.Default.Edit,
+                  contentDescription = "Edit question",
+                )
+              }
             }
           }
         }
@@ -168,18 +178,6 @@ internal fun CompactLandscapeAnswerDialog(
                 ) {
                   Icon(Icons.Default.Clear, contentDescription = "Clear answer")
                 }
-              }
-            }
-
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(Dimens.TightGap),
-              verticalAlignment = Alignment.CenterVertically,
-            ) {
-              PhasePill(phase = phase)
-              Spacer(modifier = Modifier.weight(1f))
-              TextButton(onClick = onResearch) {
-                Text("Research")
               }
             }
 

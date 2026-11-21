@@ -82,8 +82,9 @@ internal fun StandardAnswerDialog(
             ScrollableOverflowText(
               text = question.text,
               collapsedMaxLines = 4,
+              fillWidth = false,
               style = MaterialTheme.typography.titleMedium,
-              modifier = Modifier.weight(1f),
+              modifier = Modifier.weight(1f, fill = false),
             )
             IconButton(onClick = onStartEditingQuestion) {
               Icon(

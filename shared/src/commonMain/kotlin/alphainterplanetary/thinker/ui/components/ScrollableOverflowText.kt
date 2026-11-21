@@ -53,13 +53,13 @@ fun ScrollableOverflowText(
   modifier: Modifier = Modifier,
   collapsedMaxLines: Int = Int.MAX_VALUE,
   fillViewportHeight: Boolean = false,
+  fillWidth: Boolean = true,
   style: TextStyle = LocalTextStyle.current,
   color: Color = Color.Unspecified,
 ) {
   BoxWithConstraints(
     modifier = modifier
-      .fillMaxWidth()
-      .then(if (fillViewportHeight) Modifier.fillMaxHeight() else Modifier),
+      .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier),
   ) {
     val viewportMaxHeight = maxHeight
     val density = LocalDensity.current
@@ -87,8 +87,7 @@ fun ScrollableOverflowText(
 
     Box(
       modifier = Modifier
-        .fillMaxWidth()
-        .then(if (fillViewportHeight) Modifier.fillMaxHeight() else Modifier)
+        .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
         .then(
           if (scrollable && viewportHeight != Dp.Unspecified) {
             Modifier.heightIn(max = viewportHeight)
@@ -99,7 +98,13 @@ fun ScrollableOverflowText(
     ) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = if (fillViewportHeight) Modifier.fillMaxSize() else Modifier.fillMaxWidth(),
+        modifier = if (scrollable && fillViewportHeight) {
+          Modifier.fillMaxSize()
+        } else if (fillWidth) {
+          Modifier.fillMaxWidth()
+        } else {
+          Modifier
+        },
       ) {
         Text(
           text = text,
@@ -123,7 +128,7 @@ fun ScrollableOverflowText(
           modifier = Modifier
             .weight(1f)
             .then(if (scrollable) Modifier.verticalScroll(scrollState) else Modifier)
-            .then(if (fillViewportHeight) Modifier.fillMaxHeight() else Modifier),
+            .then(if (scrollable && fillViewportHeight) Modifier.fillMaxHeight() else Modifier),
         )
         if (scrollable) {
           Column(
