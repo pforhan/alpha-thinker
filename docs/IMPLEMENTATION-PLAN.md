@@ -68,7 +68,7 @@ Builds on the versioned canonical snapshot (4A.4) for machine-readable project t
 - [x] AnswerDialog mobile: text size for questions is entirely too large.  It's probably on the large size even for desktop.
 - [x] AnswerDialog mobile: need more horizontal space for answers in portrait
 - [x] AnswerDialog: may need dedicated landscape layout as well.  Question text should take up no more than about 25% of vertical space.
-- [ ] **Edit questions in the answer dialog:** Allow users to revise question text while answering (define how edits interact with stored/global questions and history).
+- [x] **Edit questions in the answer dialog:** Allow users to revise question text while answering (define how edits interact with stored/global questions and history).
 - [ ] **Answer revision history (data + UI):** Persist revisions for committed answers and draft edits (with timestamps) and add a revision-history view in the answer UI.
 - [ ] **Seed/sample revision history:** Update `SampleProjectGenerator` to generate projects that include answer revision history for testing/demo.
 

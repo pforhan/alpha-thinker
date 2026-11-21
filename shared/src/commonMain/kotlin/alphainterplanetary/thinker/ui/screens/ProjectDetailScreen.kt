@@ -385,22 +385,40 @@ fun ProjectDetailScreen(
         phase = project.phaseForQuestion(questionToShow),
         onDismiss = { selectedQuestion = null },
         onResearch = { query -> viewModel.logResearchHandoff(projectId, query) },
-        onResult = { result, text ->
+        onResult = { result, text, questionText ->
           when (result) {
             AnswerDialogResult.Submitted -> {
-              viewModel.saveAnswer(projectId, questionToShow.id, text, completed = true)
+              viewModel.saveAnswer(
+                projectId,
+                questionToShow.id,
+                text,
+                completed = true,
+                questionText = questionText,
+              )
             }
 
             AnswerDialogResult.SavedDraft -> {
-              viewModel.saveAnswer(projectId, questionToShow.id, text, completed = false)
+              viewModel.saveAnswer(
+                projectId,
+                questionToShow.id,
+                text,
+                completed = false,
+                questionText = questionText,
+              )
             }
 
             AnswerDialogResult.DeletedAnswer -> {
-              viewModel.saveAnswer(projectId, questionToShow.id, "", completed = false)
+              viewModel.saveAnswer(
+                projectId,
+                questionToShow.id,
+                "",
+                completed = false,
+                questionText = questionText,
+              )
             }
 
             AnswerDialogResult.Unignored -> {
-              viewModel.unignoreQuestion(projectId, questionToShow.id)
+              viewModel.unignoreQuestion(projectId, questionToShow.id, questionText = questionText)
             }
           }
           selectedQuestion = null

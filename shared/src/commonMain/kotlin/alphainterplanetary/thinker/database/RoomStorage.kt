@@ -110,6 +110,13 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
     }
   }
 
+  override suspend fun updateQuestionText(projectId: String, questionId: String, text: String) {
+    database.withWriteTransaction {
+      database.questionDao().updateQuestionText(questionId, projectId, text)
+      database.projectDao().updateProjectUpdatedAt(projectId, now().toEpochMilliseconds())
+    }
+  }
+
   override suspend fun getSetting(key: SettingsKey, default: String): String =
     database.settingsDao().getValue(key.storageKey) ?: default
 

@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.viewmodel
 
 import alphainterplanetary.thinker.ProjectUpdateMode
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
 import alphainterplanetary.thinker.repository.ContextCheck
 import alphainterplanetary.thinker.repository.ContextCompaction
@@ -290,19 +291,30 @@ class ProjectDetailViewModel(
       canGenerateMoreInPhase = !project.currentPhaseExhausted,
     )
 
-  fun saveAnswer(projectId: String, questionId: String, text: String, completed: Boolean) {
+  fun saveAnswer(
+    projectId: String,
+    questionId: String,
+    text: String,
+    completed: Boolean,
+    questionText: String? = null,
+  ) {
     val current = (_uiState.value as? ProjectDetailUiState.Success)?.project
+    val editedQuestionText = questionText?.trim()?.takeIf { it.isNotBlank() }
+    fun withEditedText(q: Question): Question =
+      if (q.id == questionId && editedQuestionText != null && editedQuestionText != q.text) {
+        q.copy(text = editedQuestionText)
+      } else {
+        q
+      }
+
     val deletingAnswer = !completed && text.isBlank() &&
       current?.questions?.find { it.id == questionId }?.currentAnswer != null
 
     if (deletingAnswer) {
       val optimistic = current.copy(
         questions = current.questions.map { q ->
-          if (q.id == questionId) {
-            q.withoutAnswer()
-          } else {
-            q
-          }
+          val edited = withEditedText(q)
+          if (edited.id == questionId) edited.withoutAnswer() else edited
         }
       )
       beginUndoable(current, "Answer deleted")
@@ -310,7 +322,7 @@ class ProjectDetailViewModel(
 
       vmScope.launch {
         try {
-          repository.saveAnswer(projectId, questionId, text, completed)
+          repository.saveAnswer(projectId, questionId, text, completed, questionText)
         } catch (e: Exception) {
           _uiState.value = successFor(current)
           clearUndoable()
@@ -324,7 +336,7 @@ class ProjectDetailViewModel(
 
     vmScope.launch {
       try {
-        repository.saveAnswer(projectId, questionId, text, completed)
+        repository.saveAnswer(projectId, questionId, text, completed, questionText)
         loadProject(projectId)
       } catch (e: Exception) {
         _uiState.value = ProjectDetailUiState.Error(
@@ -340,11 +352,21 @@ class ProjectDetailViewModel(
     }
   }
 
-  fun ignoreQuestion(projectId: String, questionId: String) {
+  fun ignoreQuestion(projectId: String, questionId: String, questionText: String? = null) {
     val snapshot = (_uiState.value as? ProjectDetailUiState.Success)?.project ?: return
+    val editedQuestionText = questionText?.trim()?.takeIf { it.isNotBlank() }
     val optimistic = snapshot.copy(
       questions = snapshot.questions.map { q ->
-        if (q.id == questionId) q.withIgnored(now()) else q
+        if (q.id == questionId) {
+          val base = if (editedQuestionText != null && editedQuestionText != q.text) {
+            q.copy(text = editedQuestionText)
+          } else {
+            q
+          }
+          base.withIgnored(now())
+        } else {
+          q
+        }
       }
     )
 
@@ -353,7 +375,7 @@ class ProjectDetailViewModel(
 
     vmScope.launch {
       try {
-        repository.ignoreQuestion(projectId, questionId)
+        repository.ignoreQuestion(projectId, questionId, questionText)
       } catch (e: Exception) {
         _uiState.value = successFor(snapshot)
         clearUndoable()
@@ -364,11 +386,21 @@ class ProjectDetailViewModel(
     }
   }
 
-  fun unignoreQuestion(projectId: String, questionId: String) {
+  fun unignoreQuestion(projectId: String, questionId: String, questionText: String? = null) {
     val snapshot = (_uiState.value as? ProjectDetailUiState.Success)?.project ?: return
+    val editedQuestionText = questionText?.trim()?.takeIf { it.isNotBlank() }
     val optimistic = snapshot.copy(
       questions = snapshot.questions.map { q ->
-        if (q.id == questionId) q.withoutIgnored() else q
+        if (q.id == questionId) {
+          val base = if (editedQuestionText != null && editedQuestionText != q.text) {
+            q.copy(text = editedQuestionText)
+          } else {
+            q
+          }
+          base.withoutIgnored()
+        } else {
+          q
+        }
       }
     )
 
@@ -377,7 +409,7 @@ class ProjectDetailViewModel(
 
     vmScope.launch {
       try {
-        repository.unignoreQuestion(projectId, questionId)
+        repository.unignoreQuestion(projectId, questionId, questionText)
       } catch (e: Exception) {
         _uiState.value = successFor(snapshot)
         clearUndoable()

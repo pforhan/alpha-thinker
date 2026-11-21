@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,6 +43,10 @@ internal fun CompactLandscapeAnswerDialog(
   phase: Phase,
   answerText: String,
   onAnswerTextChange: (String) -> Unit,
+  questionText: String,
+  onQuestionTextChange: (String) -> Unit,
+  isEditingQuestion: Boolean,
+  onStartEditingQuestion: () -> Unit,
   hasAnswer: Boolean,
   focusRequester: FocusRequester,
   maxDialogHeight: Dp,
@@ -74,15 +79,42 @@ internal fun CompactLandscapeAnswerDialog(
           .padding(Dimens.ScreenPadding),
         horizontalArrangement = Arrangement.spacedBy(Dimens.SectionGap),
       ) {
-        ScrollableOverflowText(
-          text = question.text,
-          collapsedMaxLines = Int.MAX_VALUE,
-          fillViewportHeight = true,
-          style = MaterialTheme.typography.titleMedium,
+        Column(
           modifier = Modifier
             .weight(0.38f)
             .fillMaxHeight(),
-        )
+        ) {
+          if (isEditingQuestion) {
+            OutlinedTextField(
+              value = questionText,
+              onValueChange = onQuestionTextChange,
+              label = { Text("Question") },
+              textStyle = MaterialTheme.typography.titleMedium,
+              modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            )
+          } else {
+            ScrollableOverflowText(
+              text = question.text,
+              collapsedMaxLines = Int.MAX_VALUE,
+              fillViewportHeight = true,
+              style = MaterialTheme.typography.titleMedium,
+              modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            )
+            IconButton(
+              onClick = onStartEditingQuestion,
+              modifier = Modifier.align(Alignment.End),
+            ) {
+              Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Edit question",
+              )
+            }
+          }
+        }
 
         Column(
           modifier = Modifier

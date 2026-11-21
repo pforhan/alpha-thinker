@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -37,6 +38,10 @@ internal fun StandardAnswerDialog(
   phase: Phase,
   answerText: String,
   onAnswerTextChange: (String) -> Unit,
+  questionText: String,
+  onQuestionTextChange: (String) -> Unit,
+  isEditingQuestion: Boolean,
+  onStartEditingQuestion: () -> Unit,
   hasAnswer: Boolean,
   focusRequester: FocusRequester,
   onDismiss: () -> Unit,
@@ -59,12 +64,35 @@ internal fun StandardAnswerDialog(
     ),
     title = {
       Column {
-        ScrollableOverflowText(
-          text = question.text,
-          collapsedMaxLines = 4,
-          style = MaterialTheme.typography.titleMedium,
-          modifier = Modifier.fillMaxWidth(),
-        )
+        if (isEditingQuestion) {
+          OutlinedTextField(
+            value = questionText,
+            onValueChange = onQuestionTextChange,
+            label = { Text("Question") },
+            textStyle = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            maxLines = 6,
+          )
+        } else {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+          ) {
+            ScrollableOverflowText(
+              text = question.text,
+              collapsedMaxLines = 4,
+              style = MaterialTheme.typography.titleMedium,
+              modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onStartEditingQuestion) {
+              Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Edit question",
+              )
+            }
+          }
+        }
         Spacer(modifier = Modifier.height(Dimens.ContentGap))
         PhasePill(phase = phase)
       }

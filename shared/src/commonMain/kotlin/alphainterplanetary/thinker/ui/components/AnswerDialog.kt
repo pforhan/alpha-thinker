@@ -60,10 +60,12 @@ fun AnswerDialog(
   phase: Phase,
   onDismiss: () -> Unit,
   onResearch: (String) -> Unit,
-  onResult: (AnswerDialogResult, String) -> Unit,
+  onResult: (AnswerDialogResult, String, String?) -> Unit,
 ) {
   val initialText = question.currentAnswer?.text ?: question.draftText ?: ""
   var answerText by remember { mutableStateOf(initialText) }
+  var questionText by remember { mutableStateOf(question.text) }
+  var editingQuestion by remember { mutableStateOf(false) }
   var showResearchTerms by remember { mutableStateOf(false) }
   var researchTerms by remember { mutableStateOf(question.text) }
   val focusRequester = remember { FocusRequester() }
@@ -78,6 +80,12 @@ fun AnswerDialog(
     focusRequester.requestFocus()
   }
 
+  fun editedQuestionText(): String? {
+    if (!editingQuestion) return null
+    val trimmed = questionText.trim()
+    return trimmed.takeIf { it.isNotBlank() && it != question.text }
+  }
+
   fun save(completed: Boolean) {
     val trimmed = answerText.trim()
     onResult(
@@ -87,6 +95,7 @@ fun AnswerDialog(
         else -> AnswerDialogResult.SavedDraft
       },
       trimmed,
+      editedQuestionText(),
     )
   }
 
@@ -105,12 +114,16 @@ fun AnswerDialog(
         phase = phase,
         answerText = answerText,
         onAnswerTextChange = { answerText = it },
+        questionText = questionText,
+        onQuestionTextChange = { questionText = it },
+        isEditingQuestion = editingQuestion,
+        onStartEditingQuestion = { editingQuestion = true },
         hasAnswer = hasAnswer,
         focusRequester = focusRequester,
         maxDialogHeight = maxHeight,
         onDismiss = onDismiss,
-        onUnignore = { onResult(AnswerDialogResult.Unignored, "") },
-        onDelete = { onResult(AnswerDialogResult.DeletedAnswer, "") },
+        onUnignore = { onResult(AnswerDialogResult.Unignored, "", editedQuestionText()) },
+        onDelete = { onResult(AnswerDialogResult.DeletedAnswer, "", editedQuestionText()) },
         onResearch = { showResearchTerms = true },
         onSaveDraft = { save(completed = false) },
         onSaveAnswer = { save(completed = true) },
@@ -121,11 +134,15 @@ fun AnswerDialog(
         phase = phase,
         answerText = answerText,
         onAnswerTextChange = { answerText = it },
+        questionText = questionText,
+        onQuestionTextChange = { questionText = it },
+        isEditingQuestion = editingQuestion,
+        onStartEditingQuestion = { editingQuestion = true },
         hasAnswer = hasAnswer,
         focusRequester = focusRequester,
         onDismiss = onDismiss,
-        onUnignore = { onResult(AnswerDialogResult.Unignored, "") },
-        onDelete = { onResult(AnswerDialogResult.DeletedAnswer, "") },
+        onUnignore = { onResult(AnswerDialogResult.Unignored, "", editedQuestionText()) },
+        onDelete = { onResult(AnswerDialogResult.DeletedAnswer, "", editedQuestionText()) },
         onResearch = { showResearchTerms = true },
         onSaveDraft = { save(completed = false) },
         onSaveAnswer = { save(completed = true) },

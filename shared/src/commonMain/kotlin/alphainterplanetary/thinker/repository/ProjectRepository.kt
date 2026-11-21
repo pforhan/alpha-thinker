@@ -334,6 +334,9 @@ class ProjectRepository @Inject constructor(
    * question is always either committed or a draft, never both, so saving a
    * draft demotes any current answer out of "answered".
    *
+   * [questionText], when provided and meaningfully edited, replaces the question's
+   * text in the same save as the answer action.
+   *
    * Saving an answer never advances the project phase — rounds move on only through
    * [advanceToPhase].
    */
@@ -342,16 +345,23 @@ class ProjectRepository @Inject constructor(
     questionId: String,
     text: String,
     completed: Boolean,
+    questionText: String? = null,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val question = project.questions.find { it.id == questionId } ?: return null
     val now = now()
     val trimmed = text.trim()
+    val editedQuestionText = questionText?.trim()?.takeIf { it.isNotBlank() && it != question.text }
+    val questionWithText = if (editedQuestionText != null) {
+      question.copy(text = editedQuestionText)
+    } else {
+      question
+    }
 
     val updatedQuestion = if (completed) {
-      val current = question.currentAnswer
+      val current = questionWithText.currentAnswer
       if (current != null && current.text == trimmed) {
-        question
+        questionWithText
       } else {
         val newAnswer = Answer(
           id = randomUUID(),
@@ -359,13 +369,13 @@ class ProjectRepository @Inject constructor(
           text = trimmed,
           createdAt = now,
         )
-        question.withAnswer(newAnswer)
+        questionWithText.withAnswer(newAnswer)
       }
     } else {
       if (trimmed.isNotBlank()) {
-        question.withDraft(trimmed, now)
+        questionWithText.withDraft(trimmed, now)
       } else {
-        question.withoutAnswer()
+        questionWithText.withoutAnswer()
       }
     }
 
@@ -707,11 +717,12 @@ class ProjectRepository @Inject constructor(
   suspend fun ignoreQuestion(
     projectId: String,
     questionId: String,
+    questionText: String? = null,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val now = now()
     val updatedQuestions = project.questions.map { q ->
-      if (q.id == questionId) q.withIgnored(now) else q
+      if (q.id == questionId) applyQuestionTextEdit(q, questionText).withIgnored(now) else q
     }
 
     val updatedProject = project.copy(
@@ -725,11 +736,12 @@ class ProjectRepository @Inject constructor(
   suspend fun unignoreQuestion(
     projectId: String,
     questionId: String,
+    questionText: String? = null,
   ): Project? {
     val project = storage.getProject(projectId) ?: return null
     val now = now()
     val updatedQuestions = project.questions.map { q ->
-      if (q.id == questionId) q.withoutIgnored() else q
+      if (q.id == questionId) applyQuestionTextEdit(q, questionText).withoutIgnored() else q
     }
 
     val updatedProject = project.copy(
@@ -739,6 +751,11 @@ class ProjectRepository @Inject constructor(
     storage.saveProject(updatedProject)
     return updatedProject
   }
+
+  private fun applyQuestionTextEdit(question: alphainterplanetary.thinker.model.Question, questionText: String?) =
+    questionText?.trim()?.takeIf { it.isNotBlank() && it != question.text }?.let { edited ->
+      question.copy(text = edited)
+    } ?: question
 
   suspend fun deleteAllProjects() {
     storage.getAllProjects().forEach { deleteExportFilesForProject(it.id) }

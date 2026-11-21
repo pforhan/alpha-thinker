@@ -57,6 +57,16 @@ class FakeStorage(
     )
   }
 
+  override suspend fun updateQuestionText(projectId: String, questionId: String, text: String) {
+    val current = projects[projectId] ?: return
+    projects[projectId] = current.copy(
+      questions = current.questions.map { q ->
+        if (q.id == questionId) q.copy(text = text) else q
+      },
+      updatedAt = now(),
+    )
+  }
+
   override suspend fun getSetting(key: SettingsKey, default: String): String =
     settings[key.storageKey] ?: default
 

@@ -24,6 +24,9 @@ interface QuestionDao {
     }
   }
 
+  @Query("UPDATE questions SET text = :text WHERE id = :questionId AND projectId = :projectId")
+  suspend fun updateQuestionText(questionId: String, projectId: String, text: String)
+
   @Query("DELETE FROM questions WHERE id IN (:questionIds)")
   suspend fun deleteQuestionsByIds(questionIds: List<String>)
 }
