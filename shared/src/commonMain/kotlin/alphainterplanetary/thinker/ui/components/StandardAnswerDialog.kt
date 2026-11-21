@@ -20,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -139,6 +140,9 @@ internal fun StandardAnswerDialog(
                   top = Dimens.FieldOverlayInsetTop,
                   end = Dimens.FieldOverlayInsetEnd,
                 ),
+              colors = IconButtonDefaults.iconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.75f),
+              ),
             ) {
               Icon(Icons.Default.Clear, contentDescription = "Clear answer")
             }
