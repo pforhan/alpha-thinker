@@ -45,9 +45,7 @@ data class QuestionEntity(
   val createdAt: Long,
   val sortOrder: Int = 0,
   val ignoredAt: Long? = null,
-  val answerId: String? = null,
-  val draftText: String? = null,
-  val draftUpdatedAt: Long? = null,
+  val answerState: String,
 )
 
 @Entity(

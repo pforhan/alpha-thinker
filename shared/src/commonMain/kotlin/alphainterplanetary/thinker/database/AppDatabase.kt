@@ -23,7 +23,7 @@ import kotlinx.coroutines.Dispatchers
     ExportArtifactEntity::class,
     PhaseSummaryCacheEntity::class,
   ],
-  version = 18,
+  version = 19,
   exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)

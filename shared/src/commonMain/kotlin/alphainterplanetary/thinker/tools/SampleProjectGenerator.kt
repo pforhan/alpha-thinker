@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.tools
 
 import alphainterplanetary.thinker.database.Storage
 import alphainterplanetary.thinker.model.Answer
+import alphainterplanetary.thinker.model.AnswerState
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
@@ -1400,17 +1401,33 @@ class SampleProjectGenerator @Inject constructor(
     ignoredAt: Instant? = null,
     draftText: String? = null,
     draftUpdatedAt: Instant? = null,
-  ) = Question(
-    id = id,
-    text = text,
-    timestamp = timestamp,
-    roundId = roundId,
-    ignoredAt = ignoredAt,
-    answers = answers,
-    answerId = answers.lastOrNull()?.id,
-    draftText = draftText,
-    draftUpdatedAt = draftUpdatedAt,
-  )
+  ): Question {
+    val draftAnswer = if (draftText != null) {
+      Answer(
+        id = randomUUID(),
+        questionId = id,
+        text = draftText,
+        createdAt = draftUpdatedAt ?: timestamp,
+      )
+    } else {
+      null
+    }
+    val allAnswers = if (draftAnswer != null) answers + draftAnswer else answers
+    val answerState = when {
+      draftAnswer != null -> AnswerState.Draft
+      allAnswers.isNotEmpty() -> AnswerState.Answered
+      else -> AnswerState.Unanswered
+    }
+    return Question(
+      id = id,
+      text = text,
+      timestamp = timestamp,
+      roundId = roundId,
+      ignoredAt = ignoredAt,
+      answerState = answerState,
+      answers = allAnswers,
+    )
+  }
 
   private fun sampleRound(
     projectId: String,

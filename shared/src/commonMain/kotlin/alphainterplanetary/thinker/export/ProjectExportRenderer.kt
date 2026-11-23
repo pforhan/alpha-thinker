@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.export
 
+import alphainterplanetary.thinker.model.AnswerState
 import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.ExportFormat
 import alphainterplanetary.thinker.model.Project
@@ -124,7 +125,12 @@ class ProjectExportRenderer(
       }
     }
 
-    if (!question.draftText.isNullOrBlank()) {
+    val draftText = if (question.answerState == AnswerState.Draft.name) {
+      question.answers.maxByOrNull { it.createdAtEpochMs }?.text ?: question.draftText
+    } else {
+      question.draftText
+    }
+    if (question.answerState == AnswerState.Draft.name && !draftText.isNullOrBlank()) {
       if (!config.includeDrafts) {
         return if (config.includeUnansweredQuestions) {
           ExportQuestionBlock(questionText = question.text, status = ExportAnswerStatus.Unanswered)
@@ -135,7 +141,7 @@ class ProjectExportRenderer(
       return ExportQuestionBlock(
         questionText = question.text,
         status = ExportAnswerStatus.Draft,
-        draftText = question.draftText,
+        draftText = draftText,
       )
     }
 
@@ -192,7 +198,7 @@ class ProjectExportRenderer(
       return ExportQuestionBlock(
         questionText = question.text,
         status = ExportAnswerStatus.Draft,
-        draftText = question.draftText,
+        draftText = question.currentDraft?.text ?: question.draftText,
       )
     }
 

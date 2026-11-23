@@ -12,6 +12,7 @@ import alphainterplanetary.thinker.engine.config.RemoteProvider
 import alphainterplanetary.thinker.engine.core.CachedPhaseSummary
 import alphainterplanetary.thinker.engine.core.PhaseSummaryIntent
 import alphainterplanetary.thinker.model.Answer
+import alphainterplanetary.thinker.model.AnswerState
 import alphainterplanetary.thinker.model.ExportArtifact
 import alphainterplanetary.thinker.model.ExportConfig
 import alphainterplanetary.thinker.model.ExportFormat
@@ -46,9 +47,7 @@ fun Question.toEntity(projectId: String, index: Int) = QuestionEntity(
   createdAt = timestamp.toEpochMilliseconds(),
   sortOrder = index,
   ignoredAt = ignoredAt?.toEpochMilliseconds(),
-  answerId = answerId,
-  draftText = draftText,
-  draftUpdatedAt = draftUpdatedAt?.toEpochMilliseconds(),
+  answerState = answerState.name,
 )
 
 fun Answer.toEntity() = AnswerEntity(
@@ -107,9 +106,7 @@ fun QuestionEntity.toModel(answers: List<AnswerEntity>): Question = Question(
   timestamp = Instant.fromEpochMilliseconds(createdAt),
   roundId = roundId,
   ignoredAt = ignoredAt?.let { Instant.fromEpochMilliseconds(it) },
-  answerId = answerId,
-  draftText = draftText,
-  draftUpdatedAt = draftUpdatedAt?.let { Instant.fromEpochMilliseconds(it) },
+  answerState = AnswerState.fromStringOrNull(answerState) ?: AnswerState.Unanswered,
   answers = answers.map { it.toModel() }
 )
 

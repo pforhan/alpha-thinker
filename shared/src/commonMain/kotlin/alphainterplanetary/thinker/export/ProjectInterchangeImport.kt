@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.export
 
 import alphainterplanetary.thinker.model.Answer
+import alphainterplanetary.thinker.model.AnswerState
 import alphainterplanetary.thinker.model.Project
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
@@ -82,6 +83,14 @@ data class ImportExecutionResult(
   val results: List<ImportProjectResult>,
 )
 
+/**
+ * Parses, validates, and converts portable interchange payloads into [Project]s.
+ *
+ * Compatibility directives: prefer canonical snapshot fields/state; fall back to older
+ * revision/legacy fields when reading older exports. Backward compatibility is crucial;
+ * forward compatibility is not a priority right now (no old readers in the wild). Do not
+ * use content sentinels - use null/defaults and schema/version signals.
+ */
 object ProjectInterchangeImport {
 
   /** Parses and validates a `.thinker` payload (gzip-compressed or plain JSON). */
@@ -373,18 +382,69 @@ object ProjectInterchangeImport {
             text = a.text,
             createdAt = Instant.fromEpochMilliseconds(a.createdAtEpochMs),
           )
-        }
+        }.toMutableList()
         val currentAnswerId = q.answerId?.let { old ->
           if (remap) answerIdMap[old] else old
         }?.takeIf { id -> answers.any { it.id == id } }
 
+        // Prefer canonical state/answers; fall back to legacy draftText for older exports.
         // A question cannot be both committed and draft.
-        val draftText = q.draftText?.takeIf { currentAnswerId == null && it.isNotBlank() }
-        val draftUpdatedAt = if (draftText != null) {
-          q.draftUpdatedAtEpochMs?.let { Instant.fromEpochMilliseconds(it) }
-            ?: Instant.fromEpochMilliseconds(q.timestampEpochMs)
+        val snapshotState = AnswerState.fromStringOrNull(q.answerState)
+        val draftSnapshot = when {
+          currentAnswerId != null -> null
+          snapshotState == AnswerState.Draft -> {
+            answers.maxByOrNull { it.createdAt }?.id ?: run {
+              if (!q.draftText.isNullOrBlank()) {
+                val draft = Answer(
+                  id = if (remap) randomUUID() else "${newQuestionId}:draft",
+                  questionId = newQuestionId,
+                  text = q.draftText,
+                  createdAt = q.draftUpdatedAtEpochMs?.let { Instant.fromEpochMilliseconds(it) }
+                    ?: Instant.fromEpochMilliseconds(q.timestampEpochMs),
+                )
+                answers += draft
+                draft.id
+              } else {
+                null
+              }
+            }
+          }
+          !q.draftText.isNullOrBlank() -> {
+            val draft = Answer(
+              id = if (remap) randomUUID() else "${newQuestionId}:draft",
+              questionId = newQuestionId,
+              text = q.draftText,
+              createdAt = q.draftUpdatedAtEpochMs?.let { Instant.fromEpochMilliseconds(it) }
+                ?: Instant.fromEpochMilliseconds(q.timestampEpochMs),
+            )
+            answers += draft
+            draft.id
+          }
+          else -> null
+        }
+
+        val activeId = draftSnapshot ?: currentAnswerId
+        val answerState = when {
+          draftSnapshot != null -> AnswerState.Draft
+          currentAnswerId != null -> AnswerState.Answered
+          snapshotState == AnswerState.Answered && answers.isNotEmpty() -> AnswerState.Answered
+          else -> AnswerState.Unanswered
+        }
+
+        // The model treats the latest snapshot by createdAt as active when Draft/Answered.
+        val normalizedAnswers = if (activeId != null) {
+          val latest = answers.maxWithOrNull(compareBy({ it.createdAt }, { it.id }))
+          val active = answers.find { it.id == activeId }
+          if (latest != null && active != null && latest.id != active.id) {
+            val bumped = active.copy(
+              createdAt = Instant.fromEpochMilliseconds(latest.createdAt.toEpochMilliseconds() + 1)
+            )
+            answers.map { if (it.id == active.id) bumped else it }
+          } else {
+            answers
+          }
         } else {
-          null
+          answers
         }
 
         Question(
@@ -393,10 +453,8 @@ object ProjectInterchangeImport {
           timestamp = Instant.fromEpochMilliseconds(q.timestampEpochMs),
           roundId = mappedRoundId,
           ignoredAt = q.ignoredAtEpochMs?.let { Instant.fromEpochMilliseconds(it) },
-          answerId = currentAnswerId,
-          draftText = draftText,
-          draftUpdatedAt = draftUpdatedAt,
-          answers = answers,
+          answerState = answerState,
+          answers = normalizedAnswers,
           compacted = false, // never persisted as compacted
         )
       }

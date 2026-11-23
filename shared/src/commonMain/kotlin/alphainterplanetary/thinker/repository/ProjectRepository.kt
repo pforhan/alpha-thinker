@@ -373,7 +373,19 @@ class ProjectRepository @Inject constructor(
       }
     } else {
       if (trimmed.isNotBlank()) {
-        questionWithText.withDraft(trimmed, now)
+        val currentDraft = questionWithText.currentDraft
+        if (currentDraft != null && currentDraft.text == trimmed) {
+          questionWithText
+        } else {
+          questionWithText.withDraft(
+            Answer(
+              id = randomUUID(),
+              questionId = questionId,
+              text = trimmed,
+              createdAt = now,
+            )
+          )
+        }
       } else {
         questionWithText.withoutAnswer()
       }
@@ -534,10 +546,8 @@ class ProjectRepository @Inject constructor(
           engineIdentity = engineIdentity,
           coveredContentHash = coveredContentHash,
         )
-        val summary = if (cached != null) {
-          cached.summaryText
-        } else {
-          PhaseSummarization.summarize(
+        val summary = cached?.summaryText
+          ?: PhaseSummarization.summarize(
             engine = engine,
             title = project.title,
             synopsis = project.synopsis,
@@ -558,7 +568,6 @@ class ProjectRepository @Inject constructor(
               )
             )
           }
-        }
         summaries += transcript.toSummarizedPhase(summary)
         // The phase's answers are replaced by the summary, which is what the
         // next re-measurement has to see — the summary only costs anything once
@@ -784,7 +793,8 @@ class ProjectRepository @Inject constructor(
   }
 
   /**
-   * Executes an import [plan] (stage 3). Each candidate's [ImportProjectCandidate.action]
+   * Executes an import [plan] (stage 3). Each candidate's
+   * [alphainterplanetary.thinker.export.ImportProjectCandidate.action]
    * determines behavior: [ImportProjectAction.ImportAsNew] remaps IDs and creates a
    * new project, [ImportProjectAction.Overwrite] replaces an existing project with the
    * same source ID (preserving IDs), and [ImportProjectAction.Skip] is ignored.

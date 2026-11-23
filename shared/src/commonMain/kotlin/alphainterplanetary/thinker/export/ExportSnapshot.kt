@@ -1,13 +1,24 @@
 package alphainterplanetary.thinker.export
 
+import alphainterplanetary.thinker.model.AnswerState
 import alphainterplanetary.thinker.model.Project
+import alphainterplanetary.thinker.model.Question
 import kotlinx.serialization.Serializable
 
 /**
  * Schema version for [ExportSnapshot]. Bump when the snapshot shape or semantics
  * change in a way that affects storage or interchange compatibility.
+ *
+ * Version history (update each time this value changes):
+ * - 1 (2026-11-17, 49ef66e): Initial canonical snapshot (project/questions/phases,
+ *   answer revision history, draft/ignored/compacted state).
+ * - 2 (2026-11-19, 6b08319): Added project status, createdAtEpochMs, and rounds for
+ *   portable interchange fidelity.
+ * - 3 (2026-11-23, _______): Added question answerState; draft/committed snapshots
+ *   unified in answers (active Draft/Answered is latest by createdAt). Deprecated
+ *   draftText/draftUpdatedAtEpochMs kept as read-compat only (not populated on write).
  */
-const val EXPORT_SNAPSHOT_SCHEMA_VERSION: Int = 2
+const val EXPORT_SNAPSHOT_SCHEMA_VERSION: Int = 3
 
 /**
  * Canonical, versioned snapshot of a project's export-relevant state at a known
@@ -23,9 +34,16 @@ const val EXPORT_SNAPSHOT_SCHEMA_VERSION: Int = 2
  * Per-phase summaries are intentionally not embedded: they are expensive,
  * intent/model-specific derived artifacts resolved via the summary cache/pipeline.
  *
- * Compatibility: additive fields carry defaults so older snapshots that omit them
- * (or readers that ignore unknown fields) remain usable; [schemaVersion] records
- * the writer's snapshot shape.
+ * Compatibility directives:
+ * - Prefer canonical fields/state when writing and reading. For questions, canonical
+ *   state is [ExportQuestionSnapshot.answerState] + [ExportQuestionSnapshot.answerId]
+ *   + [ExportQuestionSnapshot.answers] (active Draft/Answered snapshot is latest by
+ *   createdAt).
+ * - Backward compatibility is crucial: modern importers must read older exports by
+ *   falling back through older revisions/legacy fields as needed.
+ * - Forward compatibility is not a priority right now; no old readers are in the wild.
+ *   New exports may omit deprecated compat fields, but keep them readable.
+ * - Do not use content sentinels; use null/defaults and schema/version signals.
  */
 @Serializable
 data class ExportSnapshot(
@@ -127,9 +145,13 @@ data class ExportQuestionSnapshot(
   val compacted: Boolean = false,
   /** Committed answer id, when the question has a current committed answer. */
   val answerId: String? = null,
+  /** Current answer state. See [alphainterplanetary.thinker.model.AnswerState]. */
+  val answerState: String = AnswerState.Unanswered.name,
+  /** @deprecated Read-compat for schema v2 snapshots; derive from [answerState]/[answers]. */
   val draftText: String? = null,
+  /** @deprecated Read-compat for schema v2 snapshots; derive from [answerState]/[answers]. */
   val draftUpdatedAtEpochMs: Long? = null,
-  /** All committed answer versions (immutable history), in storage order. */
+  /** All answer snapshot versions (immutable history), in storage order. */
   val answers: List<ExportAnswerSnapshot> = emptyList(),
 )
 
@@ -142,26 +164,24 @@ data class ExportAnswerSnapshot(
   val createdAtEpochMs: Long,
 )
 
-private fun alphainterplanetary.thinker.model.Question.toSnapshotRecord(): ExportQuestionSnapshot =
-  ExportQuestionSnapshot(
-    id = id,
-    text = text,
-    timestampEpochMs = timestamp.toEpochMilliseconds(),
-    roundId = roundId,
-    ignoredAtEpochMs = ignoredAt?.toEpochMilliseconds(),
-    compacted = compacted,
-    answerId = answerId,
-    draftText = draftText,
-    draftUpdatedAtEpochMs = draftUpdatedAt?.toEpochMilliseconds(),
-    answers = answers.map { answer ->
-      ExportAnswerSnapshot(
-        id = answer.id,
-        questionId = answer.questionId,
-        text = answer.text,
-        createdAtEpochMs = answer.createdAt.toEpochMilliseconds(),
-      )
-    },
-  )
+private fun Question.toSnapshotRecord(): ExportQuestionSnapshot = ExportQuestionSnapshot(
+  id = id,
+  text = text,
+  timestampEpochMs = timestamp.toEpochMilliseconds(),
+  roundId = roundId,
+  ignoredAtEpochMs = ignoredAt?.toEpochMilliseconds(),
+  compacted = compacted,
+  answerId = answerId,
+  answerState = answerState.name,
+  answers = answers.map { answer ->
+    ExportAnswerSnapshot(
+      id = answer.id,
+      questionId = answer.questionId,
+      text = answer.text,
+      createdAtEpochMs = answer.createdAt.toEpochMilliseconds(),
+    )
+  },
+)
 
 private fun alphainterplanetary.thinker.model.Round.toSnapshotRecord(): ExportRoundSnapshot =
   ExportRoundSnapshot(

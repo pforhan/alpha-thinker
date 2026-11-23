@@ -129,9 +129,13 @@ class ExportSnapshotTest {
 
     val draftSnap = records.getValue("qDraft")
     assertNull(draftSnap.answerId)
-    assertEquals("in progress", draftSnap.draftText)
-    assertEquals(t3.toEpochMilliseconds(), draftSnap.draftUpdatedAtEpochMs)
-    assertTrue(draftSnap.answers.isEmpty())
+    assertEquals("Draft", draftSnap.answerState)
+    assertNull(draftSnap.draftText)
+    assertNull(draftSnap.draftUpdatedAtEpochMs)
+    assertEquals(
+      listOf(ExportAnswerSnapshot("qDraft-draft", "qDraft", "in progress", t3.toEpochMilliseconds())),
+      draftSnap.answers,
+    )
 
     val ignoredSnap = records.getValue("qIgnored")
     assertEquals(t2.toEpochMilliseconds(), ignoredSnap.ignoredAtEpochMs)

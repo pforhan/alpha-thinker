@@ -463,7 +463,8 @@ class ProjectRepositoryTest {
     assertFalse(q.isAnswered)
     assertTrue(q.isDraft)
     assertEquals("Edited", q.draftText)
-    assertEquals(1, q.answers.size, "the committed version stays in immutable history")
+    assertEquals(2, q.answers.size, "the committed version stays in immutable history alongside the draft snapshot")
+    assertTrue(q.answers.any { it.text == "Answer" })
   }
 
   @Test

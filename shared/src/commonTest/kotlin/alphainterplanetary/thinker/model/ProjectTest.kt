@@ -32,54 +32,63 @@ class ProjectTest {
   // ---------- invariant rails ----------
 
   @Test
-  fun `question cannot be committed and a draft at the same time`() {
+  fun `draft state requires an answer snapshot`() {
     assertFailsWith<IllegalArgumentException> {
       Question(
         id = "q",
         text = "Q",
         timestamp = Instant.fromEpochMilliseconds(0),
         roundId = "ctx",
-        answerId = "1",
-        draftText = "draft",
-        draftUpdatedAt = Instant.fromEpochMilliseconds(0),
-        answers = listOf(
-          Answer(
-            id = "1",
-            questionId = "q",
-            text = "a",
-            createdAt = Instant.fromEpochMilliseconds(0),
-          )
-        ),
-      )
-    }
-  }
-
-  @Test
-  fun `question with draft text requires a draft timestamp`() {
-    assertFailsWith<IllegalArgumentException> {
-      Question(
-        id = "q",
-        text = "Q",
-        timestamp = Instant.fromEpochMilliseconds(0),
-        roundId = "ctx",
-        draftText = "draft",
-        draftUpdatedAt = null,
-      )
-    }
-  }
-
-  @Test
-  fun `question answerId must reference a stored answer`() {
-    assertFailsWith<IllegalArgumentException> {
-      Question(
-        id = "q",
-        text = "Q",
-        timestamp = Instant.fromEpochMilliseconds(0),
-        roundId = "ctx",
-        answerId = "99",
+        answerState = AnswerState.Draft,
         answers = emptyList(),
       )
     }
+  }
+
+  @Test
+  fun `answered state requires an answer snapshot`() {
+    assertFailsWith<IllegalArgumentException> {
+      Question(
+        id = "q",
+        text = "Q",
+        timestamp = Instant.fromEpochMilliseconds(0),
+        roundId = "ctx",
+        answerState = AnswerState.Answered,
+        answers = emptyList(),
+      )
+    }
+  }
+
+  @Test
+  fun `answerState helpers expose committed vs draft state`() {
+    val committed = Answer(id = "a1", questionId = "q", text = "A", createdAt = Instant.fromEpochMilliseconds(0))
+    val draft = Answer(id = "d1", questionId = "q", text = "D", createdAt = Instant.fromEpochMilliseconds(1))
+
+    val answered = Question(
+      id = "q",
+      text = "Q",
+      timestamp = Instant.fromEpochMilliseconds(0),
+      roundId = "ctx",
+      answerState = AnswerState.Answered,
+      answers = listOf(committed),
+    )
+    assertEquals("a1", answered.answerId)
+    assertNull(answered.draftAnswerId)
+    assertEquals("A", answered.currentAnswer?.text)
+    assertNull(answered.currentDraft)
+
+    val drafted = Question(
+      id = "q",
+      text = "Q",
+      timestamp = Instant.fromEpochMilliseconds(0),
+      roundId = "ctx",
+      answerState = AnswerState.Draft,
+      answers = listOf(draft),
+    )
+    assertNull(drafted.answerId)
+    assertEquals("d1", drafted.draftAnswerId)
+    assertNull(drafted.currentAnswer)
+    assertEquals("D", drafted.currentDraft?.text)
   }
 
   // ---------- deck mechanics ----------

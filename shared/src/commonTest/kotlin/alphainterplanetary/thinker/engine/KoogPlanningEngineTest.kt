@@ -384,7 +384,9 @@ class KoogPlanningEngineTest {
       question(id = "What is the MVP?").withAnswer(
         Answer(questionId = "What is the MVP?", text = "A menu planner", createdAt = now()),
       ),
-      question(id = "Who is this for?").withDraft("home cooks", now()),
+      question(id = "Who is this for?").withDraft(
+        Answer(questionId = "Who is this for?", text = "home cooks", createdAt = now()),
+      ),
       question(id = "How much will it cost?").withIgnored(now()),
       question(id = "What is the timeline?"),
       question(id = "Who owns this?").asCompacted(),

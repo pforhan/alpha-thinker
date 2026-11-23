@@ -5,14 +5,16 @@ import kotlin.time.Instant
 /**
  * A question and its answer state.
  *
- * The committed/draft state lives on the question (not on the immutable
- * [Answer] history rows): [answerId] points at the current committed version,
- * and [draftText] holds in-progress text. A question is either committed or a
- * draft — never both (see the [init] guards).
+ * All answer snapshots live in [answers] as immutable full-text rows (no
+ * revision kind is stored on [Answer]). [answerState] is the single source of
+ * truth for whether the question is unanswered, draft, or answered. When state
+ * is [AnswerState.Draft] or [AnswerState.Answered], the active snapshot is the
+ * latest row in [answers] by [Answer.createdAt]; [AnswerState.Unanswered] means
+ * no active snapshot even if history exists.
  *
  * State transitions go through the [withAnswer], [withDraft], [withoutAnswer],
- * [asCompacted], [withIgnored], and [withoutIgnored] mutators so the
- * committed/draft invariants can't be broken by ad-hoc [copy] calls.
+ * [asCompacted], [withIgnored], and [withoutIgnored] mutators so invariants
+ * can't be broken by ad-hoc [copy] calls.
  */
 data class Question(
   val id: String,
@@ -20,9 +22,7 @@ data class Question(
   val timestamp: Instant,
   val roundId: String,
   val ignoredAt: Instant? = null,
-  val answerId: String? = null,
-  val draftText: String? = null,
-  val draftUpdatedAt: Instant? = null,
+  val answerState: AnswerState = AnswerState.Unanswered,
   val answers: List<Answer> = emptyList(),
   /**
    * Set only on the throwaway copies a transcript builder makes when an answer
@@ -38,23 +38,42 @@ data class Question(
   val compacted: Boolean = false,
 ) {
   init {
-    require(answerId == null || draftText.isNullOrBlank()) {
-      "Question $id has both a committed answer ($answerId) and draft text; " +
-        "a question cannot be committed and unresolved at the same time"
+    require(answerState != AnswerState.Draft || latestAnswer != null) {
+      "Question $id is Draft but has no answer snapshots"
     }
-    require(draftText.isNullOrBlank() || draftUpdatedAt != null) {
-      "Question $id has draft text but no draftUpdatedAt"
-    }
-    require(answerId == null || answers.any { it.id == answerId }) {
-      "Question $id points at answerId=$answerId but no such answer is stored"
+    require(answerState != AnswerState.Answered || latestAnswer != null) {
+      "Question $id is Answered but has no answer snapshots"
     }
   }
 
+  private val latestAnswer: Answer?
+    get() = answers.maxWithOrNull(compareBy({ it.createdAt }, { it.id }))
+
+  /** Committed answer id, or null when draft/unanswered. */
+  val answerId: String?
+    get() = if (answerState == AnswerState.Answered) latestAnswer?.id else null
+
+  /** Current draft snapshot id, or null when not in draft state. */
+  val draftAnswerId: String?
+    get() = if (answerState == AnswerState.Draft) latestAnswer?.id else null
+
   val currentAnswer: Answer?
-    get() = answerId?.let { id -> answers.find { it.id == id } }
+    get() = if (answerState == AnswerState.Answered) latestAnswer else null
+
+  val currentDraft: Answer?
+    get() = if (answerState == AnswerState.Draft) latestAnswer else null
+
+  val draftText: String?
+    get() = currentDraft?.text
+
+  val draftUpdatedAt: Instant?
+    get() = currentDraft?.createdAt
+
+  val isDraft: Boolean
+    get() = answerState == AnswerState.Draft
 
   val isAnswered: Boolean
-    get() = currentAnswer != null
+    get() = answerState == AnswerState.Answered
 
   val isUnanswered: Boolean
     get() = !isAnswered && !isIgnored
@@ -62,26 +81,18 @@ data class Question(
   val isIgnored: Boolean
     get() = ignoredAt != null
 
-  val isDraft: Boolean
-    get() = !draftText.isNullOrBlank()
-
   fun withAnswer(answer: Answer): Question = copy(
-    answerId = answer.id,
-    draftText = null,
-    draftUpdatedAt = null,
+    answerState = AnswerState.Answered,
     answers = answers + answer,
   )
 
-  fun withDraft(text: String, updatedAt: Instant): Question = copy(
-    answerId = null,
-    draftText = text,
-    draftUpdatedAt = updatedAt,
+  fun withDraft(answer: Answer): Question = copy(
+    answerState = AnswerState.Draft,
+    answers = answers + answer,
   )
 
   fun withoutAnswer(): Question = copy(
-    answerId = null,
-    draftText = null,
-    draftUpdatedAt = null,
+    answerState = AnswerState.Unanswered,
   )
 
   /**
@@ -91,9 +102,7 @@ data class Question(
    * only (see [compacted]); nothing persists the result.
    */
   fun asCompacted(): Question = copy(
-    answerId = null,
-    draftText = null,
-    draftUpdatedAt = null,
+    answerState = AnswerState.Unanswered,
     compacted = true,
   )
 
@@ -102,9 +111,7 @@ data class Question(
   fun withoutIgnored(): Question = copy(ignoredAt = null)
 
   fun resetState(): Question = copy(
-    answerId = null,
-    draftText = null,
-    draftUpdatedAt = null,
+    answerState = AnswerState.Unanswered,
     ignoredAt = null,
     compacted = false,
   )

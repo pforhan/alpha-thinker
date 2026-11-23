@@ -92,7 +92,7 @@ class ProjectInterchangeImportTest {
     assertEquals(ImportProjectAction.ImportAsNew, candidate.action)
     assertEquals(1, candidate.stats.rounds)
     assertEquals(2, candidate.stats.questions)
-    assertEquals(2, candidate.stats.answers)
+    assertEquals(3, candidate.stats.answers)
   }
 
   @Test
@@ -246,5 +246,98 @@ class ProjectInterchangeImportTest {
     assertEquals("r1", imported.rounds.single().id)
     assertEquals(NoPhase, imported.rounds.single().phase)
     assertEquals("q1", imported.questions.single().id)
+  }
+
+  @Test
+  fun importDerivesAnswerStateFromV2StyleSnapshotFields() {
+    // v2-style payload: no answerState/draftAnswerId/isDraft, draft represented by draftText.
+    val v2Json = """
+      {
+        "schemaVersion": 1,
+        "exportedAtEpochMs": 99,
+        "appId": "alpha-thinker",
+        "projects": [
+          {
+            "snapshot": {
+              "schemaVersion": 2,
+              "projectId": "p1",
+              "title": "Old",
+              "synopsis": "S",
+              "status": "Draft",
+              "createdAtEpochMs": 0,
+              "revisionUpdatedAtEpochMs": 3000,
+              "rounds": [
+                {
+                  "id": "r1",
+                  "projectId": "p1",
+                  "phaseKey": "scope-goals",
+                  "roundNumber": 1,
+                  "origin": "Initial",
+                  "startedAtEpochMs": 1000,
+                  "outcome": "Pending"
+                }
+              ],
+              "phases": [
+                {
+                  "phaseKey": "scope-goals",
+                  "phaseLabel": "Scope & Goals",
+                  "phaseOrder": 1,
+                  "questions": [
+                    {
+                      "id": "qAnswered",
+                      "text": "Answered?",
+                      "timestampEpochMs": 1000,
+                      "roundId": "r1",
+                      "answerId": "a2",
+                      "answers": [
+                        { "id": "a1", "questionId": "qAnswered", "text": "Old", "createdAtEpochMs": 1000 },
+                        { "id": "a2", "questionId": "qAnswered", "text": "Current", "createdAtEpochMs": 2000 }
+                      ]
+                    },
+                    {
+                      "id": "qDraft",
+                      "text": "Draft?",
+                      "timestampEpochMs": 2000,
+                      "roundId": "r1",
+                      "draftText": "wip",
+                      "draftUpdatedAtEpochMs": 3000,
+                      "answers": []
+                    },
+                    {
+                      "id": "qOpen",
+                      "text": "Open?",
+                      "timestampEpochMs": 2000,
+                      "roundId": "r1",
+                      "answers": []
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    """.trimIndent()
+
+    val plan = ProjectInterchangeImport.analyze(gzipCompress(v2Json.encodeToByteArray()))
+
+    assertTrue(plan.isReadable)
+    assertFalse(plan.hasErrors)
+    val imported = ProjectInterchangeImport.toProject(plan.projects.single().snapshot, newProjectId = "new")
+
+    val answered = imported.questions.first { it.id != "qDraft" && it.id != "qOpen" }
+    assertTrue(answered.isAnswered)
+    assertEquals("Current", answered.currentAnswer?.text)
+    assertEquals(2, answered.answers.size)
+
+    val draft = imported.questions.first { it.id == "qDraft" || it.text == "Draft?" }
+    assertTrue(draft.isDraft)
+    assertEquals("wip", draft.draftText)
+    assertTrue(draft.answers.any { it.text == "wip" })
+
+    val open = imported.questions.first { it.text == "Open?" }
+    assertTrue(open.isUnanswered)
+    assertNull(open.currentAnswer)
+    assertNull(open.currentDraft)
   }
 }

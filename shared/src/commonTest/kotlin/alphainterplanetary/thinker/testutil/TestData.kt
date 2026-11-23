@@ -1,6 +1,7 @@
 package alphainterplanetary.thinker.testutil
 
 import alphainterplanetary.thinker.model.Answer
+import alphainterplanetary.thinker.model.AnswerState
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.model.Round
 import alphainterplanetary.thinker.model.RoundOrigin
@@ -45,17 +46,41 @@ fun question(
   roundId: String = "ctx",
   draftText: String? = null,
   draftUpdatedAt: Instant? = null,
-): Question = Question(
-  id = id,
-  text = text,
-  timestamp = timestamp,
-  roundId = roundId,
-  ignoredAt = ignoredAt,
-  answerId = answers.lastOrNull()?.id,
-  draftText = draftText,
-  draftUpdatedAt = draftUpdatedAt,
-  answers = answers,
-)
+  draftAnswerId: String? = null,
+  isDraft: Boolean = false,
+): Question {
+  val resolvedDraft = when {
+    draftText != null -> {
+      val draftId = draftAnswerId ?: "${id}-draft"
+      val draft = Answer(
+        id = draftId,
+        questionId = id,
+        text = draftText,
+        createdAt = draftUpdatedAt ?: defaultTestInstant,
+      )
+      draftId to draft
+    }
+
+    draftAnswerId != null -> draftAnswerId to null
+    else -> null
+  }
+  val allAnswers = if (resolvedDraft?.second != null) answers + resolvedDraft.second!! else answers
+  val resolvedIsDraft = isDraft || resolvedDraft != null
+  val answerState = when {
+    resolvedIsDraft -> AnswerState.Draft
+    allAnswers.isNotEmpty() -> AnswerState.Answered
+    else -> AnswerState.Unanswered
+  }
+  return Question(
+    id = id,
+    text = text,
+    timestamp = timestamp,
+    roundId = roundId,
+    ignoredAt = ignoredAt,
+    answerState = answerState,
+    answers = allAnswers,
+  )
+}
 
 fun round(
   id: String,
