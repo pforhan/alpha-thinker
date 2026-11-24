@@ -659,6 +659,38 @@ class ProjectRepositoryTest {
     assertNull(result)
   }
 
+  @Test
+  fun `restoreAnswerRevision creates a new immutable snapshot`() = runTest {
+    val a1 = answer("q1", "First", id = "a1")
+    val a2 = answer("q1", "Second", id = "a2")
+    val original = Project(
+      id = "p1",
+      synopsis = "s",
+      title = "t",
+      status = "Draft",
+      questions = listOf(question("q1", answers = listOf(a1, a2))),
+      createdAt = now,
+      updatedAt = now,
+    )
+    val storage = FakeStorage(mutableMapOf("p1" to original))
+    val repository = repo(storage = storage)
+
+    val restoredAsDraft = repository.restoreAnswerRevision("p1", "q1", "a1", restoreAsDraft = true)
+    assertNotNull(restoredAsDraft)
+    val draftQuestion = restoredAsDraft.questions.single()
+    assertTrue(draftQuestion.isDraft)
+    assertEquals("First", draftQuestion.draftText)
+    assertEquals(3, draftQuestion.answers.size)
+    assertTrue(draftQuestion.answers.any { it.id == "a1" && it.text == "First" })
+
+    val restoredAsAnswer = repository.restoreAnswerRevision("p1", "q1", "a1", restoreAsDraft = false)
+    assertNotNull(restoredAsAnswer)
+    val answeredQuestion = restoredAsAnswer.questions.single()
+    assertTrue(answeredQuestion.isAnswered)
+    assertEquals("First", answeredQuestion.currentAnswer?.text)
+    assertEquals(4, answeredQuestion.answers.size)
+  }
+
   // ---------- generateMoreQuestions ----------
 
   @Test

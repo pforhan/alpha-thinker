@@ -406,6 +406,29 @@ class ProjectRepository @Inject constructor(
     return updatedProject
   }
 
+  /**
+   * Restores a historical answer snapshot as a new immutable snapshot.
+   *
+   * [restoreAsDraft] selects the target state: true creates a new draft snapshot,
+   * false creates a new committed answer version. History is never rewritten.
+   */
+  suspend fun restoreAnswerRevision(
+    projectId: String,
+    questionId: String,
+    revisionAnswerId: String,
+    restoreAsDraft: Boolean,
+  ): Project? {
+    val project = storage.getProject(projectId) ?: return null
+    val question = project.questions.find { it.id == questionId } ?: return null
+    val revision = question.answers.find { it.id == revisionAnswerId } ?: return null
+    return saveAnswer(
+      projectId = projectId,
+      questionId = questionId,
+      text = revision.text,
+      completed = !restoreAsDraft,
+    )
+  }
+
   /** Records a lightweight research handoff (browser launch) for a question. */
   suspend fun logResearchHandoff(projectId: String, query: String) {
     val trimmed = query.trim()

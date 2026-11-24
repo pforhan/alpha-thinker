@@ -578,4 +578,24 @@ class ProjectTest {
 
     assertEquals(BuiltInPhase.Research, p.nextPhaseSuggestions.first())
   }
+
+  @Test
+  fun `revisionHistory returns answer snapshots newest-first and marks current`() {
+    val a1 = Answer(id = "a1", questionId = "q1", text = "first", createdAt = Instant.fromEpochMilliseconds(1000))
+    val a2 = Answer(id = "a2", questionId = "q1", text = "second", createdAt = Instant.fromEpochMilliseconds(2000))
+    val a3 = Answer(id = "a3", questionId = "q1", text = "draft", createdAt = Instant.fromEpochMilliseconds(3000))
+    val q = Question(
+      id = "q1",
+      text = "Q",
+      timestamp = Instant.fromEpochMilliseconds(0),
+      roundId = "r1",
+      answerState = AnswerState.Draft,
+      answers = listOf(a1, a2, a3),
+    )
+
+    val history = q.revisionHistory()
+
+    assertEquals(listOf("a3", "a2", "a1"), history.map { it.answer.id })
+    assertEquals(listOf(true, false, false), history.map { it.isCurrent })
+  }
 }

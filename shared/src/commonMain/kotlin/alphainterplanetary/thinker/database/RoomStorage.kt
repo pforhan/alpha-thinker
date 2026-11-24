@@ -111,8 +111,10 @@ class RoomStorage @Inject constructor(private val database: AppDatabase) : Stora
   }
 
   override suspend fun updateQuestionText(projectId: String, questionId: String, text: String) {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty()) return
     database.withWriteTransaction {
-      database.questionDao().updateQuestionText(questionId, projectId, text)
+      database.questionDao().updateQuestionText(questionId, projectId, trimmed)
       database.projectDao().updateProjectUpdatedAt(projectId, now().toEpochMilliseconds())
     }
   }

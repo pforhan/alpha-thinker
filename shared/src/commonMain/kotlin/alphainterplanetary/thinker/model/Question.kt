@@ -81,6 +81,17 @@ data class Question(
   val isIgnored: Boolean
     get() = ignoredAt != null
 
+  /** All answer snapshots newest-first, with a marker for the active snapshot. */
+  fun revisionHistory(): List<AnswerRevision> {
+    val currentId = when (answerState) {
+      AnswerState.Answered, AnswerState.Draft -> latestAnswer?.id
+      AnswerState.Unanswered -> null
+    }
+    return answers
+      .sortedWith(compareByDescending<Answer> { it.createdAt }.thenByDescending { it.id })
+      .map { answer -> AnswerRevision(answer = answer, isCurrent = answer.id == currentId) }
+  }
+
   fun withAnswer(answer: Answer): Question = copy(
     answerState = AnswerState.Answered,
     answers = answers + answer,
