@@ -12,3 +12,6 @@ data class Answer(
   val text: String,
   val createdAt: Instant,
 )
+
+val ANSWER_NEWEST_FIRST: Comparator<Answer> =
+      compareByDescending<Answer> { it.createdAt }.thenByDescending { it.id }

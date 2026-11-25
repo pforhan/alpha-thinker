@@ -86,7 +86,7 @@ class ExportSnapshotTest {
       text = "Answered?",
       roundId = "r1",
       timestamp = t1,
-      answers = listOf(a1, a2),
+      answers = listOf(a2, a1),
     )
     val draft = question(
       id = "qDraft",
@@ -121,8 +121,8 @@ class ExportSnapshotTest {
     assertNull(answeredSnap.draftText)
     assertEquals(
       listOf(
-        ExportAnswerSnapshot("a1", "qAnswered", "Old", t1.toEpochMilliseconds()),
         ExportAnswerSnapshot("a2", "qAnswered", "Current", t2.toEpochMilliseconds()),
+        ExportAnswerSnapshot("a1", "qAnswered", "Old", t1.toEpochMilliseconds()),
       ),
       answeredSnap.answers,
     )

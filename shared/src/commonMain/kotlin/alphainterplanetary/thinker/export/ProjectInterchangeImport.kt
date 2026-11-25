@@ -1,5 +1,6 @@
 package alphainterplanetary.thinker.export
 
+import alphainterplanetary.thinker.model.ANSWER_NEWEST_FIRST
 import alphainterplanetary.thinker.model.Answer
 import alphainterplanetary.thinker.model.AnswerState
 import alphainterplanetary.thinker.model.Project
@@ -431,20 +432,16 @@ object ProjectInterchangeImport {
           else -> AnswerState.Unanswered
         }
 
-        // The model treats the latest snapshot by createdAt as active when Draft/Answered.
-        val normalizedAnswers = if (activeId != null) {
-          val latest = answers.maxWithOrNull(compareBy({ it.createdAt }, { it.id }))
-          val active = answers.find { it.id == activeId }
-          if (latest != null && active != null && latest.id != active.id) {
-            val bumped = active.copy(
-              createdAt = Instant.fromEpochMilliseconds(latest.createdAt.toEpochMilliseconds() + 1)
-            )
-            answers.map { if (it.id == active.id) bumped else it }
-          } else {
-            answers
-          }
-        } else {
-          answers
+        // The model treats the newest snapshot by (createdAt, id) as active when Draft/Answered.
+        val normalizedAnswers = run {
+          val sorted = answers.sortedWith(ANSWER_NEWEST_FIRST)
+          val latest = sorted.firstOrNull()
+          if (activeId == null || latest == null || latest.id == activeId) return@run sorted
+          val active = sorted.firstOrNull { it.id == activeId } ?: return@run sorted
+          val bumped = active.copy(
+            createdAt = Instant.fromEpochMilliseconds(latest.createdAt.toEpochMilliseconds() + 1)
+          )
+          listOf(bumped) + sorted.filter { it.id != activeId }
         }
 
         Question(

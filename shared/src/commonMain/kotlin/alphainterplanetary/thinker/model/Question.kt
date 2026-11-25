@@ -6,11 +6,11 @@ import kotlin.time.Instant
  * A question and its answer state.
  *
  * All answer snapshots live in [answers] as immutable full-text rows (no
- * revision kind is stored on [Answer]). [answerState] is the single source of
- * truth for whether the question is unanswered, draft, or answered. When state
- * is [AnswerState.Draft] or [AnswerState.Answered], the active snapshot is the
- * latest row in [answers] by [Answer.createdAt]; [AnswerState.Unanswered] means
- * no active snapshot even if history exists.
+ * revision kind is stored on [Answer]), newest-first by ([Answer.createdAt], id).
+ * [answerState] is the single source of truth for whether the question is
+ * unanswered, draft, or answered. When state is [AnswerState.Draft] or
+ * [AnswerState.Answered], the active snapshot is [answers].first(); [AnswerState.Unanswered]
+ * means no active snapshot even if history exists.
  *
  * State transitions go through the [withAnswer], [withDraft], [withoutAnswer],
  * [asCompacted], [withIgnored], and [withoutIgnored] mutators so invariants
@@ -38,6 +38,9 @@ data class Question(
   val compacted: Boolean = false,
 ) {
   init {
+    require(answers == answers.sortedWith(ANSWER_NEWEST_FIRST)) {
+      "Question $id answers must be newest-first by (createdAt, id)"
+    }
     require(answerState != AnswerState.Draft || latestAnswer != null) {
       "Question $id is Draft but has no answer snapshots"
     }
@@ -47,7 +50,7 @@ data class Question(
   }
 
   private val latestAnswer: Answer?
-    get() = answers.maxWithOrNull(compareBy({ it.createdAt }, { it.id }))
+    get() = answers.firstOrNull()
 
   /** Committed answer id, or null when draft/unanswered. */
   val answerId: String?
@@ -81,25 +84,17 @@ data class Question(
   val isIgnored: Boolean
     get() = ignoredAt != null
 
-  /** All answer snapshots newest-first, with a marker for the active snapshot. */
-  fun revisionHistory(): List<AnswerRevision> {
-    val currentId = when (answerState) {
-      AnswerState.Answered, AnswerState.Draft -> latestAnswer?.id
-      AnswerState.Unanswered -> null
-    }
-    return answers
-      .sortedWith(compareByDescending<Answer> { it.createdAt }.thenByDescending { it.id })
-      .map { answer -> AnswerRevision(answer = answer, isCurrent = answer.id == currentId) }
-  }
+  /** All answer snapshots newest-first; active snapshot is [currentAnswer] or [currentDraft]. */
+  fun revisionHistory(): List<Answer> = answers
 
   fun withAnswer(answer: Answer): Question = copy(
     answerState = AnswerState.Answered,
-    answers = answers + answer,
+    answers = listOf(answer) + answers,
   )
 
   fun withDraft(answer: Answer): Question = copy(
     answerState = AnswerState.Draft,
-    answers = answers + answer,
+    answers = listOf(answer) + answers,
   )
 
   fun withoutAnswer(): Question = copy(

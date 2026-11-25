@@ -56,7 +56,7 @@ class ProjectInterchangeImportTest {
     )
     val a1 = answer("q1", "Old", id = "a1", createdAt = t1)
     val a2 = answer("q1", "Current", id = "a2", createdAt = t2)
-    val q1 = question(id = "q1", text = "Question?", roundId = "r1", timestamp = t1, answers = listOf(a1, a2))
+    val q1 = question(id = "q1", text = "Question?", roundId = "r1", timestamp = t1, answers = listOf(a2, a1))
     val qDraft = question(
       id = "qDraft",
       text = "Draft?",

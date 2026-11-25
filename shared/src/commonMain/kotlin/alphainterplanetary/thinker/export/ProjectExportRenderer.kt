@@ -105,12 +105,11 @@ class ProjectExportRenderer(
 
     if (question.answerId != null) {
       val current = question.answers.find { it.id == question.answerId }
-        ?: question.answers.lastOrNull()
+        ?: question.answers.firstOrNull()
       if (current != null) {
         val revisions = if (config.includeAnswerRevisionHistory) {
           question.answers
             .filter { it.id != current.id }
-            .sortedByDescending { it.createdAtEpochMs }
             .map { ExportAnswerRevision(text = it.text, createdAt = formatEpochMs(it.createdAtEpochMs)) }
         } else {
           emptyList()
@@ -126,7 +125,7 @@ class ProjectExportRenderer(
     }
 
     val draftText = if (question.answerState == AnswerState.Draft.name) {
-      question.answers.maxByOrNull { it.createdAtEpochMs }?.text ?: question.draftText
+      question.answers.firstOrNull()?.text ?: question.draftText
     } else {
       question.draftText
     }
@@ -173,7 +172,6 @@ class ProjectExportRenderer(
       val revisions = if (config.includeAnswerRevisionHistory) {
         question.answers
           .filter { it.id != current.id }
-          .sortedByDescending { it.createdAt }
           .map { ExportAnswerRevision(text = it.text, createdAt = it.createdAt.toString()) }
       } else {
         emptyList()

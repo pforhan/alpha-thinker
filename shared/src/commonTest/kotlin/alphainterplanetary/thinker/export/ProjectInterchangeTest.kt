@@ -93,7 +93,7 @@ class ProjectInterchangeTest {
       text = "Question?",
       roundId = "r1",
       timestamp = t1,
-      answers = listOf(a1, a2),
+      answers = listOf(a2, a1),
       draftText = null,
     )
     val snapshot = ExportSnapshot.from(
@@ -136,7 +136,7 @@ class ProjectInterchangeTest {
     val question = project.phases.single().questions.single()
     assertEquals("q1", question.id)
     assertEquals("a2", question.answerId)
-    assertEquals(listOf("a1", "a2"), question.answers.map { it.id })
+    assertEquals(listOf("a2", "a1"), question.answers.map { it.id })
   }
 
   @Test

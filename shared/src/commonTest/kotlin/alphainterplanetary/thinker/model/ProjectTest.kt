@@ -590,12 +590,12 @@ class ProjectTest {
       timestamp = Instant.fromEpochMilliseconds(0),
       roundId = "r1",
       answerState = AnswerState.Draft,
-      answers = listOf(a1, a2, a3),
+      answers = listOf(a3, a2, a1),
     )
 
     val history = q.revisionHistory()
 
-    assertEquals(listOf("a3", "a2", "a1"), history.map { it.answer.id })
-    assertEquals(listOf(true, false, false), history.map { it.isCurrent })
+    assertEquals(listOf("a3", "a2", "a1"), history.map { it.id })
+    assertEquals(listOf(true, false, false), history.map { it.id == q.currentDraft?.id })
   }
 }

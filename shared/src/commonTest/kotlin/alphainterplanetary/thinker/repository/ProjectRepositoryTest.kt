@@ -522,9 +522,9 @@ class ProjectRepositoryTest {
 
     assertNotNull(updated)
     val q = updated.questions.single()
-    assertEquals(2, q.answers.size, "an edit appends an immutable version")
+    assertEquals(2, q.answers.size, "an edit adds an immutable version")
     assertEquals("Second", q.currentAnswer?.text)
-    assertEquals(listOf("First", "Second"), q.answers.map { it.text })
+    assertEquals(listOf("Second", "First"), q.answers.map { it.text })
   }
 
   @Test
@@ -668,7 +668,7 @@ class ProjectRepositoryTest {
       synopsis = "s",
       title = "t",
       status = "Draft",
-      questions = listOf(question("q1", answers = listOf(a1, a2))),
+      questions = listOf(question("q1", answers = listOf(a2, a1))),
       createdAt = now,
       updatedAt = now,
     )
