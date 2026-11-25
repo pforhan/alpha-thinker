@@ -55,6 +55,10 @@ internal fun CompactLandscapeAnswerDialog(
   onUnignore: () -> Unit,
   onDelete: () -> Unit,
   onResearch: () -> Unit,
+  historyExpanded: Boolean,
+  onHistoryExpandedChange: (Boolean) -> Unit,
+  currentEditorText: String,
+  onUseRevision: (String) -> Unit,
   onSaveDraft: () -> Unit,
   onSaveAnswer: () -> Unit,
 ) {
@@ -184,6 +188,14 @@ internal fun CompactLandscapeAnswerDialog(
                 }
               }
             }
+
+            AnswerRevisionHistory(
+              question = question,
+              expanded = historyExpanded,
+              onExpandedChange = onHistoryExpandedChange,
+              currentEditorText = currentEditorText,
+              onUseRevision = onUseRevision,
+            )
 
             if (hasAnswer) {
               HorizontalDivider()

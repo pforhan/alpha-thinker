@@ -62,12 +62,15 @@ fun AnswerDialog(
   onResearch: (String) -> Unit,
   onResult: (AnswerDialogResult, String, String?) -> Unit,
 ) {
-  val initialText = question.currentAnswer?.text ?: question.draftText ?: ""
-  var answerText by remember { mutableStateOf(initialText) }
-  var questionText by remember { mutableStateOf(question.text) }
-  var editingQuestion by remember { mutableStateOf(false) }
+  val snapshotKey = Triple(question.answerState, question.currentAnswer?.id, question.currentDraft?.id)
+  var answerText by remember(question.id, snapshotKey) {
+    mutableStateOf(question.currentAnswer?.text ?: question.draftText ?: "")
+  }
+  var questionText by remember(question.id, question.text) { mutableStateOf(question.text) }
+  var editingQuestion by remember(question.id, question.text) { mutableStateOf(false) }
   var showResearchTerms by remember { mutableStateOf(false) }
-  var researchTerms by remember { mutableStateOf(question.text) }
+  var researchTerms by remember(question.id, question.text) { mutableStateOf(question.text) }
+  var historyExpanded by remember(question.id) { mutableStateOf(false) }
   val focusRequester = remember { FocusRequester() }
   val uriHandler = LocalUriHandler.current
 
@@ -125,6 +128,10 @@ fun AnswerDialog(
         onUnignore = { onResult(AnswerDialogResult.Unignored, "", editedQuestionText()) },
         onDelete = { onResult(AnswerDialogResult.DeletedAnswer, "", editedQuestionText()) },
         onResearch = { showResearchTerms = true },
+        historyExpanded = historyExpanded,
+        onHistoryExpandedChange = { historyExpanded = it },
+        currentEditorText = answerText,
+        onUseRevision = { answerText = it },
         onSaveDraft = { save(completed = false) },
         onSaveAnswer = { save(completed = true) },
       )
@@ -144,6 +151,10 @@ fun AnswerDialog(
         onUnignore = { onResult(AnswerDialogResult.Unignored, "", editedQuestionText()) },
         onDelete = { onResult(AnswerDialogResult.DeletedAnswer, "", editedQuestionText()) },
         onResearch = { showResearchTerms = true },
+        historyExpanded = historyExpanded,
+        onHistoryExpandedChange = { historyExpanded = it },
+        currentEditorText = answerText,
+        onUseRevision = { answerText = it },
         onSaveDraft = { save(completed = false) },
         onSaveAnswer = { save(completed = true) },
       )

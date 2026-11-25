@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Edit
@@ -49,6 +51,10 @@ internal fun StandardAnswerDialog(
   onUnignore: () -> Unit,
   onDelete: () -> Unit,
   onResearch: () -> Unit,
+  historyExpanded: Boolean,
+  onHistoryExpandedChange: (Boolean) -> Unit,
+  currentEditorText: String,
+  onUseRevision: (String) -> Unit,
   onSaveDraft: () -> Unit,
   onSaveAnswer: () -> Unit,
 ) {
@@ -100,7 +106,7 @@ internal fun StandardAnswerDialog(
       }
     },
     text = {
-      Column {
+      Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
         if (question.isIgnored) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -159,6 +165,14 @@ internal fun StandardAnswerDialog(
             Text("Research")
           }
         }
+
+        AnswerRevisionHistory(
+          question = question,
+          expanded = historyExpanded,
+          onExpandedChange = onHistoryExpandedChange,
+          currentEditorText = currentEditorText,
+          onUseRevision = onUseRevision,
+        )
 
         if (hasAnswer) {
           Spacer(modifier = Modifier.height(Dimens.ContentGap))

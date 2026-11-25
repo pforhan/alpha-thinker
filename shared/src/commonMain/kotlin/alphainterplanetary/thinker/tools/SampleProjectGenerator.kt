@@ -65,9 +65,34 @@ class SampleProjectGenerator @Inject constructor(
           answers = listOf(
             completeAnswer(
               questionId = "scope-q1",
-              text = "I have been using a 1:5 ratio of coffee to water and it comes out " +
-                "concentrated enough to dilute with milk or water.",
-              createdAt = daysAgo(7),
+              text = "1:5 by weight for a concentrate I can dilute 1:1 with water or milk. " +
+                "I measure beans and water on a scale for consistency.",
+              createdAt = daysAgo(0, minutes = 20),
+            ),
+            completeAnswer(
+              questionId = "scope-q1",
+              text = "1:5 by weight for a concentrate I can dilute with water or milk.",
+              createdAt = daysAgo(0, hours = 3),
+            ),
+            completeAnswer(
+              questionId = "scope-q1",
+              text = "Around 1:5 coffee to water seems strong enough for a concentrate.",
+              createdAt = daysAgo(3),
+            ),
+            completeAnswer(
+              questionId = "scope-q1",
+              text = "I've tried 1:8 and it was too weak; maybe 1:4 or 1:5.",
+              createdAt = daysAgo(45),
+            ),
+            completeAnswer(
+              questionId = "scope-q1",
+              text = "I'm not sure yet - probably somewhere between 1:4 and 1:8.",
+              createdAt = daysAgo(200),
+            ),
+            completeAnswer(
+              questionId = "scope-q1",
+              text = "Starting point: try 1:8 and adjust.",
+              createdAt = daysAgo(600),
             ),
           ),
         ),
@@ -94,7 +119,21 @@ class SampleProjectGenerator @Inject constructor(
           id = "scope-q4",
           text = "How long can the concentrate stay fresh in the fridge?",
           timestamp = created,
-          roundId = roundId
+          roundId = roundId,
+          draftText = "Most sources say 1-2 weeks in a sealed jar; I should test taste at day 7 and day 14.",
+          draftUpdatedAt = daysAgo(0, seconds = 45),
+          answers = listOf(
+            completeAnswer(
+              questionId = "scope-q4",
+              text = "About a week, maybe two if sealed well.",
+              createdAt = daysAgo(5),
+            ),
+            completeAnswer(
+              questionId = "scope-q4",
+              text = "Not sure - need to look it up.",
+              createdAt = daysAgo(90),
+            ),
+          ),
         ),
         sampleQuestion(
           id = "scope-q5",
@@ -1412,7 +1451,7 @@ class SampleProjectGenerator @Inject constructor(
     } else {
       null
     }
-    val allAnswers = if (draftAnswer != null) answers + draftAnswer else answers
+    val allAnswers = if (draftAnswer != null) listOf(draftAnswer) + answers else answers
     val answerState = when {
       draftAnswer != null -> AnswerState.Draft
       allAnswers.isNotEmpty() -> AnswerState.Answered
@@ -1459,9 +1498,10 @@ class SampleProjectGenerator @Inject constructor(
 
   private val now: Instant = now()
 
-  private fun daysAgo(days: Long, minutes: Long = 0): Instant {
+  private fun daysAgo(days: Long, minutes: Long = 0, hours: Long = 0, seconds: Long = 0): Instant {
     val millis = now.toEpochMilliseconds()
-    return Instant.fromEpochMilliseconds(millis - (days * 24 * 60 + minutes) * 60 * 1000)
+    val totalSeconds = (((days * 24 + hours) * 60) + minutes) * 60 + seconds
+    return Instant.fromEpochMilliseconds(millis - totalSeconds * 1000)
   }
 
   private fun lipsum(paragraphCount: Int): String = buildString {
