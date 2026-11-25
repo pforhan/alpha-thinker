@@ -175,10 +175,6 @@ class ProjectListViewModelTest {
       throw IllegalStateException("boom")
     }
 
-    override suspend fun updateQuestionText(projectId: String, questionId: String, text: String) {
-      throw IllegalStateException("boom")
-    }
-
     override suspend fun getSetting(key: SettingsKey, default: String): String = default
 
     override suspend fun saveSetting(key: SettingsKey, value: String) {}

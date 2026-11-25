@@ -38,7 +38,6 @@ interface Storage {
   suspend fun deleteProject(id: String)
   suspend fun deleteAllProjects()
   suspend fun saveQuestionOrder(projectId: String, order: List<String>)
-  suspend fun updateQuestionText(projectId: String, questionId: String, text: String)
 
   /** Reads an app-wide string setting by key, returning [default] when unset. */
   suspend fun getSetting(key: SettingsKey, default: String): String
