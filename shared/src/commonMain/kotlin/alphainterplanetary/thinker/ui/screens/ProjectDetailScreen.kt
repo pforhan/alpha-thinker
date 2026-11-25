@@ -385,6 +385,15 @@ fun ProjectDetailScreen(
         phase = project.phaseForQuestion(questionToShow),
         onDismiss = { selectedQuestion = null },
         onResearch = { query -> viewModel.logResearchHandoff(projectId, query) },
+        onAutoSave = { text, completed, questionText ->
+          viewModel.saveAnswer(
+            projectId,
+            questionToShow.id,
+            text,
+            completed = completed,
+            questionText = questionText,
+          )
+        },
         onResult = { result, text, questionText ->
           when (result) {
             AnswerDialogResult.Submitted -> {

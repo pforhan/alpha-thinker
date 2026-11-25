@@ -2,6 +2,7 @@ package alphainterplanetary.thinker.ui.components
 
 import alphainterplanetary.thinker.model.Question
 import alphainterplanetary.thinker.phases.Phase
+import alphainterplanetary.thinker.ui.platform.OnAppInactive
 import alphainterplanetary.thinker.ui.theme.Dimens
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -60,13 +62,28 @@ fun AnswerDialog(
   phase: Phase,
   onDismiss: () -> Unit,
   onResearch: (String) -> Unit,
+  onAutoSave: (answerText: String, completed: Boolean, questionText: String?) -> Unit = { _, _, _ -> },
   onResult: (AnswerDialogResult, String, String?) -> Unit,
 ) {
-  val snapshotKey = Triple(question.answerState, question.currentAnswer?.id, question.currentDraft?.id)
-  var answerText by remember(question.id, snapshotKey) {
-    mutableStateOf(question.currentAnswer?.text ?: question.draftText ?: "")
+  val persistedAnswerText = question.currentAnswer?.text ?: question.draftText ?: ""
+  var answerText by remember(question.id) { mutableStateOf(persistedAnswerText) }
+  var lastSyncedAnswerText by remember(question.id) { mutableStateOf(persistedAnswerText) }
+  LaunchedEffect(persistedAnswerText) {
+    if (answerText == lastSyncedAnswerText) {
+      answerText = persistedAnswerText
+    }
+    lastSyncedAnswerText = persistedAnswerText
   }
-  var questionText by remember(question.id, question.text) { mutableStateOf(question.text) }
+
+  var questionText by remember(question.id) { mutableStateOf(question.text) }
+  var lastSyncedQuestionText by remember(question.id) { mutableStateOf(question.text) }
+  LaunchedEffect(question.text) {
+    if (questionText == lastSyncedQuestionText) {
+      questionText = question.text
+    }
+    lastSyncedQuestionText = question.text
+  }
+
   var editingQuestion by remember(question.id, question.text) { mutableStateOf(false) }
   var showResearchTerms by remember { mutableStateOf(false) }
   var researchTerms by remember(question.id, question.text) { mutableStateOf(question.text) }
@@ -106,6 +123,45 @@ fun AnswerDialog(
     val trimmedTerms = terms.trim().ifBlank { question.text }
     onResearch(trimmedTerms)
     uriHandler.openUri(searchUrlFor(trimmedTerms))
+  }
+
+  val currentQuestion by rememberUpdatedState(question)
+  val currentAnswerText by rememberUpdatedState(answerText)
+  val currentQuestionText by rememberUpdatedState(questionText)
+  val currentEditingQuestion by rememberUpdatedState(editingQuestion)
+  val currentOnAutoSave by rememberUpdatedState(onAutoSave)
+
+  OnAppInactive {
+    val q = currentQuestion
+    if (q.isIgnored) return@OnAppInactive
+    val trimmedAnswer = currentAnswerText.trim()
+    val editedQText = if (currentEditingQuestion) {
+      currentQuestionText.trim().takeIf { it.isNotBlank() && it != q.text }
+    } else {
+      null
+    }
+    when {
+      q.isAnswered -> {
+        val answerText = q.currentAnswer?.text.orEmpty()
+        if (editedQText != null && trimmedAnswer == answerText) {
+          currentOnAutoSave(answerText, true, editedQText)
+        }
+      }
+
+      q.isDraft -> {
+        if (trimmedAnswer.isBlank()) return@OnAppInactive
+        if (trimmedAnswer != q.draftText.orEmpty() || editedQText != null) {
+          currentOnAutoSave(trimmedAnswer, false, editedQText)
+        }
+      }
+
+      else -> {
+        if (trimmedAnswer.isBlank() && editedQText == null) return@OnAppInactive
+        if (trimmedAnswer.isNotBlank() || editedQText != null) {
+          currentOnAutoSave(trimmedAnswer, false, editedQText)
+        }
+      }
+    }
   }
 
   BoxWithConstraints {
